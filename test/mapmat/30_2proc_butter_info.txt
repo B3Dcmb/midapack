@@ -1,0 +1,8 @@
+flag 2
+rows 1048576
+ nnz 1
+
+sparsity 0
+total 0
+maxsize 0
+ 

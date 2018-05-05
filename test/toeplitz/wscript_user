@@ -1,0 +1,139 @@
+#! /usr/bin/env python
+# encoding: utf-8
+# MidaPack Version 1.0 May 2012
+# Toeplitz algebra library module
+
+from waflib.Configure import conf
+import sys
+import waflib.Tools
+import os.path as path
+APPNAME = 'midas'
+VERSION = '1.0'
+
+top = '.'
+out = 'build'
+
+def options(ctx):
+    ctx.load('compiler_c')
+    ctx.add_option('--memsize', action='store', help='Memory size (in Gb)')
+    ctx.add_option('--fftwdir', action='store', help='FFTW directory')
+    ctx.add_option('--platform', action='store', help='Platform name')
+    ctx.add_option('--ompflag', action='store', help='OpenMP compilation flag')
+    
+@conf
+def read_memsize(ctx):
+    ctx.start_msg('Checking for the variable MEMSIZE')
+    if ctx.options.memsize:
+        ctx.env.MEMSIZE = ctx.options.memsize
+        ctx.end_msg(ctx.env.MEMSIZE)
+    else:
+        ctx.env.MEMSIZE = 4
+        ctx.end_msg('MEMSIZE is not set, will use default 4 Gib ')
+    max_size = int(float(ctx.env.MEMSIZE)*1e9/(3*8))
+    ctx.env['DEFINES'] += ['MAX_SIZE=%d'%max_size]
+
+def configure(ctx):
+    print('→ configuring the project in ' + ctx.path.abspath())
+    ctx.load('compiler_c')
+
+    if ctx.options.platform=='cray':
+        ctx.load('gcc')
+        gcc_modifier_func = 'waflib.Tools.gcc.gcc_modifier_'+ctx.options.platform
+        eval(gcc_modifier_func+'(ctx)')
+    if ctx.options.platform=='aix':
+        ctx.env['CFLAGS']    += ["-qlanglvl=extc99", "-qcpluscmt"]
+        ctx.env['LINKFLAGS'] += ["-qlanglvl=extc99", "-qcpluscmt"]
+
+
+    ctx.env.MPI = ctx.check(header_name=['mpi.h'],mandatory=False)
+    if ctx.env.MPI:
+        ctx.env['DEFINES'] += ['MPI=1']
+
+    ctx.env.OMP  = ctx.check_cc(lib='gomp', uselib_store='OMP',mandatory=False )
+    ctx.env.OMP  = ctx.check_cc(header_name=['omp.h'],mandatory=False)
+    ctx.env['CFLAGS'] += ["-O3"]
+#    ctx.env['CFLAGS'] += ["-g"]
+    if ctx.env.OMP:
+        ctx.check_cc(lib='pthread', uselib_store='PTHREAD', cflags='', mandatory=True) 
+        if ctx.options.platform=='aix':
+            ctx.env['CFLAGS']    += ["-qthreaded"]
+            ctx.env['LINKFLAGS'] += ["-qthreaded"]
+            ctx.env['CFLAGS']    += ["-qsmp=omp"]
+            ctx.env['LINKFLAGS'] += ["-qsmp=omp"]
+        elif ctx.options.ompflag:
+            ctx.env['CFLAGS']    += [ctx.options.ompflag]
+            ctx.env['LINKFLAGS'] += [ctx.options.ompflag]
+        else:
+            ctx.env['CFLAGS'] += ["-fopenmp"]
+
+
+    if ctx.options.fftwdir:
+	ctx.env['CFLAGS'].append('-I'+path.join(ctx.options.fftwdir,'include'))
+        ctx.check_cc(lib='fftw3', libpath= path.join(ctx.options.fftwdir,'lib'), mandatory=True, uselib_store='FFTW3') 
+	ctx.check_cc(header_name='fftw3.h', mandatory=True)
+    else:
+        ctx.check_cc(lib='fftw3',  mandatory=True, uselib_store='FFTW3') 
+	ctx.check_cc(header_name='fftw3.h', mandatory=True)
+
+    ctx.env.FFTWMT = ctx.check_cc(lib="fftw3_threads",cflags='', use='FFTW3', uselib_store='FFTW3MULTITHREAD', mandatory=False) 
+    if ctx.env.FFTWMT:
+        ctx.env['DEFINES'] += ['FFTW_MULTITHREADING=1']
+
+    ctx.env.BLAS = ctx.check_cc(lib='blas', mandatory=False, uselib_store='BLAS') 
+    ctx.env.LAPACK = ctx.check_cc(lib='lapack', mandatory=False, uselib_store='LAPACK')
+    ctx.env.acml = ctx.check_cc(lib='acml', mandatory=False, uselib_store='acml')
+    ctx.env.MKL = ctx.check_cc(lib='mkl', mandatory=False, uselib_store='MKL')
+
+    ctx.env.ATLAS = ctx.check_cc(lib='atlas', mandatory=False, uselib_store='ATLAS')
+    ctx.env.PBLAS = ctx.check_cc(lib='pblas', mandatory=False, uselib_store='PBLAS')
+    ctx.env.SCALAPACK = ctx.check_cc(lib='scalapack', mandatory=False, uselib_store='SCALAPACK')
+
+
+    ctx.check_cc(header_name='fftw3.h', mandatory=True)
+
+    ctx.check_cc(lib='imf', mandatory=False, uselib_store='M')
+    ctx.check_cc(lib='m', mandatory=True, uselib_store='M') 
+
+    ctx.write_config_header('config.h')
+    ctx.read_memsize()
+    
+
+def build(ctx):
+
+ #   ctx.env['INCLUDES'] += ["../../include"]
+    ctx.env['INCLUDES'] += ["../../src/toeplitz"]
+    ctx.recurse('../../src/toeplitz')
+
+    lstlib = ['toeplitz', 'M']
+    if ctx.env.OMP:
+        lstlib += ['OMP', 'PTHREAD']
+
+
+        if ctx.env.MPI:
+            ctx.program(             target = 'testexple_mpi_stmm',
+                                     source = 'testexple_mpi_stmm.c',
+                                     use = lstlib+['BLAS'],
+                                     cflags = ctx.env['CFLAGS'])
+
+            ctx.program(             target = 'testexple_mpi_stbmm',
+                                     source = 'testexple_mpi_stbmm.c',
+                                     use = lstlib+['BLAS'],
+                                     cflags = ctx.env['CFLAGS'])
+
+            ctx.program(             target = 'testexple_mpi_gstbmm',
+                                     source = 'testexple_mpi_gstbmm.c',
+                                     use = lstlib+['BLAS'],
+                                     cflags = ctx.env['CFLAGS'])
+
+#  build    : executes the build
+#  clean    : cleans the project
+#  configure: configures the project
+#  dist     : makes a tarball for redistributing the sources
+#  distcheck: checks if the project compiles (tarball from 'dist')
+#  distclean: removes the build directory
+#  install  : installs the targets on the system
+#  list     : lists the targets to execute
+#  step     : executes tasks in a step-by-step fashion, for debugging
+#  uninstall: removes the targets installed
+
+

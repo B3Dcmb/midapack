@@ -1,0 +1,15 @@
+
+Note on waf binary
+------------------
+
+The waf binary has been slightly modified to accomodate our testing platform configuration:
+- waflib/Scripting.py : encapuslate the 'lst = os.listdir(cur)' in a try/except bloc
+- waflib/Tools/gcc.py : inverse cc and gcc. + add routine for cray platform
+#+begin_src python
+@conf
+def gcc_modifier_cray(conf):
+        v = conf.env
+        v['SHLIB_MARKER']        = []
+#+end_src
+
+
