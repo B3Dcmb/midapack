@@ -1,7 +1,0 @@
-   ./waf clean
-
-    CC=mpicc ./waf configure --prefix=.
-    ./waf build
-    ./waf install
-
-
