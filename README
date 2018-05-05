@@ -1,0 +1,76 @@
+Midapack library, ANR MIDAS'09 - release 1.1b, July 2012.
+(http://www.apc.univ-paris7.fr/APC_CS/Recherche/Adamis/MIDAS09/index.html)
+
+ACKNOWLEDGMENT: This work has been supported in part by French National Research Agency (ANR)
+through COSINUS program (project MIDAS no. ANR-09-COSI-009).
+
+
+Motivation
+----------
+
+The aim of the CMB DA library is to provide high performance, massively parallel, and 
+portable analysis tools suitable for Cosmic Microwave Background (CMB) data analysis 
+and thus addressing the existing gap between the low level numerical libraries, such as 
+FFTW, SCALAPACK, LAPACK, PLASMA, etc, and high level tools needed to analyze actual CMB data.
+
+The library is designed to provide all essential functionality needed for the CMB data analysis.
+It will include new algorithm solutions and their implementation, capable of dealing with the 
+huge data volumes, while giving the user flexibility in constructing his/her own codes
+according to their preferences and instrument and data characteristics.
+
+
+Getting some more information
+-----------------------------
+
+You can download the last release from the official website of the ANR-MIDAS'09 project at
+http://www.apc.univ-paris7.fr/APC_CS/Recherche/Adamis/MIDAS09/software.html
+
+and find a online manual at
+http://www.apc.univ-paris7.fr/APC_CS/Recherche/Adamis/MIDAS09/cmbdadoc/index.html
+
+Please report any bugs and relay any comments/suggestions you may have to the developers.
+Feel free to use it but do not distribute beyond the collaboration at this time yet.
+
+
+Project collaborators
+---------------------
+
+Please refer to the website at
+http://www.apc.univ-paris7.fr/APC_CS/Recherche/Adamis/MIDAS09/partners.html
+
+
+Project Developers (Laboratoire Astroparticule et Cosmologie) 
+-------------------------------------------------------------
+
+  Pierre Cargemel
+  Frederic Dauvergne
+  Maude Le Jeune
+  Antoine Rogier
+  Radek Stompor (project coordinator)
+
+Please refer to the website for more details:
+http://www.apc.univ-paris7.fr/APC_CS/Recherche/Adamis/MIDAS09/partners.html
+
+
+Changes since last release
+--------------------------
+
+Please refer to the website at
+http://www.apc.univ-paris7.fr/APC_CS/Recherche/Adamis/MIDAS09/software.html
+
+
+How to use it
+-------------
+
+This software is reported to work on several Linux distributions and should work on any
+modern Unix-like system after minimal porting efforts.
+
+The source code is delivered in a set of directories:
+
+- The /src directory contains the sources files for the core library. It's composed by the
+differents modules of the Midapack library (please refer to the website for more details). 
+You can directly compile theses files and link the generated binaries with your own program.
+
+- The /test directory contains some Utility/demonstration programs to show some examples of
+how to use the library fonctionnalities.
+
