@@ -1,0 +1,118 @@
+\section{distribute\-\_\-wigner.\-c File Reference}
+\label{common_2distribute__wigner_8c}\index{distribute\-\_\-wigner.\-c@{distribute\-\_\-wigner.\-c}}
+{\ttfamily \#include \char`\"{}mpi.\-h\char`\"{}}\\*
+{\ttfamily \#include \char`\"{}stdlib.\-h\char`\"{}}\\*
+{\ttfamily \#include \char`\"{}stdio.\-h\char`\"{}}\\*
+{\ttfamily \#include \char`\"{}math.\-h\char`\"{}}\\*
+{\ttfamily \#include \char`\"{}string.\-h\char`\"{}}\\*
+{\ttfamily \#include \char`\"{}sys/types.\-h\char`\"{}}\\*
+{\ttfamily \#include \char`\"{}sys/stat.\-h\char`\"{}}\\*
+{\ttfamily \#include \char`\"{}sys/param.\-h\char`\"{}}\\*
+{\ttfamily \#include \char`\"{}regex.\-h\char`\"{}}\\*
+{\ttfamily \#include $<$time.\-h$>$}\\*
+\subsection*{Macros}
+\begin{DoxyCompactItemize}
+\item 
+\#define \hyperlink{common_2distribute__wigner_8c_a598a3330b3c21701223ee0ca14316eca}{P\-I}~(4$\ast$atan(1.))
+\item 
+\#define \hyperlink{common_2distribute__wigner_8c_a0a3527f8b23535fe43972fbe88c3cc0d}{two\-P\-I}~(8$\ast$atan(1.))
+\item 
+\#define \hyperlink{common_2distribute__wigner_8c_a7eb5b348f6b35aa19816af220244cebc}{A2\-R}~(\hyperlink{kernels_2distribute__wigner_8c_a598a3330b3c21701223ee0ca14316eca}{P\-I}/(60$\ast$180.))
+\item 
+\#define \hyperlink{common_2distribute__wigner_8c_abb702d8b501669a23aa0ab3b281b9384}{min}(x, y)~((x $>$ y) ? y \-: x)
+\item 
+\#define \hyperlink{common_2distribute__wigner_8c_ac39d9cef6a5e030ba8d9e11121054268}{max}(x, y)~((x $<$ y) ? y \-: x)
+\end{DoxyCompactItemize}
+\subsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+int \hyperlink{common_2distribute__wigner_8c_acbe2e94a087052ad894871b4492c16b4}{distribute\-\_\-wigner} (int lmin, int lmax, int $\ast$lminloc, int $\ast$lmaxloc, int myrank, int nprocs, M\-P\-I\-\_\-\-Comm comm)
+\item 
+int \hyperlink{common_2distribute__wigner_8c_a2d42c6160dc38eee12380cb5a23d7772}{distribute\-\_\-wigner\-\_\-2lmax} (int lmin, int lmax\-E, int lmax\-P, int $\ast$lminloc, int $\ast$lmaxloc, int myrank, int nprocs, M\-P\-I\-\_\-\-Comm comm)
+\end{DoxyCompactItemize}
+
+
+\subsection{Macro Definition Documentation}
+\index{common/distribute\-\_\-wigner.\-c@{common/distribute\-\_\-wigner.\-c}!P\-I@{P\-I}}
+\index{P\-I@{P\-I}!common/distribute_wigner.c@{common/distribute\-\_\-wigner.\-c}}
+\subsubsection[{P\-I}]{\setlength{\rightskip}{0pt plus 5cm}\#define P\-I~(4$\ast$atan(1.))}\label{common_2distribute__wigner_8c_a598a3330b3c21701223ee0ca14316eca}
+
+
+Definition at line 13 of file common/distribute\-\_\-wigner.\-c.
+
+\index{common/distribute\-\_\-wigner.\-c@{common/distribute\-\_\-wigner.\-c}!two\-P\-I@{two\-P\-I}}
+\index{two\-P\-I@{two\-P\-I}!common/distribute_wigner.c@{common/distribute\-\_\-wigner.\-c}}
+\subsubsection[{two\-P\-I}]{\setlength{\rightskip}{0pt plus 5cm}\#define two\-P\-I~(8$\ast$atan(1.))}\label{common_2distribute__wigner_8c_a0a3527f8b23535fe43972fbe88c3cc0d}
+
+
+Definition at line 14 of file common/distribute\-\_\-wigner.\-c.
+
+\index{common/distribute\-\_\-wigner.\-c@{common/distribute\-\_\-wigner.\-c}!A2\-R@{A2\-R}}
+\index{A2\-R@{A2\-R}!common/distribute_wigner.c@{common/distribute\-\_\-wigner.\-c}}
+\subsubsection[{A2\-R}]{\setlength{\rightskip}{0pt plus 5cm}\#define A2\-R~({\bf P\-I}/(60$\ast$180.))}\label{common_2distribute__wigner_8c_a7eb5b348f6b35aa19816af220244cebc}
+
+
+Definition at line 15 of file common/distribute\-\_\-wigner.\-c.
+
+\index{common/distribute\-\_\-wigner.\-c@{common/distribute\-\_\-wigner.\-c}!min@{min}}
+\index{min@{min}!common/distribute_wigner.c@{common/distribute\-\_\-wigner.\-c}}
+\subsubsection[{min}]{\setlength{\rightskip}{0pt plus 5cm}\#define min(
+\begin{DoxyParamCaption}
+\item[{}]{x, }
+\item[{}]{y}
+\end{DoxyParamCaption}
+)~((x $>$ y) ? y \-: x)}\label{common_2distribute__wigner_8c_abb702d8b501669a23aa0ab3b281b9384}
+
+
+Definition at line 16 of file common/distribute\-\_\-wigner.\-c.
+
+\index{common/distribute\-\_\-wigner.\-c@{common/distribute\-\_\-wigner.\-c}!max@{max}}
+\index{max@{max}!common/distribute_wigner.c@{common/distribute\-\_\-wigner.\-c}}
+\subsubsection[{max}]{\setlength{\rightskip}{0pt plus 5cm}\#define max(
+\begin{DoxyParamCaption}
+\item[{}]{x, }
+\item[{}]{y}
+\end{DoxyParamCaption}
+)~((x $<$ y) ? y \-: x)}\label{common_2distribute__wigner_8c_ac39d9cef6a5e030ba8d9e11121054268}
+
+
+Definition at line 17 of file common/distribute\-\_\-wigner.\-c.
+
+
+
+\subsection{Function Documentation}
+\index{common/distribute\-\_\-wigner.\-c@{common/distribute\-\_\-wigner.\-c}!distribute\-\_\-wigner@{distribute\-\_\-wigner}}
+\index{distribute\-\_\-wigner@{distribute\-\_\-wigner}!common/distribute_wigner.c@{common/distribute\-\_\-wigner.\-c}}
+\subsubsection[{distribute\-\_\-wigner}]{\setlength{\rightskip}{0pt plus 5cm}int distribute\-\_\-wigner (
+\begin{DoxyParamCaption}
+\item[{int}]{lmin, }
+\item[{int}]{lmax, }
+\item[{int $\ast$}]{lminloc, }
+\item[{int $\ast$}]{lmaxloc, }
+\item[{int}]{myrank, }
+\item[{int}]{nprocs, }
+\item[{M\-P\-I\-\_\-\-Comm}]{comm}
+\end{DoxyParamCaption}
+)}\label{common_2distribute__wigner_8c_acbe2e94a087052ad894871b4492c16b4}
+
+
+Definition at line 20 of file common/distribute\-\_\-wigner.\-c.
+
+\index{common/distribute\-\_\-wigner.\-c@{common/distribute\-\_\-wigner.\-c}!distribute\-\_\-wigner\-\_\-2lmax@{distribute\-\_\-wigner\-\_\-2lmax}}
+\index{distribute\-\_\-wigner\-\_\-2lmax@{distribute\-\_\-wigner\-\_\-2lmax}!common/distribute_wigner.c@{common/distribute\-\_\-wigner.\-c}}
+\subsubsection[{distribute\-\_\-wigner\-\_\-2lmax}]{\setlength{\rightskip}{0pt plus 5cm}int distribute\-\_\-wigner\-\_\-2lmax (
+\begin{DoxyParamCaption}
+\item[{int}]{lmin, }
+\item[{int}]{lmax\-E, }
+\item[{int}]{lmax\-P, }
+\item[{int $\ast$}]{lminloc, }
+\item[{int $\ast$}]{lmaxloc, }
+\item[{int}]{myrank, }
+\item[{int}]{nprocs, }
+\item[{M\-P\-I\-\_\-\-Comm}]{comm}
+\end{DoxyParamCaption}
+)}\label{common_2distribute__wigner_8c_a2d42c6160dc38eee12380cb5a23d7772}
+
+
+Definition at line 85 of file common/distribute\-\_\-wigner.\-c.
+

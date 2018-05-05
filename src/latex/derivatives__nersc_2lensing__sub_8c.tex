@@ -1,0 +1,180 @@
+\section{lensing\-\_\-sub.\-c File Reference}
+\label{derivatives__nersc_2lensing__sub_8c}\index{lensing\-\_\-sub.\-c@{lensing\-\_\-sub.\-c}}
+{\ttfamily \#include \char`\"{}lens2hat.\-h\char`\"{}}\\*
+\subsection*{Macros}
+\begin{DoxyCompactItemize}
+\item 
+\#define \hyperlink{derivatives__nersc_2lensing__sub_8c_a3869d282031f6ea6b50fdb980b758420}{U\-S\-E\-\_\-\-M\-P\-I}
+\end{DoxyCompactItemize}
+\subsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+int \hyperlink{derivatives__nersc_2lensing__sub_8c_adfd4526ab7b84ab4063eafa3aff125f5}{get\-\_\-cotangent} (int64\-\_\-t g, int first\-\_\-ring, int last\-\_\-ring, int map\-\_\-size, s2hat\-\_\-pixeltype cpixelization, double $\ast$cotg)
+\item 
+int \hyperlink{derivatives__nersc_2lensing__sub_8c_a515ce6e32c83cc252ce2d98da4b8f6d0}{get\-\_\-ring} (int64\-\_\-t g, int64\-\_\-t npix\-North, int equator\-In, int first\-\_\-ring, int last\-\_\-ring, int map\-\_\-size, s2hat\-\_\-pixeltype cpixelization, int myrank, int $\ast$k)
+\item 
+double \hyperlink{derivatives__nersc_2lensing__sub_8c_a01cfb565f05ca0574ffe427957766e22}{get\-\_\-ring\-\_\-theta} (int i, s2hat\-\_\-pixeltype cpixelization)
+\item 
+double \hyperlink{derivatives__nersc_2lensing__sub_8c_a8b0d92bd46d564b7cb02a352506cd8d1}{get\-\_\-phi} (int i, int j, s2hat\-\_\-pixeltype cpixelization)
+\item 
+double \hyperlink{derivatives__nersc_2lensing__sub_8c_ade4546fa40d7a7fb7f0e9e8e7ac745df}{get\-\_\-cos\-\_\-rphi} (int i, int j, s2hat\-\_\-pixeltype cpixelization)
+\item 
+double \hyperlink{derivatives__nersc_2lensing__sub_8c_aacc42f0ba3fce9b9951cd6dba4d60ebf}{get\-\_\-sin\-\_\-rphi} (int i, int j, s2hat\-\_\-pixeltype cpixelization)
+\item 
+double \hyperlink{derivatives__nersc_2lensing__sub_8c_a8dbb3ac3e6c8aa872d542c9789239708}{distance} (double theta, double phi, double theta\-\_\-p, double phi\-\_\-p)
+\item 
+double \hyperlink{derivatives__nersc_2lensing__sub_8c_a356fc5cd79e083685c111f791709e85b}{cosdistance} (double $\ast$x, double $\ast$y)
+\item 
+int \hyperlink{derivatives__nersc_2lensing__sub_8c_a19e2918b377bd820f3a20dee06b88de2}{max\-\_\-arr} (double a\mbox{[}$\,$\mbox{]}, int ncomp)
+\item 
+int \hyperlink{derivatives__nersc_2lensing__sub_8c_a3f0449ae9cbd5c0005db6d26da882085}{min\-\_\-arr} (double a\mbox{[}$\,$\mbox{]}, int ncomp)
+\end{DoxyCompactItemize}
+
+
+\subsection{Macro Definition Documentation}
+\index{derivatives\-\_\-nersc/lensing\-\_\-sub.\-c@{derivatives\-\_\-nersc/lensing\-\_\-sub.\-c}!U\-S\-E\-\_\-\-M\-P\-I@{U\-S\-E\-\_\-\-M\-P\-I}}
+\index{U\-S\-E\-\_\-\-M\-P\-I@{U\-S\-E\-\_\-\-M\-P\-I}!derivatives_nersc/lensing_sub.c@{derivatives\-\_\-nersc/lensing\-\_\-sub.\-c}}
+\subsubsection[{U\-S\-E\-\_\-\-M\-P\-I}]{\setlength{\rightskip}{0pt plus 5cm}\#define U\-S\-E\-\_\-\-M\-P\-I}\label{derivatives__nersc_2lensing__sub_8c_a3869d282031f6ea6b50fdb980b758420}
+
+
+Definition at line 3 of file derivatives\-\_\-nersc/lensing\-\_\-sub.\-c.
+
+
+
+\subsection{Function Documentation}
+\index{derivatives\-\_\-nersc/lensing\-\_\-sub.\-c@{derivatives\-\_\-nersc/lensing\-\_\-sub.\-c}!get\-\_\-cotangent@{get\-\_\-cotangent}}
+\index{get\-\_\-cotangent@{get\-\_\-cotangent}!derivatives_nersc/lensing_sub.c@{derivatives\-\_\-nersc/lensing\-\_\-sub.\-c}}
+\subsubsection[{get\-\_\-cotangent}]{\setlength{\rightskip}{0pt plus 5cm}int get\-\_\-cotangent (
+\begin{DoxyParamCaption}
+\item[{int64\-\_\-t}]{g, }
+\item[{int}]{first\-\_\-ring, }
+\item[{int}]{last\-\_\-ring, }
+\item[{int}]{map\-\_\-size, }
+\item[{s2hat\-\_\-pixeltype}]{cpixelization, }
+\item[{double $\ast$}]{cotg}
+\end{DoxyParamCaption}
+)}\label{derivatives__nersc_2lensing__sub_8c_adfd4526ab7b84ab4063eafa3aff125f5}
+
+
+Definition at line 9 of file derivatives\-\_\-nersc/lensing\-\_\-sub.\-c.
+
+\index{derivatives\-\_\-nersc/lensing\-\_\-sub.\-c@{derivatives\-\_\-nersc/lensing\-\_\-sub.\-c}!get\-\_\-ring@{get\-\_\-ring}}
+\index{get\-\_\-ring@{get\-\_\-ring}!derivatives_nersc/lensing_sub.c@{derivatives\-\_\-nersc/lensing\-\_\-sub.\-c}}
+\subsubsection[{get\-\_\-ring}]{\setlength{\rightskip}{0pt plus 5cm}int get\-\_\-ring (
+\begin{DoxyParamCaption}
+\item[{int64\-\_\-t}]{g, }
+\item[{int64\-\_\-t}]{npix\-North, }
+\item[{int}]{equator\-In, }
+\item[{int}]{first\-\_\-ring, }
+\item[{int}]{last\-\_\-ring, }
+\item[{int}]{map\-\_\-size, }
+\item[{s2hat\-\_\-pixeltype}]{cpixelization, }
+\item[{int}]{myrank, }
+\item[{int $\ast$}]{k}
+\end{DoxyParamCaption}
+)}\label{derivatives__nersc_2lensing__sub_8c_a515ce6e32c83cc252ce2d98da4b8f6d0}
+
+
+Definition at line 37 of file derivatives\-\_\-nersc/lensing\-\_\-sub.\-c.
+
+\index{derivatives\-\_\-nersc/lensing\-\_\-sub.\-c@{derivatives\-\_\-nersc/lensing\-\_\-sub.\-c}!get\-\_\-ring\-\_\-theta@{get\-\_\-ring\-\_\-theta}}
+\index{get\-\_\-ring\-\_\-theta@{get\-\_\-ring\-\_\-theta}!derivatives_nersc/lensing_sub.c@{derivatives\-\_\-nersc/lensing\-\_\-sub.\-c}}
+\subsubsection[{get\-\_\-ring\-\_\-theta}]{\setlength{\rightskip}{0pt plus 5cm}double get\-\_\-ring\-\_\-theta (
+\begin{DoxyParamCaption}
+\item[{int}]{i, }
+\item[{s2hat\-\_\-pixeltype}]{cpixelization}
+\end{DoxyParamCaption}
+)}\label{derivatives__nersc_2lensing__sub_8c_a01cfb565f05ca0574ffe427957766e22}
+
+
+Definition at line 58 of file derivatives\-\_\-nersc/lensing\-\_\-sub.\-c.
+
+\index{derivatives\-\_\-nersc/lensing\-\_\-sub.\-c@{derivatives\-\_\-nersc/lensing\-\_\-sub.\-c}!get\-\_\-phi@{get\-\_\-phi}}
+\index{get\-\_\-phi@{get\-\_\-phi}!derivatives_nersc/lensing_sub.c@{derivatives\-\_\-nersc/lensing\-\_\-sub.\-c}}
+\subsubsection[{get\-\_\-phi}]{\setlength{\rightskip}{0pt plus 5cm}double get\-\_\-phi (
+\begin{DoxyParamCaption}
+\item[{int}]{i, }
+\item[{int}]{j, }
+\item[{s2hat\-\_\-pixeltype}]{cpixelization}
+\end{DoxyParamCaption}
+)}\label{derivatives__nersc_2lensing__sub_8c_a8b0d92bd46d564b7cb02a352506cd8d1}
+
+
+Definition at line 64 of file derivatives\-\_\-nersc/lensing\-\_\-sub.\-c.
+
+\index{derivatives\-\_\-nersc/lensing\-\_\-sub.\-c@{derivatives\-\_\-nersc/lensing\-\_\-sub.\-c}!get\-\_\-cos\-\_\-rphi@{get\-\_\-cos\-\_\-rphi}}
+\index{get\-\_\-cos\-\_\-rphi@{get\-\_\-cos\-\_\-rphi}!derivatives_nersc/lensing_sub.c@{derivatives\-\_\-nersc/lensing\-\_\-sub.\-c}}
+\subsubsection[{get\-\_\-cos\-\_\-rphi}]{\setlength{\rightskip}{0pt plus 5cm}double get\-\_\-cos\-\_\-rphi (
+\begin{DoxyParamCaption}
+\item[{int}]{i, }
+\item[{int}]{j, }
+\item[{s2hat\-\_\-pixeltype}]{cpixelization}
+\end{DoxyParamCaption}
+)}\label{derivatives__nersc_2lensing__sub_8c_ade4546fa40d7a7fb7f0e9e8e7ac745df}
+
+
+Definition at line 70 of file derivatives\-\_\-nersc/lensing\-\_\-sub.\-c.
+
+\index{derivatives\-\_\-nersc/lensing\-\_\-sub.\-c@{derivatives\-\_\-nersc/lensing\-\_\-sub.\-c}!get\-\_\-sin\-\_\-rphi@{get\-\_\-sin\-\_\-rphi}}
+\index{get\-\_\-sin\-\_\-rphi@{get\-\_\-sin\-\_\-rphi}!derivatives_nersc/lensing_sub.c@{derivatives\-\_\-nersc/lensing\-\_\-sub.\-c}}
+\subsubsection[{get\-\_\-sin\-\_\-rphi}]{\setlength{\rightskip}{0pt plus 5cm}double get\-\_\-sin\-\_\-rphi (
+\begin{DoxyParamCaption}
+\item[{int}]{i, }
+\item[{int}]{j, }
+\item[{s2hat\-\_\-pixeltype}]{cpixelization}
+\end{DoxyParamCaption}
+)}\label{derivatives__nersc_2lensing__sub_8c_aacc42f0ba3fce9b9951cd6dba4d60ebf}
+
+
+Definition at line 76 of file derivatives\-\_\-nersc/lensing\-\_\-sub.\-c.
+
+\index{derivatives\-\_\-nersc/lensing\-\_\-sub.\-c@{derivatives\-\_\-nersc/lensing\-\_\-sub.\-c}!distance@{distance}}
+\index{distance@{distance}!derivatives_nersc/lensing_sub.c@{derivatives\-\_\-nersc/lensing\-\_\-sub.\-c}}
+\subsubsection[{distance}]{\setlength{\rightskip}{0pt plus 5cm}double distance (
+\begin{DoxyParamCaption}
+\item[{double}]{theta, }
+\item[{double}]{phi, }
+\item[{double}]{theta\-\_\-p, }
+\item[{double}]{phi\-\_\-p}
+\end{DoxyParamCaption}
+)}\label{derivatives__nersc_2lensing__sub_8c_a8dbb3ac3e6c8aa872d542c9789239708}
+
+
+Definition at line 82 of file derivatives\-\_\-nersc/lensing\-\_\-sub.\-c.
+
+\index{derivatives\-\_\-nersc/lensing\-\_\-sub.\-c@{derivatives\-\_\-nersc/lensing\-\_\-sub.\-c}!cosdistance@{cosdistance}}
+\index{cosdistance@{cosdistance}!derivatives_nersc/lensing_sub.c@{derivatives\-\_\-nersc/lensing\-\_\-sub.\-c}}
+\subsubsection[{cosdistance}]{\setlength{\rightskip}{0pt plus 5cm}double cosdistance (
+\begin{DoxyParamCaption}
+\item[{double $\ast$}]{x, }
+\item[{double $\ast$}]{y}
+\end{DoxyParamCaption}
+)}\label{derivatives__nersc_2lensing__sub_8c_a356fc5cd79e083685c111f791709e85b}
+
+
+Definition at line 90 of file derivatives\-\_\-nersc/lensing\-\_\-sub.\-c.
+
+\index{derivatives\-\_\-nersc/lensing\-\_\-sub.\-c@{derivatives\-\_\-nersc/lensing\-\_\-sub.\-c}!max\-\_\-arr@{max\-\_\-arr}}
+\index{max\-\_\-arr@{max\-\_\-arr}!derivatives_nersc/lensing_sub.c@{derivatives\-\_\-nersc/lensing\-\_\-sub.\-c}}
+\subsubsection[{max\-\_\-arr}]{\setlength{\rightskip}{0pt plus 5cm}int max\-\_\-arr (
+\begin{DoxyParamCaption}
+\item[{double}]{a\mbox{[}$\,$\mbox{]}, }
+\item[{int}]{ncomp}
+\end{DoxyParamCaption}
+)}\label{derivatives__nersc_2lensing__sub_8c_a19e2918b377bd820f3a20dee06b88de2}
+
+
+Definition at line 102 of file derivatives\-\_\-nersc/lensing\-\_\-sub.\-c.
+
+\index{derivatives\-\_\-nersc/lensing\-\_\-sub.\-c@{derivatives\-\_\-nersc/lensing\-\_\-sub.\-c}!min\-\_\-arr@{min\-\_\-arr}}
+\index{min\-\_\-arr@{min\-\_\-arr}!derivatives_nersc/lensing_sub.c@{derivatives\-\_\-nersc/lensing\-\_\-sub.\-c}}
+\subsubsection[{min\-\_\-arr}]{\setlength{\rightskip}{0pt plus 5cm}int min\-\_\-arr (
+\begin{DoxyParamCaption}
+\item[{double}]{a\mbox{[}$\,$\mbox{]}, }
+\item[{int}]{ncomp}
+\end{DoxyParamCaption}
+)}\label{derivatives__nersc_2lensing__sub_8c_a3f0449ae9cbd5c0005db6d26da882085}
+
+
+Definition at line 115 of file derivatives\-\_\-nersc/lensing\-\_\-sub.\-c.
+

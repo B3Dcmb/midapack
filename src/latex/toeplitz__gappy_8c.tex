@@ -1,0 +1,61 @@
+\section{toeplitz\-\_\-gappy.\-c File Reference}
+\label{toeplitz__gappy_8c}\index{toeplitz\-\_\-gappy.\-c@{toeplitz\-\_\-gappy.\-c}}
+{\ttfamily \#include \char`\"{}toeplitz.\-h\char`\"{}}\\*
+\subsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+int \hyperlink{toeplitz__gappy_8c_af6b3f49e179ac9ed28354ddd7dbb6a04}{build\-\_\-gappy\-\_\-blocks} (int nrow, int m, Block $\ast$tpltzblocks, int nb\-\_\-blocks\-\_\-local, int nb\-\_\-blocks\-\_\-all, int64\-\_\-t $\ast$id0gap, int $\ast$lgap, int ngap, Block $\ast$tpltzblocks\-\_\-gappy, int $\ast$nb\-\_\-blocks\-\_\-gappy\-\_\-final, int flag\-\_\-param\-\_\-distmin\-\_\-fixed)
+\begin{DoxyCompactList}\small\item\em Build the gappy Toeplitz block structure to optimise the product computation at gaps location. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\subsection{Function Documentation}
+\index{toeplitz\-\_\-gappy.\-c@{toeplitz\-\_\-gappy.\-c}!build\-\_\-gappy\-\_\-blocks@{build\-\_\-gappy\-\_\-blocks}}
+\index{build\-\_\-gappy\-\_\-blocks@{build\-\_\-gappy\-\_\-blocks}!toeplitz_gappy.c@{toeplitz\-\_\-gappy.\-c}}
+\subsubsection[{build\-\_\-gappy\-\_\-blocks}]{\setlength{\rightskip}{0pt plus 5cm}int build\-\_\-gappy\-\_\-blocks (
+\begin{DoxyParamCaption}
+\item[{int}]{nrow, }
+\item[{int}]{m, }
+\item[{Block $\ast$}]{tpltzblocks, }
+\item[{int}]{nb\-\_\-blocks\-\_\-local, }
+\item[{int}]{nb\-\_\-blocks\-\_\-all, }
+\item[{int64\-\_\-t $\ast$}]{id0gap, }
+\item[{int $\ast$}]{lgap, }
+\item[{int}]{ngap, }
+\item[{Block $\ast$}]{tpltzblocks\-\_\-gappy, }
+\item[{int $\ast$}]{nb\-\_\-blocks\-\_\-gappy\-\_\-final, }
+\item[{int}]{flag\-\_\-param\-\_\-distmin\-\_\-fixed}
+\end{DoxyParamCaption}
+)}\label{toeplitz__gappy_8c_af6b3f49e179ac9ed28354ddd7dbb6a04}
+
+
+Build the gappy Toeplitz block structure to optimise the product computation at gaps location. 
+
+Considering the significant gaps, the blocks to which they belong are cut and split between the gap's edges to reduce the total row size of the flotting blocks. It take into consideration the minimum correlation length and a parameter that allows us to control the minimum gap size allowed to split the blocks. In some cases, the gap can be partially reduce to fit the minimum block size needed for computation or just for performance criteria. This is based on the fact that the gaps are previously set to zeros before calling this routine. 
+\begin{DoxyParams}{Parameters}
+{\em nrow} & number of rows of the global data matrix V \\
+\hline
+{\em m} & number of columns for the data matrix V in the global rowwise order \\
+\hline
+{\em tpltzblocks} & list of the toeplitz blocks struture with its own parameters (idv, n, T\-\_\-block, lambda). \\
+\hline
+{\em nb\-\_\-blocks\-\_\-local} & number of Toeplitz blocks as stored in T \\
+\hline
+{\em nb\-\_\-blocks\-\_\-all} & number of all Toeplitz block on the diagonal of the full Toeplitz matrix \\
+\hline
+{\em id0gap} & index of the first element of each defined gap \\
+\hline
+{\em lgap} & length of each defined gaps \\
+\hline
+{\em ngap} & number of defined gaps \\
+\hline
+{\em tpltzblocks\-\_\-gappy} & list of the gappy toeplitz blocks struture with its own parameters \\
+\hline
+{\em nb\-\_\-blocks\-\_\-gappy\-\_\-final} & real number of obtained gappy Toeplitz blocks \\
+\hline
+{\em flag\-\_\-param\-\_\-distmin\-\_\-fixed} & flag to defined the minimum gap value allowed to split a Toeplitz block \\
+\hline
+\end{DoxyParams}
+
+
+Definition at line 231 of file toeplitz\-\_\-gappy.\-c.
+

@@ -1,0 +1,98 @@
+\section{param\-\_\-reader.\-c File Reference}
+\label{rng_2common_2param__reader_8c}\index{param\-\_\-reader.\-c@{param\-\_\-reader.\-c}}
+{\ttfamily \#include \char`\"{}lens2hat.\-h\char`\"{}}\\*
+{\ttfamily \#include $<$errno.\-h$>$}\\*
+{\ttfamily \#include $<$unistd.\-h$>$}\\*
+{\ttfamily \#include $<$iso646.\-h$>$}\\*
+\subsection*{Macros}
+\begin{DoxyCompactItemize}
+\item 
+\#define \hyperlink{rng_2common_2param__reader_8c_a7d2d24512e1704eaf046667bee38b7ef}{L\-I\-N\-E\-\_\-\-D\-I\-M}~1000
+\end{DoxyCompactItemize}
+\subsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+char $\ast$ \hyperlink{rng_2common_2param__reader_8c_ab3cc75c29a38da58b8a99b6f65096891}{get\-\_\-parameter} (const char $\ast$, char $\ast$, int, int $\ast$)
+\item 
+int \hyperlink{rng_2common_2param__reader_8c_a990ccd7e0b3352322502e77838c159d7}{param\-\_\-reader} (char $\ast$params\-\_\-file, int $\ast$pixchoice, s2hat\-\_\-pixparameters $\ast$pixpar, int $\ast$lmax, int $\ast$nmaps, int $\ast$nstokes, double zbounds\mbox{[}2\mbox{]}, char $\ast$w8, char $\ast$input\-\_\-spectra, int $\ast$seed\-\_\-par, int $\ast$corrtype, int $\ast$nlmax, int $\ast$nmmax, int $\ast$nspec, int $\ast$write\-\_\-unlensed\-\_\-map, int $\ast$write\-\_\-displacement\-\_\-map, int $\ast$write\-\_\-lensed\-\_\-map, int $\ast$output\-\_\-nside, int $\ast$write\-\_\-healpix\-\_\-lensed, int $\ast$write\-\_\-healpix\-\_\-unlensed, int $\ast$write\-\_\-healpix\-\_\-displacement, int $\ast$write\-\_\-unlensed\-\_\-spectra, int $\ast$write\-\_\-displacement\-\_\-spectra, int $\ast$cambformat, char $\ast$total\-\_\-spectra, char $\ast$out\-\_\-file, int myrank, int root, M\-P\-I\-\_\-\-Comm current\-\_\-comm)
+\item 
+int \hyperlink{rng_2common_2param__reader_8c_a70bcbd531a6e4abc62d73f5b4532c2cc}{my\-Error\-Check} (int pe, char $\ast$file\-Name, int line, char $\ast$string, int ok, int flag)
+\end{DoxyCompactItemize}
+
+
+\subsection{Macro Definition Documentation}
+\index{rng/common/param\-\_\-reader.\-c@{rng/common/param\-\_\-reader.\-c}!L\-I\-N\-E\-\_\-\-D\-I\-M@{L\-I\-N\-E\-\_\-\-D\-I\-M}}
+\index{L\-I\-N\-E\-\_\-\-D\-I\-M@{L\-I\-N\-E\-\_\-\-D\-I\-M}!rng/common/param_reader.c@{rng/common/param\-\_\-reader.\-c}}
+\subsubsection[{L\-I\-N\-E\-\_\-\-D\-I\-M}]{\setlength{\rightskip}{0pt plus 5cm}\#define L\-I\-N\-E\-\_\-\-D\-I\-M~1000}\label{rng_2common_2param__reader_8c_a7d2d24512e1704eaf046667bee38b7ef}
+
+
+Definition at line 14 of file rng/common/param\-\_\-reader.\-c.
+
+
+
+\subsection{Function Documentation}
+\index{rng/common/param\-\_\-reader.\-c@{rng/common/param\-\_\-reader.\-c}!get\-\_\-parameter@{get\-\_\-parameter}}
+\index{get\-\_\-parameter@{get\-\_\-parameter}!rng/common/param_reader.c@{rng/common/param\-\_\-reader.\-c}}
+\subsubsection[{get\-\_\-parameter}]{\setlength{\rightskip}{0pt plus 5cm}char$\ast$ get\-\_\-parameter (
+\begin{DoxyParamCaption}
+\item[{const char $\ast$}]{File\-Name, }
+\item[{char $\ast$}]{Variable\-Name, }
+\item[{int}]{attr, }
+\item[{int $\ast$}]{ok}
+\end{DoxyParamCaption}
+)}\label{rng_2common_2param__reader_8c_ab3cc75c29a38da58b8a99b6f65096891}
+\index{rng/common/param\-\_\-reader.\-c@{rng/common/param\-\_\-reader.\-c}!param\-\_\-reader@{param\-\_\-reader}}
+\index{param\-\_\-reader@{param\-\_\-reader}!rng/common/param_reader.c@{rng/common/param\-\_\-reader.\-c}}
+\subsubsection[{param\-\_\-reader}]{\setlength{\rightskip}{0pt plus 5cm}int param\-\_\-reader (
+\begin{DoxyParamCaption}
+\item[{char $\ast$}]{params\-\_\-file, }
+\item[{int $\ast$}]{pixchoice, }
+\item[{s2hat\-\_\-pixparameters $\ast$}]{pixpar, }
+\item[{int $\ast$}]{lmax, }
+\item[{int $\ast$}]{nmaps, }
+\item[{int $\ast$}]{nstokes, }
+\item[{double}]{zbounds\mbox{[}2\mbox{]}, }
+\item[{char $\ast$}]{w8, }
+\item[{char $\ast$}]{input\-\_\-spectra, }
+\item[{int $\ast$}]{seed\-\_\-par, }
+\item[{int $\ast$}]{corrtype, }
+\item[{int $\ast$}]{nlmax, }
+\item[{int $\ast$}]{nmmax, }
+\item[{int $\ast$}]{nspec, }
+\item[{int $\ast$}]{write\-\_\-unlensed\-\_\-map, }
+\item[{int $\ast$}]{write\-\_\-displacement\-\_\-map, }
+\item[{int $\ast$}]{write\-\_\-lensed\-\_\-map, }
+\item[{int $\ast$}]{output\-\_\-nside, }
+\item[{int $\ast$}]{write\-\_\-healpix\-\_\-lensed, }
+\item[{int $\ast$}]{write\-\_\-healpix\-\_\-unlensed, }
+\item[{int $\ast$}]{write\-\_\-healpix\-\_\-displacement, }
+\item[{int $\ast$}]{write\-\_\-unlensed\-\_\-spectra, }
+\item[{int $\ast$}]{write\-\_\-displacement\-\_\-spectra, }
+\item[{int $\ast$}]{cambformat, }
+\item[{char $\ast$}]{total\-\_\-spectra, }
+\item[{char $\ast$}]{out\-\_\-file, }
+\item[{int}]{myrank, }
+\item[{int}]{root, }
+\item[{M\-P\-I\-\_\-\-Comm}]{current\-\_\-comm}
+\end{DoxyParamCaption}
+)}\label{rng_2common_2param__reader_8c_a990ccd7e0b3352322502e77838c159d7}
+
+
+Definition at line 18 of file rng/common/param\-\_\-reader.\-c.
+
+\index{rng/common/param\-\_\-reader.\-c@{rng/common/param\-\_\-reader.\-c}!my\-Error\-Check@{my\-Error\-Check}}
+\index{my\-Error\-Check@{my\-Error\-Check}!rng/common/param_reader.c@{rng/common/param\-\_\-reader.\-c}}
+\subsubsection[{my\-Error\-Check}]{\setlength{\rightskip}{0pt plus 5cm}int my\-Error\-Check (
+\begin{DoxyParamCaption}
+\item[{int}]{pe, }
+\item[{char $\ast$}]{file\-Name, }
+\item[{int}]{line, }
+\item[{char $\ast$}]{string, }
+\item[{int}]{ok, }
+\item[{int}]{flag}
+\end{DoxyParamCaption}
+)}\label{rng_2common_2param__reader_8c_a70bcbd531a6e4abc62d73f5b4532c2cc}
+
+
+Definition at line 327 of file rng/common/param\-\_\-reader.\-c.
+

@@ -1,0 +1,197 @@
+\section{toeplitz\-\_\-utils.\-c File Reference}
+\label{toeplitz__utils_8c}\index{toeplitz\-\_\-utils.\-c@{toeplitz\-\_\-utils.\-c}}
+
+
+Contains a set of utilitaries routines for Toeplitz algebra.  
+
+
+{\ttfamily \#include \char`\"{}toeplitz.\-h\char`\"{}}\\*
+\subsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+int \hyperlink{toeplitz__utils_8c_a080c7fa4d4c35aef9389d777fe2625be}{define\-Tpltz} (Tpltz $\ast$Nm1, int64\-\_\-t nrow, int m\-\_\-cw, int m\-\_\-rw, Block $\ast$tpltzblocks, int nb\-\_\-blocks\-\_\-loc, int nb\-\_\-blocks\-\_\-tot, int64\-\_\-t idp, int local\-\_\-\-V\-\_\-size, Flag flag\-\_\-stgy, M\-P\-I\-\_\-\-Comm comm)
+\item 
+int \hyperlink{toeplitz__utils_8c_ae35e762f7f467f3c2e5ae4a10eee1569}{define\-Blocks\-\_\-avg} (Block $\ast$tpltzblocks, double $\ast$T, int nb\-\_\-blocks\-\_\-loc, int n\-\_\-block\-\_\-avg, int lambda\-\_\-block\-\_\-avg, int64\-\_\-t id0)
+\item 
+int \hyperlink{toeplitz__utils_8c_afd66a4b165e762bcdd42fab1c1b9a305}{create\-Random\-T} (double $\ast$T, int Tsize)
+\item 
+int \hyperlink{toeplitz__utils_8c_adb3085be919676c8abdbe1ba1dc1d53a}{create\-Tbasic1} (double $\ast$T, int Tsize)
+\item 
+int \hyperlink{toeplitz__utils_8c_a5fc110e6ebd713ac93ed3e3b115f3c54}{create\-Tbasic2} (double $\ast$T, int Tsize)
+\item 
+int \hyperlink{toeplitz__utils_8c_adb00a5dd5479deac50815f8d4d67ad46}{create\-Tbasic3} (double $\ast$T, int Tsize)
+\item 
+int \hyperlink{toeplitz__utils_8c_a795d607f44bc2ad76baddb3f600acb46}{create\-Tfrominvtt} (double $\ast$T, int Tsize)
+\end{DoxyCompactItemize}
+\subsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+int \hyperlink{toeplitz__utils_8c_a300d52d9923297872ffb24962a0f0ce6}{P\-R\-I\-N\-T\-\_\-\-R\-A\-N\-K}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Contains a set of utilitaries routines for Toeplitz algebra. version 1.\-2b, July 2012 \begin{DoxyAuthor}{Author}
+Frederic Dauvergne
+\end{DoxyAuthor}
+Project\-: Midapack library, A\-N\-R M\-I\-D\-A\-S'09 -\/ Toeplitz Algebra module Purpose\-: Provide Toeplitz algebra tools suitable for Cosmic Microwave Background (C\-M\-B) data analysis.
+
+\begin{DoxyNote}{Note}
+Copyright (c) 2010-\/2012 A\-P\-C C\-N\-R\-S Université Paris Diderot 
+
+
+
+This program is free software; you can redistribute it and/or modify it under the terms 
+
+of the G\-N\-U Lesser General Public License as published by the Free Software Foundation; 
+
+either version 3 of the License, or (at your option) any later version. This program is 
+
+distributed in the hope that it will be useful, but W\-I\-T\-H\-O\-U\-T A\-N\-Y W\-A\-R\-R\-A\-N\-T\-Y; without even 
+
+the implied warranty of M\-E\-R\-C\-H\-A\-N\-T\-A\-B\-I\-L\-I\-T\-Y or F\-I\-T\-N\-E\-S\-S F\-O\-R A P\-A\-R\-T\-I\-C\-U\-L\-A\-R P\-U\-R\-P\-O\-S\-E. See the G\-N\-U 
+
+Lesser General Public License for more details. 
+
+
+
+You should have received a copy of the G\-N\-U Lesser General Public License along with this 
+
+program; if not, see \href{http://www.gnu.org/licenses/lgpl.html}{\tt http\-://www.\-gnu.\-org/licenses/lgpl.\-html} 
+
+For more information about A\-N\-R M\-I\-D\-A\-S'09 project see \-: 
+
+\href{http://www.apc.univ-paris7.fr/APC_CS/Recherche/Adamis/MIDAS09/index.html}{\tt http\-://www.\-apc.\-univ-\/paris7.\-fr/\-A\-P\-C\-\_\-\-C\-S/\-Recherche/\-Adamis/\-M\-I\-D\-A\-S09/index.\-html} 
+
+A\-C\-K\-N\-O\-W\-L\-E\-D\-G\-M\-E\-N\-T\-: This work has been supported in part by the French National Research 
+
+Agency (A\-N\-R) through C\-O\-S\-I\-N\-U\-S program (project M\-I\-D\-A\-S no. A\-N\-R-\/09-\/\-C\-O\-S\-I-\/009).
+\end{DoxyNote}
+Log\-: toeplitz$\ast$.c
+
+Revision 1.\-0b 2012/05/07 Frederic Dauvergne (A\-P\-C) Official release 1.\-0beta. The first installement of the library is the Toeplitz algebra module.
+
+Revision 1.\-1b 2012/07/-\/ Frederic Dauvergne (A\-P\-C)
+\begin{DoxyItemize}
+\item mpi\-\_\-stbmm allows now rowi-\/wise order per process datas and no-\/blocking communications.
+\item O\-M\-P improvment for optimal cpu time.
+\item bug fixed for O\-M\-P in the stmm\-\_\-basic routine.
+\item distcorrmin is used to communicate only lambda-\/1 datas when it is needed.
+\item new reshaping routines using transformation functions in stmm. Thus, only one copy at most is needed.
+\item tpltz\-\_\-init improvement using define\-\_\-nfft and define\-\_\-blocksize routines.
+\item add Block struture to define each Toeplitz block.
+\item add Flag structure and preprocessing parameters to define the computational strategy. All the flag parameters are then available directly from the A\-P\-I. 
+\end{DoxyItemize}
+
+Definition in file \hyperlink{toeplitz__utils_8c_source}{toeplitz\-\_\-utils.\-c}.
+
+
+
+\subsection{Function Documentation}
+\index{toeplitz\-\_\-utils.\-c@{toeplitz\-\_\-utils.\-c}!define\-Tpltz@{define\-Tpltz}}
+\index{define\-Tpltz@{define\-Tpltz}!toeplitz_utils.c@{toeplitz\-\_\-utils.\-c}}
+\subsubsection[{define\-Tpltz}]{\setlength{\rightskip}{0pt plus 5cm}int define\-Tpltz (
+\begin{DoxyParamCaption}
+\item[{Tpltz $\ast$}]{Nm1, }
+\item[{int64\-\_\-t}]{nrow, }
+\item[{int}]{m\-\_\-cw, }
+\item[{int}]{m\-\_\-rw, }
+\item[{Block $\ast$}]{tpltzblocks, }
+\item[{int}]{nb\-\_\-blocks\-\_\-loc, }
+\item[{int}]{nb\-\_\-blocks\-\_\-tot, }
+\item[{int64\-\_\-t}]{idp, }
+\item[{int}]{local\-\_\-\-V\-\_\-size, }
+\item[{Flag}]{flag\-\_\-stgy, }
+\item[{M\-P\-I\-\_\-\-Comm}]{comm}
+\end{DoxyParamCaption}
+)}\label{toeplitz__utils_8c_a080c7fa4d4c35aef9389d777fe2625be}
+
+
+Definition at line 55 of file toeplitz\-\_\-utils.\-c.
+
+\index{toeplitz\-\_\-utils.\-c@{toeplitz\-\_\-utils.\-c}!define\-Blocks\-\_\-avg@{define\-Blocks\-\_\-avg}}
+\index{define\-Blocks\-\_\-avg@{define\-Blocks\-\_\-avg}!toeplitz_utils.c@{toeplitz\-\_\-utils.\-c}}
+\subsubsection[{define\-Blocks\-\_\-avg}]{\setlength{\rightskip}{0pt plus 5cm}int define\-Blocks\-\_\-avg (
+\begin{DoxyParamCaption}
+\item[{Block $\ast$}]{tpltzblocks, }
+\item[{double $\ast$}]{T, }
+\item[{int}]{nb\-\_\-blocks\-\_\-loc, }
+\item[{int}]{n\-\_\-block\-\_\-avg, }
+\item[{int}]{lambda\-\_\-block\-\_\-avg, }
+\item[{int64\-\_\-t}]{id0}
+\end{DoxyParamCaption}
+)}\label{toeplitz__utils_8c_ae35e762f7f467f3c2e5ae4a10eee1569}
+
+
+Definition at line 75 of file toeplitz\-\_\-utils.\-c.
+
+\index{toeplitz\-\_\-utils.\-c@{toeplitz\-\_\-utils.\-c}!create\-Random\-T@{create\-Random\-T}}
+\index{create\-Random\-T@{create\-Random\-T}!toeplitz_utils.c@{toeplitz\-\_\-utils.\-c}}
+\subsubsection[{create\-Random\-T}]{\setlength{\rightskip}{0pt plus 5cm}int create\-Random\-T (
+\begin{DoxyParamCaption}
+\item[{double $\ast$}]{T, }
+\item[{int}]{Tsize}
+\end{DoxyParamCaption}
+)}\label{toeplitz__utils_8c_afd66a4b165e762bcdd42fab1c1b9a305}
+
+
+Definition at line 103 of file toeplitz\-\_\-utils.\-c.
+
+\index{toeplitz\-\_\-utils.\-c@{toeplitz\-\_\-utils.\-c}!create\-Tbasic1@{create\-Tbasic1}}
+\index{create\-Tbasic1@{create\-Tbasic1}!toeplitz_utils.c@{toeplitz\-\_\-utils.\-c}}
+\subsubsection[{create\-Tbasic1}]{\setlength{\rightskip}{0pt plus 5cm}int create\-Tbasic1 (
+\begin{DoxyParamCaption}
+\item[{double $\ast$}]{T, }
+\item[{int}]{Tsize}
+\end{DoxyParamCaption}
+)}\label{toeplitz__utils_8c_adb3085be919676c8abdbe1ba1dc1d53a}
+
+
+Definition at line 118 of file toeplitz\-\_\-utils.\-c.
+
+\index{toeplitz\-\_\-utils.\-c@{toeplitz\-\_\-utils.\-c}!create\-Tbasic2@{create\-Tbasic2}}
+\index{create\-Tbasic2@{create\-Tbasic2}!toeplitz_utils.c@{toeplitz\-\_\-utils.\-c}}
+\subsubsection[{create\-Tbasic2}]{\setlength{\rightskip}{0pt plus 5cm}int create\-Tbasic2 (
+\begin{DoxyParamCaption}
+\item[{double $\ast$}]{T, }
+\item[{int}]{Tsize}
+\end{DoxyParamCaption}
+)}\label{toeplitz__utils_8c_a5fc110e6ebd713ac93ed3e3b115f3c54}
+
+
+Definition at line 133 of file toeplitz\-\_\-utils.\-c.
+
+\index{toeplitz\-\_\-utils.\-c@{toeplitz\-\_\-utils.\-c}!create\-Tbasic3@{create\-Tbasic3}}
+\index{create\-Tbasic3@{create\-Tbasic3}!toeplitz_utils.c@{toeplitz\-\_\-utils.\-c}}
+\subsubsection[{create\-Tbasic3}]{\setlength{\rightskip}{0pt plus 5cm}int create\-Tbasic3 (
+\begin{DoxyParamCaption}
+\item[{double $\ast$}]{T, }
+\item[{int}]{Tsize}
+\end{DoxyParamCaption}
+)}\label{toeplitz__utils_8c_adb00a5dd5479deac50815f8d4d67ad46}
+
+
+Definition at line 155 of file toeplitz\-\_\-utils.\-c.
+
+\index{toeplitz\-\_\-utils.\-c@{toeplitz\-\_\-utils.\-c}!create\-Tfrominvtt@{create\-Tfrominvtt}}
+\index{create\-Tfrominvtt@{create\-Tfrominvtt}!toeplitz_utils.c@{toeplitz\-\_\-utils.\-c}}
+\subsubsection[{create\-Tfrominvtt}]{\setlength{\rightskip}{0pt plus 5cm}int create\-Tfrominvtt (
+\begin{DoxyParamCaption}
+\item[{double $\ast$}]{T, }
+\item[{int}]{Tsize}
+\end{DoxyParamCaption}
+)}\label{toeplitz__utils_8c_a795d607f44bc2ad76baddb3f600acb46}
+
+
+Definition at line 178 of file toeplitz\-\_\-utils.\-c.
+
+
+
+\subsection{Variable Documentation}
+\index{toeplitz\-\_\-utils.\-c@{toeplitz\-\_\-utils.\-c}!P\-R\-I\-N\-T\-\_\-\-R\-A\-N\-K@{P\-R\-I\-N\-T\-\_\-\-R\-A\-N\-K}}
+\index{P\-R\-I\-N\-T\-\_\-\-R\-A\-N\-K@{P\-R\-I\-N\-T\-\_\-\-R\-A\-N\-K}!toeplitz_utils.c@{toeplitz\-\_\-utils.\-c}}
+\subsubsection[{P\-R\-I\-N\-T\-\_\-\-R\-A\-N\-K}]{\setlength{\rightskip}{0pt plus 5cm}int P\-R\-I\-N\-T\-\_\-\-R\-A\-N\-K}\label{toeplitz__utils_8c_a300d52d9923297872ffb24962a0f0ce6}
+
+
+Definition at line 82 of file toeplitz.\-c.
+
