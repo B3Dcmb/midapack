@@ -1,23 +1,25 @@
-PROJECT = /global/u1/s/scayrols/Sources/
-DIR = /scratch1/scratchdirs/radek/from_seb/mapmaking/
+DIR = /global/homes/e/elbouha/midapack
 MAPMAT = $(DIR)/src/mapmat/
-F90 =  ftn
+F90 = ftn
 GCC = gcc
-MPICC = mpicc
+# MPICC = /global/homes/e/elbouha/.conda/envs/hamzaenv/bin/mpicc
+MPICC = cc
 OPT =  -D W_MPI -D W_OPENMP -O3
-CC =  cc -openmp $(OPT)
-INC = -I$(DIR)/include -I -L
+CC = $(MPICC) -qopenmp $(OPT)
+INC = -I$(DIR)/include -I/opt/cray/pe/fftw/3.3.6.2/haswell/include
 LIB = -L$(DIR)/lib -lmidapack
 #supplementary libraries
-PTSCOTCH_INC = -I$(HOME)/scotch_5.1.12/include/
-HEALPIX_INC = -I$(PROJECT)/Healpix_3.20/include 
-CFITSIO_INC = -I$(PROJECT)/cfitsio/include 
+# PTSCOTCH_INC = -I$(HOME)/scotch_5.1.12/include/
+HEALPIX_INC = -I$(HOME)/Healpix_3.31/include
+CFITSIO_INC = -I/usr/common/software/cfitsio/3.370-reentrant/hsw/intel/include
 
-PTSCOTCH_LIB = -L$(HOME)/scotch_5.1.12/lib/ -lptscotch -lptscotcherr
-HEALPIX_LIB = -L$(PROJECT)/Healpix_3.20/lib -lchealpix -lhealpix
-CFITSIO_LIB = -L$(PROJECT)/cfitsio/lib -lcfitsio
-HDF5_LIB = -L/usr/lib/ -lhdf5
-
+# PTSCOTCH_LIB = -L$(HOME)/scotch_5.1.12/lib/ -lptscotch -lptscotcherr
+HEALPIX_LIB = -L$(HOME)/Healpix_3.31/lib -lchealpix -lhealpix
+CFITSIO_LIB = -L/usr/common/software/cfitsio/3.370-reentrant/hsw/intel/lib -lcfitsio
+# HDF5_LIB = -L/usr/lib/ -lhdf5
+# -lm -L/usr/lib64/gcc/x86_64-suse-linux/4.8/
+INTEL_DIR = /opt/intel/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64/
+INTEL_LIB = $(INTEL_DIR)libsvml.a $(INTEL_DIR)libirc.a $(INTEL_DIR)libimf.a $(INTEL_DIR)libifcore.a $(INTEL_DIR)libiomp5.a
 ##############################################
 all:
 	make test
@@ -36,12 +38,12 @@ cg.o: cg.c
 ##############################################
 test: $(MAPMAT)
 	@echo "start compiling tests ........"
-	make test_als        
-	make test_alm        
-	make test_cindex       
-	make test_csort       
-	make test_ring     
-	make test_butterfly     
+	make test_als
+	make test_alm
+	make test_cindex
+	make test_csort
+	make test_ring
+	make test_butterfly
 
 
 test_als: $(MAPMAT)
@@ -50,13 +52,13 @@ test_als: $(MAPMAT)
 	$(CC) test_als_2.c $(INC) $(LIB) -o als_2
 	$(CC) test_als_3.c $(INC) $(LIB) -o als_3
 
-test_alm: $(MAPMAT) 
+test_alm: $(MAPMAT)
 	$(CC) test_alm_0.c $(INC) $(LIB) -o alm_0
 
-test_cindex: $(MAPMAT) 
+test_cindex: $(MAPMAT)
 	$(CC) test_cindex_0.c $(INC) $(LIB) -o cindex_0
 
-test_csort: $(MAPMAT) test_csort_0.c test_csort_1.c 
+test_csort: $(MAPMAT) test_csort_0.c test_csort_1.c
 	$(CC) test_csort_0.c $(INC) $(LIB) -o csort_0
 	$(CC) test_csort_1.c $(INC) $(LIB) -o csort_1
 
@@ -70,12 +72,12 @@ test_butterfly: $(MAPMAT)
 
 ##############################################
 example: $(MAPMAT)
-	make sky_scan_loop       
-#	make sky_scan
-#	make test_init_mapmat
-#	make test_cg_mapmat
-#	make test_init_mapmatc
-#	make test_cg_mapmatc       
+	make sky_scan_loop
+	make sky_scan
+	# make test_init_mapmat
+	# make test_cg_mapmat
+	# make test_init_mapmatc
+	# make test_cg_mapmatc
 
 test_init_mapmat: $(MAPMAT) fem1D.c algo.o multiI.c test_spI_mapmat.c
 	$(CC) fem1D.c $(INC) $(LIB) algo.o -o fem1D
@@ -83,30 +85,28 @@ test_init_mapmat: $(MAPMAT) fem1D.c algo.o multiI.c test_spI_mapmat.c
 	$(CC) -o test_spI_mapmat test_spI_mapmat.c $(INC) $(LIB) algo.o -o spI_mat
 
 test_cg_mapmat: $(MAPMAT) test_rand_mapmat.c cg.o
-	$(CC) test_rand_mat_0.c cg.o $(INC) $(LIB) -o rand_mat_0 
-	$(CC) test_diags_mat_0.c cg.o $(INC) $(LIB)  -o diags_mat_0 
+	$(CC) test_rand_mat_0.c cg.o $(INC) $(LIB) -o rand_mat_0
+	$(CC) test_diags_mat_0.c cg.o $(INC) $(LIB)  -o diags_mat_0
 
-test_init_mapmatc: $(MAPMAT) algo.o 
+test_init_mapmatc: $(MAPMAT) algo.o
 	@echo 'nothing to do'
 
 test_cg_mapmatc: $(MAPMAT) test_rand_mapmat.c cg.o
-	$(CC) test_rand_matc.c cg.o $(INC) $(LIB) -o rand_matc 
-	$(CC) test_diags_matc.c cg.o $(INC) $(LIB)  -o diags_matc 
+	$(CC) test_rand_matc.c cg.o $(INC) $(LIB) -o rand_matc
+	$(CC) test_diags_matc.c cg.o $(INC) $(LIB)  -o diags_matc
 
 test_spI_mapmat: $(MAPMAT)mapmat.o test_spI_mapmat.c
 
 sky_scan : sky_scan.c $(MAPMAT) algo.o map2gif.o
-	$(CC) sky_scan.c -o sky_scan $(HEALPIX_INC) $(INC) $(LIB) algo.o map2gif.o -lm -L/usr/lib/gcc/x86_64-linux-gnu/4.4.4/ -lifcore $(HEALPIX_LIB) -lhpxgif -lgif $(CFITSIO_LIB) 
+	$(CC) sky_scan.c -o sky_scan $(HEALPIX_INC) $(INC) $(LIB) algo.o map2gif.o -lintlc -Wl,--start-group $(INTEL_LIB) $(HEALPIX_LIB) -lhpxgif -lgif $(CFITSIO_LIB) -Wl,--end-group
 sky_scan_loop : sky_scan_loop.c $(MAPMAT) algo.o map2gif.o
-	$(CC) sky_scan_loop.c -o sky_scan_loop $(HEALPIX_INC) $(INC) $(LIB) algo.o map2gif.o -lm -L/usr/lib/gcc/x86_64-linux-gnu/4.4.4/ -lifcore $(HEALPIX_LIB) -lhpxgif -lgif $(CFITSIO_LIB) 
+	$(CC) sky_scan_loop.c -o sky_scan_loop $(HEALPIX_INC) $(INC) $(LIB) algo.o map2gif.o -lintlc -Wl,--start-group $(INTEL_LIB) $(HEALPIX_LIB) -lhpxgif -lgif $(CFITSIO_LIB) -Wl,--end-group
 
-map2gif.o : map2gif.f90 
-	$(F90) -c map2gif.f90 -o map2gif.o $(HEALPIX_INC)  
+map2gif.o : map2gif.f90
+	$(F90) -c map2gif.f90 -o map2gif.o $(HEALPIX_INC)
 
 
 
 
 clean :
 	rm -f *.o ;
-
-
