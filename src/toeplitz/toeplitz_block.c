@@ -1,27 +1,27 @@
 /**
-@file toeplitz_block.c version 1.1b, July 2012  
+@file toeplitz_block.c version 1.1b, July 2012
 @brief Contains routines related to the Toeplitz blocks diagonal routine for Toeplitz algebra
 @author  Frederic Dauvergne, Radek Stompor
-**  
+**
 ** Project:  Midapack library, ANR MIDAS'09 - Toeplitz Algebra module
 ** Purpose:  Provide Toeplitz algebra tools suitable for Cosmic Microwave Background (CMB)
 **           data analysis.
 **
 ***************************************************************************
 @note Copyright (c) 2010-2012 APC CNRS Université Paris Diderot
-@note 
+@note
 @note This program is free software; you can redistribute it and/or modify it under the terms
-@note of the GNU Lesser General Public License as published by the Free Software Foundation; 
+@note of the GNU Lesser General Public License as published by the Free Software Foundation;
 @note either version 3 of the License, or (at your option) any later version. This program is
-@note distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even 
+@note distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
 @note the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
 @note Lesser General Public License for more details.
-@note 
+@note
 @note You should have received a copy of the GNU Lesser General Public License along with this
 @note program; if not, see http://www.gnu.org/licenses/lgpl.html
 @note For more information about ANR MIDAS'09 project see :
 @note http://www.apc.univ-paris7.fr/APC_CS/Recherche/Adamis/MIDAS09/index.html
-@note ACKNOWLEDGMENT: This work has been supported in part by the French National Research 
+@note ACKNOWLEDGMENT: This work has been supported in part by the French National Research
 @note Agency (ANR) through COSINUS program (project MIDAS no. ANR-09-COSI-009).
 ***************************************************************************
 ** Log: toeplitz*.c
@@ -35,7 +35,7 @@
 ** - OMP improvment for optimal cpu time.
 ** - bug fixed for OMP in the stmm_basic routine.
 ** - distcorrmin is used to communicate only lambda-1 datas when it is needed.
-** - new reshaping routines using transformation functions in stmm. Thus, only one copy 
+** - new reshaping routines using transformation functions in stmm. Thus, only one copy
 **   at most is needed.
 ** - tpltz_init improvement using define_nfft and define_blocksize routines.
 ** - add Block struture to define each Toeplitz block.
@@ -58,31 +58,31 @@
 
 //=========================================================================
 #ifdef W_MPI
-/// Performs the multiplication of a symmetric, Toeplitz block-diagonal matrix, T, by an arbitrary matrix, V, distributed over processes in the generalized column-wise way. 
+/// Performs the multiplication of a symmetric, Toeplitz block-diagonal matrix, T, by an arbitrary matrix, V, distributed over processes in the generalized column-wise way.
 /** @ingroup group12
     Each process performs the multiplication sequentially for each diagonal block and based on
-    the sliding window algorithm. Prior to that MPI calls are used to exchange data between 
+    the sliding window algorithm. Prior to that MPI calls are used to exchange data between
     neighboring process. Each of the diagonal blocks is a symmetric, band-diagonal Toeplitz
     matrix, which can be different for each block.
     The parameters are :
     \param V \b [input] distributed data matrix (with the convention V(i,j)=V[i+j*n]) ;
              \b [out] result of the product TV
     \param nrow number of rows of the global data matrix V
-    \param m number of columns for the data matrix V in the global rowwise order 
-    \param m_rowwise number of columns for the data matrix V in the rowwise order per processor 
-    \param tpltzblocks list of the toeplitz blocks struture with its own parameters 
+    \param m number of columns for the data matrix V in the global rowwise order
+    \param m_rowwise number of columns for the data matrix V in the rowwise order per processor
+    \param tpltzblocks list of the toeplitz blocks struture with its own parameters
     (idv, n, T_block, lambda) :
     - idv is the global row index defining for each Toeplitz block as stored in the vector T ;
     - n size of each Toeplitz block
     - T_block location of each Toeplitz matrix data composed of the non-zero entries of the first
     row ;
-    - lambda size of each Toeplitz block data T_block. The bandwith size is then equal to lambda*2-1 
+    - lambda size of each Toeplitz block data T_block. The bandwith size is then equal to lambda*2-1
     \param nb_blocks_all number of all Toeplitz block on the diagonal of the full Toeplitz matrix
-    \param nb_blocks_local number of Toeplitz blocks as stored in T 
+    \param nb_blocks_local number of Toeplitz blocks as stored in T
     \param idp global index of the first element of the local part of V
     \param local_V_size a number of all elements in local V
     \param flag_stgy flag strategy for the product computation
-    \param comm MPI communicator 
+    \param comm MPI communicator
 */
 int mpi_stbmm(double **V, int64_t nrow, int m, int m_rowwise, Block *tpltzblocks, int nb_blocks_local, int nb_blocks_all, int64_t idp, int local_V_size, Flag flag_stgy, MPI_Comm comm)
 {
@@ -92,9 +92,9 @@ int mpi_stbmm(double **V, int64_t nrow, int m, int m_rowwise, Block *tpltzblocks
 #endif
 
 
-  //MPI parameters 
-  int rank;   //process rank 
-  int size;   //process number 
+  //MPI parameters
+  int rank;   //process rank
+  int size;   //process number
 
 #ifdef W_MPI
   MPI_Status status;
@@ -125,7 +125,7 @@ int mpi_stbmm(double **V, int64_t nrow, int m, int m_rowwise, Block *tpltzblocks
   int *nnew;
   nnew = (int*) calloc(nb_blocks_local, sizeof(int));
   int64_t idpnew;
-  int local_V_size_new;  
+  int local_V_size_new;
   int n_rowwise=local_V_size;
 
   int status_params = get_overlapping_blocks_params( nb_blocks_local, tpltzblocks, local_V_size, nrow, idp, &idpnew, &local_V_size_new, nnew, &idv0, &idvn);
@@ -162,10 +162,10 @@ int mpi_stbmm(double **V, int64_t nrow, int m, int m_rowwise, Block *tpltzblocks
   int idvmn = (idpnew+local_V_size_new-1)/nrow;
   //number of columns of V for the current process
   int ncol_rank = idvmn-idvm0+1;
-  //number of blocks for the current process with possibly repetitions 
+  //number of blocks for the current process with possibly repetitions
   int nb_blocks_rank;
 
-  if(ncol_rank == 1) // Empty process not allowed 
+  if(ncol_rank == 1) // Empty process not allowed
     nb_blocks_rank = idvn - idv0 + 1;
   else
     nb_blocks_rank = (ncol_rank-2)*nb_blocks_local + (nb_blocks_local-idv0) + (idvn+1);  //in this case nb_blocks_local = nblocs_all
@@ -185,10 +185,10 @@ int mpi_stbmm(double **V, int64_t nrow, int m, int m_rowwise, Block *tpltzblocks
   int distcorrmin_idv0 = (tpltzblocks[idv0].lambda)-1;
   int distcorrmin_idvn = (tpltzblocks[idvn].lambda)-1;
 
-  //if(idvp0 != 0) 
-    offset0 = min( idvp0, distcorrmin_idv0); 
-  //if(idvpn != 0) 
-    offsetn = min(idvpn, distcorrmin_idvn);  
+  //if(idvp0 != 0)
+    offset0 = min( idvp0, distcorrmin_idv0);
+  //if(idvpn != 0)
+    offsetn = min(idvpn, distcorrmin_idvn);
 
 
   int toSendLeft=0;
@@ -196,10 +196,10 @@ int mpi_stbmm(double **V, int64_t nrow, int m, int m_rowwise, Block *tpltzblocks
 
 #ifdef W_MPI
   if(offset0!=0) {
-    toSendLeft = min( tpltzblocks[idv0].idv+nnew[idv0]-idpnew%nrow, distcorrmin_idv0); 
+    toSendLeft = min( tpltzblocks[idv0].idv+nnew[idv0]-idpnew%nrow, distcorrmin_idv0);
   }
   if( offsetn != 0) {
-    toSendRight = min( (idpnew+local_V_size_new)%nrow-tpltzblocks[idvn].idv, distcorrmin_idvn); 
+    toSendRight = min( (idpnew+local_V_size_new)%nrow-tpltzblocks[idvn].idv, distcorrmin_idvn);
   }
 
  int flag_optimlambda=1; //to allocate only the memory place needed
@@ -213,7 +213,7 @@ int mpi_stbmm(double **V, int64_t nrow, int m, int m_rowwise, Block *tpltzblocks
   LambdaOut=(double *) calloc((toSendLeft+toSendRight)*m_rowwise, sizeof(double));
   lambdaOut_offset = toSendLeft*m_rowwise;
   lambdaIn_offset = offset0*m_rowwise;
-  lambdaOut_size = (toSendLeft+toSendRight)*m_rowwise ; 
+  lambdaOut_size = (toSendLeft+toSendRight)*m_rowwise ;
   lambdaIn_size = (offset0+offsetn)*m_rowwise;
  }
  else {
@@ -228,8 +228,8 @@ int mpi_stbmm(double **V, int64_t nrow, int m, int m_rowwise, Block *tpltzblocks
   if(offset0!=0) {
     for (j=0;j<m_rowwise;j++)
     for (i=0;i<toSendLeft;i++)
-      LambdaOut[i+j*toSendLeft]=(*V)[i+j*n_rowwise]; //good because toSendLeft=0 if it 
-  }                                                   //doesnt start on a the first block. 
+      LambdaOut[i+j*toSendLeft]=(*V)[i+j*n_rowwise]; //good because toSendLeft=0 if it
+  }                                                   //doesnt start on a the first block.
   if( offsetn != 0) {
     for (j=0;j<m_rowwise;j++)
     for (i=0;i<toSendRight;i++)
@@ -273,7 +273,7 @@ int mpi_stbmm(double **V, int64_t nrow, int m, int m_rowwise, Block *tpltzblocks
 
 //size of the first and the last block for the current process
   int v0rank_size, vnrank_size;
-  if (nb_blocks_rank == 1) {  //only one block 
+  if (nb_blocks_rank == 1) {  //only one block
     v0rank_size = ((idpnew+local_V_size_new-1)%nrow +1) - idpnew%nrow + offset0 + offsetn;
     vnrank_size = 0; //just for convenience - no really need it
   }
@@ -304,7 +304,7 @@ if (flag_blockingcomm!=1) {
 //initialization for the blocks loop
 
   int idv1=0;     //old index of *V1
-  int idv2=0;     //index 
+  int idv2=0;     //index
 
 
   int mid;  //local number of column for the current block
@@ -352,7 +352,7 @@ if (flag_blockingcomm!=1) {
 
   V1block = (double *) calloc(vblock_size*m_rowwise, sizeof(double));
 
-  for (j=0;j<m_rowwise;j++) { 
+  for (j=0;j<m_rowwise;j++) {
 #pragma omp parallel for //num_threads(NB_OMPTHREADS_STBMM)
   for (i=0;i<offset0;i++)
     V1block[i+j*vblock_size] = LambdaIn[i+j*offset0];
@@ -491,7 +491,7 @@ if (nb_blocks_rank == 1) {
   tpltz_cleanup(&T_fft, &V_fft, &V_rfft, &plan_f, &plan_b);
 
   for (j=0;j<m_rowwise;j++) {
-#pragma omp parallel for //num_threads(NB_OMPTHREADS_STBMM)                      
+#pragma omp parallel for //num_threads(NB_OMPTHREADS_STBMM)
   for (i=0;i<vnrank_size-offsetn;i++) {
     (*V)[idv2+i+j*n_rowwise] = V1block[i+j*vblock_size];
   }}
@@ -517,26 +517,23 @@ if (nb_blocks_rank == 1) {
 
 //====================================================================
 
-/// Select the useful flotting blocks for the local data of the current processor. 
+/// Select the useful flotting blocks for the local data of the current processor.
 /// parameters (idpnew, local_V_size_new, nnew) for the computation. ide the local
-/// range are set with a size nnew equal to zero. 
+/// range are set with a size nnew equal to zero.
 /** @ingroup group22
-    This compute the right parameters (idpnew, local_V_size_new, nnew) for the computation. 
-    All the block outside the local range are set with a size nnew equal to zero. local_V_size_new 
+    This compute the right parameters (idpnew, local_V_size_new, nnew) for the computation.
+    All the block outside the local range are set with a size nnew equal to zero. local_V_size_new
     correspond to the size without the shift between the global rank index and the global index of
     the first flotting block. idnew is then set to the index of this first flotting block.
 */
 int get_overlapping_blocks_params(int nbloc, Block *tpltzblocks, int local_V_size, int64_t nrow, int64_t idp, int64_t *idpnew, int *local_V_size_new, int *nnew, int *ifirstBlock, int *ilastBlock)
-{
-
-  int ib, nblockOK=0, nfullcol_data;
+{ int ib, nblockOK=0, nfullcol_data;
   int64_t firstrow, lastrow;
   int64_t idptmp;
 
 
 //check how many full columns input data have
   nfullcol_data = max(0, (local_V_size-(nrow-idp%nrow)%nrow-(idp+local_V_size)%nrow)/nrow );
-
 
   if( nfullcol_data > 0) {
 
@@ -548,12 +545,12 @@ int get_overlapping_blocks_params(int nbloc, Block *tpltzblocks, int local_V_siz
   }
 
   }
-  else {  //no full column observed 
+  else {  //no full column observed
 
     firstrow = idp%nrow;
     lastrow = (idp+local_V_size-1)%nrow;
 
-    if( firstrow < lastrow) {  //just one column partially observed   
+    if( firstrow < lastrow) {  //just one column partially observed
 
     for( ib=0; ib<nbloc; ib++) {
     if( (tpltzblocks[ib].idv+tpltzblocks[ib].n > firstrow) && (tpltzblocks[ib].idv < lastrow+1)) {
@@ -563,7 +560,7 @@ int get_overlapping_blocks_params(int nbloc, Block *tpltzblocks, int local_V_siz
     }
 
     }
-    else {  //two columns partially observed   
+    else {  //two columns partially observed
 
       for( ib=0; ib<nbloc; ib++) {
         if( (tpltzblocks[ib].idv + tpltzblocks[ib].n > firstrow) && (tpltzblocks[ib].idv < nrow)) {  //intersects first partial column
@@ -578,12 +575,11 @@ int get_overlapping_blocks_params(int nbloc, Block *tpltzblocks, int local_V_siz
       }
      }
   }
-
   if(PRINT_RANK==0 && VERBOSE>2)
     printf("nblockOK=%d\n", nblockOK);
 
 
-  if( nblockOK == 0) return(0);  //no blocks overlapping with the data 
+  if( nblockOK == 0) return(0);  //no blocks overlapping with the data
 
   //find the first and last relevant blocks for the begining and end of the local data  V
 
@@ -644,7 +640,3 @@ int get_overlapping_blocks_params(int nbloc, Block *tpltzblocks, int local_V_siz
 
     return(1);
 }
-
-
-
-

@@ -13,15 +13,15 @@ MODULE mapOutput
 		INTEGER(I4B) :: nside
 		REAL(SP), DIMENSION(0:12*nside**2-1) :: map
 		REAL(DP), DIMENSION(0:12*nside**2-1) :: dpmap
-   
+
 		INTEGER(I4B) :: filenamelen
 
-		CHARACTER(LEN=filenamelen) :: output_file 
-			
+		CHARACTER(LEN=filenamelen) :: output_file
+
 
 		map = dpmap !convert double precision to single precision
 
-		print *, ' nside          = ', nside 
+		print *, ' nside          = ', nside
 		print *, ' output_file    = ', output_file
 
 		call inside_map2gif(nside, map, filenamelen, output_file)
@@ -31,7 +31,7 @@ MODULE mapOutput
 	END SUBROUTINE map2gif
 
 	!! ---------------------- MAP2GIF code from HEALpix -------------------------------------
-	
+
 	SUBROUTINE inside_map2gif(nside, map, fnl, output_file)
 
 		IMPLICIT NONE
@@ -83,7 +83,7 @@ MODULE mapOutput
 		integer(i4b)       :: n_ext, i_ext, nmaps_sum, icolumn
 
 
-	
+
 		!-------------------------------------------------------------------
 
 		npixtot = 12*nside**2;
@@ -98,7 +98,7 @@ MODULE mapOutput
 
 
 		allocate(observed(0:npixtot-1),stat = status)
-		call assert_alloc(status,'map2gif','observed') 
+		call assert_alloc(status,'map2gif','observed')
 
 		!--- Test for unobserved pixels ---
 		observed = map > -1.6375e30
@@ -166,9 +166,9 @@ MODULE mapOutput
 			case ('MOL', 'mol')
 			   !--- allocate space for image and mask ---
 			   ALLOCATE(image(0:xsize-1,0:xsize/2-1),stat = status)
-			   call assert_alloc(status,'map2gif','image') 
+			   call assert_alloc(status,'map2gif','image')
 			   ALLOCATE(mask(0:xsize-1,0:xsize/2-1),stat = status)
-			   call assert_alloc(status,'map2gif','mask') 
+			   call assert_alloc(status,'map2gif','mask')
 
 			   !--- create the mollweide projection ---
 			   call proj_mollw(&

@@ -1,5 +1,5 @@
 // Midapack library
-// mapmaking code example using the Midapack library - release 1.2b, Nov 2012 
+// mapmaking code example using the Midapack library - release 1.2b, Nov 2012
 // The routine read data from binaries files and write the result in distributed binaries files
 
 /** @file   test_pcg.c
@@ -15,7 +15,7 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
-#include <midapack.h>
+#include "midapack.h"
 
 
 void usage(){
@@ -34,9 +34,9 @@ double FKNEE=0.25;
 int main(int argc, char *argv[])
 {
 
-  int		M, N, Nnz;  //Global number of rows, of columns, 
+  int		M, N, Nnz;  //Global number of rows, of columns,
                             //of non-zeros values per column for the pointing matrix A
-  int		m, n;  //local number of rows, of columns for the pointing matrix A 
+  int		m, n;  //local number of rows, of columns for the pointing matrix A
   int 		gif;			//global indice for the first local line
   int		i, j, k;
   int           K;	                //maximum number of iteration for the PCG
@@ -50,12 +50,12 @@ int main(int argc, char *argv[])
   double        alpha, beta, gamma, resold, resnew;
   double 	localreduce;
   double	st, t;		 	//timer, start time
-  int 		output, timer, info;          
-  int 		rank, size;	
-  
-  MPI_Init(&argc, &argv);               
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank); 
-  MPI_Comm_size(MPI_COMM_WORLD, &size); 
+  int 		output, timer, info;
+  int 		rank, size;
+
+  MPI_Init(&argc, &argv);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
 
 //communication scheme for the pointing matrix  (to move in .h)
   pointing_commflag=1; //2==BUTTERFLY - 1==RING
@@ -88,12 +88,12 @@ int main(int argc, char *argv[])
 //should be equal to min(m ,t_Interval_length)
 
   printf("[rank %d] size=%d \t m=%d \t t_Interval_length=%d\n", rank, size, m, t_Interval_length );
-  printf("[rank %d] Nb_t_Intervals_loc=%d \t t_Interval_length_loc=%d\n", rank, Nb_t_Intervals_loc , t_Interval_length_loc); 
+  printf("[rank %d] Nb_t_Intervals_loc=%d \t t_Interval_length_loc=%d\n", rank, Nb_t_Intervals_loc , t_Interval_length_loc);
 
 
 //input data memory allocation
-  indices  = (int *) malloc(Nnz*m * sizeof(int));     //for pointing matrix indices 
-  values  = (double *) malloc(Nnz*m * sizeof(double));//for pointing matrix values  
+  indices  = (int *) malloc(Nnz*m * sizeof(int));     //for pointing matrix indices
+  values  = (double *) malloc(Nnz*m * sizeof(double));//for pointing matrix values
   b   = (double *) malloc(m*sizeof(double));    //full raw data vector for the signal
 
 
@@ -102,12 +102,12 @@ int main(int argc, char *argv[])
 
 //Definition for the input data
   int part_id;      // stationnaly period id number
-  int *point_data;  // scann strategy input data for the pointing matrix 
+  int *point_data;  // scann strategy input data for the pointing matrix
   double *signal;   // signal input data
 
 
 //Init the pointing matrix values to unity
-  for(i=0; i<(Nnz*m); i++) 
+  for(i=0; i<(Nnz*m); i++)
     values[i] = 1.;
 
   int number_in_interval;
@@ -140,7 +140,7 @@ else { //for the case we dont need to share
 //Read the relevants raw inputs data from files distributed by stationary period
 //note: Work only for no sharing stationnary interval
 
-  for (k=0; k < Nb_t_Intervals_loc; ++k) { 
+  for (k=0; k < Nb_t_Intervals_loc; ++k) {
     point_data = indices + t_Interval_length*Nnz*k;
     signal = b + t_Interval_length*k;
 
@@ -212,7 +212,7 @@ if (rank==1) {
   int nb_blocks_tot = Nb_t_Intervals;
   int n_block_avg = M/nb_blocks_tot;  //should be equal to t_Intervals_length in this example
                                       //because we dont have flotting blocks
-  int lambda_block_avg = LambdaBlock; 
+  int lambda_block_avg = LambdaBlock;
 
 //flags for Toeplitz product strategy
   Flag flag_stgy;
@@ -231,7 +231,7 @@ if (rank==1) {
 
 //dependants parameters:
   int nrow = M;
-  int mcol = 1;  
+  int mcol = 1;
 
   int id0 = gif;
   int local_V_size = m;
@@ -240,7 +240,7 @@ if (rank==1) {
   double *T;  //toeplitz data storage
   T  = (double *) calloc(Tsize ,sizeof(double));
 
-//For one identical block 
+//For one identical block
   ioReadTpltzfile( Tsize, fknee, T);
 
 //  createT(T, Tsize);
@@ -265,7 +265,7 @@ if (rank==1) {
   int nb_comm = (nb_proc_shared_a_block)-1 ;
 
 
-//Block definition 
+//Block definition
   tpltzblocks = (Block *) malloc(nb_blocks_loc * sizeof(Block));
 
   defineBlocks_avg(tpltzblocks, T, nb_blocks_loc, n_block_avg, lambda_block_avg, id0 );
@@ -335,7 +335,7 @@ if (rank==1) {
   fclose(file);
 
 
-  MatFree(&A);                                                //free memory  
+  MatFree(&A);                                                //free memory
 
   free(indices);
   free(values);
@@ -343,8 +343,8 @@ if (rank==1) {
   free(b);
   free(x);
   MPI_Finalize();
- 
- 
+
+
   return 0;
 }
 
@@ -364,6 +364,3 @@ int partition(int *fi, int *wi, int N, int me, int us){
     }
   return 0;
 }
-
-
-

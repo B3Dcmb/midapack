@@ -1,6 +1,6 @@
 /**
-@file: toeplitz.h version 1.2b, November 2012  
-@brief Header file with main definitions and declarations for the Toeplitz algebra module 
+@file: toeplitz.h version 1.2b, November 2012
+@brief Header file with main definitions and declarations for the Toeplitz algebra module
 @author  Frederic Dauvergne
 **
 ** Project:  Midapack library, ANR MIDAS'09 - Toeplitz Algebra module
@@ -9,21 +9,21 @@
 **
 ***************************************************************************
 @note Copyright (c) 2010-2012 APC CNRS Université Paris Diderot
-@note 
+@note
 @note This program is free software; you can redistribute it and/or modify it under the terms
-@note of the GNU Lesser General Public License as published by the Free Software Foundation; 
+@note of the GNU Lesser General Public License as published by the Free Software Foundation;
 @note either version 3 of the License, or (at your option) any later version. This program is
-@note distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even 
+@note distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
 @note the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
 @note Lesser General Public License for more details.
-@note 
+@note
 @note You should have received a copy of the GNU Lesser General Public License along with this
 @note program; if not, see http://www.gnu.org/licenses/lgpl.html
 @note
 @note For more information about ANR MIDAS'09 project see :
 @note http://www.apc.univ-paris7.fr/APC_CS/Recherche/Adamis/MIDAS09/index.html
 @note
-@note ACKNOWLEDGMENT: This work has been supported in part by the French National Research 
+@note ACKNOWLEDGMENT: This work has been supported in part by the French National Research
 @note Agency (ANR) through COSINUS program (project MIDAS no. ANR-09-COSI-009).
 ***************************************************************************
 ** Log: toeplitz*.c
@@ -77,7 +77,7 @@
 //Basic functions definition
 #define max(a,b) (((a) > (b)) ? (a) : (b))
 #define min(a,b) (((a) < (b)) ? (a) : (b))
- 
+
 //=========================================================================
 //Fixed parameters
 
@@ -92,10 +92,10 @@
 //Define this parameter to use fftw multithreading
 //This is not fully tested
 #ifndef fftw_MULTITHREADING
-#define fftw_MULTITHREADING 
+#define fftw_MULTITHREADING
 #endif
 
-/// Number of FFT's performed at the same time (default value). 
+/// Number of FFT's performed at the same time (default value).
 /** FFT's can be performed simultaneously using advanced fftw plans.
 */
 #ifndef NFFT_DEFAULT
@@ -103,10 +103,10 @@
 #endif
 
 
-/// fftw plan allocation flag (default value). 
+/// fftw plan allocation flag (default value).
 /** fftw plan allocation flag can be one of (from fastest to lowest):
     ESTIMATE, MEASURE, PATIENT, EXHAUSTIVE. Default is MEASURE.
-    Fastest plans lead to sub optimal FFT computation. 
+    Fastest plans lead to sub optimal FFT computation.
 */
 #ifndef FFTW_FLAG_AUTO
 #define FFTW_FLAG_AUTO FFTW_ESTIMATE
@@ -117,12 +117,12 @@
 #ifndef FLAG_STGY
 #define FLAG_STGY
 
-#define FLAG_BS 0  //0:auto  1:fixed  2:zero  3:3lambda  4:4lambda  5:formula2 
-#define FLAG_NFFT 0  //0:auto  1:fixed  2:numthreads  3:fftwthreads 
+#define FLAG_BS 0  //0:auto  1:fixed  2:zero  3:3lambda  4:4lambda  5:formula2
+#define FLAG_NFFT 0  //0:auto  1:fixed  2:numthreads  3:fftwthreads
 #define FLAG_FFTW FFTW_FLAG_AUTO  //ESTIMATE, MEASURE, PATIENT, EXHAUSTIVE. Default is MEASURE
 #define FLAG_NO_RSHP 0  //0:auto  1:yes  1:no
 #define FLAG_NOFFT 0 //0:auto  1:yes  1:no
-#define FLAG_BLOCKINGCOMM 0  //0:auto  1:noblocking  2:blocking 
+#define FLAG_BLOCKINGCOMM 0  //0:auto  1:noblocking  2:blocking
 #define FIXED_NFFT 0  //fixed init value for nfft
 #define FIXED_BS 0   //fixed init value for blockside
 #define FLAG_VERBOSE 0
@@ -162,7 +162,7 @@ typedef struct Block {
 
 typedef struct Flag {
        int flag_bs;  //bs used formula
-       int flag_nfft;   
+       int flag_nfft;
        int flag_fftw;
        int flag_no_rshp;  //with or without
        int flag_nofft;
@@ -205,8 +205,8 @@ typedef struct Tpltz {
 
 /** @defgroup group1 user interface (API)
  *  These routines provide main functionality of the Toeplitz algebra library.
- *  They are divided in two groups: 
- *  - shared-memory: multithreaded (openMP/sequential) routines 
+ *  They are divided in two groups:
+ *  - shared-memory: multithreaded (openMP/sequential) routines
  *  - distributed-memory (MPI) routines
  *  @ingroup toeplitz
  */
@@ -228,10 +228,10 @@ typedef struct Tpltz {
 
 /** @defgroup group2 internal routines
  *  These are auxiliary, internal routines, not intended to be used by no-expert user.
- *  They are divided in two groups: 
- *  - low level routines 
+ *  They are divided in two groups:
+ *  - low level routines
  *  - internal routines
- *  @ingroup toeplitz 
+ *  @ingroup toeplitz
  */
 
 /** @defgroup group21 low-level routines
@@ -335,5 +335,3 @@ int stbmmProd( Tpltz Nm1, double *V);
 
 //=========================================================================
 #endif 	    /* !TOEPLITZ_H_ */
-
-

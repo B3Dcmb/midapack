@@ -13,27 +13,27 @@
 #include <mpi.h>
 #include <time.h>
 #include <string.h>
-#include <midapack.h>
+#include "midapack.h"
 
 
 /* Preconditioned Conjugate Gradient algorithm for the Map-Making equation, i.e.
    solve the system A^t N^-1 A x = A^t N-1 b,
-   where A is unpointing matix from the mapmat module and N^-1 is a symmetric piecewise Toeplitz 
+   where A is unpointing matix from the mapmat module and N^-1 is a symmetric piecewise Toeplitz
    from Toeplitz module.
 
    The algoritm is slightly different from the classical PCG. Matrix are applied succesively
-   at each iterate to take advantage of the sparsity. The dot product is perform in the 
-   "well-ballanced" time domain. 
+   at each iterate to take advantage of the sparsity. The dot product is perform in the
+   "well-ballanced" time domain.
 
    Occupancy  : 1 vector in map domain, 3 vectors in time domain.
    Complexity : at each iterate operation, we use 1 Toeplitz product, 3 dots product,
-                4 axpy, 3 unpointing product (MatVecProd) and 1 pointing product (TrMatVecProd). 
+                4 axpy, 3 unpointing product (MatVecProd) and 1 pointing product (TrMatVecProd).
 */
 
 int PCG_GLS_like(Mat A, Tpltz Nm1, double *x, double*b, double tol, int K)//, double *c)
 {
 
-  int 		i, j, k ;			// some indexes 
+  int 		i, j, k ;			// some indexes
   int		m, n, rank, size;
   double 	localreduce;			//reduce buffer
   double	st, t;				//timers
@@ -42,24 +42,24 @@ int PCG_GLS_like(Mat A, Tpltz Nm1, double *x, double*b, double tol, int K)//, do
   n=A.lcount;					//number of local pixels
   MPI_Comm_rank(A.comm, &rank);			//
   MPI_Comm_size(A.comm, &size);			//
-  
 
-  double *_g, *ACg, *Ah, *Nm1Ah ;		// time domain vectors 
+
+  double *_g, *ACg, *Ah, *Nm1Ah ;		// time domain vectors
   double *g, *Cg, *h ;		      		// map domain vectors
   double *AtNm1Ah ;                    		// map domain
-  double res, g2, g2p, ro, gamma, coeff ;	// scalars 
+  double res, g2, g2p, ro, gamma, coeff ;	// scalars
 
 
   //map domain
-  h = (double *) malloc(n*sizeof(double));      //descent direction  
+  h = (double *) malloc(n*sizeof(double));      //descent direction
 
   //time domain
-  _g = (double *) malloc(m*sizeof(double));   
-  Ah = (double *) malloc(m*sizeof(double));    
-  Nm1Ah = (double *) malloc(m*sizeof(double)); 
+  _g = (double *) malloc(m*sizeof(double));
+  Ah = (double *) malloc(m*sizeof(double));
+  Nm1Ah = (double *) malloc(m*sizeof(double));
 
-  ACg=Ah;  
-  g = Ah;  //gradient, work because m>n 
+  ACg=Ah;
+  g = Ah;  //gradient, work because m>n
   Cg=Nm1Ah;   //ok because m>n
 
 
@@ -69,11 +69,11 @@ int PCG_GLS_like(Mat A, Tpltz Nm1, double *x, double*b, double tol, int K)//, do
   st=MPI_Wtime();			//start timer
 
   double *c;
-  c = (double *) malloc(n*sizeof(double)); 
+  c = (double *) malloc(n*sizeof(double));
 
 
 // for no preconditionner:
-//  for(j=0; j<n; j++)                    // 
+//  for(j=0; j<n; j++)                    //
 //    c[j]=1.;
 
 
@@ -92,22 +92,22 @@ int PCG_GLS_like(Mat A, Tpltz Nm1, double *x, double*b, double tol, int K)//, do
     _g[i] = _g[i] - b[i];		//
 
   stbmmProd(Nm1, _g);			// _g = Nm1 (Ax-b)
-  TrMatVecProd(&A, _g, g, 0);		//  g = At _g 
+  TrMatVecProd(&A, _g, g, 0);		//  g = At _g
 
 
-  for(j=0; j<n; j++)                    // 
+  for(j=0; j<n; j++)                    //
     Cg[j]=c[j]*g[j]; 			//  Cg = C g  with C = Id
- 
-  for(j=0; j<n; j++)   		        //  h = -Cg 
-    h[j]=-Cg[j];  
+
+  for(j=0; j<n; j++)   		        //  h = -Cg
+    h[j]=-Cg[j];
 
 
    MatVecProd(&A, Cg, ACg, 0);		//  ACg = A Cg
 
-  g2=0.0;  				//g2 = "res"                          
-  localreduce=0.0;                    
-  for(i=0; i<m; i++)                    //  g2 = (ACg , _g)    
-    localreduce+= ACg[i] * _g[i]; 	  
+  g2=0.0;  				//g2 = "res"
+  localreduce=0.0;
+  for(i=0; i<m; i++)                    //  g2 = (ACg , _g)
+    localreduce+= ACg[i] * _g[i];
   MPI_Allreduce(&localreduce, &g2, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
 //Test if already converged
@@ -124,12 +124,12 @@ int PCG_GLS_like(Mat A, Tpltz Nm1, double *x, double*b, double tol, int K)//, do
 
 
 // PCG Descent Loop
-  for(k=0; k<K ; k++){               
+  for(k=0; k<K ; k++){
 
 
     MatVecProd(&A, h, Ah, 0);		// Ah = A h
-			
-    for(i=0; i<m; i++)			
+
+    for(i=0; i<m; i++)
       Nm1Ah[i] = Ah[i];
 
     stbmmProd(Nm1, Nm1Ah);		// Nm1Ah = Nm1 Ah
@@ -137,20 +137,20 @@ int PCG_GLS_like(Mat A, Tpltz Nm1, double *x, double*b, double tol, int K)//, do
 
     coeff=0.0;                              //
     localreduce=0.0;                    //
-    for(i=0; i<m; i++)                  //         
+    for(i=0; i<m; i++)                  //
       localreduce+= Ah[i]*Nm1Ah[i];         //
     MPI_Allreduce(&localreduce, &coeff, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
     ro=0.0;				//
     localreduce=0.0;			//
-    for(i=0; i<m; i++)			//         
+    for(i=0; i<m; i++)			//
       localreduce+= _g[i]*Ah[i];  	//
-    MPI_Allreduce(&localreduce, &ro, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD); 
+    MPI_Allreduce(&localreduce, &ro, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-    ro = -ro/coeff ; 
+    ro = -ro/coeff ;
 
 
-    for(j=0; j<n; j++)			//  x = x + ro*h 
+    for(j=0; j<n; j++)			//  x = x + ro*h
       x[j] = x[j] + ro*h[j];		//
 
     for(i=0; i<m; i++)			//  _g = _g + ro * Nm1Ah
@@ -159,14 +159,14 @@ int PCG_GLS_like(Mat A, Tpltz Nm1, double *x, double*b, double tol, int K)//, do
     TrMatVecProd(&A, _g, g, 0);
 
 
-    for(j=0; j<n; j++)                  // 
+    for(j=0; j<n; j++)                  //
       Cg[j]=c[j]*g[j];                       //  Cg = C g  with C = Id
 
     MatVecProd(&A, Cg, ACg, 0);         //  ACg = A Cg
 
-    g2p=g2;                               // g2p = "res"                          
+    g2p=g2;                               // g2p = "res"
     localreduce=0.0;
-    for(i=0; i<m; i++)                    // g2 = (ACg , _g)    
+    for(i=0; i<m; i++)                    // g2 = (ACg , _g)
       localreduce+= ACg[i] * _g[i];
 
 
@@ -179,7 +179,7 @@ int PCG_GLS_like(Mat A, Tpltz Nm1, double *x, double*b, double tol, int K)//, do
    if(g2<tol2rel){                         //
       if(rank ==0)                      //
         printf("--> converged (%e < %e) \n", g2, tol2rel);
-      break;    
+      break;
    }
    if(g2>g2p){                         //
       if(rank ==0)                      //
@@ -193,7 +193,7 @@ int PCG_GLS_like(Mat A, Tpltz Nm1, double *x, double*b, double tol, int K)//, do
   gamma = g2/g2p ;
 
   for(j=0; j<n; j++)			// h = h * gamma - Cg
-    h[j] = h[j] * gamma - Cg[j] ; 
+    h[j] = h[j] * gamma - Cg[j] ;
 
 
   }  //End loop
@@ -209,12 +209,10 @@ int PCG_GLS_like(Mat A, Tpltz Nm1, double *x, double*b, double tol, int K)//, do
         printf("--> res=%e  \n", g2);
 
   free(_g);
-  free(h);				
+  free(h);
   free(Ah);
   free(Nm1Ah);
 
 
   return 1;
-} 
-
-
+}

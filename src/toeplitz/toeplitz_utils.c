@@ -1,27 +1,27 @@
 /**
-@file toeplitz_utils.c version 1.2b, July 2012  
+@file toeplitz_utils.c version 1.2b, July 2012
 @brief Contains a set of utilitaries routines for Toeplitz algebra
 @author  Frederic Dauvergne
-**  
+**
 ** Project:  Midapack library, ANR MIDAS'09 - Toeplitz Algebra module
 ** Purpose:  Provide Toeplitz algebra tools suitable for Cosmic Microwave Background (CMB)
 **           data analysis.
 **
 ***************************************************************************
 @note Copyright (c) 2010-2012 APC CNRS Université Paris Diderot
-@note 
+@note
 @note This program is free software; you can redistribute it and/or modify it under the terms
-@note of the GNU Lesser General Public License as published by the Free Software Foundation; 
+@note of the GNU Lesser General Public License as published by the Free Software Foundation;
 @note either version 3 of the License, or (at your option) any later version. This program is
-@note distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even 
+@note distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
 @note the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
 @note Lesser General Public License for more details.
-@note 
+@note
 @note You should have received a copy of the GNU Lesser General Public License along with this
 @note program; if not, see http://www.gnu.org/licenses/lgpl.html
 @note For more information about ANR MIDAS'09 project see :
 @note http://www.apc.univ-paris7.fr/APC_CS/Recherche/Adamis/MIDAS09/index.html
-@note ACKNOWLEDGMENT: This work has been supported in part by the French National Research 
+@note ACKNOWLEDGMENT: This work has been supported in part by the French National Research
 @note Agency (ANR) through COSINUS program (project MIDAS no. ANR-09-COSI-009).
 ***************************************************************************
 ** Log: toeplitz*.c
@@ -35,7 +35,7 @@
 ** - OMP improvment for optimal cpu time.
 ** - bug fixed for OMP in the stmm_basic routine.
 ** - distcorrmin is used to communicate only lambda-1 datas when it is needed.
-** - new reshaping routines using transformation functions in stmm. Thus, only one copy 
+** - new reshaping routines using transformation functions in stmm. Thus, only one copy
 **   at most is needed.
 ** - tpltz_init improvement using define_nfft and define_blocksize routines.
 ** - add Block struture to define each Toeplitz block.
@@ -68,7 +68,7 @@ int defineTpltz( Tpltz *Nm1, int64_t nrow, int m_cw, int m_rw, Block *tpltzblock
 
 
   return 0;
-};
+}
 
 
 
@@ -149,8 +149,8 @@ int createTbasic2(double *T, int Tsize)
      }}
 
   return 0;
-}  
-  
+}
+
 
 int createTbasic3(double *T, int Tsize)
 {
@@ -190,5 +190,3 @@ int createTfrominvtt(double *T, int Tsize)
 
   return 0;
 }
-
-
