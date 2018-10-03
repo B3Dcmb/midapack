@@ -1,10 +1,11 @@
 // Midapack library
-// mapmaking code example using the Midapack library - release 1.2b, Nov 2012 
-// Utilitary IO routines for the mapmaking example. This is not contains healpix dependancy.
+// mapmaking code example using the Midapack library - release 1.2b, Nov 2012
+// Utilitary IO routines for the mapmaking example. This does not contain healpix dependency.
 
 /** @file   iofiles.c
     @author Frederic Dauvergne
-    @date   November 2012 */
+    @date   November 2012
+    @last_update October 2018 by Hamza El Bouhargani */
 
 
 #include <stdlib.h>
@@ -13,7 +14,7 @@
 #include <mpi.h>
 #include <time.h>
 #include <string.h>
-#include <midapack.h>
+#include "midapack.h"
 
 #include <stdbool.h>
 #include <errno.h>
@@ -21,7 +22,7 @@
 
 
 //extern char *WORKDIR="/data/dauvergn/Test_mapmaking/fred_pack_data/";
-//char *WORKDIR="/data/dauvergn/Test_mapmaking/fred_pack_data/";
+// char *WORKDIR="/global/homes/e/elbouha/midapack/test/mapmaking/data/";
 char *WORKDIR;
 int IOVERBOSE=0;
 
@@ -39,7 +40,7 @@ int ioReadfile( int block_size, int part_id, unsigned int *point_data, double *s
         FILE *fp;
 
         sprintf(p_vectorFile, "%s%s%01d.dat", WORKDIR, p_vectorFileNameBasis, part_id);
-        sprintf(s_vectorFile, "%s%s%01d.dat", WORKDIR, s_vectorFileNameBasis, part_id); 
+        sprintf(s_vectorFile, "%s%s%01d.dat", WORKDIR, s_vectorFileNameBasis, part_id);
 
         if (IOVERBOSE>1) {
           printf(" Pointing file name: %s\n", p_vectorFile);
@@ -57,6 +58,46 @@ int ioReadfile( int block_size, int part_id, unsigned int *point_data, double *s
         return 0;
 }
 
+int ioReadfile_pol( int block_size, int part_id, unsigned int *point_data, double *signal, double *pol_ang)
+{
+        int i;
+
+        char p_vectorFile[256];
+        char *p_vectorFileNameBasis = "point_data_0_";
+
+        char s_vectorFile[256];
+//        char *s_vectorFileNameBasis = "signal_";
+        char *s_vectorFileNameBasis = "pure_signal_";
+
+        char pol_vectorFile[256];
+        char *pol_vectorFileNameBasis = "pol_angle_";
+
+        FILE *fp;
+
+        sprintf(p_vectorFile, "%s%s%01d.dat", WORKDIR, p_vectorFileNameBasis, part_id);
+        sprintf(s_vectorFile, "%s%s%01d.dat", WORKDIR, s_vectorFileNameBasis, part_id);
+        sprintf(pol_vectorFile, "%s%s%01d.dat", WORKDIR, pol_vectorFileNameBasis, part_id);
+
+        if (IOVERBOSE>1) {
+          printf(" Pointing file name: %s\n", p_vectorFile);
+          printf("   Signal file name: %s\n", s_vectorFile);
+          printf(" Polarisation angles file name: %s\n", pol_vectorFile);
+	}
+
+        fp=fopen(p_vectorFile, "rb");
+        fread(point_data, sizeof(unsigned int), 3*block_size, fp);
+        fclose(fp);
+
+        fp=fopen(s_vectorFile, "rb");
+        fread(signal, sizeof(double), block_size, fp);
+        fclose(fp);
+
+        fp=fopen(pol_vectorFile, "rb");
+        fread(pol_ang, sizeof(double), block_size, fp);
+        fclose(fp);
+
+        return 0;
+}
 
 int ioReadfilePure( int block_size, int part_id, unsigned int *point_data, double *signal)
 {
@@ -136,20 +177,22 @@ int ioReadTpltzfile( int lambda, double num, double *Tblock)
 
 int ioReadTpltzrandom( int lambda, double *Tblock)
 {
-        int i;
-	double lambdareduce=10;
+  //        int i;
+	// double lambdareduce=10;
+  //
+  //   srand (lambda); //init seed
+  //
+  // //input matrix definition of T
+  //   for(i=1;i<lambdareduce;i++) {
+  //     Tblock[i]= -1.0/((double) i);
+  //   }
+  //   for(i=lambdareduce;i<lambda;i++) {
+  //     Tblock[i]= rand()/((double) 100*RAND_MAX);
+  //   }
+    // for(i=1;i<lambda;i++)
+    //   Tblock[i]= rand()/((double)RAND_MAX);
 
-    srand (lambda); //init seed
-
-  //input matrix definition of T
-    for(i=1;i<lambdareduce;i++) {
-      Tblock[i]= -1.0/((double) i);
-    }
-    for(i=lambdareduce;i<lambda;i++) {
-      Tblock[i]= rand()/((double) 100*RAND_MAX);
-    }
-
-    Tblock[0] = 10;
+    Tblock[0] = 1;//10;
 
 
         return 0;
@@ -157,18 +200,24 @@ int ioReadTpltzrandom( int lambda, double *Tblock)
 
 
 
-int ioWritebinfile( int mapsize, int mappart_id, int *lstid, double *map)
+int ioWritebinfile( int mapsize, int mappart_id, int *lstid, int *lhits, double *cond, double *map)
 {
         int i;
 
         char lstid_vectorFile[256];
+        char lhits_vectorFile[256];
+        char cond_vectorFile[256];
         char x_vectorFile[256];
         char *lstid_vectorFileNameBasis = "mapout_lstid_";
+        char *lhits_vectorFileNameBasis = "mapout_lhits_";
+        char *cond_vectorFileNameBasis = "mapout_lcond_";
         char *x_vectorFileNameBasis = "mapout_";
 
         FILE *fp;
 
         sprintf(lstid_vectorFile, "%s%01d.dat", lstid_vectorFileNameBasis, mappart_id);
+        sprintf(lhits_vectorFile, "%s%01d.dat", lhits_vectorFileNameBasis, mappart_id);
+        sprintf(cond_vectorFile, "%s%01d.dat", cond_vectorFileNameBasis, mappart_id);
         sprintf(x_vectorFile, "%s%01d.dat", x_vectorFileNameBasis, mappart_id);
 
 //        printf(" Map file name: %s\n", lstid_vectorFile);
@@ -179,9 +228,17 @@ int ioWritebinfile( int mapsize, int mappart_id, int *lstid, double *map)
         fwrite(lstid, sizeof(int), mapsize, fp);
         fclose(fp);
 
+        fp=fopen(lhits_vectorFile, "wb");
+        fwrite(lhits, sizeof(int), (int)(mapsize/3), fp);
+        fclose(fp);
+
+        fp=fopen(cond_vectorFile, "wb");
+        fwrite(cond, sizeof(double), (int)(mapsize/3), fp);
+        fclose(fp);
+
         fp=fopen(x_vectorFile, "wb");
         fwrite(map, sizeof(double), mapsize, fp);
-	fclose(fp);
+	      fclose(fp);
 
 
         return 0;
@@ -190,27 +247,43 @@ int ioWritebinfile( int mapsize, int mappart_id, int *lstid, double *map)
 
 
 
-int ioReadbinfile( int mapsize, int mappart_id, int *lstid, double *map)
+int ioReadbinfile( int mapsize, int mappart_id, int *lstid, int *lhits, double *cond, double *map)
 {
 
         int i;
 
         char lstid_vectorFile[256];
+        char lhits_vectorFile[256];
+        char cond_vectorFile[256];
         char x_vectorFile[256];
         char *lstid_vectorFileNameBasis = "mapout_lstid_";
+        char *lhits_vectorFileNameBasis = "mapout_lhits_";
+        char *cond_vectorFileNameBasis = "mapout_lcond_";
         char *x_vectorFileNameBasis = "mapout_";
 
         FILE *fp;
 
         sprintf(lstid_vectorFile, "%s%01d.dat", lstid_vectorFileNameBasis, mappart_id);
+        sprintf(lhits_vectorFile, "%s%01d.dat", lhits_vectorFileNameBasis, mappart_id);
+        sprintf(cond_vectorFile, "%s%01d.dat", cond_vectorFileNameBasis, mappart_id);
         sprintf(x_vectorFile, "%s%01d.dat", x_vectorFileNameBasis, mappart_id);
 
         printf(" Map id file name: %s\n", lstid_vectorFile);
+        printf(" Hits map file name: %s\n", lhits_vectorFile);
+        printf(" Condition map file name: %s\n", cond_vectorFile);
         printf(" Map file name: %s\n", x_vectorFile);
 
 
         fp=fopen(lstid_vectorFile, "rb");
         fread(lstid, sizeof(int), mapsize, fp);
+        fclose(fp);
+
+        fp=fopen(lhits_vectorFile, "rb");
+        fread(lhits, sizeof(int), (int)(mapsize/3), fp);
+        fclose(fp);
+
+        fp=fopen(cond_vectorFile, "rb");
+        fread(cond, sizeof(double), (int)(mapsize/3), fp);
         fclose(fp);
 
         fp=fopen(x_vectorFile, "rb");
@@ -220,5 +293,3 @@ int ioReadbinfile( int mapsize, int mappart_id, int *lstid, double *map)
 
         return 0;
 }
-
-
