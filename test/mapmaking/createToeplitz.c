@@ -1,4 +1,4 @@
-// Create Toeplitz - fd 
+// Create Toeplitz - fd
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -9,7 +9,7 @@
 char CHAR_RW='\0';  //global variable for write mode
 
 
-int defineTpltz_avg( Tpltz *Nm1, int nrow, int m_cw, int m_rw, Block *tpltzblocks, int nb_blocks_loc, int nb_blocks_tot, int idp, int local_V_size, Flag flag_stgy, MPI_Comm comm) 
+int defineTpltz_avg( Tpltz *Nm1, int64_t nrow, int m_cw, int m_rw, Block *tpltzblocks, int nb_blocks_loc, int nb_blocks_tot, int64_t idp, int local_V_size, Flag flag_stgy, MPI_Comm comm)
 {
 
 // faire les allocs ici avec la structure Tpltz
@@ -27,7 +27,7 @@ int defineTpltz_avg( Tpltz *Nm1, int nrow, int m_cw, int m_rw, Block *tpltzblock
 
 
   return 0;
-};
+}
 
 
 
@@ -52,7 +52,7 @@ int i;
     tpltzblocks[i].T_block = (T);
   }
 
-  for(i=0; i<nb_blocks_loc; i++)  
+  for(i=0; i<nb_blocks_loc; i++)
     printf("tpltzblocks[%d].idv=%ld\n", i, tpltzblocks[i].idv);
 
   return 0;
@@ -78,7 +78,7 @@ int createT(double *T, int Tsize)
 
   int i;
   //srand (time (NULL));  //init seed
-  srand (Tsize); 
+  srand (Tsize);
 
   if (1==0) {
   //input matrix definition of T
@@ -129,4 +129,3 @@ int createT(double *T, int Tsize)
 
   return 0;
 }
-
