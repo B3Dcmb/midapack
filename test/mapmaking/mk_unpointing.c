@@ -1,6 +1,6 @@
 // Midapack library
-// mapmaking code example using the Midapack library - release 1.2b, Nov 2012 
-// Utilitary code to build the map output in gif and binary directly from the inputs data (point_data and
+// mapmaking code example using the Midapack library - release 1.2b, Nov 2012
+// Utilitary code to build the map output in gif and binary directly from the input data (point_data and
 // pure_signal files).
 
 /** @file   mk_unpointing.c
@@ -14,7 +14,7 @@
 #include <mpi.h>
 #include <time.h>
 #include <string.h>
-#include <midapack.h>
+#include "midapack.h"
 
 #include <stdbool.h>
 #include <errno.h>
@@ -22,7 +22,7 @@
 #include <chealpix.h>
 
 
-extern void __mapoutput_MOD_map2gif(int* nside, double* map, int* filenamelen,char* output_file);
+extern void mapoutput_mp_map2gif_(int* nside, double* map, int* filenamelen,char* output_file);
 
 
 //cluster Adamis:
@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
 
 //Read data source files:
   int part_id;      // stationnaly period id number
-  int *point_data;  // scann strategy input data for the pointing matrix 
+  int *point_data;  // scann strategy input data for the pointing matrix
   double *signal;   // signal input data
 
 
@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
   signal     = (double *) malloc(t_Interval_length * sizeof(double));
 
 
-  for (k=0; k<Nb_t_Intervals; k++) { 
+  for (k=0; k<Nb_t_Intervals; k++) {
 
   part_id=k;
 
@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
 /*
   int point_data_prev=-1;
   for(i=0; i<t_Interval_length; i++) {
-    if (point_data[i] != point_data_prev) 
+    if (point_data[i] != point_data_prev)
       printf("%10d \t %7d \t %lf\n", i, point_data[i], signal[i] );
   point_data_prev=point_data[i];
   }
@@ -167,7 +167,7 @@ int ioWritePixfile( double *map, int nside)
 
   int filenamelen = strlen(fn);
 
-  __mapoutput_MOD_map2gif((int*)(&nside), map, &filenamelen, fn);
+  mapoutput_mp_map2gif_((int*)(&nside), map, &filenamelen, fn);
 
 
   return 0;
@@ -193,5 +193,3 @@ int ioWritePixbinfile( int mapsize, double *map)
 
         return 0;
 }
-
-
