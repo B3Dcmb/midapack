@@ -1,10 +1,11 @@
 // Midapack library
-// mapmaking code example using the Midapack library - release 1.2b, Nov 2012 
-// The routine read data from binaries files and write the result in distributed binaries files
+// mapmaking code example using the Midapack library - release 1.2b, Nov 2012
+// The routine reads data from binary files and write the results in distributed binary files
 
 /** @file   test_pcg.c
     @author Frederic Dauvergne
-    @date   November 2012 */
+    @date   November 2012
+    @Last_update October 2018 by Hamza El Bouhargani*/
 
 
 #include <stdlib.h>
@@ -15,7 +16,7 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
-#include <midapack.h>
+#include "midapack.h"
 
 
 void usage(){
@@ -23,7 +24,7 @@ void usage(){
 }
 
 //cluster Adamis:
-extern const char *WORKDIR="/data/dauvergn/Test_mapmaking/new_data_set/";
+extern const char *WORKDIR="/global/cscratch1/sd/elbouha/dataIonly/";
 //double FKNEE=1.00;
 //extern const char *WORKDIR="/data/dauvergn/Test_mapmaking/fred_pack_data/";
 double FKNEE=0.25;
@@ -34,9 +35,9 @@ double FKNEE=0.25;
 int main(int argc, char *argv[])
 {
 
-  int64_t	M;       //Global number of rows,
+  int64_t	M;       //Global number of rows
   int 		N, Nnz;  //of columns, of non-zeros values per column for the pointing matrix A
-  int		m, n;  //local number of rows, of columns for the pointing matrix A 
+  int		m, n;  //local number of rows, of columns for the pointing matrix A
   int64_t	gif;			//global indice for the first local line
   int		i, j, k;
   int           K;	                //maximum number of iteration for the PCG
@@ -50,22 +51,22 @@ int main(int argc, char *argv[])
   double        alpha, beta, gamma, resold, resnew;
   double 	localreduce;
   double	st, t;		 	//timer, start time
-  int 		output, timer, info;          
-  int 		rank, size;	
-  
-  MPI_Init(&argc, &argv);               
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank); 
-  MPI_Comm_size(MPI_COMM_WORLD, &size); 
+  int 		output, timer, info;
+  int 		rank, size;
+
+  MPI_Init(&argc, &argv);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  printf("rank = %d, size = %d",rank,size);
 
 //communication scheme for the pointing matrix  (to move in .h)
   pointing_commflag=1; //2==BUTTERFLY - 1==RING
 
-
 //global data caracteristics
-  int Nb_t_Intervals = 2;//256;//8;           //total number of stationnary intervals
-  int t_Interval_length = pow(2,25);//pow(2,25);          //length for each stationnary interval
-  int t_Interval_length_true = pow(2,20);
-  int LambdaBlock = pow(2,14);//pow(2,14)+1;  //lambda length for each stationnary interval
+  int Nb_t_Intervals = 128;//2;//256;//8;           //total number of stationnary intervals
+  int t_Interval_length = 1431992;//17899900;//1431992;//2863984;//1431992;//pow(2,25);//pow(2,25);          //length for each stationnary interval
+  int t_Interval_length_true = 1431992;//17899900;//1431992;//2863984;//1431992;//pow(2,20);
+  int LambdaBlock = pow(2,10);//pow(2,14)+1;  //lambda length for each stationnary interval
   double fknee=FKNEE; //0.25;
   Nnz=1;
 
@@ -80,13 +81,12 @@ int main(int argc, char *argv[])
 //total length of the time domaine signal
   M = (int64_t) Nb_t_Intervals*t_Interval_length ;
 
-  printf("[rank %d] M=%ld\n", rank, M); 
+  printf("[rank %d] M=%ld\n", rank, M);
 
 //compute distribution indexes over the processes
   partition(&gif, &m, M, rank, size);
 
-
-//  double Nb_t_Intervals_loc_dble = Nb_t_Intervals/size;
+ double Nb_t_Intervals_loc_dble = Nb_t_Intervals/size;
   int Nb_t_Intervals_loc = ceil( Nb_t_Intervals*1.0/size );
   int nb_proc_shared_one_interval = max(1, size/Nb_t_Intervals ); //same as ceil( (size*1.0)/Nb_t_Intervals );
   printf("[rank %d] nb_proc_shared_one_interval=%d\n", rank, nb_proc_shared_one_interval );
@@ -95,12 +95,12 @@ int main(int argc, char *argv[])
 //should be equal to min(m ,t_Interval_length)
 
   printf("[rank %d] size=%d \t m=%d \t Nb_t_Intervals=%d \t t_Interval_length=%d\n", rank, size, m, Nb_t_Intervals, t_Interval_length );
-  printf("[rank %d] Nb_t_Intervals_loc=%d \t t_Interval_length_loc=%d\n", rank, Nb_t_Intervals_loc , t_Interval_length_loc); 
+  printf("[rank %d] Nb_t_Intervals_loc=%d \t t_Interval_length_loc=%d\n", rank, Nb_t_Intervals_loc , t_Interval_length_loc);
 
 
 //input data memory allocation
-  indices  = (int *) malloc(Nnz*m * sizeof(int));     //for pointing matrix indices 
-  values  = (double *) malloc(Nnz*m * sizeof(double));//for pointing matrix values  
+  indices  = (int *) malloc(Nnz*m * sizeof(int));     //for pointing matrix indices
+  values  = (double *) malloc(Nnz*m * sizeof(double));//for pointing matrix values
   b   = (double *) malloc(m*sizeof(double));    //full raw data vector for the signal
 
 
@@ -109,14 +109,13 @@ int main(int argc, char *argv[])
 
 //Definition for the input data
   int part_id;      // stationnaly period id number
-  int *point_data;  // scann strategy input data for the pointing matrix 
+  int *point_data;  // scann strategy input data for the pointing matrix
   double *signal;   // signal input data
 
 
 //Init the pointing matrix values to unity
-  for(i=0; i<(Nnz*m); i++) 
+  for(i=0; i<(Nnz*m); i++)
     values[i] = 1.;
-
   int number_in_interval;
 
 int flag_bigdata=1;
@@ -142,9 +141,8 @@ if (rank==0) {
   for (i=0; i < t_Interval_loop_loc; ++i) {
     ioReadfile(t_Interval_length, part_id, point_data+t_Interval_length_true*Nnz*i, signal+t_Interval_length_true*i);
   }
-
 //just keep the relevant part of the stationary interval for the local process
-  int nb_proc_shared_one_subinterval = max(1, size/(Nb_t_Intervals*t_Interval_loop) ); 
+  int nb_proc_shared_one_subinterval = max(1, size/(Nb_t_Intervals*t_Interval_loop) );
   //same as ceil( (size*1.0)/Nb_t_Intervals );
   int number_in_subinterval = rank%nb_proc_shared_one_subinterval;
 
@@ -160,7 +158,6 @@ if (rank==0) {
 
   for(i=0; i<(m); i++)
     b[i] = signal[i+number_in_subinterval*t_Interval_length_subinterval_loc];
-
   free(point_data);
   free(signal);
 
@@ -200,7 +197,7 @@ else { //for the case we dont need to share
 //Read the relevants raw inputs data from files distributed by stationary period
 //note: Work only for no sharing stationnary interval
 
-  for (k=0; k < Nb_t_Intervals_loc; ++k) { 
+  for (k=0; k < Nb_t_Intervals_loc; ++k) {
     point_data = indices + t_Interval_length*Nnz*k;
     signal = b + t_Interval_length*k;
 
@@ -234,7 +231,7 @@ else { //for the case we dont need to share
   int nb_blocks_tot = Nb_t_Intervals;
   int n_block_avg = M/nb_blocks_tot;  //should be equal to t_Intervals_length in this example
                                       //because we dont have flotting blocks
-  int lambda_block_avg = LambdaBlock; 
+  int lambda_block_avg = LambdaBlock;
 
 //flags for Toeplitz product strategy
   Flag flag_stgy;
@@ -253,7 +250,7 @@ else { //for the case we dont need to share
 
 //dependants parameters:
   int64_t nrow = M;
-  int mcol = 1;  
+  int mcol = 1;
 
   int64_t id0 = gif;
   int local_V_size = m;
@@ -262,9 +259,11 @@ else { //for the case we dont need to share
   double *T;  //toeplitz data storage
   T  = (double *) calloc(Tsize ,sizeof(double));
 
-//For one identical block 
-  ioReadTpltzfile( Tsize, fknee, T);
-
+//For one identical block
+  //ioReadTpltzfile( Tsize, fknee, T);
+  ioReadTpltzrandom( Tsize, T);
+  // for(i=0;i<50;i++)
+  //   printf("Tpltz[%d] = %f\n",i,T[i]);
 //  createT(T, Tsize);
 
 
@@ -272,6 +271,7 @@ else { //for the case we dont need to share
   nb_blocks_loc = ceil( local_V_size*1.0/n_block_avg );
 
   double nb_blocks_loc_part =  (local_V_size*1.0)/(n_block_avg) ;
+
 
 
 // check special cases to have exact number of local blocks
@@ -287,19 +287,14 @@ else { //for the case we dont need to share
   int nb_comm = (nb_proc_shared_a_block)-1 ;
 
 
-//Block definition 
+//Block definition
   tpltzblocks = (Block *) malloc(nb_blocks_loc * sizeof(Block));
-
   defineBlocks_avg(tpltzblocks, T, nb_blocks_loc, n_block_avg, lambda_block_avg, id0 );
-
-
   defineTpltz_avg( &Nm1, nrow, 1, mcol, tpltzblocks, nb_blocks_loc, nb_blocks_tot, id0, local_V_size, flag_stgy, MPI_COMM_WORLD);
-
-
 
 //print Toeplitz parameters for information
   if (rank==0 | rank==1) {
-    printf("[rank %d] size=%d, nrow=%ld, local_V_size=%d, id0=%ld \n", rank, size, nrow, local_V_size, id0);
+    printf("[rank %d] size=%d, nrow=%ld, local_V_size=%ld, id0=%ld \n", rank, size, nrow, local_V_size, id0);
     printf("[rank %d] nb_blocks_tot=%d, nb_blocks_loc=%d, n_block_avg=%d, lambda_block_avg=%d \n", rank, nb_blocks_tot, nb_blocks_loc, n_block_avg, lambda_block_avg);
     printf("[rank %d] nb_proc_shared_a_block=%d, nb_comm=%d \n", rank, nb_proc_shared_a_block, nb_comm);
   }
@@ -332,7 +327,7 @@ else { //for the case we dont need to share
 
   for(i=0; i< A.lcount; i++)
     lstid[i] = A.lindices[i];
-
+  // printf("x[0] = %f\n",x[0]);
 
   ioWritebinfile( mapsize, map_id, lstid, x);
 
@@ -357,7 +352,7 @@ else { //for the case we dont need to share
   fclose(file);
 
 
-  MatFree(&A);                                                //free memory  
+  MatFree(&A);                                                //free memory
 
   free(indices);
   free(values);
@@ -365,10 +360,10 @@ else { //for the case we dont need to share
   free(b);
   free(x);
   MPI_Finalize();
- 
- 
+
+
   return 0;
-}
+ }
 
 
 int partition(int64_t *gif, int *m, int64_t M, int rank, int size){
@@ -385,5 +380,3 @@ int partition(int64_t *gif, int *m, int64_t M, int rank, int size){
     }
   return 0;
 }
-
-
