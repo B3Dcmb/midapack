@@ -1,5 +1,5 @@
 // Midapack library
-// mapmaking code example using the Midapack library - release 1.2b, Nov 2012 
+// mapmaking code example using the Midapack library - release 1.2b, Nov 2012
 // Utilitary code to do the difference between a distributed binaries result and a one processor result
 // stored in the Prev directory.
 
@@ -14,7 +14,7 @@
 #include <mpi.h>
 #include <time.h>
 #include <string.h>
-#include <midapack.h>
+#include "midapack.h"
 
 #include <stdbool.h>
 #include <errno.h>
@@ -22,7 +22,7 @@
 #include <chealpix.h>
 
 
-extern void __mapoutput_MOD_map2gif(int* nside, double* map, int* filenamelen,char* output_file);
+extern void mapoutput_mp_map2gif_(int* nside, double* map, int* filenamelen,char* output_file);
 
 
 //ioReadbinWritePixfile
@@ -55,8 +55,8 @@ int main(int argc, char *argv[])
   ioReadtxtfilePrev( &size0, &idp, &m, &Alcount, &Nb_t_Intervals, &t_Interval_length, &LambdaBlock, &Nb_t_Intervals_loc, 0);
 
   nbproc=1;
-  printf(" nbproc=%d, m=%d, Alcount=%d, Nb_t_Intervals=%d, t_Interval_length=%d, LambdaBlock=%d\n", nbproc, m, Alcount, 
-Nb_t_Intervals, t_Interval_length, LambdaBlock);  
+  printf(" nbproc=%d, m=%d, Alcount=%d, Nb_t_Intervals=%d, t_Interval_length=%d, LambdaBlock=%d\n", nbproc, m, Alcount,
+Nb_t_Intervals, t_Interval_length, LambdaBlock);
 
   xsize=Alcount;
   x   = (double *) malloc(xsize*sizeof(double));
@@ -100,7 +100,7 @@ Nb_t_Intervals, t_Interval_length, LambdaBlock);
    for(i=0; i<npix; i++)
     map[i]= map[i]-mapPrev[i];
 
- 
+
 
   ioWritePixfile(map, nside);
 
@@ -171,7 +171,7 @@ int ioWritePixfile( double *map, int nside)
 
   int filenamelen = strlen(fn);
 
-  __mapoutput_MOD_map2gif((int*)(&nside), map, &filenamelen, fn);
+  mapoutput_mp_map2gif_((int*)(&nside), map, &filenamelen, fn);
 
 
   return 0;
@@ -238,5 +238,3 @@ int ioReadbinfilePrev( int mapsize, int mappart_id, int *lstid, double *map)
 
         return 0;
 }
-
-

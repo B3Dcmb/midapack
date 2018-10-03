@@ -1,5 +1,5 @@
 // Midapack library
-// mapmaking code example using the Midapack library - release 1.2b, Nov 2012 
+// mapmaking code example using the Midapack library - release 1.2b, Nov 2012
 // Utilitary code to build the difference map output in pixel gif between two results maps stored in binaries
 // files.
 
@@ -14,7 +14,7 @@
 #include <mpi.h>
 #include <time.h>
 #include <string.h>
-#include <midapack.h>
+#include "midapack.h"
 
 #include <stdbool.h>
 #include <errno.h>
@@ -22,7 +22,7 @@
 #include <chealpix.h>
 
 
-extern void __mapoutput_MOD_map2gif(int* nside, double* map, int* filenamelen,char* output_file);
+extern void mapoutput_mp_map2gif_(int* nside, double* map, int* filenamelen,char* output_file);
 
 
 //ioReadbinWritePixfile
@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
    for(i=0; i<npix; i++)
     mapDiff[i]= map01[i]-map02[i];
 
- 
+
 
   ioWritePixfileDiff(mapDiff, nside);
 
@@ -72,7 +72,7 @@ int ioWritePixfileDiff( double *map, int nside)
 
   int filenamelen = strlen(fn);
 
-  __mapoutput_MOD_map2gif((int*)(&nside), map, &filenamelen, fn);
+  mapoutput_mp_map2gif_((int*)(&nside), map, &filenamelen, fn);
 
 
   return 0;
@@ -119,5 +119,3 @@ int ioReadPixbinfile2( int mapsize, double *map)
 
         return 0;
 }
-
-
