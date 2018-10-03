@@ -1,11 +1,12 @@
 // Midapack library
-// mapmaking code example using the Midapack library - release 1.2b, Nov 2012 
+// mapmaking code example using the Midapack library - release 1.2b, Nov 2012
 // Utilitary code to build the map output in gif and binary using distributed binaries results
-// This contains healpix depandancy
+// This contains healpix dependency
 
 /** @file   mk_iofilespix.c
     @author Frederic Dauvergne
-    @date   November 2012 */
+    @date   November 2012
+    @last_update October 2018 by Hamza El Bouhargani*/
 
 
 #include <stdlib.h>
@@ -14,7 +15,7 @@
 #include <mpi.h>
 #include <time.h>
 #include <string.h>
-#include <midapack.h>
+#include "midapack.h"
 
 #include <stdbool.h>
 #include <errno.h>
@@ -22,7 +23,7 @@
 #include <chealpix.h>
 
 
-extern void __mapoutput_MOD_map2gif(int* nside, double* map, int* filenamelen,char* output_file);
+extern void mapoutput_mp_map2gif_(int* nside, double* map, int* filenamelen,char* output_file);
 
 
 //ioReadbinWritePixfile
@@ -37,7 +38,7 @@ int main(int argc, char *argv[])
 
   int rank0, idp, m, Alcount, Nb_t_Intervals, t_Interval_length, LambdaBlock, Nb_t_Intervals_loc;
 
-  int nside=256;
+  int nside=512;
   int npix = 12*pow(nside,2);
 
   double *map;
@@ -70,6 +71,7 @@ int main(int argc, char *argv[])
   ioReadbinfile( xsize, map_id, lstid, x);
 
   x2map( map, npix, x, lstid, xsize);
+
 
   free(x);
   free(lstid);
@@ -143,11 +145,8 @@ int ioWritePixfile( double *map, int nside)
 
   sprintf(fn, "%s.gif", bn);
   printf(" output map file name: %s\n", fn);
-
   int filenamelen = strlen(fn);
-
-  __mapoutput_MOD_map2gif((int*)(&nside), map, &filenamelen, fn);
-
+  mapoutput_mp_map2gif_((int*)(&nside), map, &filenamelen, fn);
 
   return 0;
 }
@@ -172,5 +171,3 @@ int ioWritePixbinfile( int mapsize, double *map)
 
         return 0;
 }
-
-
