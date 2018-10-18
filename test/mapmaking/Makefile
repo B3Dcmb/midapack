@@ -48,7 +48,8 @@ example_pcg: $(TOEPLITZ) $(MAPMAT)
 	iofiles.o \
 	test_pcg \
 	test_pcg_pol \
-	test_pcg_rand
+	test_pcg_rand \
+	test_com
 
 exemple_iofilepix:
 	make map2gif.o \
@@ -116,6 +117,8 @@ test_pcg_pol: createToeplitz.o precond.o test_pcg_polar.c iofiles.o pcg_true.o
 test_pcg_rand: createToeplitz.o precond.o test_pcg_rand.c iofiles.o pcg_true.o
 	$(CC) test_pcg_rand.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(LIB) $(FFTW_LIB) -lm -o pcg_rand
 
+test_com: test_com.c iofiles.o
+			$(CC) test_com.c iofiles.o $(INC) $(LIB) $(FFTW_LIB) -lm -o test_com
 
 ##############   u t i l s   #############
 

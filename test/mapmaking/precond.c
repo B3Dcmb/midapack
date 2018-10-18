@@ -284,13 +284,13 @@ int getlocDiagN(Mat *A, Tpltz Nm1, double *vpixDiag)
     printf("istart=%d, il=%d, istartn=%d\n", istart, il, istartn);
     printf("Nm1.tpltzblocks[k].idv=%d, Nm1.tpltzblocks[k].n=%d, Nm1.idp=%d\n", Nm1.tpltzblocks[k].idv, Nm1.tpltzblocks[k].n, Nm1.idp);
 */
-//a piecewise stationary periode
+//a piecewise stationary period
     for (i= istart; i<istart+il; i++) {
       for (j=0; j<(A->nnz); j++)
         vpixDiag[A->indices[i*(A->nnz)+j]]+=(A->values[i*(A->nnz)+j]*A->values[i*(A->nnz)+j])*diagNm1;
     }
 
-//continue until the next periode if exist
+//continue until the next period if exist
     for (i= istart+il; i<istartn; i++) {
       for (j=0; j<(A->nnz); j++)
         vpixDiag[A->indices[i*(A->nnz)+j]]+=(A->values[i*(A->nnz)+j]*A->values[i*(A->nnz)+j]);
