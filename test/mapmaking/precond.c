@@ -16,7 +16,7 @@
 #include <string.h>
 #include "midapack.h"
 
-int precondblockjacobilike(Mat A, Mat *BJ, int *lhits)
+int precondblockjacobilike(Mat A, Tpltz Nm1, Mat *BJ, int *lhits)
 {
   int           i, j, k ;                       // some indexes
   int           m, n, rank, size;
@@ -34,18 +34,21 @@ int precondblockjacobilike(Mat A, Mat *BJ, int *lhits)
   vpixBlock_loc = (double *) malloc(n * sizeof(double));
   vpixBlock = (double *) malloc(n*(A.nnz) * sizeof(double));
 
-  //Init vpixBlock
-  for(i=0;i<n*(A.nnz);i++)
-    vpixBlock[i] = 0.;
+  // //Init vpixBlock
+  // for(i=0;i<n*(A.nnz);i++)
+  //   vpixBlock[i] = 0.;
+  //
+  // //Compute local AtA blocks (local sum over same pix blocks)
+  // for(i=0;i<A.m;i++){
+  //   for(j=0;j<A.nnz;j++){
+  //     for(k=0;k<A.nnz;k++){
+  //       vpixBlock[(A.nnz)*A.indices[i*(A.nnz)+j]+k] += A.values[i*(A.nnz)+j]*A.values[i*(A.nnz)+k];
+  //     }
+  //   }
+  // }
 
-  //Compute local AtA blocks (local sum over same pix blocks)
-  for(i=0;i<A.m;i++){
-    for(j=0;j<A.nnz;j++){
-      for(k=0;k<A.nnz;k++){
-        vpixBlock[(A.nnz)*A.indices[i*(A.nnz)+j]+k] += A.values[i*(A.nnz)+j]*A.values[i*(A.nnz)+k];
-      }
-    }
-  }
+  //Compute local Atdiag(N^1)A
+    getlocalW(&A, Nm1, vpixBlock);
 
   //communicate with the other processes to have the global reduce
     for(i=0;i<n*(A.nnz);i+=(A.nnz)*(A.nnz)){
@@ -212,7 +215,103 @@ int precondjacobilike(Mat A, Tpltz Nm1, int *lhits, double *cond, double *vpixDi
   return 0;
 }
 
+//do the local Atdiag(Nm1)A with as output a block-diagonal matrix (stored as a vector) in the pixel domain
+int getlocalW(Mat *A, Tpltz Nm1, double *vpixBlock)
+{
+  int           i, j, k ;                       // some indexes
+  int           m;
 
+  m=Nm1.local_V_size;  //number of local time samples
+  int nnz=(A->nnz);
+
+  //Define the indices for each process
+  int idv0, idvn;  //indice of the first and the last block of V for each processes
+  int *nnew;
+  nnew = (int*) calloc(Nm1.nb_blocks_loc, sizeof(int));
+  int64_t idpnew;
+  int local_V_size_new;
+//get idv0 and idvn
+  get_overlapping_blocks_params( Nm1.nb_blocks_loc, Nm1.tpltzblocks, Nm1.local_V_size, Nm1.nrow, Nm1.idp, &idpnew, &local_V_size_new, nnew, &idv0, &idvn);
+ // double *vpixDiag;
+ // vpixDiag = (double *) malloc(A->lcount *sizeof(double));
+
+  int istart, il, istartn;
+  for(i=0; i < nnz * A->lcount; i++)
+    vpixBlock[i]=0.0;//0.0;
+
+  int vShft=idpnew-Nm1.idp; //=Nm1.tpltzblocks[idv0].idv-Nm1.idp in principle
+/*
+  printf("Nm1.idp=%d, idpnew=%d, vShft=%d\n", Nm1.idp, idpnew, vShft);
+  printf("idv0=%d, idvn=%d\n", idv0, idvn);
+  printf("Nm1.nb_blocks_loc=%d, Nm1.local_V_size=%d\n", Nm1.nb_blocks_loc, Nm1.local_V_size);
+
+  for(i=0; i < Nm1.nb_blocks_loc; i++)
+    printf("Nm1.tpltzblocks[%d].idv=%d\n", i, Nm1.tpltzblocks[i].idv);
+*/
+
+//go until the first piecewise stationary period
+    for(i=0;i<vShft;i++){
+      for(j=0;j<nnz;j++){
+        for(k=0;k<nnz;k++){
+          vpixBlock[nnz*A->indices[i*nnz+j]+k] += A->values[i*nnz+j]*A->values[i*nnz+k];
+        }
+      }
+    }
+
+//temporary buffer for one diag value of Nm1
+  int diagNm1;
+//loop on the blocks
+  for(k=idv0; k<(idv0+Nm1.nb_blocks_loc); k++) {
+  if (nnew[idv0]>0) {  //if nnew==0, this is a wrong defined block
+
+    if (k+1<idv0+Nm1.nb_blocks_loc)   //if there is a next block, compute his next first indice
+      istartn= Nm1.tpltzblocks[k+1].idv-Nm1.idp ;
+    else
+      istartn= Nm1.local_V_size;
+      // istartn = 0;
+
+    istart = max( 0, Nm1.tpltzblocks[k].idv-Nm1.idp);
+    il = Nm1.tpltzblocks[k].n; // added this line to default code
+
+    //if block cut from the left:
+    if (k==idv0)
+      il     = min( Nm1.tpltzblocks[k].n, Nm1.tpltzblocks[k].idv + Nm1.tpltzblocks[k].n - Nm1.idp );
+    //if block cut from the right:
+    if (k==idv0+Nm1.nb_blocks_loc-1)
+      il     = min(il , (Nm1.idp + Nm1.local_V_size) - Nm1.tpltzblocks[k].idv );
+    //if block alone in the middle, and cut from both sides
+    if (Nm1.nb_blocks_loc==1)
+      il     = min(il , Nm1.local_V_size);
+
+    //get the diagonal value of the Toeplitz
+    diagNm1 = Nm1.tpltzblocks[k].T_block[0];
+
+/*
+    printf("istart=%d, il=%d, istartn=%d\n", istart, il, istartn);
+    printf("Nm1.tpltzblocks[k].idv=%d, Nm1.tpltzblocks[k].n=%d, Nm1.idp=%d\n", Nm1.tpltzblocks[k].idv, Nm1.tpltzblocks[k].n, Nm1.idp);
+*/
+//a piecewise stationary period
+    for(i = istart; i<istart+il; i++){
+      for(j=0;j<nnz;j++){
+        for(k=0;k<nnz;k++){
+          vpixBlock[nnz*A->indices[i*nnz+j]+k] += A->values[i*nnz+j]*A->values[i*nnz+k]*diagNm1;
+        }
+      }
+    }
+
+//continue until the next period if exist or to the last line of V
+    for(i = istart+il; i<istartn; i++){
+      for(j=0;j<nnz;j++){
+        for(k=0;k<nnz;k++){
+          vpixBlock[nnz*A->indices[i*nnz+j]+k] += A->values[i*nnz+j]*A->values[i*nnz+k];
+        }
+      }
+    }
+
+  }}//end of the loop over the blocks
+
+  return 0;
+}
 
 //do the local diag( At diag(Nm1) A ) with as output a vector in the pixel domain
 int getlocDiagN(Mat *A, Tpltz Nm1, double *vpixDiag)

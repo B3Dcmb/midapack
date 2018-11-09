@@ -78,7 +78,7 @@ int PCG_GLS_true(Mat A, Tpltz Nm1, double *x, int *lhits, double *cond, double*b
 
   // precondjacobilike( A, Nm1, lhits, cond, c);
  // precondjacobilike_avg( A, Nm1, c);
-  precondblockjacobilike(A, &BJ, lhits);
+  precondblockjacobilike(A, Nm1, &BJ, lhits);
 //return 0;
 
   //if we want to use the true norm to compute the residual

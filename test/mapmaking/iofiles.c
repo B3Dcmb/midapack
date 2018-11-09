@@ -177,22 +177,22 @@ int ioReadTpltzfile( int lambda, double num, double *Tblock)
 
 int ioReadTpltzrandom( int lambda, double *Tblock)
 {
-  //        int i;
-	// double lambdareduce=10;
-  //
-  //   srand (lambda); //init seed
-  //
-  // //input matrix definition of T
-  //   for(i=1;i<lambdareduce;i++) {
-  //     Tblock[i]= -1.0/((double) i);
-  //   }
-  //   for(i=lambdareduce;i<lambda;i++) {
-  //     Tblock[i]= rand()/((double) 100*RAND_MAX);
-  //   }
+         int i;
+	double lambdareduce=10;
+
+    srand (lambda); //init seed
+
+  //input matrix definition of T
+    for(i=1;i<lambdareduce;i++) {
+      Tblock[i]= -1.0/((double) i);
+    }
+    for(i=lambdareduce;i<lambda;i++) {
+      Tblock[i]= rand()/((double) 100*RAND_MAX);
+    }
     // for(i=1;i<lambda;i++)
     //   Tblock[i]= rand()/((double)RAND_MAX);
 
-    Tblock[0] = 1;//10;
+    Tblock[0] = 10;
 
 
         return 0;

@@ -23,7 +23,7 @@ void usage(){
 }
 
 //cluster Adamis:
-extern const char *WORKDIR="/global/cscratch1/sd/elbouha/data4/";
+extern const char *WORKDIR="/global/cscratch1/sd/elbouha/data3/";
 //double FKNEE=1.00;
 //extern const char *WORKDIR="/data/dauvergn/Test_mapmaking/fred_pack_data/";
 double FKNEE=0.25;
@@ -59,18 +59,18 @@ int main(int argc, char *argv[])
   printf("rank = %d, size = %d",rank,size);
 
 //communication scheme for the pointing matrix  (to move in .h)
-  pointing_commflag=1; //2==BUTTERFLY - 1==RING
+  pointing_commflag=2; //2==BUTTERFLY - 1==RING
 
 //global data caracteristics
   int Nb_t_Intervals = 128;//1352;//128;//2;//256;//8;           //total number of stationnary intervals
-  int t_Interval_length = 17899900;//1431992;//139992; //1431992;//2863984;//1431992;//pow(2,25);//pow(2,25);          //length for each stationnary interval
-  int t_Interval_length_true = 17899900;//1431992;//139992;//1431992;//2863984;//1431992;//pow(2,20);
-  int LambdaBlock = pow(2,6);//pow(2,14)+1;  //lambda length for each stationnary interval
+  int t_Interval_length = 1431992;//17899900;//1431992;//139992; //1431992;//2863984;//1431992;//pow(2,25);//pow(2,25);          //length for each stationnary interval
+  int t_Interval_length_true = 1431992;//17899900;//1431992;//139992;//1431992;//2863984;//1431992;//pow(2,20);
+  int LambdaBlock = pow(2,4);//pow(2,14)+1;  //lambda length for each stationnary interval
   double fknee=FKNEE; //0.25;
   Nnz=3;
 
 // PCG parameters
-  tol=pow(10,-12);
+  tol=pow(10,-15);
   K=500;
 
 //Number of loop we need to read the all t_Interval_length
@@ -235,7 +235,6 @@ else { //for the case we dont need to share
 
 
 //Pointing matrix init
-printf("test\n");
   MatInit( &A, m, Nnz, indices, values, pointing_commflag, MPI_COMM_WORLD);
   // printf("A.lcount = %d\n", A.lcount);
 
