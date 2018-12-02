@@ -31,8 +31,8 @@
 00085 \textcolor{comment}{//=========================================================================}
 00086 
 00088 
-\hypertarget{toeplitz_8c_source_l00093}{}\hyperlink{group__group22_ga24331a8efb6e0b77df7c645ef45b2830}{00093} \textcolor{keywordtype}{int} \hyperlink{group__group22_ga24331a8efb6e0b77df7c645ef45b2830}{print\_error\_message}(\textcolor{keywordtype}{int} error\_number, \textcolor{keywordtype}{char} \textcolor{keyword}{const} *\hyperlink{mkdoc_8dox_a049a073e5602cc325f7559a06c5a2420}{file}
-      , \textcolor{keywordtype}{int} line)
+\hypertarget{toeplitz_8c_source_l00093}{}\hyperlink{group__group22_ga24331a8efb6e0b77df7c645ef45b2830}{00093} \textcolor{keywordtype}{int} \hyperlink{group__group22_ga24331a8efb6e0b77df7c645ef45b2830}{print\_error\_message}(\textcolor{keywordtype}{int} error\_number, \textcolor{keywordtype}{char} \textcolor{keyword}{const} *file, \textcolor{keywordtype}{
+      int} line)
 00094 \{
 00095   \textcolor{keywordtype}{char} *str\_mess;
 00096   str\_mess = (\textcolor{keywordtype}{char} *) malloc(100 * \textcolor{keyword}{sizeof}(\textcolor{keywordtype}{char}));
@@ -665,7 +665,7 @@
 00818   \textcolor{keywordtype}{int} nfullcol;
 00819   \textcolor{keywordtype}{int} nloop\_middle;  \textcolor{comment}{//change it to number of full column to improve memory}
 00820 
-00821   FILE *\hyperlink{mkdoc_8dox_a049a073e5602cc325f7559a06c5a2420}{file};
+00821   FILE *file;
 00822   file = stdout;
 00823 
 00824   \textcolor{keywordflow}{if} (l<distcorrmin) \textcolor{comment}{//test to avoid communications errors}

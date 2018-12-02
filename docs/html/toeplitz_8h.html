@@ -126,10 +126,10 @@ Data Structures</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2><a name="typedef-members"></a>
 Typedefs</h2></td></tr>
-<tr class="memitem:ae0f591bed4b671805a642031cb2247ad"><td class="memItemLeft" align="right" valign="top">typedef <a class="el" href="mkdoc_8dox.html#aba655c5729da86df745f0c8e7f9ba8d2">struct</a> <a class="el" href="structBlock.html">Block</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="toeplitz_8h.html#ae0f591bed4b671805a642031cb2247ad">Block</a></td></tr>
-<tr class="memitem:a50f6d802912467eb6af9d706f0030001"><td class="memItemLeft" align="right" valign="top">typedef <a class="el" href="mkdoc_8dox.html#aba655c5729da86df745f0c8e7f9ba8d2">struct</a> <a class="el" href="structFlag.html">Flag</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="toeplitz_8h.html#a50f6d802912467eb6af9d706f0030001">Flag</a></td></tr>
-<tr class="memitem:a7e1f53c0f7143b20fe98a74b039d89e9"><td class="memItemLeft" align="right" valign="top">typedef <a class="el" href="mkdoc_8dox.html#aba655c5729da86df745f0c8e7f9ba8d2">struct</a> <a class="el" href="structGap.html">Gap</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="toeplitz_8h.html#a7e1f53c0f7143b20fe98a74b039d89e9">Gap</a></td></tr>
-<tr class="memitem:aed6f6e14ad6cf376f446a5fc4ce1b8fa"><td class="memItemLeft" align="right" valign="top">typedef <a class="el" href="mkdoc_8dox.html#aba655c5729da86df745f0c8e7f9ba8d2">struct</a> <a class="el" href="structTpltz.html">Tpltz</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="toeplitz_8h.html#aed6f6e14ad6cf376f446a5fc4ce1b8fa">Tpltz</a></td></tr>
+<tr class="memitem:ae0f591bed4b671805a642031cb2247ad"><td class="memItemLeft" align="right" valign="top">typedef struct <a class="el" href="structBlock.html">Block</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="toeplitz_8h.html#ae0f591bed4b671805a642031cb2247ad">Block</a></td></tr>
+<tr class="memitem:a50f6d802912467eb6af9d706f0030001"><td class="memItemLeft" align="right" valign="top">typedef struct <a class="el" href="structFlag.html">Flag</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="toeplitz_8h.html#a50f6d802912467eb6af9d706f0030001">Flag</a></td></tr>
+<tr class="memitem:a7e1f53c0f7143b20fe98a74b039d89e9"><td class="memItemLeft" align="right" valign="top">typedef struct <a class="el" href="structGap.html">Gap</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="toeplitz_8h.html#a7e1f53c0f7143b20fe98a74b039d89e9">Gap</a></td></tr>
+<tr class="memitem:aed6f6e14ad6cf376f446a5fc4ce1b8fa"><td class="memItemLeft" align="right" valign="top">typedef struct <a class="el" href="structTpltz.html">Tpltz</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="toeplitz_8h.html#aed6f6e14ad6cf376f446a5fc4ce1b8fa">Tpltz</a></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2><a name="func-members"></a>
 Functions</h2></td></tr>
@@ -182,7 +182,7 @@ Functions</h2></td></tr>
 <tr class="memdesc:gaf19f51ef406bebdb5e9400b6f9962077"><td class="mdescLeft">&#160;</td><td class="mdescRight">Perform the product of a Toeplitz matrix by a matrix without using FFT's.  <a href="group__group21.html#gaf19f51ef406bebdb5e9400b6f9962077"></a><br/></td></tr>
 <tr class="memitem:gaf6b3f49e179ac9ed28354ddd7dbb6a04"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__group21.html#gaf6b3f49e179ac9ed28354ddd7dbb6a04">build_gappy_blocks</a> (int nrow, int m, <a class="el" href="structBlock.html">Block</a> *tpltzblocks, int nb_blocks_local, int nb_blocks_all, int64_t *id0gap, int *lgap, int ngap, <a class="el" href="structBlock.html">Block</a> *tpltzblocks_gappy, int *nb_blocks_gappy_final, int flag_param_distmin_fixed)</td></tr>
 <tr class="memdesc:gaf6b3f49e179ac9ed28354ddd7dbb6a04"><td class="mdescLeft">&#160;</td><td class="mdescRight">Build the gappy Toeplitz block structure to optimise the product computation at gaps location.  <a href="group__group21.html#gaf6b3f49e179ac9ed28354ddd7dbb6a04"></a><br/></td></tr>
-<tr class="memitem:ga24331a8efb6e0b77df7c645ef45b2830"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__group22.html#ga24331a8efb6e0b77df7c645ef45b2830">print_error_message</a> (int error_number, char const *<a class="el" href="mkdoc_8dox.html#a049a073e5602cc325f7559a06c5a2420">file</a>, int line)</td></tr>
+<tr class="memitem:ga24331a8efb6e0b77df7c645ef45b2830"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__group22.html#ga24331a8efb6e0b77df7c645ef45b2830">print_error_message</a> (int error_number, char const *file, int line)</td></tr>
 <tr class="memdesc:ga24331a8efb6e0b77df7c645ef45b2830"><td class="mdescLeft">&#160;</td><td class="mdescRight">Prints error message corresponding to an error number.  <a href="group__group22.html#ga24331a8efb6e0b77df7c645ef45b2830"></a><br/></td></tr>
 <tr class="memitem:ga7dddc7df6f787d6aa92dfc25e9d0465a"><td class="memItemLeft" align="right" valign="top">int&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="group__group22.html#ga7dddc7df6f787d6aa92dfc25e9d0465a">copy_block</a> (int ninrow, int nincol, double *Vin, int noutrow, int noutcol, double *Vout, int inrow, int incol, int nblockrow, int nblockcol, int outrow, int outcol, double norm, int set_zero_flag)</td></tr>
 <tr class="memdesc:ga7dddc7df6f787d6aa92dfc25e9d0465a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Copies (and potentially reshapes) a selected block of the input matrix to a specified position of the output matrix.  <a href="group__group22.html#ga7dddc7df6f787d6aa92dfc25e9d0465a"></a><br/></td></tr>
@@ -262,7 +262,7 @@ Agency (ANR) through COSINUS program (project MIDAS no. ANR-09-COSI-009).</dd></
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">typedef <a class="el" href="mkdoc_8dox.html#aba655c5729da86df745f0c8e7f9ba8d2">struct</a> <a class="el" href="structBlock.html">Block</a>  <a class="el" href="structBlock.html">Block</a></td>
+          <td class="memname">typedef struct <a class="el" href="structBlock.html">Block</a>  <a class="el" href="structBlock.html">Block</a></td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -274,7 +274,7 @@ Agency (ANR) through COSINUS program (project MIDAS no. ANR-09-COSI-009).</dd></
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">typedef <a class="el" href="mkdoc_8dox.html#aba655c5729da86df745f0c8e7f9ba8d2">struct</a> <a class="el" href="structFlag.html">Flag</a>  <a class="el" href="structFlag.html">Flag</a></td>
+          <td class="memname">typedef struct <a class="el" href="structFlag.html">Flag</a>  <a class="el" href="structFlag.html">Flag</a></td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -286,7 +286,7 @@ Agency (ANR) through COSINUS program (project MIDAS no. ANR-09-COSI-009).</dd></
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">typedef <a class="el" href="mkdoc_8dox.html#aba655c5729da86df745f0c8e7f9ba8d2">struct</a> <a class="el" href="structGap.html">Gap</a>  <a class="el" href="structGap.html">Gap</a></td>
+          <td class="memname">typedef struct <a class="el" href="structGap.html">Gap</a>  <a class="el" href="structGap.html">Gap</a></td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -298,7 +298,7 @@ Agency (ANR) through COSINUS program (project MIDAS no. ANR-09-COSI-009).</dd></
 <div class="memproto">
       <table class="memname">
         <tr>
-          <td class="memname">typedef <a class="el" href="mkdoc_8dox.html#aba655c5729da86df745f0c8e7f9ba8d2">struct</a> <a class="el" href="structTpltz.html">Tpltz</a>  <a class="el" href="structTpltz.html">Tpltz</a></td>
+          <td class="memname">typedef struct <a class="el" href="structTpltz.html">Tpltz</a>  <a class="el" href="structTpltz.html">Tpltz</a></td>
         </tr>
       </table>
 </div><div class="memdoc">
@@ -533,7 +533,7 @@ Agency (ANR) through COSINUS program (project MIDAS no. ANR-09-COSI-009).</dd></
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
     <li class="navelem"><a class="el" href="dir_68267d1309a1af8e8297ef4c3efbcdba.html">src</a></li><li class="navelem"><a class="el" href="dir_03a9a56a78e86ef6aa86ae63554fe4e5.html">toeplitz</a></li><li class="navelem"><a class="el" href="toeplitz_8h.html">toeplitz.h</a></li>
-    <li class="footer">Generated on Sun Dec 2 2018 15:55:16 for MIDAPACK - MIcrowave Data Analysis PACKage by
+    <li class="footer">Generated on Sun Dec 2 2018 17:59:40 for MIDAPACK - MIcrowave Data Analysis PACKage by
     <a href="http://www.doxygen.org/index.html">
     <img class="footer" src="doxygen.png" alt="doxygen"/></a> 1.8.1.1 </li>
   </ul>

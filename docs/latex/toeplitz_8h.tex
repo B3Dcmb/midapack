@@ -20,13 +20,13 @@ struct \hyperlink{structTpltz}{Tpltz}
 \subsection*{Typedefs}
 \begin{DoxyCompactItemize}
 \item 
-typedef \hyperlink{mkdoc_8dox_aba655c5729da86df745f0c8e7f9ba8d2}{struct} \hyperlink{structBlock}{Block} \hyperlink{toeplitz_8h_ae0f591bed4b671805a642031cb2247ad}{Block}
+typedef struct \hyperlink{structBlock}{Block} \hyperlink{toeplitz_8h_ae0f591bed4b671805a642031cb2247ad}{Block}
 \item 
-typedef \hyperlink{mkdoc_8dox_aba655c5729da86df745f0c8e7f9ba8d2}{struct} \hyperlink{structFlag}{Flag} \hyperlink{toeplitz_8h_a50f6d802912467eb6af9d706f0030001}{Flag}
+typedef struct \hyperlink{structFlag}{Flag} \hyperlink{toeplitz_8h_a50f6d802912467eb6af9d706f0030001}{Flag}
 \item 
-typedef \hyperlink{mkdoc_8dox_aba655c5729da86df745f0c8e7f9ba8d2}{struct} \hyperlink{structGap}{Gap} \hyperlink{toeplitz_8h_a7e1f53c0f7143b20fe98a74b039d89e9}{Gap}
+typedef struct \hyperlink{structGap}{Gap} \hyperlink{toeplitz_8h_a7e1f53c0f7143b20fe98a74b039d89e9}{Gap}
 \item 
-typedef \hyperlink{mkdoc_8dox_aba655c5729da86df745f0c8e7f9ba8d2}{struct} \hyperlink{structTpltz}{Tpltz} \hyperlink{toeplitz_8h_aed6f6e14ad6cf376f446a5fc4ce1b8fa}{Tpltz}
+typedef struct \hyperlink{structTpltz}{Tpltz} \hyperlink{toeplitz_8h_aed6f6e14ad6cf376f446a5fc4ce1b8fa}{Tpltz}
 \end{DoxyCompactItemize}
 \subsection*{Functions}
 \begin{DoxyCompactItemize}
@@ -81,7 +81,7 @@ int \hyperlink{group__group21_gaf19f51ef406bebdb5e9400b6f9962077}{stmm\-\_\-simp
 \begin{DoxyCompactList}\small\item\em Perform the product of a Toeplitz matrix by a matrix without using F\-F\-T's. \end{DoxyCompactList}\item 
 int \hyperlink{group__group21_gaf6b3f49e179ac9ed28354ddd7dbb6a04}{build\-\_\-gappy\-\_\-blocks} (int nrow, int m, \hyperlink{structBlock}{Block} $\ast$tpltzblocks, int nb\-\_\-blocks\-\_\-local, int nb\-\_\-blocks\-\_\-all, int64\-\_\-t $\ast$id0gap, int $\ast$lgap, int ngap, \hyperlink{structBlock}{Block} $\ast$tpltzblocks\-\_\-gappy, int $\ast$nb\-\_\-blocks\-\_\-gappy\-\_\-final, int flag\-\_\-param\-\_\-distmin\-\_\-fixed)
 \begin{DoxyCompactList}\small\item\em Build the gappy Toeplitz block structure to optimise the product computation at gaps location. \end{DoxyCompactList}\item 
-int \hyperlink{group__group22_ga24331a8efb6e0b77df7c645ef45b2830}{print\-\_\-error\-\_\-message} (int error\-\_\-number, char const $\ast$\hyperlink{mkdoc_8dox_a049a073e5602cc325f7559a06c5a2420}{file}, int line)
+int \hyperlink{group__group22_ga24331a8efb6e0b77df7c645ef45b2830}{print\-\_\-error\-\_\-message} (int error\-\_\-number, char const $\ast$file, int line)
 \begin{DoxyCompactList}\small\item\em Prints error message corresponding to an error number. \end{DoxyCompactList}\item 
 int \hyperlink{group__group22_ga7dddc7df6f787d6aa92dfc25e9d0465a}{copy\-\_\-block} (int ninrow, int nincol, double $\ast$Vin, int noutrow, int noutcol, double $\ast$Vout, int inrow, int incol, int nblockrow, int nblockcol, int outrow, int outcol, double norm, int set\-\_\-zero\-\_\-flag)
 \begin{DoxyCompactList}\small\item\em Copies (and potentially reshapes) a selected block of the input matrix to a specified position of the output matrix. \end{DoxyCompactList}\item 
@@ -172,16 +172,16 @@ Definition in file \hyperlink{toeplitz_8h_source}{toeplitz.\-h}.
 \subsection{Typedef Documentation}
 \hypertarget{toeplitz_8h_ae0f591bed4b671805a642031cb2247ad}{\index{toeplitz.\-h@{toeplitz.\-h}!Block@{Block}}
 \index{Block@{Block}!toeplitz.h@{toeplitz.\-h}}
-\subsubsection[{Block}]{\setlength{\rightskip}{0pt plus 5cm}typedef {\bf struct} {\bf Block}  {\bf Block}}}\label{toeplitz_8h_ae0f591bed4b671805a642031cb2247ad}
+\subsubsection[{Block}]{\setlength{\rightskip}{0pt plus 5cm}typedef struct {\bf Block}  {\bf Block}}}\label{toeplitz_8h_ae0f591bed4b671805a642031cb2247ad}
 \hypertarget{toeplitz_8h_a50f6d802912467eb6af9d706f0030001}{\index{toeplitz.\-h@{toeplitz.\-h}!Flag@{Flag}}
 \index{Flag@{Flag}!toeplitz.h@{toeplitz.\-h}}
-\subsubsection[{Flag}]{\setlength{\rightskip}{0pt plus 5cm}typedef {\bf struct} {\bf Flag}  {\bf Flag}}}\label{toeplitz_8h_a50f6d802912467eb6af9d706f0030001}
+\subsubsection[{Flag}]{\setlength{\rightskip}{0pt plus 5cm}typedef struct {\bf Flag}  {\bf Flag}}}\label{toeplitz_8h_a50f6d802912467eb6af9d706f0030001}
 \hypertarget{toeplitz_8h_a7e1f53c0f7143b20fe98a74b039d89e9}{\index{toeplitz.\-h@{toeplitz.\-h}!Gap@{Gap}}
 \index{Gap@{Gap}!toeplitz.h@{toeplitz.\-h}}
-\subsubsection[{Gap}]{\setlength{\rightskip}{0pt plus 5cm}typedef {\bf struct} {\bf Gap}  {\bf Gap}}}\label{toeplitz_8h_a7e1f53c0f7143b20fe98a74b039d89e9}
+\subsubsection[{Gap}]{\setlength{\rightskip}{0pt plus 5cm}typedef struct {\bf Gap}  {\bf Gap}}}\label{toeplitz_8h_a7e1f53c0f7143b20fe98a74b039d89e9}
 \hypertarget{toeplitz_8h_aed6f6e14ad6cf376f446a5fc4ce1b8fa}{\index{toeplitz.\-h@{toeplitz.\-h}!Tpltz@{Tpltz}}
 \index{Tpltz@{Tpltz}!toeplitz.h@{toeplitz.\-h}}
-\subsubsection[{Tpltz}]{\setlength{\rightskip}{0pt plus 5cm}typedef {\bf struct} {\bf Tpltz}  {\bf Tpltz}}}\label{toeplitz_8h_aed6f6e14ad6cf376f446a5fc4ce1b8fa}
+\subsubsection[{Tpltz}]{\setlength{\rightskip}{0pt plus 5cm}typedef struct {\bf Tpltz}  {\bf Tpltz}}}\label{toeplitz_8h_aed6f6e14ad6cf376f446a5fc4ce1b8fa}
 
 
 \subsection{Function Documentation}
