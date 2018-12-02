@@ -1,0 +1,159 @@
+\hypertarget{als_8c}{\section{als.\-c}
+\label{als_8c}\index{als.\-c@{als.\-c}}
+}
+
+\begin{DoxyCode}
+00001 
+00009 \textcolor{preprocessor}{#include <stdlib.h>}
+00010 
+\hypertarget{als_8c_source_l00017}{}\hyperlink{als_8h_a895e7767f67f48a41f62a83122f28960}{00017} \textcolor{keywordtype}{int} \hyperlink{als_8c_a895e7767f67f48a41f62a83122f28960}{card}(\textcolor{keywordtype}{int} *A, \textcolor{keywordtype}{int} nA)\{
+00018   \textcolor{keywordtype}{int} i;
+00019   \textcolor{keywordtype}{int} tmp=A[0];
+00020   \textcolor{keywordtype}{int} c=1;
+00021   \textcolor{keywordflow}{for}(i=1; i<nA; i++)\{
+00022     \textcolor{keywordflow}{if}(A[i] != tmp)\{
+00023       c++;  
+00024       tmp=A[i];
+00025     \}
+00026   \} 
+00027   \textcolor{keywordflow}{return} c;
+00028 \}
+00029 
+00030 
+\hypertarget{als_8c_source_l00039}{}\hyperlink{als_8h_a8e2ee6837f49affa2ec499bd74e1ddf6}{00039} \textcolor{keywordtype}{void} \hyperlink{als_8c_a8e2ee6837f49affa2ec499bd74e1ddf6}{merge}(\textcolor{keywordtype}{int} *A, \textcolor{keywordtype}{int} nA, \textcolor{keywordtype}{int} *B)\{
+00040   \textcolor{keywordtype}{int} i=0, j=0;
+00041   B[0]=A[0];
+00042   \textcolor{keywordflow}{for}(i=1; i<nA; i++)\{
+00043     \textcolor{keywordflow}{if}(A[i] != B[j])\{
+00044       j++;  
+00045       B[j]=A[i];
+00046     \}
+00047   \} 
+00048 \}
+00049 
+00050 
+\hypertarget{als_8c_source_l00060}{}\hyperlink{group__matmap__group22_ga53acb71f83d76d42080a2fd8b4ad06b1}{00060} \textcolor{keywordtype}{int} \hyperlink{group__matmap__group22_ga53acb71f83d76d42080a2fd8b4ad06b1}{card\_or}(\textcolor{keywordtype}{int} *A1, \textcolor{keywordtype}{int} n1, \textcolor{keywordtype}{int} *A2, \textcolor{keywordtype}{int} n2)\{
+00061   \textcolor{keywordtype}{int} i=0, j=0, k= 0;
+00062   \textcolor{keywordflow}{while}( i<n1 || j<n2)\{
+00063     \textcolor{keywordflow}{if}(A1[i] < A2[j])\{
+00064       \textcolor{keywordflow}{if}(i<n1)\{ i++; \}
+00065       \textcolor{keywordflow}{else}\{ j++; \}
+00066     \}
+00067     \textcolor{keywordflow}{else} \textcolor{keywordflow}{if}(A1[i] > A2[j])\{
+00068       \textcolor{keywordflow}{if}(j<n2)\{ j++; \}
+00069       \textcolor{keywordflow}{else}\{ i++; \}
+00070     \}
+00071     \textcolor{keywordflow}{else}\{
+00072       \textcolor{keywordflow}{if}(i<n1)\{ i++; \}
+00073       \textcolor{keywordflow}{if}(j<n2)\{ j++; \}
+00074     \}
+00075     k++; 
+00076   \}
+00077   \textcolor{keywordflow}{return} k;
+00078 \}
+00079 
+\hypertarget{als_8c_source_l00089}{}\hyperlink{group__matmap__group22_ga67a8ef3c535fc47af99024fa2de0b3c5}{00089} \textcolor{keywordtype}{int} \hyperlink{group__matmap__group22_ga67a8ef3c535fc47af99024fa2de0b3c5}{card\_and}(\textcolor{keywordtype}{int} *A1, \textcolor{keywordtype}{int} n1, \textcolor{keywordtype}{int} *A2, \textcolor{keywordtype}{int} n2)\{
+00090   \textcolor{keywordtype}{int} i=0, j=0, k= 0;
+00091   \textcolor{keywordflow}{while}( i<n1 && j<n2)\{
+00092     \textcolor{keywordflow}{if}(A1[i] < A2[j])\{
+00093       i++;  
+00094     \}
+00095     \textcolor{keywordflow}{else} \textcolor{keywordflow}{if}(A1[i] > A2[j])\{
+00096       j++;
+00097     \}
+00098     \textcolor{keywordflow}{else}\{
+00099       k++; 
+00100       i++;
+00101       j++;
+00102     \}
+00103   \}
+00104   \textcolor{keywordflow}{return} k;
+00105 \}
+00106 
+\hypertarget{als_8c_source_l00118}{}\hyperlink{group__matmap__group22_ga07e3dbbce334f3744a3eb27174780a7c}{00118} \textcolor{keywordtype}{int} \hyperlink{group__matmap__group22_ga07e3dbbce334f3744a3eb27174780a7c}{set\_or}(\textcolor{keywordtype}{int} *A1, \textcolor{keywordtype}{int} n1, \textcolor{keywordtype}{int} *A2, \textcolor{keywordtype}{int} n2, \textcolor{keywordtype}{int} *A1orA2)\{
+00119   \textcolor{keywordtype}{int} i=0, j=0, k= 0;
+00120   \textcolor{keywordflow}{while}( i<n1 || j<n2)\{
+00121     \textcolor{keywordflow}{if}(A1[i] < A2[j])\{
+00122       \textcolor{keywordflow}{if}(i<n1)\{
+00123         A1orA2[k]=A1[i];
+00124         i++;
+00125       \}
+00126       \textcolor{keywordflow}{else}\{
+00127         A1orA2[k]=A2[j];
+00128         j++;
+00129       \}
+00130     \}
+00131     \textcolor{keywordflow}{else} \textcolor{keywordflow}{if}(A1[i] > A2[j])\{
+00132       \textcolor{keywordflow}{if}(j<n2)\{
+00133         A1orA2[k]=A2[j];
+00134         j++;  
+00135       \}
+00136       \textcolor{keywordflow}{else}\{
+00137         A1orA2[k]=A1[i];
+00138         i++;
+00139       \}
+00140     \}
+00141     \textcolor{keywordflow}{else}\{
+00142       A1orA2[k]=A1[i];
+00143       i++;  
+00144       j++;    
+00145     \}
+00146     k++;
+00147   \}
+00148   \textcolor{keywordflow}{return} k;
+00149 \}
+00150 
+\hypertarget{als_8c_source_l00162}{}\hyperlink{group__matmap__group22_ga3beac6a118c373a422f4772144306add}{00162} \textcolor{keywordtype}{int} \hyperlink{group__matmap__group22_ga3beac6a118c373a422f4772144306add}{set\_and}(\textcolor{keywordtype}{int} *A1, \textcolor{keywordtype}{int} n1, \textcolor{keywordtype}{int} *A2, \textcolor{keywordtype}{int} n2, \textcolor{keywordtype}{int} *A1andA2)\{
+00163   \textcolor{keywordtype}{int} i=0, j=0, k= 0;
+00164   \textcolor{keywordflow}{while}( i<n1 && j<n2)\{
+00165     \textcolor{keywordflow}{if}(A1[i] < A2[j])\{
+00166       i++;  
+00167     \}
+00168     \textcolor{keywordflow}{else} \textcolor{keywordflow}{if}(A1[i] > A2[j])\{
+00169       j++;
+00170     \}
+00171     \textcolor{keywordflow}{else}\{
+00172       A1andA2[k]=A1[i];
+00173       k++; 
+00174       i++;
+00175       j++;
+00176     \}
+00177   \}
+00178   \textcolor{keywordflow}{return} k;
+00179 \}
+00180 
+\hypertarget{als_8c_source_l00188}{}\hyperlink{als_8h_a6f1b0726299f97bfb88c9edc2bdbe174}{00188} \textcolor{keywordtype}{int} \hyperlink{als_8c_a6f1b0726299f97bfb88c9edc2bdbe174}{map\_and}(\textcolor{keywordtype}{int} *A1, \textcolor{keywordtype}{int} n1, \textcolor{keywordtype}{int} *A2, \textcolor{keywordtype}{int} n2, \textcolor{keywordtype}{int} *mapA1andA2)\{
+00189   \textcolor{keywordtype}{int} i=0, j=0, k= 0;
+00190   \textcolor{keywordflow}{while}( i<n1 && j<n2)\{
+00191     \textcolor{keywordflow}{if}(A1[i] < A2[j])\{
+00192       i++;  
+00193     \}
+00194     \textcolor{keywordflow}{else} \textcolor{keywordflow}{if}(A1[i] > A2[j])\{
+00195       j++;
+00196     \}
+00197     \textcolor{keywordflow}{else}\{
+00198       mapA1andA2[k]=i;
+00199       k++; 
+00200       i++;
+00201       j++;
+00202     \}
+00203   \}
+00204   \textcolor{keywordflow}{return} k;
+00205 \}
+00206 
+00207 
+\hypertarget{als_8c_source_l00217}{}\hyperlink{als_8h_a9b54f87c099afc27b21911c553068651}{00217} \textcolor{keywordtype}{void} \hyperlink{als_8c_a9b54f87c099afc27b21911c553068651}{subset2map}(\textcolor{keywordtype}{int} *A, \textcolor{keywordtype}{int} nA, \textcolor{keywordtype}{int} *subA, \textcolor{keywordtype}{int} nsubA)\{
+00218   \textcolor{keywordtype}{int} i=0, j=0;
+00219   \textcolor{keywordflow}{while}( i<nA && j<nsubA)\{
+00220     \textcolor{keywordflow}{if}(A[i] < subA[j])\{
+00221       i++;  
+00222     \}
+00223     \textcolor{keywordflow}{else}\{
+00224       subA[j]=i;
+00225       i++;
+00226       j++;
+00227     \}
+00228   \}
+00229 \}
+00230 
+\end{DoxyCode}

@@ -1,0 +1,73 @@
+\hypertarget{mapmat_8h}{\section{mapmat.\-h File Reference}
+\label{mapmat_8h}\index{mapmat.\-h@{mapmat.\-h}}
+}
+
+
+{\bfseries  Declarations of the matrix type and his associated routines.} \par
+ these routines are developed to handle sparse matrices. Typically, in the C\-M\-B Data Analysis context, it is especially developed handle pointing or unpointing matrices. Thus, the unpointing matrix {\itshape A} can be defined as a M\-I\-D\-A\-S\-\_\-\-Mat. Operating with the pointing matrices can be done without redefining a new matrix.  
+
+
+\subsection*{Data Structures}
+\begin{DoxyCompactItemize}
+\item 
+struct \hyperlink{structMat}{Mat}
+\begin{DoxyCompactList}\small\item\em Matrix structure \par
+ A$\ast$ = (A0$\ast$ $|$ A1$\ast$ $|$ ... $|$ Ap-\/1$\ast$ ) \end{DoxyCompactList}\end{DoxyCompactItemize}
+\subsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+int \hyperlink{group__matmap__group11_ga16fec1005b6f01bda1dd6154c26c27ed}{Mat\-Init} (\hyperlink{structMat}{Mat} $\ast$A, int m, int nnz, int $\ast$indices, double $\ast$values, int flag\#ifdef W\-\_\-\-M\-P\-I, M\-P\-I\-\_\-\-Comm comm\#endif)
+\item 
+void \hyperlink{group__matmap__group11_gaaf26c7678367e6757392c03abd22a105}{Mat\-Set\-Indices} (\hyperlink{structMat}{Mat} $\ast$A, int m, int nnz, int $\ast$indices)
+\item 
+void \hyperlink{group__matmap__group11_gad3d5adb742e7a82454fcd6eede21da91}{Mat\-Set\-Values} (\hyperlink{structMat}{Mat} $\ast$A, int m, int nnz, double $\ast$values)
+\item 
+void \hyperlink{group__matmap__group11_ga4e1732c63feba9e589b5037d0a25ab75}{Mat\-Free} (\hyperlink{structMat}{Mat} $\ast$A)
+\item 
+int \hyperlink{group__matmap__group11_gae31f7ccb10cda5c97e49f640feed1ad4}{Mat\-Local\-Shape} (\hyperlink{structMat}{Mat} $\ast$A, int sflag)
+\item 
+int \hyperlink{group__matmap__group11_ga61b3b348d7c039aadfc3196e6b83535a}{Mat\-Com\-Shape} (\hyperlink{structMat}{Mat} $\ast$A, int flag, M\-P\-I\-\_\-\-Comm comm)
+\item 
+int \hyperlink{group__matmap__group12a_gaf757d9249d31d2839b3376ac2e3f5574}{Mat\-Vec\-Prod} (\hyperlink{structMat}{Mat} $\ast$A, double $\ast$x, double $\ast$y, int pflag)
+\item 
+int \hyperlink{group__matmap__group11_ga1a51d7e8153d33045482100bbd07d0a9}{Tr\-Mat\-Vec\-Prod} (\hyperlink{structMat}{Mat} $\ast$A, double $\ast$y, double $\ast$x, int pflag)
+\item 
+int \hyperlink{group__matmap__group12b_ga46ad4af50377be15a0aa50f416a53ade}{Tr\-Mat\-Vec\-Prod\-\_\-\-Naive} (\hyperlink{structMat}{Mat} $\ast$A, double $\ast$y, double $\ast$x, int pflag)
+\item 
+int \hyperlink{group__matmap__group11_ga56b5e9bda4e4ad0a2c4f2f12e94d077e}{Mat\-Load} (\hyperlink{structMat}{Mat} $\ast$A, char $\ast$filename)
+\item 
+int \hyperlink{group__matmap__group11_ga792b187cf2f23e526ecd5e2c3cbb9dab}{Mat\-Save} (\hyperlink{structMat}{Mat} $\ast$A, char $\ast$filename)
+\item 
+int \hyperlink{group__matmap__group11_ga8e522200e7c693e4d81ff3ce3a1e24ff}{Mat\-Info} (\hyperlink{structMat}{Mat} $\ast$A, int master, char $\ast$filename)
+\begin{DoxyCompactList}\small\item\em Print information about a matrix. \end{DoxyCompactList}\item 
+int \hyperlink{mapmat_8h_a8b6ed129adf6485b891280470ba4e6df}{greedyreduce} (\hyperlink{structMat}{Mat} $\ast$A, double $\ast$x)
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+{\bfseries  Declarations of the matrix type and his associated routines.} \par
+ these routines are developed to handle sparse matrices. Typically, in the C\-M\-B Data Analysis context, it is especially developed handle pointing or unpointing matrices. Thus, the unpointing matrix {\itshape A} can be defined as a M\-I\-D\-A\-S\-\_\-\-Mat. Operating with the pointing matrices can be done without redefining a new matrix. \begin{DoxyAuthor}{Author}
+Pierre Cargemel 
+\end{DoxyAuthor}
+\begin{DoxyDate}{Date}
+November 2011 
+\end{DoxyDate}
+
+
+Definition in file \hyperlink{mapmat_8h_source}{mapmat.\-h}.
+
+
+
+\subsection{Function Documentation}
+\hypertarget{mapmat_8h_a8b6ed129adf6485b891280470ba4e6df}{\index{mapmat.\-h@{mapmat.\-h}!greedyreduce@{greedyreduce}}
+\index{greedyreduce@{greedyreduce}!mapmat.h@{mapmat.\-h}}
+\subsubsection[{greedyreduce}]{\setlength{\rightskip}{0pt plus 5cm}int greedyreduce (
+\begin{DoxyParamCaption}
+\item[{{\bf Mat} $\ast$}]{A, }
+\item[{double $\ast$}]{x}
+\end{DoxyParamCaption}
+)}}\label{mapmat_8h_a8b6ed129adf6485b891280470ba4e6df}
+
+
+Definition at line \hyperlink{mapmat_8c_source_l00894}{894} of file \hyperlink{mapmat_8c_source}{mapmat.\-c}.
+

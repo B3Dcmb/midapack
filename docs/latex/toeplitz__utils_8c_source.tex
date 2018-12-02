@@ -1,0 +1,156 @@
+\hypertarget{toeplitz__utils_8c}{\section{toeplitz\-\_\-utils.\-c}
+\label{toeplitz__utils_8c}\index{toeplitz\-\_\-utils.\-c@{toeplitz\-\_\-utils.\-c}}
+}
+
+\begin{DoxyCode}
+00001 
+00049 \textcolor{preprocessor}{#include "\hyperlink{toeplitz_8h}{toeplitz.h}"}
+00050 \textcolor{keyword}{extern} \textcolor{keywordtype}{int} \hyperlink{toeplitz_8c_a300d52d9923297872ffb24962a0f0ce6}{PRINT\_RANK};
+00051 
+00052 \textcolor{comment}{//set of utilitaries routines - fd@apc}
+00053 
+00054 
+\hypertarget{toeplitz__utils_8c_source_l00055}{}\hyperlink{toeplitz__utils_8c_a080c7fa4d4c35aef9389d777fe2625be}{00055} \textcolor{keywordtype}{int} \hyperlink{toeplitz__utils_8c_a080c7fa4d4c35aef9389d777fe2625be}{defineTpltz}( \hyperlink{structTpltz}{Tpltz} *Nm1, int64\_t nrow, \textcolor{keywordtype}{int} m\_cw, \textcolor{keywordtype}{int} m\_rw, 
+      \hyperlink{structBlock}{Block} *tpltzblocks, \textcolor{keywordtype}{int} nb\_blocks\_loc, \textcolor{keywordtype}{int} nb\_blocks\_tot, int64\_t idp, \textcolor{keywordtype}{int}
+       local\_V\_size, \hyperlink{structFlag}{Flag} flag\_stgy, MPI\_Comm comm)
+00056 \{
+00057 
+00058   Nm1->\hyperlink{structTpltz_ae6401204807b06471ae4cf9ce7c2022b}{nrow} = nrow; \textcolor{comment}{//glob //recup du fichier params apres (en variables
+       globales)}
+00059   Nm1->\hyperlink{structTpltz_a6025c0048255a299edfb4f88ca01e7ec}{m\_cw} = m\_cw; \textcolor{comment}{//glob}
+00060   Nm1->\hyperlink{structTpltz_a0ad1c2bba1b44cc8e1a700813195d0a0}{m\_rw} = m\_rw; \textcolor{comment}{//glob}
+00061   Nm1->\hyperlink{structTpltz_ae2ec369f6eaac15a2353231b50270990}{tpltzblocks} = tpltzblocks; \textcolor{comment}{//toep}
+00062   Nm1->\hyperlink{structTpltz_a4090e9931928ca56b30db246ff77ce29}{nb\_blocks\_loc} = nb\_blocks\_loc; \textcolor{comment}{//toep}
+00063   Nm1->\hyperlink{structTpltz_a6275c3f32f3d790d92a7c8f257d3dcf9}{nb\_blocks\_tot} = nb\_blocks\_tot;  \textcolor{comment}{//toep}
+00064   Nm1->\hyperlink{structTpltz_af669b52bd5c07d8e41b4dddfc8c62312}{idp} = idp; \textcolor{comment}{//comput}
+00065   Nm1->\hyperlink{structTpltz_a03c363fb09ce439bcbbe0fd1f419ff3a}{local\_V\_size} = local\_V\_size; \textcolor{comment}{//comput}
+00066   Nm1->\hyperlink{structTpltz_af136a7cb103383ffab2080c566b8c7ab}{flag\_stgy} = flag\_stgy; \textcolor{comment}{//param}
+00067   Nm1->\hyperlink{structTpltz_ac000d7cb5fa8d9a204a38255e5d00098}{comm} = comm; \textcolor{comment}{//param}
+00068 
+00069 
+00070   \textcolor{keywordflow}{return} 0;
+00071 \}
+00072 
+00073 
+00074 
+\hypertarget{toeplitz__utils_8c_source_l00075}{}\hyperlink{toeplitz__utils_8c_ae35e762f7f467f3c2e5ae4a10eee1569}{00075} \textcolor{keywordtype}{int} \hyperlink{toeplitz__utils_8c_ae35e762f7f467f3c2e5ae4a10eee1569}{defineBlocks\_avg}(\hyperlink{structBlock}{Block} *tpltzblocks, \textcolor{keywordtype}{double} *T, \textcolor{keywordtype}{int} 
+      nb\_blocks\_loc, \textcolor{keywordtype}{int} n\_block\_avg, \textcolor{keywordtype}{int} lambda\_block\_avg, int64\_t id0 )
+00076 \{
+00077 
+00078 \textcolor{keywordtype}{int} i;
+00079 
+00080 
+00081   \textcolor{keywordflow}{for} ( i=0; i<nb\_blocks\_loc; i++)
+00082     tpltzblocks[i].n = n\_block\_avg;
+00083 
+00084   \textcolor{keywordflow}{for} ( i=0; i<nb\_blocks\_loc; i++)
+00085     tpltzblocks[i].lambda = lambda\_block\_avg;
+00086 
+00087   tpltzblocks[0].\hyperlink{structBlock_ad45697f62720768c82b652d948156fc6}{idv} = (int64\_t) (id0/n\_block\_avg) * n\_block\_avg ;
+00088   \textcolor{keywordflow}{for}(i=1;i<nb\_blocks\_loc;i++)
+00089     tpltzblocks[i].idv = (int64\_t) tpltzblocks[i-1].\hyperlink{structBlock_ad45697f62720768c82b652d948156fc6}{idv} + tpltzblocks[i-1].\hyperlink{structBlock_a458266f4280fecec415e23faf8a043a8}{n}
+      ;
+00090 
+00091   \textcolor{keywordflow}{for}( i=0; i<nb\_blocks\_loc; i++) \{
+00092     tpltzblocks[i].\hyperlink{structBlock_a79bef249b5532406d73f2c5253e00a60}{T\_block} = (T);
+00093   \}
+00094 
+00095 
+00096   \textcolor{keywordflow}{return} 0;
+00097 \}
+00098 
+00099 
+00100 \textcolor{comment}{//=============================================}
+00101 
+00102 
+\hypertarget{toeplitz__utils_8c_source_l00103}{}\hyperlink{toeplitz__utils_8c_afd66a4b165e762bcdd42fab1c1b9a305}{00103} \textcolor{keywordtype}{int} \hyperlink{toeplitz__utils_8c_afd66a4b165e762bcdd42fab1c1b9a305}{createRandomT}(\textcolor{keywordtype}{double} *T, \textcolor{keywordtype}{int} Tsize)
+00104 \{
+00105 
+00106   \textcolor{keywordtype}{int} i;
+00107   srand (time (NULL));  \textcolor{comment}{//init seed}
+00108 
+00109   \textcolor{comment}{//input matrix definition of T}
+00110     \textcolor{keywordflow}{for}(i=0;i<Tsize;i++)
+00111       T[i]= rand()/((double) RAND\_MAX);
+00112 
+00113   \textcolor{keywordflow}{return} 0;
+00114 \}
+00115 
+00116 
+00117 
+\hypertarget{toeplitz__utils_8c_source_l00118}{}\hyperlink{toeplitz__utils_8c_adb3085be919676c8abdbe1ba1dc1d53a}{00118} \textcolor{keywordtype}{int} \hyperlink{toeplitz__utils_8c_adb3085be919676c8abdbe1ba1dc1d53a}{createTbasic1}(\textcolor{keywordtype}{double} *T, \textcolor{keywordtype}{int} Tsize)
+00119 \{
+00120 
+00121   \textcolor{keywordtype}{int} i;
+00122   srand (Tsize);
+00123 
+00124   \textcolor{comment}{//input matrix definition of T}
+00125     \textcolor{keywordflow}{for}(i=0;i<Tsize;i++)
+00126       T[i]= 1.0 + rand()/((double) RAND\_MAX);
+00127 
+00128   \textcolor{keywordflow}{return} 0;
+00129 \}
+00130 
+00131 
+00132 
+\hypertarget{toeplitz__utils_8c_source_l00133}{}\hyperlink{toeplitz__utils_8c_a5fc110e6ebd713ac93ed3e3b115f3c54}{00133} \textcolor{keywordtype}{int} \hyperlink{toeplitz__utils_8c_a5fc110e6ebd713ac93ed3e3b115f3c54}{createTbasic2}(\textcolor{keywordtype}{double} *T, \textcolor{keywordtype}{int} Tsize)
+00134 \{
+00135 
+00136   \textcolor{keywordtype}{int} i;
+00137   srand (Tsize);
+00138 
+00139   \textcolor{comment}{//input matrix definition of T}
+00140     \textcolor{keywordflow}{for}(i=0;i<Tsize;i++) \{
+00141       \textcolor{keywordflow}{if} (i == 0) \{
+00142         T[i]=10.;\}
+00143       \textcolor{keywordflow}{else} \textcolor{keywordflow}{if} (i == 1) \{
+00144         T[i]=2.;\}
+00145       \textcolor{keywordflow}{else} \textcolor{keywordflow}{if} (i == 2) \{
+00146         T[i]=3.;\}
+00147       \textcolor{keywordflow}{else} \{
+00148         T[i]=rand()/((double) RAND\_MAX);
+00149      \}\}
+00150 
+00151   \textcolor{keywordflow}{return} 0;
+00152 \}
+00153 
+00154 
+\hypertarget{toeplitz__utils_8c_source_l00155}{}\hyperlink{toeplitz__utils_8c_adb00a5dd5479deac50815f8d4d67ad46}{00155} \textcolor{keywordtype}{int} \hyperlink{toeplitz__utils_8c_adb00a5dd5479deac50815f8d4d67ad46}{createTbasic3}(\textcolor{keywordtype}{double} *T, \textcolor{keywordtype}{int} Tsize)
+00156 \{
+00157 
+00158   \textcolor{keywordtype}{int} i;
+00159   srand (Tsize);
+00160 
+00161   \textcolor{comment}{//input matrix definition of T}
+00162     \textcolor{keywordflow}{for}(i=0;i<Tsize;i++) \{
+00163       \textcolor{keywordflow}{if} (i == 0) \{
+00164         T[i]=2.;\}
+00165       \textcolor{keywordflow}{else} \textcolor{keywordflow}{if} (i == 1) \{
+00166         T[i]=-1.;\}
+00167       \textcolor{keywordflow}{else} \textcolor{keywordflow}{if} (i == 2) \{
+00168         T[i]=0.;\}
+00169       \textcolor{keywordflow}{else} \{
+00170         T[i]=0.;\textcolor{comment}{//rand()/((double) RAND\_MAX);}
+00171      \}\}
+00172 
+00173 
+00174   \textcolor{keywordflow}{return} 0;
+00175 \}
+00176 
+00177 
+\hypertarget{toeplitz__utils_8c_source_l00178}{}\hyperlink{toeplitz__utils_8c_a795d607f44bc2ad76baddb3f600acb46}{00178} \textcolor{keywordtype}{int} \hyperlink{toeplitz__utils_8c_a795d607f44bc2ad76baddb3f600acb46}{createTfrominvtt}(\textcolor{keywordtype}{double} *T, \textcolor{keywordtype}{int} Tsize)
+00179 \{
+00180 
+00181   \textcolor{keywordtype}{int} i;
+00182 
+00183 \textcolor{comment}{//#include "invtt\_params.h"}
+00184 
+00185   \textcolor{keywordtype}{double} *invtt;
+00186 
+00187   T = invtt;
+00188 \textcolor{comment}{//  createinvtt(invtt);}
+00189 
+00190 
+00191   \textcolor{keywordflow}{return} 0;
+00192 \}
+\end{DoxyCode}

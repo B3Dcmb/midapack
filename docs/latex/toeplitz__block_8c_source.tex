@@ -1,0 +1,651 @@
+\hypertarget{toeplitz__block_8c}{\section{toeplitz\-\_\-block.\-c}
+\label{toeplitz__block_8c}\index{toeplitz\-\_\-block.\-c@{toeplitz\-\_\-block.\-c}}
+}
+
+\begin{DoxyCode}
+00001 
+00049 \textcolor{preprocessor}{#include "\hyperlink{toeplitz_8h}{toeplitz.h}"}
+00050 
+00051 
+00052 \textcolor{comment}{//r1.1 - Frederic Dauvergne (APC)}
+00053 \textcolor{comment}{//This is the routines related to the Toeplitz blocks diagonal routine.}
+00054 \textcolor{comment}{//There is a sequential equivalent routine in the file toeplitz\_seq.c}
+00055 
+00056 \textcolor{comment}{//todo:}
+00057 \textcolor{comment}{//- remove the nooptimize communication}
+00058 
+00059 \textcolor{comment}{//=========================================================================}
+00060 \textcolor{preprocessor}{#ifdef W\_MPI}
+00061 \textcolor{preprocessor}{}
+00062 
+\hypertarget{toeplitz__block_8c_source_l00087}{}\hyperlink{group__group22_gaa7ea4ac654fcb9f5fe3bad139febb65d}{00087} \textcolor{keywordtype}{int} \hyperlink{group__group22_gaa7ea4ac654fcb9f5fe3bad139febb65d}{mpi\_stbmm}(\textcolor{keywordtype}{double} **V, int64\_t nrow, \textcolor{keywordtype}{int} m, \textcolor{keywordtype}{int} m\_rowwise, \hyperlink{structBlock}{Block}
+       *tpltzblocks, \textcolor{keywordtype}{int} nb\_blocks\_local, \textcolor{keywordtype}{int} nb\_blocks\_all, int64\_t idp, \textcolor{keywordtype}{int} 
+      local\_V\_size, \hyperlink{structFlag}{Flag} flag\_stgy, MPI\_Comm comm)
+00088 \{
+00089 \textcolor{preprocessor}{#else  //for sequential use only}
+00090 \textcolor{preprocessor}{}\textcolor{keywordtype}{int} \hyperlink{group__group22_gaa7ea4ac654fcb9f5fe3bad139febb65d}{mpi\_stbmm}(\textcolor{keywordtype}{double} **V, int64\_t nrow, \textcolor{keywordtype}{int} m, \textcolor{keywordtype}{int} m\_rowwise, \hyperlink{structBlock}{Block}
+       *tpltzblocks, \textcolor{keywordtype}{int} nb\_blocks\_local, \textcolor{keywordtype}{int} nb\_blocks\_all, int64\_t idp, \textcolor{keywordtype}{int} 
+      local\_V\_size, \hyperlink{structFlag}{Flag} flag\_stgy)
+00091 \{
+00092 \textcolor{preprocessor}{#endif}
+00093 \textcolor{preprocessor}{}
+00094 
+00095   \textcolor{comment}{//MPI parameters}
+00096   \textcolor{keywordtype}{int} rank;   \textcolor{comment}{//process rank}
+00097   \textcolor{keywordtype}{int} size;   \textcolor{comment}{//process number}
+00098 
+00099 \textcolor{preprocessor}{#ifdef W\_MPI}
+00100 \textcolor{preprocessor}{}  MPI\_Status status;
+00101   MPI\_Comm\_rank(comm, &rank);
+00102   MPI\_Comm\_size(comm, &size);
+00103 
+00104 \textcolor{preprocessor}{#else}
+00105 \textcolor{preprocessor}{}  rank=0;
+00106   size=1;
+00107 \textcolor{preprocessor}{#endif}
+00108 \textcolor{preprocessor}{}
+00109   \hyperlink{toeplitz_8c_a300d52d9923297872ffb24962a0f0ce6}{PRINT\_RANK}=rank;
+00110 
+00111   FILE *\hyperlink{mkdoc_8dox_a049a073e5602cc325f7559a06c5a2420}{file};
+00112   file = stdout;
+00113 
+00114   \textcolor{keywordtype}{int} i,j,k;  \textcolor{comment}{//some indexes}
+00115 
+00116 
+00117   \textcolor{comment}{//identification of the mpi neighbours process to communicate when there is a
+       shared block}
+00118   \textcolor{keywordtype}{int} right = rank+1;
+00119   \textcolor{keywordtype}{int} left  = rank-1;
+00120 
+00121 
+00122   \textcolor{comment}{//Define the indices for each process}
+00123   \textcolor{keywordtype}{int} idv0, idvn;  \textcolor{comment}{//indice of the first and the last block of V for each
+       processes}
+00124 
+00125   \textcolor{keywordtype}{int} *nnew;
+00126   nnew = (\textcolor{keywordtype}{int}*) calloc(nb\_blocks\_local, \textcolor{keyword}{sizeof}(\textcolor{keywordtype}{int}));
+00127   int64\_t idpnew;
+00128   \textcolor{keywordtype}{int} local\_V\_size\_new;
+00129   \textcolor{keywordtype}{int} n\_rowwise=local\_V\_size;
+00130 
+00131   \textcolor{keywordtype}{int} status\_params = \hyperlink{toeplitz_8h_aec19e9200f0b8b258ce04dc8a38fc96d}{get\_overlapping\_blocks\_params}
+      ( nb\_blocks\_local, tpltzblocks, local\_V\_size, nrow, idp, &idpnew, &
+      local\_V\_size\_new, nnew, &idv0, &idvn);
+00132 
+00133 
+00134   \textcolor{keywordflow}{if}(\hyperlink{toeplitz_8c_a300d52d9923297872ffb24962a0f0ce6}{PRINT\_RANK}==0 && \hyperlink{toeplitz_8c_ab848ce91ba14d3dc5c87d0b42f3a1c0d}{VERBOSE}>2)
+00135     printf(\textcolor{stringliteral}{"status\_params=%d\(\backslash\)n"}, status\_params);
+00136 
+00137   \textcolor{keywordflow}{if}( status\_params == 0) \{
+00138     free(nnew);
+00139     \textcolor{keywordflow}{return}(0); \textcolor{comment}{//no work to be done}
+00140   \}
+00141 
+00142   \textcolor{keywordflow}{if} (tpltzblocks[idv0].lambda==0 || tpltzblocks[idvn].lambda==0)
+00143     \textcolor{keywordflow}{return} \hyperlink{group__group22_ga24331a8efb6e0b77df7c645ef45b2830}{print\_error\_message} (2, \_\_FILE\_\_, \_\_LINE\_\_);
+00144 
+00145 
+00146   \textcolor{keywordflow}{if}(\hyperlink{toeplitz_8c_a300d52d9923297872ffb24962a0f0ce6}{PRINT\_RANK}==0 && \hyperlink{toeplitz_8c_ab848ce91ba14d3dc5c87d0b42f3a1c0d}{VERBOSE}>2) \{  \textcolor{comment}{//print on screen news
+       parameters definition if VERBOSE}
+00147     fprintf(file, \textcolor{stringliteral}{"new parameters caracteristics:\(\backslash\)n"});
+00148     fprintf(file, \textcolor{stringliteral}{"[%d] idp=%ld ; idpnew=%ld\(\backslash\)n"}, rank, idp, idpnew);
+00149     fprintf(file, \textcolor{stringliteral}{"[%d] local\_V\_size=%d ; local\_V\_size\_new=%d\(\backslash\)n"}, rank, 
+      local\_V\_size, local\_V\_size\_new);
+00150     \textcolor{keywordflow}{for}(i=0;i<nb\_blocks\_local;i++)
+00151       fprintf(file, \textcolor{stringliteral}{"[%d] n[%d]=%d ; nnew[%d]=%d\(\backslash\)n"}, rank, i, (tpltzblocks[i].n
+      ), i, nnew[i]);
+00152     \textcolor{keywordflow}{for}(i=0;i<nb\_blocks\_local;i++)
+00153       fprintf(file, \textcolor{stringliteral}{"[%d] tpltzblocks[%d].idv=%ld\(\backslash\)n"}, rank, i, tpltzblocks[i].
+      idv);
+00154 \}
+00155 
+00156 
+00157   \textcolor{keywordtype}{int} vShft=idpnew-idp;   \textcolor{comment}{//new first element of relevance in V}
+00158 
+00159   \textcolor{comment}{//Define the column indices:}
+00160   \textcolor{comment}{//index of the first and the last column of V for the current process}
+00161   \textcolor{keywordtype}{int} idvm0 = idpnew/nrow;
+00162   \textcolor{keywordtype}{int} idvmn = (idpnew+local\_V\_size\_new-1)/nrow;
+00163   \textcolor{comment}{//number of columns of V for the current process}
+00164   \textcolor{keywordtype}{int} ncol\_rank = idvmn-idvm0+1;
+00165   \textcolor{comment}{//number of blocks for the current process with possibly repetitions}
+00166   \textcolor{keywordtype}{int} nb\_blocks\_rank;
+00167 
+00168   \textcolor{keywordflow}{if}(ncol\_rank == 1) \textcolor{comment}{// Empty process not allowed}
+00169     nb\_blocks\_rank = idvn - idv0 + 1;
+00170   \textcolor{keywordflow}{else}
+00171     nb\_blocks\_rank = (ncol\_rank-2)*nb\_blocks\_local + (nb\_blocks\_local-idv0) + (
+      idvn+1);  \textcolor{comment}{//in this case nb\_blocks\_local = nblocs\_all}
+00172 
+00173   \textcolor{keywordflow}{if}(\hyperlink{toeplitz_8c_a300d52d9923297872ffb24962a0f0ce6}{PRINT\_RANK}==0 && \hyperlink{toeplitz_8c_ab848ce91ba14d3dc5c87d0b42f3a1c0d}{VERBOSE}>2)
+00174   fprintf(file, \textcolor{stringliteral}{"[%d] nb\_blocks\_rank=%d, nb\_blocks\_local=%d\(\backslash\)n"}, rank, 
+      nb\_blocks\_rank, nb\_blocks\_local);
+00175 
+00176   \textcolor{comment}{//Define the indices for the first and the last element in each blocks}
+00177   \textcolor{keywordtype}{int} idvp0 = idpnew%nrow-tpltzblocks[idv0].\hyperlink{structBlock_ad45697f62720768c82b652d948156fc6}{idv};  \textcolor{comment}{//index of the first
+       element of the process in the first block}
+00178   \textcolor{keywordtype}{int} idvpn;  \textcolor{comment}{//reverse index of the last element of the process in the last
+       block}
+00179               \textcolor{comment}{//It's the number of remaining elements needed to fully complete
+       the last block}
+00180   idvpn = tpltzblocks[idvn].\hyperlink{structBlock_ad45697f62720768c82b652d948156fc6}{idv}+nnew[idvn]-1 - (idpnew+local\_V\_size\_new-1)%
+      nrow ;
+00181 
+00182 
+00183   \textcolor{comment}{//Define the offsets for the first and last blocks of the process for V1}
+00184   \textcolor{keywordtype}{int} offset0, offsetn;
+00185   \textcolor{keywordtype}{int} distcorrmin\_idv0 = (tpltzblocks[idv0].\hyperlink{structBlock_a8f25504e415ca086e0bcaf30b676f29f}{lambda})-1;
+00186   \textcolor{keywordtype}{int} distcorrmin\_idvn = (tpltzblocks[idvn].\hyperlink{structBlock_a8f25504e415ca086e0bcaf30b676f29f}{lambda})-1;
+00187 
+00188   \textcolor{comment}{//if(idvp0 != 0)}
+00189     offset0 = min( idvp0, distcorrmin\_idv0);
+00190   \textcolor{comment}{//if(idvpn != 0)}
+00191     offsetn = min(idvpn, distcorrmin\_idvn);
+00192 
+00193 
+00194   \textcolor{keywordtype}{int} toSendLeft=0;
+00195   \textcolor{keywordtype}{int} toSendRight=0;
+00196 
+00197 \textcolor{preprocessor}{#ifdef W\_MPI}
+00198 \textcolor{preprocessor}{}  \textcolor{keywordflow}{if}(offset0!=0) \{
+00199     toSendLeft = min( tpltzblocks[idv0].idv+nnew[idv0]-idpnew%nrow, 
+      distcorrmin\_idv0);
+00200   \}
+00201   \textcolor{keywordflow}{if}( offsetn != 0) \{
+00202     toSendRight = min( (idpnew+local\_V\_size\_new)%nrow-tpltzblocks[idvn].idv, 
+      distcorrmin\_idvn);
+00203   \}
+00204 
+00205  \textcolor{keywordtype}{int} flag\_optimlambda=1; \textcolor{comment}{//to allocate only the memory place needed}
+00206 
+00207  \textcolor{keywordtype}{int} lambdaOut\_offset;
+00208  \textcolor{keywordtype}{int} lambdaIn\_offset;
+00209  \textcolor{keywordtype}{double} *LambdaOut;
+00210  \textcolor{keywordtype}{int} lambdaOut\_size, lambdaIn\_size;
+00211 
+00212  \textcolor{keywordflow}{if} (flag\_optimlambda==1) \{
+00213   LambdaOut=(\textcolor{keywordtype}{double} *) calloc((toSendLeft+toSendRight)*m\_rowwise, \textcolor{keyword}{sizeof}(double
+      ));
+00214   lambdaOut\_offset = toSendLeft*m\_rowwise;
+00215   lambdaIn\_offset = offset0*m\_rowwise;
+00216   lambdaOut\_size = (toSendLeft+toSendRight)*m\_rowwise ;
+00217   lambdaIn\_size = (offset0+offsetn)*m\_rowwise;
+00218  \}
+00219  \textcolor{keywordflow}{else} \{
+00220   LambdaOut=(\textcolor{keywordtype}{double} *) calloc((tpltzblocks[idv0].lambda+tpltzblocks[idvn].
+      lambda)*m\_rowwise, \textcolor{keyword}{sizeof}(double));
+00221   lambdaOut\_offset = tpltzblocks[idv0].\hyperlink{structBlock_a8f25504e415ca086e0bcaf30b676f29f}{lambda}*m\_rowwise;
+00222   lambdaIn\_offset = tpltzblocks[idv0].\hyperlink{structBlock_a8f25504e415ca086e0bcaf30b676f29f}{lambda}*m\_rowwise;
+00223   lambdaOut\_size = (tpltzblocks[idv0].\hyperlink{structBlock_a8f25504e415ca086e0bcaf30b676f29f}{lambda}+tpltzblocks[idvn].\hyperlink{structBlock_a8f25504e415ca086e0bcaf30b676f29f}{lambda}
+      )*m\_rowwise;
+00224   lambdaIn\_size = (tpltzblocks[idv0].\hyperlink{structBlock_a8f25504e415ca086e0bcaf30b676f29f}{lambda}+tpltzblocks[idvn].\hyperlink{structBlock_a8f25504e415ca086e0bcaf30b676f29f}{lambda}
+      )*m\_rowwise;
+00225  \}
+00226 
+00227 
+00228   \textcolor{keywordflow}{if}(offset0!=0) \{
+00229     \textcolor{keywordflow}{for} (j=0;j<m\_rowwise;j++)
+00230     \textcolor{keywordflow}{for} (i=0;i<toSendLeft;i++)
+00231       LambdaOut[i+j*toSendLeft]=(*V)[i+j*n\_rowwise]; \textcolor{comment}{//good because
+       toSendLeft=0 if it}
+00232   \}                                                   \textcolor{comment}{//doesnt start on a the
+       first block.}
+00233   \textcolor{keywordflow}{if}( offsetn != 0) \{
+00234     \textcolor{keywordflow}{for} (j=0;j<m\_rowwise;j++)
+00235     \textcolor{keywordflow}{for} (i=0;i<toSendRight;i++)
+00236       LambdaOut[i+j*toSendRight+lambdaOut\_offset]=(*V)[i+j*n\_rowwise+
+      local\_V\_size-toSendRight];
+00237   \}                                        \textcolor{comment}{//good too using same argument than
+       for offset0!=0}
+00238                                            \textcolor{comment}{//if
+       local\_V\_size!=local\_V\_size\_new+vShft mean there is extra}
+00239                                            \textcolor{comment}{//terms a the end and so offsetn=0}
+00240                                            \textcolor{comment}{//idpnew+local\_V\_size\_new =
+       idp+local\_V\_size and vShft=idpnew-idp}
+00241                                            \textcolor{comment}{//so
+       local\_V\_size=vShft+local\_V\_size\_new}
+00242   \textcolor{keywordflow}{if}(rank==0 || offset0==0)
+00243     left = MPI\_PROC\_NULL;
+00244   \textcolor{keywordflow}{if}(rank==size-1 || offsetn==0)
+00245     right = MPI\_PROC\_NULL;
+00246 
+00247   \textcolor{keywordtype}{double} *LambdaIn=(\textcolor{keywordtype}{double} *) calloc(lambdaIn\_size, \textcolor{keyword}{sizeof}(\textcolor{keywordtype}{double}));
+00248 
+00249 
+00250  \textcolor{keywordtype}{int} flag\_blockingcomm=0;  \textcolor{comment}{//to use blocking comm}
+00251  MPI\_Request requestLeft\_r, requestLeft\_s;
+00252  MPI\_Request requestRight\_r, requestRight\_s;
+00253 
+00254   \textcolor{keywordflow}{if} (flag\_blockingcomm==1) \{
+00255 \textcolor{comment}{//send and receive data}
+00256   MPI\_Sendrecv( LambdaOut, toSendLeft*m\_rowwise, MPI\_DOUBLE, left,  
+      MPI\_USER\_TAG, (LambdaIn+lambdaIn\_offset), offsetn*m\_rowwise, MPI\_DOUBLE, right, 
+      MPI\_USER\_TAG, comm, &status);
+00257   MPI\_Sendrecv( (LambdaOut+lambdaOut\_offset), toSendRight*m\_rowwise, MPI\_DOUBLE
+      , right,  MPI\_USER\_TAG, LambdaIn, offset0*m\_rowwise, MPI\_DOUBLE, left, 
+      MPI\_USER\_TAG, comm, &status);
+00258 
+00259   \}
+00260   \textcolor{keywordflow}{else} \{
+00261 \textcolor{comment}{//to the Left}
+00262   MPI\_Irecv((LambdaIn+lambdaIn\_offset), offsetn*m\_rowwise, MPI\_DOUBLE, right, 
+      MPI\_USER\_TAG, comm, &requestLeft\_r);
+00263   MPI\_Isend(LambdaOut, toSendLeft*m\_rowwise, MPI\_DOUBLE, left, MPI\_USER\_TAG, 
+      comm, &requestLeft\_s);
+00264 
+00265 \textcolor{comment}{//to the Right}
+00266   MPI\_Irecv(LambdaIn, offset0*m\_rowwise, MPI\_DOUBLE, left, MPI\_USER\_TAG, comm, 
+      &requestRight\_r);
+00267   MPI\_Isend((LambdaOut+lambdaOut\_offset), toSendRight*m\_rowwise, MPI\_DOUBLE, 
+      right, MPI\_USER\_TAG, comm, &requestRight\_s);
+00268 
+00269  \}
+00270 
+00271 \textcolor{preprocessor}{#endif}
+00272 \textcolor{preprocessor}{}
+00273 
+00274 \textcolor{comment}{//size of the first and the last block for the current process}
+00275   \textcolor{keywordtype}{int} v0rank\_size, vnrank\_size;
+00276   \textcolor{keywordflow}{if} (nb\_blocks\_rank == 1) \{  \textcolor{comment}{//only one block}
+00277     v0rank\_size = ((idpnew+local\_V\_size\_new-1)%nrow +1) - idpnew%nrow + offset0
+       + offsetn;
+00278     vnrank\_size = 0; \textcolor{comment}{//just for convenience - no really need it}
+00279   \}
+00280   \textcolor{keywordflow}{else} \{ \textcolor{comment}{//more than one block}
+00281     v0rank\_size = tpltzblocks[idv0].\hyperlink{structBlock_ad45697f62720768c82b652d948156fc6}{idv} + nnew[idv0] - idpnew%nrow + offset0
+      ;
+00282     vnrank\_size = ((idpnew+local\_V\_size\_new-1)%nrow +1) - tpltzblocks[idvn].\hyperlink{structBlock_ad45697f62720768c82b652d948156fc6}{idv}
+       + offsetn;
+00283   \}
+00284 
+00285 
+00286 \textcolor{preprocessor}{#ifdef W\_MPI}
+00287 \textcolor{preprocessor}{}
+00288 \textcolor{keywordflow}{if} (flag\_blockingcomm!=1) \{
+00289   \textcolor{comment}{//MPI\_Wait for lambda comm}
+00290   MPI\_Wait(&requestLeft\_r, &status);
+00291   MPI\_Wait(&requestLeft\_s, &status);
+00292   MPI\_Wait(&requestRight\_r, &status);
+00293   MPI\_Wait(&requestRight\_s, &status);
+00294 
+00295 \}
+00296 
+00297 
+00298   free(LambdaOut);
+00299 
+00300 \textcolor{preprocessor}{#endif}
+00301 \textcolor{preprocessor}{}
+00302 
+00303 \textcolor{comment}{//---------------------------------------}
+00304 \textcolor{comment}{//initialization for the blocks loop}
+00305 
+00306   \textcolor{keywordtype}{int} idv1=0;     \textcolor{comment}{//old index of *V1}
+00307   \textcolor{keywordtype}{int} idv2=0;     \textcolor{comment}{//index}
+00308 
+00309 
+00310   \textcolor{keywordtype}{int} mid;  \textcolor{comment}{//local number of column for the current block}
+00311   \textcolor{comment}{//index of the first element of the process inside the first block}
+00312   \textcolor{keywordtype}{int} offset\_id0;
+00313   offset\_id0 = idvp0;
+00314 
+00315 \textcolor{comment}{//fftw variables}
+00316   fftw\_complex *V\_fft, *T\_fft;
+00317   \textcolor{keywordtype}{double} *V\_rfft;
+00318   fftw\_plan plan\_f, plan\_b;
+00319 \textcolor{comment}{//init local block vector}
+00320   \textcolor{keywordtype}{double} *V1block;
+00321 \textcolor{comment}{//  int lambdaShft;}
+00322 
+00323 
+00324 \textcolor{comment}{//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=}
+00325 \textcolor{comment}{//loop on the blocks inside the process}
+00326   \textcolor{keywordtype}{int} nfft, blocksize;
+00327   \textcolor{keywordtype}{int} iblock;  \textcolor{comment}{//index for the loop on the blocks}
+00328 \textcolor{comment}{//  int loopindex;}
+00329   \textcolor{keywordtype}{int} id; \textcolor{comment}{//indice of the current block}
+00330 
+00331   \textcolor{keywordtype}{int} vblock\_size;
+00332   \textcolor{keywordtype}{int} id0block;
+00333 
+00334   \textcolor{keywordtype}{int} jj;
+00335 
+00336 
+00337   \textcolor{keywordflow}{for}(iblock=idv0;iblock<idv0+nb\_blocks\_rank;iblock++) \{
+00338     \textcolor{keywordtype}{id} = iblock%nb\_blocks\_local;  \textcolor{comment}{//index of current block}
+00339 
+00340 
+00341   \textcolor{keywordflow}{if}(nnew[\textcolor{keywordtype}{id}]>0) \{ \textcolor{comment}{//the block is ok}
+00342 
+00343 \textcolor{preprocessor}{#ifdef W\_MPI}
+00344 \textcolor{preprocessor}{}\textcolor{comment}{//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=}
+00345 \textcolor{comment}{//first case : First block of the process}
+00346   \textcolor{keywordflow}{if}(iblock==idv0) \{
+00347   \textcolor{keywordflow}{if}(\hyperlink{toeplitz_8c_a300d52d9923297872ffb24962a0f0ce6}{PRINT\_RANK}==0 && \hyperlink{toeplitz_8c_ab848ce91ba14d3dc5c87d0b42f3a1c0d}{VERBOSE}>2)
+00348     fprintf(file, \textcolor{stringliteral}{"[%d] First block...\(\backslash\)n"}, rank);
+00349 
+00350   vblock\_size=v0rank\_size;
+00351   id0block=(offset\_id0-offset0);
+00352 
+00353   V1block = (\textcolor{keywordtype}{double} *) calloc(vblock\_size*m\_rowwise, \textcolor{keyword}{sizeof}(\textcolor{keywordtype}{double}));
+00354 
+00355   \textcolor{keywordflow}{for} (j=0;j<m\_rowwise;j++) \{
+00356 \textcolor{preprocessor}{#pragma omp parallel for //num\_threads(NB\_OMPTHREADS\_STBMM)}
+00357 \textcolor{preprocessor}{}  \textcolor{keywordflow}{for} (i=0;i<offset0;i++)
+00358     V1block[i+j*vblock\_size] = LambdaIn[i+j*offset0];
+00359   \}
+00360 \textcolor{comment}{//note: check if copyblock could be used instead.}
+00361 
+00362 
+00363 \textcolor{comment}{//if (nb\_blocks\_rank == 1) currentsize\_middlepart=vblock\_size-offset0-offsetn =
+       local\_V\_size\_new}
+00364 \textcolor{comment}{//else currentsize\_middlepart=vblock\_size-offset0}
+00365   \textcolor{keywordtype}{int} currentsize\_middlepart=min(vblock\_size-offset0, local\_V\_size\_new);
+00366 
+00367   \textcolor{keywordflow}{for} (j=0;j<m\_rowwise;j++) \{
+00368 \textcolor{preprocessor}{#pragma omp parallel for //num\_threads(NB\_OMPTHREADS\_STBMM)}
+00369 \textcolor{preprocessor}{}  \textcolor{keywordflow}{for} (i=0;i<currentsize\_middlepart;i++)
+00370     V1block[offset0+i+j*vblock\_size] = (*V)[i+vShft+j*n\_rowwise];
+00371   \}
+00372 
+00373 \textcolor{keywordflow}{if} (nb\_blocks\_rank == 1) \{
+00374   \textcolor{keywordflow}{for} (j=0;j<m\_rowwise;j++) \{
+00375 \textcolor{preprocessor}{#pragma omp parallel for //num\_threads(NB\_OMPTHREADS\_STBMM)}
+00376 \textcolor{preprocessor}{}  \textcolor{keywordflow}{for} (i=0;i<offsetn;i++) \{
+00377     V1block[vblock\_size-offsetn+i+j*vblock\_size] = LambdaIn[i+lambdaIn\_offset+j
+      *offsetn];
+00378   \}\}
+00379 \}
+00380 
+00381 
+00382   \textcolor{comment}{//init Toeplitz arrays}
+00383   \hyperlink{group__group11_ga7f4e77d71f2c6f2caf652bab7520e3f4}{tpltz\_init}(vblock\_size, tpltzblocks[\textcolor{keywordtype}{id}].lambda, &nfft, &blocksize, 
+      &T\_fft, (tpltzblocks[\textcolor{keywordtype}{id}].T\_block), &V\_fft, &V\_rfft, &plan\_f, &plan\_b, flag\_stgy)
+      ;
+00384 
+00385   \textcolor{comment}{//Toeplitz computation}
+00386   \textcolor{keywordflow}{if}(\hyperlink{toeplitz_8c_a300d52d9923297872ffb24962a0f0ce6}{PRINT\_RANK}==0 && \hyperlink{toeplitz_8c_ab848ce91ba14d3dc5c87d0b42f3a1c0d}{VERBOSE}>2)
+00387     fprintf(file, \textcolor{stringliteral}{"[%d] Before stmm\_main call : nfft = %d, blocksize = %d\(\backslash\)n"}, 
+      rank, nfft, blocksize);
+00388   \hyperlink{group__group21_gace7322011cd24b469e9b5d530e8a71ba}{stmm\_main}(&V1block, vblock\_size, m\_rowwise, 0, m\_rowwise*vblock\_size
+      , (tpltzblocks[\textcolor{keywordtype}{id}].T\_block), T\_fft, tpltzblocks[\textcolor{keywordtype}{id}].lambda, V\_fft, V\_rfft, 
+      plan\_f, plan\_b, blocksize, nfft, flag\_stgy);
+00389 
+00390   \hyperlink{group__group11_gac7ac0ee5f6eaee6846814b131671f6e8}{tpltz\_cleanup}(&T\_fft, &V\_fft, &V\_rfft, &plan\_f, &plan\_b);
+00391 
+00392 
+00393   \textcolor{keywordtype}{int} currentsize=min(vblock\_size-offset0, local\_V\_size\_new);
+00394   \textcolor{keywordflow}{for} (j=0;j<m\_rowwise;j++) \{
+00395 \textcolor{preprocessor}{#pragma omp parallel for //num\_threads(NB\_OMPTHREADS\_STBMM)}
+00396 \textcolor{preprocessor}{}  \textcolor{keywordflow}{for} (i=0;i<currentsize;i++)
+00397     (*V)[vShft+i+j*n\_rowwise] = V1block[offset0+i+j*vblock\_size];
+00398   \}
+00399 
+00400   free(V1block);
+00401 
+00402   \}\textcolor{comment}{//end (First case)}
+00403 
+00404 
+00405 \textcolor{comment}{//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=}
+00406 \textcolor{comment}{//Generic case : Generic block of the process}
+00407   \textcolor{keywordflow}{else} \textcolor{keywordflow}{if}(iblock!=idv0 && iblock!=idv0+nb\_blocks\_rank-1) \{
+00408 \textcolor{preprocessor}{#endif}
+00409 \textcolor{preprocessor}{}
+00410   \textcolor{keywordflow}{if}(\hyperlink{toeplitz_8c_a300d52d9923297872ffb24962a0f0ce6}{PRINT\_RANK}==0 && \hyperlink{toeplitz_8c_ab848ce91ba14d3dc5c87d0b42f3a1c0d}{VERBOSE}>2)
+00411     fprintf(file, \textcolor{stringliteral}{"[%d] generic block...\(\backslash\)n"});
+00412 
+00413   vblock\_size=nnew[id];
+00414   id0block=0;
+00415 
+00416   V1block = (\textcolor{keywordtype}{double} *) calloc(vblock\_size*m\_rowwise, \textcolor{keyword}{sizeof}(\textcolor{keywordtype}{double}));
+00417 
+00418   idv1 = (tpltzblocks[id].\hyperlink{structBlock_ad45697f62720768c82b652d948156fc6}{idv})-idp%nrow - vShft + offset0 +nrow*( (iblock/
+      nb\_blocks\_local) );  \textcolor{comment}{//no need}
+00419 \textcolor{comment}{//  idv2 = idv[id]-idp%nrow + nrow*( (iblock/nb\_blocks\_local) );}
+00420   idv2 = (tpltzblocks[id].\hyperlink{structBlock_ad45697f62720768c82b652d948156fc6}{idv})-(idpnew)%nrow+vShft + nrow*( (iblock/
+      nb\_blocks\_local) );
+00421 
+00422   \textcolor{keywordflow}{for} (j=0;j<m\_rowwise;j++) \{
+00423 \textcolor{preprocessor}{#pragma omp parallel for //num\_threads(NB\_OMPTHREADS\_STBMM)}
+00424 \textcolor{preprocessor}{}  \textcolor{keywordflow}{for} (i=0;i<vblock\_size;i++)
+00425     V1block[i+j*vblock\_size] = (*V)[i+idv2+j*n\_rowwise];
+00426 \textcolor{comment}{//    V1block[i] = (*V)[i+idv1-offset0+vShft];}
+00427   \}
+00428 
+00429   \textcolor{comment}{//init Toeplitz arrays}
+00430   \hyperlink{group__group11_ga7f4e77d71f2c6f2caf652bab7520e3f4}{tpltz\_init}(nnew[\textcolor{keywordtype}{id}], tpltzblocks[\textcolor{keywordtype}{id}].lambda, &nfft, &blocksize, &
+      T\_fft, (tpltzblocks[\textcolor{keywordtype}{id}].T\_block), &V\_fft, &V\_rfft, &plan\_f, &plan\_b, flag\_stgy);
+00431 
+00432   \textcolor{comment}{//Toeplitz computation}
+00433   \textcolor{keywordflow}{if}(\hyperlink{toeplitz_8c_a300d52d9923297872ffb24962a0f0ce6}{PRINT\_RANK}==0 && \hyperlink{toeplitz_8c_ab848ce91ba14d3dc5c87d0b42f3a1c0d}{VERBOSE}>2)
+00434     fprintf(file, \textcolor{stringliteral}{"[%d] Before stmm\_main call : nfft = %d, blocksize = %d\(\backslash\)n"}, 
+      rank, nfft, blocksize);
+00435   \hyperlink{group__group21_gace7322011cd24b469e9b5d530e8a71ba}{stmm\_main}(&V1block, vblock\_size, m\_rowwise, 0, m\_rowwise*vblock\_size
+      , (tpltzblocks[\textcolor{keywordtype}{id}].T\_block), T\_fft, tpltzblocks[\textcolor{keywordtype}{id}].lambda, V\_fft, V\_rfft, 
+      plan\_f, plan\_b, blocksize, nfft, flag\_stgy);
+00436 
+00437 
+00438   \hyperlink{group__group11_gac7ac0ee5f6eaee6846814b131671f6e8}{tpltz\_cleanup}(&T\_fft, &V\_fft, &V\_rfft, &plan\_f, &plan\_b);
+00439 
+00440 
+00441   \textcolor{keywordflow}{for} (j=0;j<m\_rowwise;j++) \{
+00442 \textcolor{preprocessor}{#pragma omp parallel for //num\_threads(NB\_OMPTHREADS\_STBMM)}
+00443 \textcolor{preprocessor}{}  \textcolor{keywordflow}{for} (i=0;i<vblock\_size;i++) \{
+00444     (*V)[i+idv2+j*n\_rowwise] = V1block[i+j*vblock\_size];
+00445   \}\}
+00446 
+00447 
+00448   free(V1block);
+00449 
+00450 \textcolor{preprocessor}{#ifdef W\_MPI}
+00451 \textcolor{preprocessor}{}  \}  \textcolor{comment}{//end (Generic case)}
+00452 
+00453 \textcolor{comment}{//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=}
+00454 \textcolor{comment}{// Last case : Last block of the process}
+00455   \textcolor{keywordflow}{else} \textcolor{keywordflow}{if}(iblock==idv0+nb\_blocks\_rank-1 && iblock!= idv0) \{
+00456   \textcolor{keywordflow}{if}(\hyperlink{toeplitz_8c_a300d52d9923297872ffb24962a0f0ce6}{PRINT\_RANK}==0 && \hyperlink{toeplitz_8c_ab848ce91ba14d3dc5c87d0b42f3a1c0d}{VERBOSE}>2)
+00457     fprintf(file, \textcolor{stringliteral}{"[%d] last block...\(\backslash\)n"});
+00458 
+00459   vblock\_size=vnrank\_size;
+00460   id0block=0;
+00461 
+00462   V1block = (\textcolor{keywordtype}{double} *) calloc(vblock\_size*m\_rowwise, \textcolor{keyword}{sizeof}(\textcolor{keywordtype}{double}));
+00463 
+00464   idv1 = (tpltzblocks[id].\hyperlink{structBlock_ad45697f62720768c82b652d948156fc6}{idv}) - idp%nrow - vShft + offset0  + nrow*( (
+      iblock/nb\_blocks\_local) );
+00465   idv2 = (tpltzblocks[id].\hyperlink{structBlock_ad45697f62720768c82b652d948156fc6}{idv})-(idpnew)%nrow+vShft + nrow*( (iblock/
+      nb\_blocks\_local) );
+00466 
+00467 
+00468   \textcolor{keywordflow}{for} (j=0;j<m\_rowwise;j++) \{
+00469 \textcolor{preprocessor}{#pragma omp parallel for //num\_threads(NB\_OMPTHREADS\_STBMM)}
+00470 \textcolor{preprocessor}{}  \textcolor{keywordflow}{for} (i=0;i<vblock\_size-offsetn;i++)
+00471     V1block[i+j*vblock\_size] = (*V)[i+idv2+j*n\_rowwise];
+00472 \textcolor{comment}{//    V1block[i] = (*V)[i+idv1-offset0+vShft];}
+00473   \}
+00474 
+00475   \textcolor{keywordflow}{for} (j=0;j<m\_rowwise;j++) \{
+00476 \textcolor{preprocessor}{#pragma omp parallel for //num\_threads(NB\_OMPTHREADS\_STBMM)}
+00477 \textcolor{preprocessor}{}  \textcolor{keywordflow}{for} (i=0;i<offsetn;i++)
+00478     V1block[vblock\_size-offsetn+i+j*vblock\_size] = LambdaIn[i+lambdaIn\_offset+j
+      *offsetn];
+00479   \}
+00480 
+00481 
+00482   \textcolor{comment}{//init Toeplitz arrays}
+00483   \hyperlink{group__group11_ga7f4e77d71f2c6f2caf652bab7520e3f4}{tpltz\_init}(vblock\_size, tpltzblocks[\textcolor{keywordtype}{id}].lambda, &nfft, &blocksize, 
+      &T\_fft, (tpltzblocks[\textcolor{keywordtype}{id}].T\_block), &V\_fft, &V\_rfft, &plan\_f, &plan\_b, flag\_stgy)
+      ;
+00484 
+00485   \textcolor{comment}{//Toeplitz computation}
+00486   \textcolor{keywordflow}{if}(\hyperlink{toeplitz_8c_a300d52d9923297872ffb24962a0f0ce6}{PRINT\_RANK}==0 && \hyperlink{toeplitz_8c_ab848ce91ba14d3dc5c87d0b42f3a1c0d}{VERBOSE}>2)
+00487     fprintf(file, \textcolor{stringliteral}{"[%d] Before stmm\_main call : nfft = %d, blocksize = %d\(\backslash\)n"}, 
+      rank, nfft, blocksize);
+00488 
+00489   \hyperlink{group__group21_gace7322011cd24b469e9b5d530e8a71ba}{stmm\_main}(&V1block, vblock\_size, m\_rowwise, 0, vblock\_size*m\_rowwise
+      , (tpltzblocks[\textcolor{keywordtype}{id}].T\_block), T\_fft, tpltzblocks[\textcolor{keywordtype}{id}].lambda, V\_fft, V\_rfft, 
+      plan\_f, plan\_b, blocksize, nfft, flag\_stgy);
+00490 
+00491   \hyperlink{group__group11_gac7ac0ee5f6eaee6846814b131671f6e8}{tpltz\_cleanup}(&T\_fft, &V\_fft, &V\_rfft, &plan\_f, &plan\_b);
+00492 
+00493   \textcolor{keywordflow}{for} (j=0;j<m\_rowwise;j++) \{
+00494 \textcolor{preprocessor}{#pragma omp parallel for //num\_threads(NB\_OMPTHREADS\_STBMM)}
+00495 \textcolor{preprocessor}{}  \textcolor{keywordflow}{for} (i=0;i<vnrank\_size-offsetn;i++) \{
+00496     (*V)[idv2+i+j*n\_rowwise] = V1block[i+j*vblock\_size];
+00497   \}\}
+00498 
+00499 
+00500   free(V1block);
+00501 
+00502   \}\textcolor{comment}{//end of last block}
+00503   \textcolor{keywordflow}{else} \{ \textcolor{keywordflow}{break}; \}\textcolor{comment}{//error  //we can put the generic case here instead of between
+       first and last cases}
+00504 \textcolor{preprocessor}{#endif}
+00505 \textcolor{preprocessor}{}\textcolor{comment}{//-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=}
+00506   \}\textcolor{comment}{//end of if(nnew[id]>0)}
+00507   \}\textcolor{comment}{//end of loop over the blocks}
+00508 
+00509 
+00510   free(LambdaIn);
+00511 
+00512 
+00513   \textcolor{keywordflow}{return} 0;
+00514 \}
+00515 
+00516 \textcolor{comment}{//#endif}
+00517 
+00518 \textcolor{comment}{//====================================================================}
+00519 
+00523 
+00529 \textcolor{keywordtype}{int} \hyperlink{toeplitz_8h_aec19e9200f0b8b258ce04dc8a38fc96d}{get\_overlapping\_blocks\_params}(\textcolor{keywordtype}{int} nbloc, \hyperlink{structBlock}{Block}
+       *tpltzblocks, \textcolor{keywordtype}{int} local\_V\_size, int64\_t nrow, int64\_t idp, int64\_t *idpnew, \textcolor{keywordtype}{int}
+       *local\_V\_size\_new, \textcolor{keywordtype}{int} *nnew, \textcolor{keywordtype}{int} *ifirstBlock, \textcolor{keywordtype}{int} *ilastBlock)
+00530 \{ \textcolor{keywordtype}{int} ib, nblockOK=0, nfullcol\_data;
+00531   int64\_t firstrow, lastrow;
+00532   int64\_t idptmp;
+00533 
+00534 
+00535 \textcolor{comment}{//check how many full columns input data have}
+00536   nfullcol\_data = max(0, (local\_V\_size-(nrow-idp%nrow)%nrow-(idp+local\_V\_size)%
+      nrow)/nrow );
+00537 
+00538   \textcolor{keywordflow}{if}( nfullcol\_data > 0) \{
+00539 
+00540   \textcolor{keywordflow}{for}( ib=0; ib<nbloc; ib++) \{
+00541     \textcolor{keywordflow}{if}( tpltzblocks[ib].idv < nrow) \{
+00542       nnew[ib] = min( tpltzblocks[ib].n, nrow-tpltzblocks[ib].idv);  \textcolor{comment}{//block
+       used for the product}
+00543       nblockOK++;
+00544     \}
+00545   \}
+00546 
+00547   \}
+00548   \textcolor{keywordflow}{else} \{  \textcolor{comment}{//no full column observed}
+00549 
+00550     firstrow = idp%nrow;
+00551     lastrow = (idp+local\_V\_size-1)%nrow;
+00552 
+00553     \textcolor{keywordflow}{if}( firstrow < lastrow) \{  \textcolor{comment}{//just one column partially observed}
+00554 
+00555     \textcolor{keywordflow}{for}( ib=0; ib<nbloc; ib++) \{
+00556     \textcolor{keywordflow}{if}( (tpltzblocks[ib].idv+tpltzblocks[ib].n > firstrow) && (tpltzblocks[ib].
+      \hyperlink{structBlock_ad45697f62720768c82b652d948156fc6}{idv} < lastrow+1)) \{
+00557       nnew[ib] = min( tpltzblocks[ib].n, nrow-tpltzblocks[ib].idv);  \textcolor{comment}{//block
+       used for the product}
+00558       nblockOK++;
+00559     \}
+00560     \}
+00561 
+00562     \}
+00563     \textcolor{keywordflow}{else} \{  \textcolor{comment}{//two columns partially observed}
+00564 
+00565       \textcolor{keywordflow}{for}( ib=0; ib<nbloc; ib++) \{
+00566         \textcolor{keywordflow}{if}( (tpltzblocks[ib].idv + tpltzblocks[ib].n > firstrow) && (
+      tpltzblocks[ib].idv < nrow)) \{  \textcolor{comment}{//intersects first partial column}
+00567           nnew[ib] = min( tpltzblocks[ib].n, nrow-tpltzblocks[ib].idv);  \textcolor{comment}{//
+      block used for the product}
+00568           nblockOK++;
+00569         \}
+00570 
+00571         \textcolor{keywordflow}{if}( (tpltzblocks[ib].idv < lastrow+1) && (tpltzblocks[ib].idv+
+      tpltzblocks[ib].n > 0)) \{  \textcolor{comment}{//intersects second partial column}
+00572           nnew[ib] = min( tpltzblocks[ib].n, nrow-tpltzblocks[ib].idv);  \textcolor{comment}{//
+      block used for the product}
+00573           nblockOK++;  \textcolor{comment}{//may overcount but we do not care}
+00574         \}  \textcolor{comment}{//could use else insteed!}
+00575       \}
+00576      \}
+00577   \}
+00578   \textcolor{keywordflow}{if}(\hyperlink{toeplitz_8c_a300d52d9923297872ffb24962a0f0ce6}{PRINT\_RANK}==0 && \hyperlink{toeplitz_8c_ab848ce91ba14d3dc5c87d0b42f3a1c0d}{VERBOSE}>2)
+00579     printf(\textcolor{stringliteral}{"nblockOK=%d\(\backslash\)n"}, nblockOK);
+00580 
+00581 
+00582   \textcolor{keywordflow}{if}( nblockOK == 0) \textcolor{keywordflow}{return}(0);  \textcolor{comment}{//no blocks overlapping with the data}
+00583 
+00584   \textcolor{comment}{//find the first and last relevant blocks for the begining and end of the
+       local data  V}
+00585 
+00586  \textcolor{comment}{//first block}
+00587   idptmp = idp;
+00588 
+00589   \textcolor{keywordflow}{for}( *ifirstBlock = -1; *ifirstBlock == -1;     ) \{
+00590     \textcolor{keywordflow}{for}(ib=0;ib<nbloc;ib++) \{
+00591       \textcolor{keywordflow}{if}(nnew[ib] != 0 && idptmp%nrow < tpltzblocks[ib].idv+nnew[ib]) \textcolor{keywordflow}{break};
+00592     \}
+00593 
+00594     \textcolor{keywordflow}{if} (ib<nbloc && tpltzblocks[ib].idv <= idptmp%nrow) \{
+00595       *ifirstBlock = ib;
+00596       *idpnew = idptmp;
+00597     \}
+00598     \textcolor{keywordflow}{else} \textcolor{keywordflow}{if} (ib<nbloc && tpltzblocks[ib].idv > idptmp%nrow) \{
+00599       *ifirstBlock = ib;
+00600   \textcolor{comment}{//   int64\_t extrabegining = tpltzblocks[ib].idv-idp%nrow;  //note I put
+       int64 just to be sure. Never used}
+00601 \textcolor{comment}{//      *idpnew = idp+extrabegining;//tpltzblocks[ib].idv;}
+00602       \textcolor{keywordtype}{int} idvfirstcolumn = idptmp/nrow;
+00603       *idpnew = tpltzblocks[ib].\hyperlink{structBlock_ad45697f62720768c82b652d948156fc6}{idv}+idvfirstcolumn*nrow;
+00604     \}
+00605     \textcolor{keywordflow}{else} \{ \textcolor{comment}{//ib=nb\_blocs}
+00606       idptmp += nrow-idptmp%nrow; \textcolor{comment}{//(int) (nrow-idptmp%nrow);}
+00607 \textcolor{comment}{//          idtmp = (int) ceil((1.0*idpnew)/(1.0*nrow))*nrow; // go to the
+       first element of the next column}
+00608     \}\}
+00609 
+00610 
+00611  \textcolor{comment}{//last block}
+00612   idptmp = idp+local\_V\_size-1;
+00613 
+00614   \textcolor{keywordflow}{for}( *ilastBlock = -1; *ilastBlock == -1; ) \{
+00615     \textcolor{keywordflow}{for}(ib=nbloc-1;ib>=0;ib--) \{
+00616       \textcolor{keywordflow}{if}(nnew[ib] != 0 && tpltzblocks[ib].idv <= idptmp%nrow) \textcolor{keywordflow}{break};
+00617     \}
+00618 
+00619 
+00620     \textcolor{keywordflow}{if} (ib>=0 && idptmp%nrow < tpltzblocks[ib].idv+nnew[ib]) \{
+00621       *ilastBlock = ib;
+00622       *local\_V\_size\_new = local\_V\_size-(*idpnew)+idp;
+00623     \}
+00624     \textcolor{keywordflow}{else} \textcolor{keywordflow}{if} (ib>=0 && tpltzblocks[ib].idv+nnew[ib] <= idptmp%nrow) \{
+00625       *ilastBlock = ib;
+00626       \textcolor{comment}{//int64\_t extraend =
+       (local\_V\_size-1+idp)%nrow+1-(tpltzblocks[ib].idv+nnew[ib]);  //note I put int64 just to be sure}
+00627       \textcolor{comment}{//*local\_V\_size\_new =
+       (local\_V\_size+idp)%nrow-(idv[*ilastBlock]+nnew[*ilastBlock]);}
+00628      \textcolor{comment}{//idv[*ilastBlock]+nnew[*ilastBlock]-(*idpnew);}
+00629       \textcolor{comment}{//*local\_V\_size\_new = local\_V\_size-(*idpnew)+idp-extraend;  //compute
+       twice ... ? remove this one}
+00630 
+00631       \textcolor{keywordtype}{int} idvlastcolumn = idptmp/nrow;
+00632       *local\_V\_size\_new = tpltzblocks[ib].\hyperlink{structBlock_ad45697f62720768c82b652d948156fc6}{idv}+nnew[ib]+idvlastcolumn*nrow - 
+      (*idpnew);
+00633 
+00634     \}
+00635     \textcolor{keywordflow}{else} \{
+00636       idptmp = idptmp - (idptmp%nrow)-1;\textcolor{comment}{//(int) idptmp - (idptmp%nrow)-1;}
+00637 \textcolor{comment}{//        idtmp = (int) floor( (1.0*idpnew)/(1.0*nrow))*nrow-1; // go to the
+       last element of the previous column}
+00638     \}\}
+00639 
+00640 
+00641     \textcolor{keywordflow}{return}(1);
+00642 \}
+\end{DoxyCode}

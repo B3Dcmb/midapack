@@ -1,0 +1,109 @@
+\hypertarget{alm_8c}{\section{alm.\-c}
+\label{alm_8c}\index{alm.\-c@{alm.\-c}}
+}
+
+\begin{DoxyCode}
+00001 
+00010 \textcolor{preprocessor}{#include <stdlib.h>}
+00011 
+\hypertarget{alm_8c_source_l00016}{}\hyperlink{alm_8h_a025f3e840ed5ec45c53aedc002feff2e}{00016} \textcolor{keywordtype}{void} \hyperlink{alm_8c_a025f3e840ed5ec45c53aedc002feff2e}{m2s}(\textcolor{keywordtype}{double} *mapval, \textcolor{keywordtype}{double} *submapval, \textcolor{keywordtype}{int} *subset, \textcolor{keywordtype}{int} count)\{
+00017   \textcolor{keywordtype}{int} i;
+00018 
+00019 \textcolor{comment}{//#pragma omp parallel for}
+00020   \textcolor{keywordflow}{for}(i=0; i< count; i++)\{
+00021     submapval[i]=mapval[subset[i]];
+00022   \}
+00023 \}
+00024 
+\hypertarget{alm_8c_source_l00029}{}\hyperlink{alm_8h_a25f5f633a4483d645db5b72b1de6038e}{00029} \textcolor{keywordtype}{void} \hyperlink{alm_8c_a25f5f633a4483d645db5b72b1de6038e}{lmatvecprod}(\textcolor{keywordtype}{int} *ind, \textcolor{keywordtype}{double} *val, \textcolor{keywordtype}{int} m, \textcolor{keywordtype}{int} nnz, \textcolor{keywordtype}{double} *in, \textcolor{keywordtype}{
+      double} *out)\{
+00030   \textcolor{keywordtype}{int} i, j, k; 
+00031   k=0;
+00032   \textcolor{keywordflow}{for}(i=0; i<m; i++)\{                               \textcolor{comment}{/*<local transform reduce*/}
+                  
+00033     \textcolor{keywordflow}{for}(j=0; j<nnz; j++)\{
+00034       out[i]+=val[k]*in[ind[k]]; 
+00035       k++;
+00036     \}
+00037   \}
+00038 \}
+00039 
+00040 
+\hypertarget{alm_8c_source_l00045}{}\hyperlink{alm_8h_a6e63772ec097a4b407a183ba90668771}{00045} \textcolor{keywordtype}{void} \hyperlink{alm_8c_a6e63772ec097a4b407a183ba90668771}{s2m\_sum}(\textcolor{keywordtype}{double} *mapval, \textcolor{keywordtype}{double} *submapval, \textcolor{keywordtype}{int} *subset, \textcolor{keywordtype}{int} count)\{
+00046   \textcolor{keywordtype}{int} i;
+00047 \textcolor{comment}{//#pragma omp parallel for}
+00048   \textcolor{keywordflow}{for}(i=0; i< count; i++)\{
+00049     mapval[subset[i]] += submapval[i];
+00050   \}
+00051 \}
+00052 
+00053 
+\hypertarget{alm_8c_source_l00058}{}\hyperlink{alm_8h_a3215545f5ef51df80f796a4b727d6548}{00058} \textcolor{keywordtype}{void} \hyperlink{alm_8c_a3215545f5ef51df80f796a4b727d6548}{s2m}(\textcolor{keywordtype}{double} *mapval, \textcolor{keywordtype}{double} *submapval, \textcolor{keywordtype}{int} *subset, \textcolor{keywordtype}{int} count)\{
+00059   \textcolor{keywordtype}{int} i;
+00060   \textcolor{keywordflow}{for}(i=0; i< count; i++)\{
+00061     mapval[subset[i]] = submapval[i];
+00062   \}
+00063 \}
+00064 
+\hypertarget{alm_8c_source_l00067}{}\hyperlink{alm_8h_af2051489cb86480d4c9768b758db5313}{00067} \textcolor{keywordtype}{void} \hyperlink{alm_8c_af2051489cb86480d4c9768b758db5313}{cnt\_nnz\_dot\_prod}(\textcolor{keywordtype}{double} *out, \textcolor{keywordtype}{double} *in, \textcolor{keywordtype}{int} cnt, \textcolor{keywordtype}{int} *
+      ind, \textcolor{keywordtype}{double} *val, \textcolor{keywordtype}{int} nnz)\{
+00068   \textcolor{keywordtype}{int} i, j, k; 
+00069   k=0;
+00070   \textcolor{keywordflow}{for}(i=0; i<cnt; i++)                                   \textcolor{comment}{/*<local transform
+       reduce*/}            
+00071     \textcolor{keywordflow}{for}(j=0; j<nnz; j++)
+00072       out[ind[k]]+=val[k]*in[i]; 
+00073 \}
+00074 
+00075 \textcolor{preprocessor}{#if OPENMP}
+00076 \textcolor{preprocessor}{}
+\hypertarget{alm_8c_source_l00078}{}\hyperlink{alm_8h_a3ff5266a59baa0dfcf7f4a62b935d35e}{00078} \textcolor{keywordtype}{void} \hyperlink{alm_8c_a3ff5266a59baa0dfcf7f4a62b935d35e}{omp\_cnt\_nnz\_dot\_prod}(\textcolor{keywordtype}{double} *out, \textcolor{keywordtype}{double} *in, \textcolor{keywordtype}{int} cnt,
+       \textcolor{keywordtype}{int} *ind, \textcolor{keywordtype}{double} *val, \textcolor{keywordtype}{int} nnz)\{
+00079   \textcolor{keywordtype}{int} i, j, k; 
+00080   k=0;
+00081   \textcolor{keywordflow}{for}(i=0; i<cnt; i++)                                   \textcolor{comment}{/*<local transform
+       reduce*/}            
+00082     \textcolor{keywordflow}{for}(j=0; j<nnz; j++)
+00083       out[ind[k]]+=val[k]*in[i]; 
+00084 \}
+00085 \textcolor{preprocessor}{#endif}
+00086 \textcolor{preprocessor}{}
+\hypertarget{alm_8c_source_l00093}{}\hyperlink{group__matmap__group22_ga3097d396b49c10414a79152f4ebd2902}{00093} \textcolor{keywordtype}{int} \hyperlink{group__matmap__group22_ga3097d396b49c10414a79152f4ebd2902}{m2m}(\textcolor{keywordtype}{double} *vA1, \textcolor{keywordtype}{int} *A1, \textcolor{keywordtype}{int} n1, \textcolor{keywordtype}{double} *vA2, \textcolor{keywordtype}{int} *A2, \textcolor{keywordtype}{int} n2)\{
+00094   \textcolor{keywordtype}{int} i=0, j=0, k= 0;
+00095   \textcolor{keywordflow}{while}( i<n1 && j<n2)\{
+00096     \textcolor{keywordflow}{if}(A1[i] < A2[j])\{
+00097       i++;  
+00098     \}
+00099     \textcolor{keywordflow}{else} \textcolor{keywordflow}{if}(A1[i] > A2[j])\{
+00100       j++;
+00101     \}
+00102     \textcolor{keywordflow}{else}\{
+00103       vA2[j]=vA1[i];
+00104       k++; 
+00105       i++;
+00106       j++;
+00107     \}
+00108   \}
+00109   \textcolor{keywordflow}{return} k;
+00110 \}
+00111 
+\hypertarget{alm_8c_source_l00118}{}\hyperlink{group__matmap__group22_ga28c05d496e6168337d8a466affc1d0ac}{00118} \textcolor{keywordtype}{int} \hyperlink{group__matmap__group22_ga28c05d496e6168337d8a466affc1d0ac}{m2m\_sum}(\textcolor{keywordtype}{double} *vA1, \textcolor{keywordtype}{int} *A1, \textcolor{keywordtype}{int} n1, \textcolor{keywordtype}{double} *vA2, \textcolor{keywordtype}{int} *A2, \textcolor{keywordtype}{int} n2)\{
+00119   \textcolor{keywordtype}{int} i=0, j=0, k= 0;
+00120   \textcolor{keywordflow}{while}( i<n1 && j<n2)\{
+00121     \textcolor{keywordflow}{if}(A1[i] < A2[j])\{
+00122       i++;  
+00123     \}
+00124     \textcolor{keywordflow}{else} \textcolor{keywordflow}{if}(A1[i] > A2[j])\{
+00125       j++;
+00126     \}
+00127     \textcolor{keywordflow}{else}\{
+00128       vA2[j]+=vA1[i];
+00129       k++; 
+00130       i++;
+00131       j++;
+00132     \}
+00133   \}
+00134   \textcolor{keywordflow}{return} k;
+00135 \}
+00136 
+\end{DoxyCode}

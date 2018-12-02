@@ -1,0 +1,356 @@
+\hypertarget{toeplitz__gappy__seq_8dev_8c}{\section{toeplitz\-\_\-gappy\-\_\-seq.\-dev.\-c}
+\label{toeplitz__gappy__seq_8dev_8c}\index{toeplitz\-\_\-gappy\-\_\-seq.\-dev.\-c@{toeplitz\-\_\-gappy\-\_\-seq.\-dev.\-c}}
+}
+
+\begin{DoxyCode}
+00001 
+00002 
+00003 \textcolor{comment}{//=========================================================================}
+00004 \textcolor{comment}{//Alternave version of the sequential routine for the gaps - in dev }
+00005 \textcolor{comment}{//Need to change the name to gap\_reduce\_matrix for more explicit purpose}
+00006 \textcolor{comment}{//fd@apc }
+\hypertarget{toeplitz__gappy__seq_8dev_8c_source_l00007}{}\hyperlink{toeplitz__gappy__seq_8dev_8h_af66e44de454002389ec9a52953526a59}{00007} \textcolor{keywordtype}{int} \hyperlink{toeplitz__gappy__seq_8dev_8c_af66e44de454002389ec9a52953526a59}{gstmm}(\textcolor{keywordtype}{double} **V, \textcolor{keywordtype}{int} n, \textcolor{keywordtype}{int} m, \textcolor{keywordtype}{int} id0, \textcolor{keywordtype}{int} l, fftw\_complex *T\_fft, \textcolor{keywordtype}{
+      int} lambda, fftw\_complex *V\_fft, \textcolor{keywordtype}{double} *V\_rfft, fftw\_plan plan\_f, fftw\_plan 
+      plan\_b, \textcolor{keywordtype}{int} blocksize, \textcolor{keywordtype}{int} nfft, \textcolor{keywordtype}{int} *id0gap, \textcolor{keywordtype}{int} *lgap, \textcolor{keywordtype}{int} ngap)
+00008 \{
+00009 
+00010   \textcolor{comment}{//routine variable }
+00011   \textcolor{keywordtype}{int} i,j,k,p;  \textcolor{comment}{//loop index }
+00012   \textcolor{keywordtype}{int} idf       = id0+l-1;
+00013   \textcolor{keywordtype}{int} cfirst    = id0/n;  \textcolor{comment}{//first column index }
+00014   \textcolor{keywordtype}{int} clast     = idf/n;  \textcolor{comment}{//last column index }
+00015   \textcolor{keywordtype}{int} clast\_1   = (idf+1)/n;
+00016   \textcolor{keywordtype}{int} m\_eff     = clast - cfirst + 1 ;  \textcolor{comment}{//number of columns }
+00017   \textcolor{keywordtype}{int} rfirst    = id0%n;
+00018   \textcolor{keywordtype}{int} rlast     = idf%n;
+00019 
+00020   \textcolor{keywordflow}{if} (l<lambda) \textcolor{comment}{// test to avoid communications errors}
+00021     \textcolor{keywordflow}{return} \hyperlink{group__group22_ga24331a8efb6e0b77df7c645ef45b2830}{print\_error\_message} (1, \_\_FILE\_\_, \_\_LINE\_\_);
+00022 
+00023   \textcolor{keywordtype}{int} nnew=0;
+00024   \textcolor{keywordtype}{int} lcolnew=0;
+00025   \textcolor{keywordtype}{int} lcol;
+00026   \textcolor{keywordtype}{double} *Vcol;
+00027   \textcolor{keywordtype}{int} icol, igap;
+00028 ;
+00029   \textcolor{keywordtype}{int} id0col;
+00030   \textcolor{keywordtype}{int} id0out=0;
+00031   \textcolor{keywordtype}{int} lnew;
+00032 
+00033   \textcolor{keywordtype}{int} nfullcol;
+00034   nfullcol = (l-(n-id0%n)-(id0+l)%n)/n;  \textcolor{comment}{//check how many full columns input
+       data have}
+00035 
+00036   \textcolor{keywordtype}{int} ifirstgap, ilastgap;
+00037 
+00038 \textcolor{keywordflow}{if} (id0%n != 0) \{
+00039 \textcolor{comment}{//first column if not full}
+00040   id0out=0;
+00041   id0col=id0%n;
+00042   Vcol = (*V)+id0col;
+00043   lcol= n-id0col;
+00044 
+00045   \textcolor{comment}{//find the first and last gap on the column}
+00046   \textcolor{keywordflow}{for}(k=0;k<ngap;k++) \{
+00047     \textcolor{keywordflow}{if}(lgap[k] != 0 && id0col < id0gap[k]+lgap[k]) \textcolor{keywordflow}{break};
+00048   \}
+00049   ifirstgap = k;
+00050 
+00051   \textcolor{keywordflow}{for}(k=ngap-1;k>=0;k--) \{
+00052     \textcolor{keywordflow}{if}(lgap[k] != 0 && id0gap[k] <= id0col) \textcolor{keywordflow}{break};
+00053   \}
+00054   ilastgap = k;
+00055 
+00056 
+00057   \textcolor{keywordflow}{for} (i=0 ; i<ngap; i++)
+00058     printf(\textcolor{stringliteral}{"id0gap[%d]=%d\(\backslash\)n"}, i, id0gap[i]);
+00059   \textcolor{keywordflow}{for} (i=0 ; i<ngap; i++)
+00060     printf(\textcolor{stringliteral}{"lgap[%d]=%d\(\backslash\)n"}, i, lgap[i]);
+00061 
+00062     printf(\textcolor{stringliteral}{"---\(\backslash\)n"});
+00063 
+00064     printf(\textcolor{stringliteral}{"lcol=%d\(\backslash\)n"}, lcol);
+00065   \textcolor{keywordflow}{for} (i=0 ; i<lcol; i++)
+00066     printf(\textcolor{stringliteral}{"Vcol[%d]=%f\(\backslash\)n"}, i, Vcol[i]);
+00067 
+00068 \textcolor{comment}{//reduce the gap to lambda zeros on the column}
+00069   \hyperlink{group__group22_ga8c05d2ff1d358740d1c8965040e7080a}{gap\_reduce}(&Vcol, id0col, lcol, lambda, id0gap, lgap, ngap, &
+      lcolnew, id0out);
+00070 
+00071   id0out += lcolnew;
+00072 
+00073     printf(\textcolor{stringliteral}{"---\(\backslash\)n"});
+00074 
+00075   \textcolor{keywordflow}{for} (i=0 ; i<lcol; i++)
+00076     printf(\textcolor{stringliteral}{"Vcolout[%d]=%f\(\backslash\)n"}, i, Vcol[i]);
+00077     printf(\textcolor{stringliteral}{"===\(\backslash\)n"});
+00078 
+00079     printf(\textcolor{stringliteral}{"---\(\backslash\)n"});
+00080 
+00081   \textcolor{keywordflow}{for} (i=0 ; i<l; i++)
+00082     printf(\textcolor{stringliteral}{"(*V)[%d]=%f\(\backslash\)n"}, i, (*V)[i]);
+00083 
+00084 \}
+00085 
+00086 \textcolor{comment}{//generic loop on the full column}
+00087   \textcolor{keywordflow}{for} (icol=0 ; icol<nfullcol; icol++) \{
+00088 
+00089     id0out= lcolnew;
+00090     id0col=0;
+00091     Vcol = (*V)+id0col;
+00092     lcol= n-id0col;
+00093 
+00094     \hyperlink{group__group22_ga8c05d2ff1d358740d1c8965040e7080a}{gap\_reduce}(&Vcol, id0col, lcol, lambda, id0gap, lgap, ngap, &
+      lcolnew, id0out);
+00095 
+00096     id0out += lcolnew;
+00097 
+00098     \textcolor{keywordflow}{if} (icol==0)  \textcolor{comment}{//take the nnew directly if they is a full column}
+00099       nnew=lcolnew;
+00100 
+00101   \}
+00102 
+00103 
+00104 \textcolor{comment}{//last column if not full and more than one column}
+00105   \textcolor{keywordflow}{if} (idf%n != n && m > 1) \{
+00106  
+00107   id0out=0;
+00108   id0col=0;
+00109   Vcol = (*V)+id0col;
+00110   lcol= idf%n;
+00111 
+00112   \textcolor{comment}{//find the first and last gap on the column}
+00113   ifirstgap = 0;  \textcolor{comment}{//we already know it, no need to compute}
+00114 
+00115   \textcolor{keywordflow}{for}(k=ngap-1;k>=0;k--) \{
+00116     \textcolor{keywordflow}{if}(lgap[k] != 0 && id0gap[k] <= id0col) \textcolor{keywordflow}{break};
+00117   \}
+00118   ilastgap = k;
+00119 
+00120 \textcolor{comment}{//reduce the gap to lambda zeros on the column}
+00121   \hyperlink{group__group22_ga8c05d2ff1d358740d1c8965040e7080a}{gap\_reduce}(&Vcol, id0col, lcol, lambda, id0gap, lgap, ngap, &
+      lcolnew, id0out);
+00122 
+00123   \}
+00124 
+00125 
+00126 \textcolor{comment}{//cleaning the extra terms}
+00127   \textcolor{keywordflow}{if} (nnew==0) \{  \textcolor{comment}{//compute the nnew if there is no full column}
+00128     \textcolor{keywordflow}{for} (igap=0 ; igap<ngap; igap++) 
+00129       nnew += id0gap[igap] - min(id0gap[igap], lambda);
+00130   \}
+00131 
+00132   \textcolor{keywordflow}{for} (i=nnew*m ; i<n*m; i++)
+00133     (*V)[i] = 0;
+00134 
+00135     printf(\textcolor{stringliteral}{"===\(\backslash\)n"});
+00136   \textcolor{keywordflow}{for} (i=0 ; i<l; i++)
+00137     printf(\textcolor{stringliteral}{"(*V)[%d]=%f\(\backslash\)n"}, i, (*V)[i]);
+00138 
+00139 
+00140 \textcolor{comment}{//now do the product}
+00141 \textcolor{comment}{//  int id0new = ..;}
+00142 
+00143 \textcolor{comment}{//  stmm( V, nnew, m, id0new, lnew, T\_fft, lambda, V\_fft, V\_rfft, plan\_f,
+       plan\_b, blocksize, nfft)}
+00144 
+00145 
+00146 \textcolor{comment}{//gap extend - same thing as above and reverse gap\_reduce routine}
+00147 \textcolor{comment}{// gap\_extend()}
+00148 
+00149 \textcolor{comment}{//maybe create gap\_blockreduce to clarify this routine.}
+00150 
+00151   \textcolor{keywordflow}{return} 0;
+00152 \}
+00153 
+00154 \textcolor{comment}{//=========================================================================}
+00155 
+00157 
+\hypertarget{toeplitz__gappy__seq_8dev_8c_source_l00163}{}\hyperlink{group__group22_ga8c05d2ff1d358740d1c8965040e7080a}{00163} \textcolor{keywordtype}{int} \hyperlink{group__group22_ga8c05d2ff1d358740d1c8965040e7080a}{gap\_reduce}(\textcolor{keywordtype}{double} **V, \textcolor{keywordtype}{int} id0, \textcolor{keywordtype}{int} l, \textcolor{keywordtype}{int} lambda, \textcolor{keywordtype}{int} *id0gap, \textcolor{keywordtype}{
+      int} *lgap, \textcolor{keywordtype}{int} ngap, \textcolor{keywordtype}{int} *newl, \textcolor{keywordtype}{int} id0out)
+00164 \{
+00165   \textcolor{comment}{//routine variables}
+00166   \textcolor{keywordtype}{int} i,k, ii;
+00167   \textcolor{keywordtype}{int} lg;
+00168   \textcolor{keywordtype}{int} newid0gap\_ip1;
+00169   \textcolor{keywordtype}{int} newlgap\_ip1;
+00170 
+00171 
+00172   \textcolor{keywordtype}{double} *Vout;
+00173   Vout =(*V)-(id0-id0out);
+00174 
+00175 
+00176   \textcolor{keywordflow}{if} (id0gap[0]>id0) \{
+00177     lg = id0gap[0]-id0;
+00178     printf(\textcolor{stringliteral}{"lg=%d\(\backslash\)n"}, lg);
+00179     memmove(&(Vout)[0], &(*V)[0], lg*\textcolor{keyword}{sizeof}(\textcolor{keywordtype}{double}));
+00180   \textcolor{comment}{//to do if the first element isn't a gap}
+00181   \}
+00182 
+00183   \textcolor{keywordtype}{int} offset\_first=id0gap[0]-id0+min(lambda,lgap[0]);
+00184   offset\_first=max(0, offset\_first);
+00185 
+00186 
+00187 \textcolor{comment}{//  for (k=0; k<offset\_first; k++)}
+00188 \textcolor{comment}{//    (Vout)[k] = 0;}
+00189 
+00190   printf(\textcolor{stringliteral}{"offset\_first=%d\(\backslash\)n"}, offset\_first);
+00191 
+00192   \textcolor{keywordflow}{for} (i=0 ; i<l; i++)
+00193     printf(\textcolor{stringliteral}{"(Vout)[%d]=%f\(\backslash\)n"}, i, (Vout)[i]);
+00194     printf(\textcolor{stringliteral}{"---\(\backslash\)n"});
+00195 
+00196     printf(\textcolor{stringliteral}{"l=%d\(\backslash\)n"}, l);
+00197 
+00198 
+00199   \textcolor{keywordflow}{for} (i=0 ; i<(ngap-1); i++) \{
+00200     lg = id0gap[i+1]-id0-(id0gap[i]-id0+lgap[i]);
+00201     printf(\textcolor{stringliteral}{"lg=%d\(\backslash\)n"}, lg);
+00202     memmove(&(Vout)[offset\_first], &(*V)[id0gap[i]-id0+lgap[i]], lg*\textcolor{keyword}{sizeof}(\textcolor{keywordtype}{
+      double}));
+00203 
+00204   \textcolor{keywordflow}{for} (ii=0 ; ii<l; ii++)
+00205     printf(\textcolor{stringliteral}{"(Vout)[%d]=%f\(\backslash\)n"}, ii, (Vout)[ii]);
+00206 
+00207     newid0gap\_ip1=offset\_first+lg;
+00208     newlgap\_ip1=min(lambda,lgap[i+1]);
+00209     \textcolor{keywordflow}{for} (k=newid0gap\_ip1; k<newid0gap\_ip1+newlgap\_ip1; k++)
+00210       (Vout)[k] = 0;
+00211 
+00212     printf(\textcolor{stringliteral}{"lg=%d ; lambda=%d ; lgap[i+1]=%d\(\backslash\)n"}, lg, lambda, lgap[i+1]);
+00213     offset\_first += lg+min(lambda,lgap[i+1]);
+00214   \}  \textcolor{comment}{//end gaps loop}
+00215 
+00216     printf(\textcolor{stringliteral}{"---\(\backslash\)n"});
+00217   printf(\textcolor{stringliteral}{"offset\_first=%d\(\backslash\)n"}, offset\_first);
+00218   \textcolor{keywordflow}{for} (i=0 ; i<l; i++)
+00219     printf(\textcolor{stringliteral}{"(Vout)[%d]=%f\(\backslash\)n"}, i, (Vout)[i]);
+00220 
+00221   i=(ngap-1);
+00222 
+00223   \textcolor{keywordflow}{if} (id0gap[i]-id0+lgap[i]<l) \{
+00224     printf(\textcolor{stringliteral}{"toc\(\backslash\)n"});
+00225     lg = l-(id0gap[i]-id0+lgap[i]);
+00226     memmove(&(Vout)[offset\_first], &(*V)[id0gap[i]-id0+lgap[i]], lg*\textcolor{keyword}{sizeof}(\textcolor{keywordtype}{
+      double}));
+00227     offset\_first += lg;
+00228     *newl = offset\_first;
+00229   \}
+00230   \textcolor{keywordflow}{else} \{
+00231     *newl = offset\_first-min(lambda,lgap[ngap-1])+min( lambda, (id0+l-id0gap[
+      ngap-1]) );
+00232   \}
+00233 
+00234     printf(\textcolor{stringliteral}{"---\(\backslash\)n"});
+00235   printf(\textcolor{stringliteral}{"l=%d, *newl=%d, offset\_first=%d\(\backslash\)n"}, l, *newl, offset\_first);
+00236 
+00237   \textcolor{keywordflow}{for} (i=offset\_first ; i<l; i++)
+00238     (Vout)[i] = 0;
+00239 
+00240     printf(\textcolor{stringliteral}{"*newl=%d\(\backslash\)n"}, *newl);
+00241 
+00242 
+00243  \textcolor{keywordflow}{return} 0;
+00244 \}
+00245 \textcolor{comment}{//=========================================================================}
+00246 
+00248 
+\hypertarget{toeplitz__gappy__seq_8dev_8c_source_l00255}{}\hyperlink{group__group11_ga8a16933581102fbad56d8ef6610eac81}{00255} \textcolor{keywordtype}{int} \hyperlink{group__group11_ga8a16933581102fbad56d8ef6610eac81}{gap\_masking}(\textcolor{keywordtype}{double} **V, \textcolor{keywordtype}{int} l, \textcolor{keywordtype}{int} *id0gap, \textcolor{keywordtype}{int} *lgap, \textcolor{keywordtype}{int} ngap)
+00256 \{
+00257 
+00258   \textcolor{keywordtype}{int} i,k;
+00259   \textcolor{keywordtype}{int} lg;
+00260 
+00261   \textcolor{keywordtype}{int} offset\_first=id0gap[0];
+00262   \textcolor{keywordflow}{for} (i=0 ; i<(ngap-1); i++) \{
+00263     lg = id0gap[i+1]-(id0gap[i]+lgap[i]);
+00264     memmove(&(*V)[offset\_first], &(*V)[id0gap[i]+lgap[i]], lg*\textcolor{keyword}{sizeof}(\textcolor{keywordtype}{double}));
+00265     offset\_first += lg;
+00266   \}
+00267 
+00268   i=(ngap-1);
+00269   lg = l-(id0gap[i]+lgap[i]);
+00270 
+00271     memmove(&(*V)[offset\_first], &(*V)[id0gap[i]+lgap[i]], lg*\textcolor{keyword}{sizeof}(\textcolor{keywordtype}{double}));
+00272     offset\_first += lg;
+00273 
+00274 
+00275   \textcolor{keywordflow}{for} (i=offset\_first ; i<l; i++)
+00276     (*V)[i] = 0;
+00277 
+00278 
+00279  \textcolor{keywordflow}{return} 0;
+00280 \}
+00281 
+00282 
+00283 \textcolor{comment}{//=========================================================================}
+00284 
+00286 
+\hypertarget{toeplitz__gappy__seq_8dev_8c_source_l00293}{}\hyperlink{group__group11_gaf84a476c33acadd1dbfa6e9833e16499}{00293} \textcolor{keywordtype}{int} \hyperlink{group__group11_gaf84a476c33acadd1dbfa6e9833e16499}{gap\_filling}(\textcolor{keywordtype}{double} **V, \textcolor{keywordtype}{int} l, \textcolor{keywordtype}{int} *id0gap, \textcolor{keywordtype}{int} *lgap, \textcolor{keywordtype}{int} ngap)
+00294 \{
+00295 
+00296   \textcolor{keywordtype}{int} i,k;
+00297   \textcolor{keywordtype}{int} lg;
+00298 
+00299   \textcolor{keywordtype}{int} lgaptot = 0;
+00300   \textcolor{keywordflow}{for} (i=0 ; i<ngap; i++)
+00301     lgaptot += lgap[i];
+00302 
+00303   \textcolor{keywordtype}{int} id0\_Vmv;
+00304   \textcolor{keywordtype}{int} offset\_last;
+00305 
+00306   id0\_Vmv = id0gap[ngap-1]+lgap[ngap-1];
+00307   offset\_last = id0\_Vmv - lgaptot;
+00308   lg = l-id0\_Vmv;
+00309 
+00310   \textcolor{keywordflow}{if} (lg>0)
+00311     memmove(&(*V)[id0\_Vmv], &(*V)[offset\_last], lg*\textcolor{keyword}{sizeof}(\textcolor{keywordtype}{double}));
+00312 
+00313   \textcolor{keywordflow}{for} (i=ngap-2 ; i>=0; i--) \{
+00314     id0\_Vmv = id0gap[i]+lgap[i];
+00315     lg = id0gap[i+1]-id0\_Vmv;
+00316     offset\_last -= lg;
+00317 
+00318     memmove(&(*V)[id0\_Vmv], &(*V)[offset\_last], lg*\textcolor{keyword}{sizeof}(\textcolor{keywordtype}{double}));
+00319   \}
+00320 
+00321   \textcolor{keywordflow}{for} (i=0 ; i<ngap; i++)
+00322    \textcolor{keywordflow}{for} (k=0 ; k<lgap[i]; k++)
+00323     (*V)[id0gap[i]+k] = 0;
+00324 
+00325  \textcolor{keywordflow}{return} 0;
+00326 \}
+00327 
+00328 
+00329 \textcolor{comment}{//a naive version - in dev}
+\hypertarget{toeplitz__gappy__seq_8dev_8c_source_l00330}{}\hyperlink{toeplitz__gappy__seq_8dev_8c_a9fff288f9a34ed29e0a344a1e238a973}{00330} \textcolor{keywordtype}{int} \hyperlink{toeplitz__gappy__seq_8dev_8c_a9fff288f9a34ed29e0a344a1e238a973}{gap\_masking\_naive}(\textcolor{keywordtype}{double} **V, \textcolor{keywordtype}{int} id0,\textcolor{keywordtype}{int} local\_V\_size, \textcolor{keywordtype}{
+      int} m, \textcolor{keywordtype}{int} nrow, \textcolor{keywordtype}{int} *id0gap, \textcolor{keywordtype}{int} *lgap, \textcolor{keywordtype}{int} ngap)
+00331 \{
+00332   \textcolor{keywordtype}{int} i,j,k;
+00333   \textcolor{keywordtype}{int} icol;
+00334 
+00335   \textcolor{keywordtype}{int} offsetV=id0;
+00336   k=0;
+00337 
+00338   \textcolor{keywordflow}{for} (i=0 ; i<local\_V\_size; i++) \{
+00339   icol=(i+id0)%nrow;
+00340 
+00341   \textcolor{keywordflow}{if} ( icol<id0gap[k] ) \{
+00342     (*V)[offsetV]=(*V)[i];
+00343     offsetV=offsetV+1;
+00344   \}
+00345   \textcolor{keywordflow}{else} \textcolor{keywordflow}{if} (icol>=id0gap[k]+lgap[k]) \{
+00346     k=k+1;
+00347     i=i-1;
+00348 \textcolor{comment}{//    (*V)[offsetV]=(*V)[i];}
+00349 \textcolor{comment}{//    offsetV=offsetV+1;}
+00350   \}
+00351   \textcolor{keywordflow}{else} \{\textcolor{comment}{//do not copy, just skip}
+00352   \}
+00353 
+00354 
+00355   \textcolor{keywordflow}{return} 0;
+00356 \}
+00357 
+00358 
+\end{DoxyCode}

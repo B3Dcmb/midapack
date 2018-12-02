@@ -1,0 +1,94 @@
+\hypertarget{mapmat_8h}{\section{mapmat.\-h}
+\label{mapmat_8h}\index{mapmat.\-h@{mapmat.\-h}}
+}
+
+\begin{DoxyCode}
+00001 
+00013 \textcolor{preprocessor}{#define NONE 0}
+00014 \textcolor{preprocessor}{}\textcolor{preprocessor}{#define RING 1}
+00015 \textcolor{preprocessor}{}\textcolor{preprocessor}{#define BUTTERFLY 2}
+00016 \textcolor{preprocessor}{}\textcolor{preprocessor}{#define NONBLOCKING 3}
+00017 \textcolor{preprocessor}{}\textcolor{preprocessor}{#define NOEMPTY 4}
+00018 \textcolor{preprocessor}{}\textcolor{preprocessor}{#define ALLTOALLV 5}
+00019 \textcolor{preprocessor}{}\textcolor{preprocessor}{#define ALLREDUCE 6}
+00020 \textcolor{preprocessor}{}\textcolor{comment}{//================Modification introduced by Sebastien Cayrols : 01/09/2015 ;
+       Berkeley}
+00021 \textcolor{preprocessor}{#define BUTTERFLY\_BLOCKING\_1 7}
+00022 \textcolor{preprocessor}{}\textcolor{preprocessor}{#define BUTTERFLY\_BLOCKING\_2 8}
+00023 \textcolor{preprocessor}{}\textcolor{preprocessor}{#define NOEMPTYSTEPRING 9}
+00024 \textcolor{preprocessor}{}\textcolor{comment}{//================End modification}
+00025 \textcolor{preprocessor}{#define SEQ 0}
+00026 \textcolor{preprocessor}{}\textcolor{preprocessor}{#define OMP 1}
+00027 \textcolor{preprocessor}{}\textcolor{preprocessor}{#define GPU 2}
+00028 \textcolor{preprocessor}{}
+00029 
+00030 
+\hypertarget{mapmat_8h_source_l00034}{}\hyperlink{structMat}{00034} \textcolor{keyword}{typedef} \textcolor{keyword}{struct }\{
+\hypertarget{mapmat_8h_source_l00035}{}\hyperlink{structMat_a0ab8c39abb15ab5d8d0d990a37dadcc2}{00035}   \textcolor{keywordtype}{int}           \hyperlink{structMat_a0ab8c39abb15ab5d8d0d990a37dadcc2}{flag};                       \textcolor{comment}{// flag for communication
+       scheme (NONE, RING, BUTTERFLY ...)}
+\hypertarget{mapmat_8h_source_l00036}{}\hyperlink{structMat_a1656ea8b949ef48d4f0939f675a6d075}{00036}   \textcolor{keywordtype}{int}           \hyperlink{structMat_a1656ea8b949ef48d4f0939f675a6d075}{m};                     \textcolor{comment}{// number local rows}
+\hypertarget{mapmat_8h_source_l00037}{}\hyperlink{structMat_acd6e2a54ef05701b15d794040a3816a6}{00037}   \textcolor{keywordtype}{int}           \hyperlink{structMat_acd6e2a54ef05701b15d794040a3816a6}{nnz};                    \textcolor{comment}{// number non-zero per rows}
+\hypertarget{mapmat_8h_source_l00038}{}\hyperlink{structMat_a47d869e53879ad1d2b0aed8f6f1f648a}{00038}   \textcolor{keywordtype}{int}           *\hyperlink{structMat_a47d869e53879ad1d2b0aed8f6f1f648a}{indices};                \textcolor{comment}{// column indices tab; size = m
+       * nnz; can be a global or local numbering}
+\hypertarget{mapmat_8h_source_l00039}{}\hyperlink{structMat_a6239320537db64ae9c1432f31f51e04b}{00039}   \textcolor{keywordtype}{double}        *\hyperlink{structMat_a6239320537db64ae9c1432f31f51e04b}{values};          \textcolor{comment}{// non-zero values tab; size = m * nnz}
+00040   \textcolor{comment}{//--------local shaping---------------}
+\hypertarget{mapmat_8h_source_l00041}{}\hyperlink{structMat_a983857e6f4ddb2c19a5119bcf1b6af63}{00041}   \textcolor{keywordtype}{int}           \hyperlink{structMat_a983857e6f4ddb2c19a5119bcf1b6af63}{lcount};
+\hypertarget{mapmat_8h_source_l00042}{}\hyperlink{structMat_a26f484e28815cb59e3cd5600f8832de4}{00042}   \textcolor{keywordtype}{int}           *\hyperlink{structMat_a26f484e28815cb59e3cd5600f8832de4}{lindices};              \textcolor{comment}{// local indices tab (monotony
+       with global numbering); size = lcount}
+00043 \textcolor{preprocessor}{#ifdef W\_MPI}
+\hypertarget{mapmat_8h_source_l00044}{}\hyperlink{structMat_a9a3894b7f67951ccae6fa1446fd00200}{00044} \textcolor{preprocessor}{}  MPI\_Comm      \hyperlink{structMat_a9a3894b7f67951ccae6fa1446fd00200}{comm};                   \textcolor{comment}{// MPI communicator}
+00045   \textcolor{comment}{//--------com shaping-----------------}
+\hypertarget{mapmat_8h_source_l00046}{}\hyperlink{structMat_acd1137be3acc4749cd1226022b9bbe67}{00046}   \textcolor{keywordtype}{int}           *\hyperlink{structMat_acd1137be3acc4749cd1226022b9bbe67}{com\_indices}, com\_count;\textcolor{comment}{// communicated indices tab,
+       and size}
+\hypertarget{mapmat_8h_source_l00047}{}\hyperlink{structMat_a1f42610fea23791bc58f95d445a63838}{00047}   \textcolor{keywordtype}{int}           \hyperlink{structMat_a1f42610fea23791bc58f95d445a63838}{steps};                     \textcolor{comment}{// number of steps in the
+       communication scheme}
+\hypertarget{mapmat_8h_source_l00048}{}\hyperlink{structMat_a17303d0444340f5349c9d23628a15914}{00048}   \textcolor{keywordtype}{int}           *\hyperlink{structMat_a17303d0444340f5349c9d23628a15914}{nS}, *nR;             \textcolor{comment}{// number of indices (to send and to
+       receive); size = steps}
+\hypertarget{mapmat_8h_source_l00049}{}\hyperlink{structMat_a1a774da8e5eb2c07a70491f3b14b96c7}{00049}   \textcolor{keywordtype}{int}           **R, **\hyperlink{structMat_a1a774da8e5eb2c07a70491f3b14b96c7}{S};              \textcolor{comment}{// sending or receiving indices tab}
+00050 \textcolor{preprocessor}{#endif}
+00051 \textcolor{preprocessor}{}\}\hyperlink{structMat}{Mat};
+00052 
+00053 
+00054 \textcolor{keywordtype}{int} \hyperlink{group__matmap__group11_ga16fec1005b6f01bda1dd6154c26c27ed}{MatInit}(\hyperlink{structMat}{Mat} *A, \textcolor{keywordtype}{int} m, \textcolor{keywordtype}{int} nnz, \textcolor{keywordtype}{int} *indices, \textcolor{keywordtype}{double} *values, \textcolor{keywordtype}{int}
+       flag
+00055 #ifdef W\_MPI
+00056 , MPI\_Comm comm
+00057 #endif
+00058 );
+00059 
+00060 \textcolor{keywordtype}{void} \hyperlink{group__matmap__group11_gaaf26c7678367e6757392c03abd22a105}{MatSetIndices}(\hyperlink{structMat}{Mat} *A, \textcolor{keywordtype}{int} m, \textcolor{keywordtype}{int} nnz, \textcolor{keywordtype}{int} *indices);
+00061 
+00062 \textcolor{keywordtype}{void} \hyperlink{group__matmap__group11_gad3d5adb742e7a82454fcd6eede21da91}{MatSetValues}(\hyperlink{structMat}{Mat} *A, \textcolor{keywordtype}{int} m, \textcolor{keywordtype}{int} nnz, \textcolor{keywordtype}{double} *values);
+00063 
+00064 \textcolor{keywordtype}{void} \hyperlink{group__matmap__group11_ga4e1732c63feba9e589b5037d0a25ab75}{MatFree}(\hyperlink{structMat}{Mat} *A);
+00065 
+00066 \textcolor{keywordtype}{int} \hyperlink{group__matmap__group11_gae31f7ccb10cda5c97e49f640feed1ad4}{MatLocalShape}(\hyperlink{structMat}{Mat} *A, \textcolor{keywordtype}{int} sflag);
+00067 
+00068 \textcolor{preprocessor}{#if W\_MPI}
+00069 \textcolor{preprocessor}{}\textcolor{keywordtype}{int} \hyperlink{group__matmap__group11_ga61b3b348d7c039aadfc3196e6b83535a}{MatComShape}(\hyperlink{structMat}{Mat} *A, \textcolor{keywordtype}{int} flag,  MPI\_Comm comm);
+00070 \textcolor{preprocessor}{#endif}
+00071 \textcolor{preprocessor}{}
+00072 \textcolor{keywordtype}{int} \hyperlink{group__matmap__group12a_gaf757d9249d31d2839b3376ac2e3f5574}{MatVecProd}(\hyperlink{structMat}{Mat} *A, \textcolor{keywordtype}{double} *x, \textcolor{keywordtype}{double} *y, \textcolor{keywordtype}{int} pflag);
+00073 
+00074 \textcolor{keywordtype}{int} \hyperlink{group__matmap__group11_ga1a51d7e8153d33045482100bbd07d0a9}{TrMatVecProd}(\hyperlink{structMat}{Mat} *A, \textcolor{keywordtype}{double} *y, \textcolor{keywordtype}{double}* x, \textcolor{keywordtype}{int} pflag);
+00075 
+00076 
+00077 \textcolor{preprocessor}{#if W\_MPI}
+00078 \textcolor{preprocessor}{}\textcolor{keywordtype}{int} \hyperlink{group__matmap__group12b_ga46ad4af50377be15a0aa50f416a53ade}{TrMatVecProd\_Naive}(\hyperlink{structMat}{Mat} *A, \textcolor{keywordtype}{double} *y, \textcolor{keywordtype}{double}* x, \textcolor{keywordtype}{int} 
+      pflag);
+00079 \textcolor{preprocessor}{#endif}
+00080 \textcolor{preprocessor}{}
+00081 \textcolor{keywordtype}{int} \hyperlink{group__matmap__group11_ga56b5e9bda4e4ad0a2c4f2f12e94d077e}{MatLoad}(\hyperlink{structMat}{Mat} *A, \textcolor{keywordtype}{char} *filename);
+00082 
+00083 \textcolor{keywordtype}{int} \hyperlink{group__matmap__group11_ga792b187cf2f23e526ecd5e2c3cbb9dab}{MatSave}(\hyperlink{structMat}{Mat} *A, \textcolor{keywordtype}{char}* filename);
+00084 
+00085 \textcolor{preprocessor}{#if W\_MPI}
+00086 \textcolor{preprocessor}{}\textcolor{keywordtype}{int} \hyperlink{group__matmap__group11_ga8e522200e7c693e4d81ff3ce3a1e24ff}{MatInfo}(\hyperlink{structMat}{Mat} *A, \textcolor{keywordtype}{int} master, \textcolor{keywordtype}{char}* filename);
+00087 \textcolor{preprocessor}{#endif}
+00088 \textcolor{preprocessor}{}
+00089 \textcolor{keywordtype}{int} \hyperlink{mapmat_8c_a8b6ed129adf6485b891280470ba4e6df}{greedyreduce}(\hyperlink{structMat}{Mat} *A, \textcolor{keywordtype}{double}* x);
+00090 
+00091 
+00092 \textcolor{comment}{// Doxygen definitions}
+00093 
+\end{DoxyCode}

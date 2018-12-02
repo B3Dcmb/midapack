@@ -1,0 +1,207 @@
+\hypertarget{toeplitz__seq_8c}{\section{toeplitz\-\_\-seq.\-c}
+\label{toeplitz__seq_8c}\index{toeplitz\-\_\-seq.\-c@{toeplitz\-\_\-seq.\-c}}
+}
+
+\begin{DoxyCode}
+00001 
+00049 \textcolor{preprocessor}{#include "\hyperlink{toeplitz_8h}{toeplitz.h}"}
+00050 
+00051 \textcolor{comment}{//r1.1 - Frederic Dauvergne (APC)}
+00052 \textcolor{comment}{//This is the sequential version of the mpi routines for the API.}
+00053 \textcolor{comment}{//The stbmm and gstbmm are the same as the mpi\_stbmm and mpi\_gstbmm but without}
+00054 \textcolor{comment}{//any communication. stmm is a simplifed call of the sequential product
+       including}
+00055 \textcolor{comment}{//initialization and cleaning. }
+00056 
+00057 
+00058 \textcolor{comment}{//=========================================================================}
+00060 \textcolor{comment}{}
+\hypertarget{toeplitz__seq_8c_source_l00072}{}\hyperlink{group__group11_gab2face64bf4e429b38b3ae1a6701cc78}{00072} \textcolor{keywordtype}{int} \hyperlink{group__group11_gab2face64bf4e429b38b3ae1a6701cc78}{stmm}(\textcolor{keywordtype}{double} **V, \textcolor{keywordtype}{int} n, \textcolor{keywordtype}{int} m, \textcolor{keywordtype}{double} *T, \textcolor{keywordtype}{int} lambda, \hyperlink{structFlag}{Flag} 
+      flag\_stgy)
+00073 \{
+00074 
+00075 \textcolor{comment}{//fftw variables}
+00076   fftw\_complex *V\_fft, *T\_fft;
+00077   \textcolor{keywordtype}{double} *V\_rfft;
+00078   fftw\_plan plan\_f, plan\_b;
+00079 
+00080 \textcolor{comment}{//product parameters}
+00081   \textcolor{keywordtype}{int} nfft, blocksize;
+00082 
+00083   FILE *\hyperlink{mkdoc_8dox_a049a073e5602cc325f7559a06c5a2420}{file};
+00084   file = stdout;
+00085 
+00086 
+00087   \hyperlink{group__group11_ga7f4e77d71f2c6f2caf652bab7520e3f4}{tpltz\_init}(n, lambda, &nfft, &blocksize, &T\_fft, T, &V\_fft, &V\_rfft
+      , &plan\_f, &plan\_b, flag\_stgy);
+00088 
+00089   \textcolor{comment}{//Toeplitz computation}
+00090   \textcolor{keywordflow}{if}(\hyperlink{toeplitz_8c_ab848ce91ba14d3dc5c87d0b42f3a1c0d}{VERBOSE})
+00091     fprintf(file, \textcolor{stringliteral}{"Before stmm\_main call : nfft = %d, blocksize = %d\(\backslash\)n"}, nfft, 
+      blocksize);
+00092   \hyperlink{group__group21_gace7322011cd24b469e9b5d530e8a71ba}{stmm\_main}(V, n, m, 0, n*m, T, T\_fft, lambda, V\_fft, V\_rfft, plan\_f, 
+      plan\_b, blocksize, nfft, flag\_stgy);
+00093 
+00094   \hyperlink{group__group11_gac7ac0ee5f6eaee6846814b131671f6e8}{tpltz\_cleanup}(&T\_fft, &V\_fft, &V\_rfft, &plan\_f, &plan\_b);
+00095 
+00096 
+00097   \textcolor{keywordflow}{return} 0;
+00098 \}
+00099 
+00100 
+00101 \textcolor{comment}{//=========================================================================}
+00103 \textcolor{comment}{}
+\hypertarget{toeplitz__seq_8c_source_l00121}{}\hyperlink{group__group12_gab51a5dfa887d47b4ce627eb0e01a2e0a}{00121} \textcolor{keywordtype}{int} \hyperlink{group__group12_gab51a5dfa887d47b4ce627eb0e01a2e0a}{stbmm}(\textcolor{keywordtype}{double} **V, \textcolor{keywordtype}{int} nrow, \textcolor{keywordtype}{int} m\_cw, \textcolor{keywordtype}{int} m\_rw, \hyperlink{structBlock}{Block} *
+      tpltzblocks, \textcolor{keywordtype}{int} nb\_blocks, int64\_t idp, \textcolor{keywordtype}{int} local\_V\_size, \hyperlink{structFlag}{Flag} flag\_stgy)
+00122 \{
+00123 
+00124 
+00125   \textcolor{keywordtype}{int} nb\_blocks\_local=nb\_blocks;
+00126   \textcolor{keywordtype}{int} nb\_blocks\_all=nb\_blocks;
+00127  \textcolor{comment}{// int idp=0;}
+00128  \textcolor{comment}{// int local\_V\_size=nrow;}
+00129  \textcolor{comment}{//MPI\_Comm comm=NULL;}
+00130 
+00131   \hyperlink{group__group22_gaa7ea4ac654fcb9f5fe3bad139febb65d}{mpi\_stbmm}(V, nrow, m\_cw, m\_rw, tpltzblocks, nb\_blocks, nb\_blocks, 
+      idp, local\_V\_size, flag\_stgy, NULL);
+00132 
+00133 
+00134 
+00135   \textcolor{keywordflow}{return} 0;
+00136 \}
+00137 
+00138 
+00139 \textcolor{comment}{//====================================================================}
+00140 
+00142 \textcolor{comment}{// This matrix V contains defined gaps which represents the useless data for
+       the comutation. The gaps indexes are defined in the global time space as the
+       generized toeplitz matrix, }
+00143 \textcolor{comment}{// meaning the row dimension. Each of his diagonal blocks is a symmetric,
+       band-diagonal Toeplitz matrix, which can be different for each block.}
+\hypertarget{toeplitz__seq_8c_source_l00170}{}\hyperlink{group__group11_ga4cd10fd194db5a77c0366cddeda596ae}{00170} \textcolor{comment}{}\textcolor{keywordtype}{int} \hyperlink{group__group11_ga4cd10fd194db5a77c0366cddeda596ae}{gstbmm}(\textcolor{keywordtype}{double} **V, \textcolor{keywordtype}{int} nrow, \textcolor{keywordtype}{int} m\_cw, \textcolor{keywordtype}{int} m\_rw, \hyperlink{structBlock}{Block} *
+      tpltzblocks, \textcolor{keywordtype}{int} nb\_blocks, int64\_t idp, \textcolor{keywordtype}{int} local\_V\_size, int64\_t *id0gap, \textcolor{keywordtype}{int} *lgap, \textcolor{keywordtype}{
+      int} ngap, \hyperlink{structFlag}{Flag} flag\_stgy)
+00171 \{
+00172   \textcolor{keywordtype}{int} nb\_blocks\_local=nb\_blocks;
+00173   \textcolor{keywordtype}{int} nb\_blocks\_all=nb\_blocks;
+00174  \textcolor{comment}{// int idp=0;}
+00175  \textcolor{comment}{// int local\_V\_size=nrow;}
+00176  \textcolor{comment}{//MPI\_Comm comm=NULL;}
+00177 
+00178   \hyperlink{group__group12_ga7c3bdb98f0e937e6e84c8652e101acac}{mpi\_gstbmm}(V, nrow, m\_cw, m\_rw, tpltzblocks, nb\_blocks, nb\_blocks, 
+      idp, local\_V\_size, id0gap, lgap, ngap, flag\_stgy, NULL);
+00179 
+00180 
+00181 
+00182   \textcolor{keywordflow}{return} 0;
+00183 \}
+00184 
+00185 
+\hypertarget{toeplitz__seq_8c_source_l00186}{}\hyperlink{toeplitz__seq_8c_a5aa00da67c3344b6d0b9d3fdf24d5a1c}{00186} \textcolor{keywordtype}{int} \hyperlink{toeplitz__seq_8c_a5aa00da67c3344b6d0b9d3fdf24d5a1c}{gstbmm0}(\textcolor{keywordtype}{double} **V, \textcolor{keywordtype}{int} nrow, \textcolor{keywordtype}{int} m, \textcolor{keywordtype}{int} m\_rowwise, \hyperlink{structBlock}{Block} *
+      tpltzblocks, \textcolor{keywordtype}{int} nb\_blocks\_local, \textcolor{keywordtype}{int} nb\_blocks\_all, \textcolor{keywordtype}{int} id0p, \textcolor{keywordtype}{int} local\_V\_size, 
+      int64\_t *id0gap, \textcolor{keywordtype}{int} *lgap, \textcolor{keywordtype}{int} ngap, \hyperlink{structFlag}{Flag} flag\_stgy)
+00187 \{
+00188 
+00189   \textcolor{keywordtype}{int} rank=0;
+00190   \textcolor{keywordtype}{int} i,j,k;   \textcolor{comment}{//some indexes}
+00191 
+00192   \textcolor{keywordtype}{int} flag\_skip\_build\_gappy\_blocks = flag\_stgy.\hyperlink{structFlag_a554392271ddce269c1f562aaecd4a17b}{flag\_skip\_build\_gappy\_blocks}
+      ;
+00193 
+00194   FILE *\hyperlink{mkdoc_8dox_a049a073e5602cc325f7559a06c5a2420}{file};
+00195   file = stdout;
+00196   \hyperlink{toeplitz_8c_a300d52d9923297872ffb24962a0f0ce6}{PRINT\_RANK}=rank ;
+00197 
+00198 \textcolor{comment}{//put zeros at the gaps location}
+00199   \hyperlink{group__group11_ga639be254160aa6fdb502dfff6190950a}{reset\_gaps}( V, id0p, local\_V\_size, m, nrow, m\_rowwise, id0gap, lgap
+      , ngap);
+00200 
+00201 
+00202 \textcolor{comment}{//allocation for the gappy structure of the diagonal block Toeplitz matrix}
+00203   \textcolor{keywordtype}{int} nb\_blocks\_gappy;
+00204   \textcolor{keywordtype}{int} nb\_blockgappy\_max;
+00205   \textcolor{keywordtype}{int} Tgappysize\_max;
+00206 
+00207   \hyperlink{structBlock}{Block} *tpltzblocks\_gappy;
+00208 
+00209 \textcolor{comment}{//some computation usefull to determine the max size possible for the gappy
+       variables}
+00210   \textcolor{keywordtype}{int} Tsize=0;
+00211   \textcolor{keywordtype}{int} lambdamax=0;
+00212 
+00213 \textcolor{keywordflow}{if} (\hyperlink{toeplitz_8c_ab848ce91ba14d3dc5c87d0b42f3a1c0d}{VERBOSE})
+00214   fprintf(file, \textcolor{stringliteral}{"[%d] flag\_skip\_build\_gappy\_blocks=%d\(\backslash\)n"}, rank, 
+      flag\_skip\_build\_gappy\_blocks);
+00215 
+00216   \textcolor{keywordflow}{if} (flag\_skip\_build\_gappy\_blocks==1) \{  \textcolor{comment}{//no build gappy blocks strategy,
+       just put zeros at gaps location}
+00217 
+00218   \textcolor{comment}{//compute the product using only the input Toeplitz blocks structure with
+       zeros at the gaps location}
+00219 \textcolor{comment}{//to remake  stbmm(V, nrow, m, m\_rowwise, tpltzblocks, nb\_blocks\_local,
+       nb\_blocks\_all, id0p, local\_V\_size, flag\_stgy);}
+00220 
+00221   \}
+00222   \textcolor{keywordflow}{else} \{ \textcolor{comment}{//build gappy blocks strategy}
+00223 
+00224   \textcolor{keywordflow}{for}(Tsize=i=0;i<nb\_blocks\_local;i++)
+00225     Tsize += tpltzblocks[i].lambda;
+00226 
+00227   \textcolor{keywordflow}{for}(i=0;i<nb\_blocks\_local;i++) \{
+00228     \textcolor{keywordflow}{if} (tpltzblocks[i].lambda>lambdamax)
+00229       lambdamax = tpltzblocks[i].\hyperlink{structBlock_a8f25504e415ca086e0bcaf30b676f29f}{lambda};
+00230   \}
+00231 
+00232 \textcolor{comment}{//compute max size possible for the gappy variables}
+00233   nb\_blockgappy\_max = nb\_blocks\_local+ngap;
+00234   Tgappysize\_max = Tsize + lambdamax*ngap;
+00235 
+00236 \textcolor{comment}{//allocation of the gappy variables with max size possible}
+00237   tpltzblocks\_gappy = (\hyperlink{structBlock}{Block} *) calloc(nb\_blockgappy\_max,\textcolor{keyword}{sizeof}(\hyperlink{structBlock}{Block}
+      ));
+00238 
+00239 
+00240 \textcolor{comment}{//build gappy Toeplitz block structure considering significant gaps locations,
+       meaning we skip}
+00241 \textcolor{comment}{//the gaps lower than the minimum correlation distance. You can also use the
+       flag\_param\_distmin\_fixed}
+00242 \textcolor{comment}{//parameter which allows you to skip the gap lower than these value. Indeed,
+       sometimes it's}
+00243 \textcolor{comment}{//better to just put somes zeros than to consider two separates blocks.}
+00244 \textcolor{comment}{//ps: This criteria could be dependant of the local lambda in futur
+       impovements.}
+00245   \textcolor{keywordtype}{int} flag\_param\_distmin\_fixed = flag\_stgy.\hyperlink{structFlag_a51e7368d87f7d743dbf7c04dde411af1}{flag\_param\_distmin\_fixed}
+      ;
+00246   \hyperlink{group__group21_gaf6b3f49e179ac9ed28354ddd7dbb6a04}{build\_gappy\_blocks}(nrow, m, tpltzblocks, nb\_blocks\_local, 
+      nb\_blocks\_all, id0gap, lgap, ngap, tpltzblocks\_gappy, &nb\_blocks\_gappy, 
+      flag\_param\_distmin\_fixed);
+00247 
+00248 
+00249 \textcolor{keywordflow}{if} (\hyperlink{toeplitz_8c_ab848ce91ba14d3dc5c87d0b42f3a1c0d}{VERBOSE}) \{
+00250     fprintf(file, \textcolor{stringliteral}{"[%d] nb\_blocks\_gappy=%d\(\backslash\)n"}, rank, nb\_blocks\_gappy);
+00251     \textcolor{keywordflow}{for}(i=0;i<nb\_blocks\_gappy;i++)
+00252       fprintf(file, \textcolor{stringliteral}{"[%d] idvgappy[%d]=%d ; ngappy[%d]=%d\(\backslash\)n"}, rank, i, 
+      tpltzblocks\_gappy[i].idv, i, tpltzblocks\_gappy[i].n );
+00253 \}
+00254 \textcolor{comment}{//ps: we could reallocate the gappy variables to their real size. Not sure it's
+       worth it.}
+00255 
+00256 \textcolor{comment}{//compute the product using the freshly created gappy Toeplitz blocks structure}
+00257 \textcolor{comment}{//to remake  stbmm(V, nrow, m, m\_rowwise, tpltzblocks\_gappy, nb\_blocks\_local,
+       nb\_blocks\_all, id0p, local\_V\_size, flag\_stgy);}
+00258 
+00259   \} \textcolor{comment}{//end flag\_skip\_build\_gappy\_blocks==1}
+00260 
+00261 
+00262 \textcolor{comment}{//put zeros on V for the gaps location again. Indeed, some gaps are just
+       replaced by zeros}
+00263 \textcolor{comment}{//in input, it's created some fakes results we need to clear after the
+       computation.}
+00264   \hyperlink{group__group11_ga639be254160aa6fdb502dfff6190950a}{reset\_gaps}( V, id0p, local\_V\_size, m, nrow, m\_rowwise, id0gap, lgap
+      , ngap);
+00265 
+00266 
+00267   \textcolor{keywordflow}{return} 0;
+00268 \}
+00269 
+\end{DoxyCode}

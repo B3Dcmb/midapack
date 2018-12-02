@@ -1,0 +1,290 @@
+\hypertarget{toeplitz__rshp_8c}{\section{toeplitz\-\_\-rshp.\-c File Reference}
+\label{toeplitz__rshp_8c}\index{toeplitz\-\_\-rshp.\-c@{toeplitz\-\_\-rshp.\-c}}
+}
+
+
+Contains reshaping routines to build the optimal data structure when needed for Toeplitz algebra.  
+
+
+\subsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+int \hyperlink{toeplitz__rshp_8c_ab939dbb745b7f484b6ea199bb97b8047}{fctid\-\_\-mat2vect} (int i, int id0, int n, int lambda)
+\item 
+int \hyperlink{toeplitz__rshp_8c_ae78ae0f7f2d99a5784932da5623faec1}{fctid\-\_\-mat2vect\-\_\-inv} (int i, int id0, int n, int lambda)
+\item 
+int \hyperlink{toeplitz__rshp_8c_a60fd6d5e5ef75b619c6709bfc6c285cf}{fctid\-\_\-concatcol} (int i, int id0, int n, int m, int l, int lconc, int lambda, int $\ast$nocol, int nbcol)
+\item 
+int \hyperlink{toeplitz__rshp_8c_a548030b0dd8348a79e837aac51482962}{fctid\-\_\-concatcol\-\_\-inv} (int i, int id0, int n, int m, int l, int lconc, int lambda, int $\ast$nocol\-\_\-inv, int nbcol)
+\item 
+int \hyperlink{toeplitz__rshp_8c_ac9c1b645a62e6a958eac0bdf7ad622c8}{fctid\-\_\-vect2nfftblock} (int i, int v1\-\_\-size, int fft\-\_\-size, int nfft, int lambda)
+\item 
+int \hyperlink{toeplitz__rshp_8c_a466af9471a3e62e38234b3a861f18621}{is\-\_\-needconcat} (int $\ast$nocol, int nbcol)
+\item 
+int \hyperlink{toeplitz__rshp_8c_a535af30fa6acfde1c5369820fe8a20d7}{fctid\-\_\-vect2nfftblock\-\_\-inv} (int i, int v1\-\_\-size, int fft\-\_\-size, int nfft, int lambda)
+\item 
+int \hyperlink{toeplitz__rshp_8c_a2f7b2601a9a5e73c83546978b6a1a35a}{define\-\_\-rshp\-\_\-size} (int flag\-\_\-format\-\_\-rshp, int fft\-\_\-size, int nfft, int v1\-\_\-size, int vedge\-\_\-size, int $\ast$nrshp, int $\ast$mrshp, int $\ast$lrshp)
+\item 
+int \hyperlink{toeplitz__rshp_8c_a4e4d58a32816e9e5ffb6dd8d95b943b6}{build\-\_\-nocol\-\_\-inv} (int $\ast$nocol, int nbcol, int m)
+\item 
+int \hyperlink{toeplitz__rshp_8c_a0a6fdc2b8a9d18173c70ac3f62d3dabd}{build\-\_\-reshape} (double $\ast$Vin, int $\ast$nocol, int nbcol, int lconc, int n, int m, int id0, int l, int lambda, int nfft, double $\ast$Vrshp, int nrshp, int mrshp, int lrshp, int flag\-\_\-format\-\_\-rshp)
+\item 
+int \hyperlink{toeplitz__rshp_8c_aa006c198e58701067495afeace933382}{extract\-\_\-result} (double $\ast$Vout, int $\ast$nocol, int nbcol, int lconc, int n, int m, int id0, int l, int lambda, int nfft, double $\ast$Vrshp, int nrshp, int mrshp, int lrshp, int flag\-\_\-format\-\_\-rshp)
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Contains reshaping routines to build the optimal data structure when needed for Toeplitz algebra. version 1.\-1b, July 2012 \begin{DoxyAuthor}{Author}
+Frederic Dauvergne
+\end{DoxyAuthor}
+Project\-: Midapack library, A\-N\-R M\-I\-D\-A\-S'09 -\/ Toeplitz Algebra module Purpose\-: Provide Toeplitz algebra tools suitable for Cosmic Microwave Background (C\-M\-B) data analysis.
+
+\begin{DoxyNote}{Note}
+Copyright (c) 2010-\/2012 A\-P\-C C\-N\-R\-S Université Paris Diderot 
+
+
+
+This program is free software; you can redistribute it and/or modify it under the terms 
+
+of the G\-N\-U Lesser General Public License as published by the Free Software Foundation; 
+
+either version 3 of the License, or (at your option) any later version. This program is 
+
+distributed in the hope that it will be useful, but W\-I\-T\-H\-O\-U\-T A\-N\-Y W\-A\-R\-R\-A\-N\-T\-Y; without even 
+
+the implied warranty of M\-E\-R\-C\-H\-A\-N\-T\-A\-B\-I\-L\-I\-T\-Y or F\-I\-T\-N\-E\-S\-S F\-O\-R A P\-A\-R\-T\-I\-C\-U\-L\-A\-R P\-U\-R\-P\-O\-S\-E. See the G\-N\-U 
+
+Lesser General Public License for more details. 
+
+
+
+You should have received a copy of the G\-N\-U Lesser General Public License along with this 
+
+program; if not, see \href{http://www.gnu.org/licenses/lgpl.html}{\tt http\-://www.\-gnu.\-org/licenses/lgpl.\-html} 
+
+For more information about A\-N\-R M\-I\-D\-A\-S'09 project see \-: 
+
+\href{http://www.apc.univ-paris7.fr/APC_CS/Recherche/Adamis/MIDAS09/index.html}{\tt http\-://www.\-apc.\-univ-\/paris7.\-fr/\-A\-P\-C\-\_\-\-C\-S/\-Recherche/\-Adamis/\-M\-I\-D\-A\-S09/index.\-html} 
+
+A\-C\-K\-N\-O\-W\-L\-E\-D\-G\-M\-E\-N\-T\-: This work has been supported in part by the French National Research 
+
+Agency (A\-N\-R) through C\-O\-S\-I\-N\-U\-S program (project M\-I\-D\-A\-S no. A\-N\-R-\/09-\/\-C\-O\-S\-I-\/009).
+\end{DoxyNote}
+Log\-: toeplitz$\ast$.c
+
+Revision 1.\-0b 2012/05/07 Frederic Dauvergne (A\-P\-C) Official release 1.\-0beta. The first installement of the library is the Toeplitz algebra module.
+
+Revision 1.\-1b 2012/07/-\/ Frederic Dauvergne (A\-P\-C)
+\begin{DoxyItemize}
+\item mpi\-\_\-stbmm allows now rowi-\/wise order per process datas and no-\/blocking communications.
+\item O\-M\-P improvment for optimal cpu time.
+\item bug fixed for O\-M\-P in the stmm\-\_\-basic routine.
+\item distcorrmin is used to communicate only lambda-\/1 datas when it is needed.
+\item new reshaping routines using transformation functions in stmm. Thus, only one copy at most is needed.
+\item tpltz\-\_\-init improvement using define\-\_\-nfft and define\-\_\-blocksize routines.
+\item add \hyperlink{structBlock}{Block} struture to define each Toeplitz block.
+\item add \hyperlink{structFlag}{Flag} structure and preprocessing parameters to define the computational strategy. All the flag parameters are then available directly from the A\-P\-I.
+\end{DoxyItemize}
+
+Revision 1.\-2b 2012/11/30 Frederic Dauvergne (A\-P\-C)
+\begin{DoxyItemize}
+\item extend the mpi product routine to rowwise order data distribution. This is now allowing tree kinds of distribution.
+\item add int64 for some variables to extend the global volume of data you can use.
+\item Openmp improvments.
+\item Add \hyperlink{toeplitz__wizard_8c}{toeplitz\-\_\-wizard.\-c}, which contains a set of easy to use routines with defined structures. 
+\end{DoxyItemize}
+
+Definition in file \hyperlink{toeplitz__rshp_8c_source}{toeplitz\-\_\-rshp.\-c}.
+
+
+
+\subsection{Function Documentation}
+\hypertarget{toeplitz__rshp_8c_ab939dbb745b7f484b6ea199bb97b8047}{\index{toeplitz\-\_\-rshp.\-c@{toeplitz\-\_\-rshp.\-c}!fctid\-\_\-mat2vect@{fctid\-\_\-mat2vect}}
+\index{fctid\-\_\-mat2vect@{fctid\-\_\-mat2vect}!toeplitz_rshp.c@{toeplitz\-\_\-rshp.\-c}}
+\subsubsection[{fctid\-\_\-mat2vect}]{\setlength{\rightskip}{0pt plus 5cm}int fctid\-\_\-mat2vect (
+\begin{DoxyParamCaption}
+\item[{int}]{i, }
+\item[{int}]{id0, }
+\item[{int}]{n, }
+\item[{int}]{lambda}
+\end{DoxyParamCaption}
+)}}\label{toeplitz__rshp_8c_ab939dbb745b7f484b6ea199bb97b8047}
+
+
+Definition at line \hyperlink{toeplitz__rshp_8c_source_l00065}{65} of file \hyperlink{toeplitz__rshp_8c_source}{toeplitz\-\_\-rshp.\-c}.
+
+\hypertarget{toeplitz__rshp_8c_ae78ae0f7f2d99a5784932da5623faec1}{\index{toeplitz\-\_\-rshp.\-c@{toeplitz\-\_\-rshp.\-c}!fctid\-\_\-mat2vect\-\_\-inv@{fctid\-\_\-mat2vect\-\_\-inv}}
+\index{fctid\-\_\-mat2vect\-\_\-inv@{fctid\-\_\-mat2vect\-\_\-inv}!toeplitz_rshp.c@{toeplitz\-\_\-rshp.\-c}}
+\subsubsection[{fctid\-\_\-mat2vect\-\_\-inv}]{\setlength{\rightskip}{0pt plus 5cm}int fctid\-\_\-mat2vect\-\_\-inv (
+\begin{DoxyParamCaption}
+\item[{int}]{i, }
+\item[{int}]{id0, }
+\item[{int}]{n, }
+\item[{int}]{lambda}
+\end{DoxyParamCaption}
+)}}\label{toeplitz__rshp_8c_ae78ae0f7f2d99a5784932da5623faec1}
+
+
+Definition at line \hyperlink{toeplitz__rshp_8c_source_l00088}{88} of file \hyperlink{toeplitz__rshp_8c_source}{toeplitz\-\_\-rshp.\-c}.
+
+\hypertarget{toeplitz__rshp_8c_a60fd6d5e5ef75b619c6709bfc6c285cf}{\index{toeplitz\-\_\-rshp.\-c@{toeplitz\-\_\-rshp.\-c}!fctid\-\_\-concatcol@{fctid\-\_\-concatcol}}
+\index{fctid\-\_\-concatcol@{fctid\-\_\-concatcol}!toeplitz_rshp.c@{toeplitz\-\_\-rshp.\-c}}
+\subsubsection[{fctid\-\_\-concatcol}]{\setlength{\rightskip}{0pt plus 5cm}int fctid\-\_\-concatcol (
+\begin{DoxyParamCaption}
+\item[{int}]{i, }
+\item[{int}]{id0, }
+\item[{int}]{n, }
+\item[{int}]{m, }
+\item[{int}]{l, }
+\item[{int}]{lconc, }
+\item[{int}]{lambda, }
+\item[{int $\ast$}]{nocol, }
+\item[{int}]{nbcol}
+\end{DoxyParamCaption}
+)}}\label{toeplitz__rshp_8c_a60fd6d5e5ef75b619c6709bfc6c285cf}
+
+
+Definition at line \hyperlink{toeplitz__rshp_8c_source_l00106}{106} of file \hyperlink{toeplitz__rshp_8c_source}{toeplitz\-\_\-rshp.\-c}.
+
+\hypertarget{toeplitz__rshp_8c_a548030b0dd8348a79e837aac51482962}{\index{toeplitz\-\_\-rshp.\-c@{toeplitz\-\_\-rshp.\-c}!fctid\-\_\-concatcol\-\_\-inv@{fctid\-\_\-concatcol\-\_\-inv}}
+\index{fctid\-\_\-concatcol\-\_\-inv@{fctid\-\_\-concatcol\-\_\-inv}!toeplitz_rshp.c@{toeplitz\-\_\-rshp.\-c}}
+\subsubsection[{fctid\-\_\-concatcol\-\_\-inv}]{\setlength{\rightskip}{0pt plus 5cm}int fctid\-\_\-concatcol\-\_\-inv (
+\begin{DoxyParamCaption}
+\item[{int}]{i, }
+\item[{int}]{id0, }
+\item[{int}]{n, }
+\item[{int}]{m, }
+\item[{int}]{l, }
+\item[{int}]{lconc, }
+\item[{int}]{lambda, }
+\item[{int $\ast$}]{nocol\-\_\-inv, }
+\item[{int}]{nbcol}
+\end{DoxyParamCaption}
+)}}\label{toeplitz__rshp_8c_a548030b0dd8348a79e837aac51482962}
+
+
+Definition at line \hyperlink{toeplitz__rshp_8c_source_l00128}{128} of file \hyperlink{toeplitz__rshp_8c_source}{toeplitz\-\_\-rshp.\-c}.
+
+\hypertarget{toeplitz__rshp_8c_ac9c1b645a62e6a958eac0bdf7ad622c8}{\index{toeplitz\-\_\-rshp.\-c@{toeplitz\-\_\-rshp.\-c}!fctid\-\_\-vect2nfftblock@{fctid\-\_\-vect2nfftblock}}
+\index{fctid\-\_\-vect2nfftblock@{fctid\-\_\-vect2nfftblock}!toeplitz_rshp.c@{toeplitz\-\_\-rshp.\-c}}
+\subsubsection[{fctid\-\_\-vect2nfftblock}]{\setlength{\rightskip}{0pt plus 5cm}int fctid\-\_\-vect2nfftblock (
+\begin{DoxyParamCaption}
+\item[{int}]{i, }
+\item[{int}]{v1\-\_\-size, }
+\item[{int}]{fft\-\_\-size, }
+\item[{int}]{nfft, }
+\item[{int}]{lambda}
+\end{DoxyParamCaption}
+)}}\label{toeplitz__rshp_8c_ac9c1b645a62e6a958eac0bdf7ad622c8}
+
+
+Definition at line \hyperlink{toeplitz__rshp_8c_source_l00154}{154} of file \hyperlink{toeplitz__rshp_8c_source}{toeplitz\-\_\-rshp.\-c}.
+
+\hypertarget{toeplitz__rshp_8c_a466af9471a3e62e38234b3a861f18621}{\index{toeplitz\-\_\-rshp.\-c@{toeplitz\-\_\-rshp.\-c}!is\-\_\-needconcat@{is\-\_\-needconcat}}
+\index{is\-\_\-needconcat@{is\-\_\-needconcat}!toeplitz_rshp.c@{toeplitz\-\_\-rshp.\-c}}
+\subsubsection[{is\-\_\-needconcat}]{\setlength{\rightskip}{0pt plus 5cm}int is\-\_\-needconcat (
+\begin{DoxyParamCaption}
+\item[{int $\ast$}]{nocol, }
+\item[{int}]{nbcol}
+\end{DoxyParamCaption}
+)}}\label{toeplitz__rshp_8c_a466af9471a3e62e38234b3a861f18621}
+
+
+Definition at line \hyperlink{toeplitz__rshp_8c_source_l00176}{176} of file \hyperlink{toeplitz__rshp_8c_source}{toeplitz\-\_\-rshp.\-c}.
+
+\hypertarget{toeplitz__rshp_8c_a535af30fa6acfde1c5369820fe8a20d7}{\index{toeplitz\-\_\-rshp.\-c@{toeplitz\-\_\-rshp.\-c}!fctid\-\_\-vect2nfftblock\-\_\-inv@{fctid\-\_\-vect2nfftblock\-\_\-inv}}
+\index{fctid\-\_\-vect2nfftblock\-\_\-inv@{fctid\-\_\-vect2nfftblock\-\_\-inv}!toeplitz_rshp.c@{toeplitz\-\_\-rshp.\-c}}
+\subsubsection[{fctid\-\_\-vect2nfftblock\-\_\-inv}]{\setlength{\rightskip}{0pt plus 5cm}int fctid\-\_\-vect2nfftblock\-\_\-inv (
+\begin{DoxyParamCaption}
+\item[{int}]{i, }
+\item[{int}]{v1\-\_\-size, }
+\item[{int}]{fft\-\_\-size, }
+\item[{int}]{nfft, }
+\item[{int}]{lambda}
+\end{DoxyParamCaption}
+)}}\label{toeplitz__rshp_8c_a535af30fa6acfde1c5369820fe8a20d7}
+
+
+Definition at line \hyperlink{toeplitz__rshp_8c_source_l00190}{190} of file \hyperlink{toeplitz__rshp_8c_source}{toeplitz\-\_\-rshp.\-c}.
+
+\hypertarget{toeplitz__rshp_8c_a2f7b2601a9a5e73c83546978b6a1a35a}{\index{toeplitz\-\_\-rshp.\-c@{toeplitz\-\_\-rshp.\-c}!define\-\_\-rshp\-\_\-size@{define\-\_\-rshp\-\_\-size}}
+\index{define\-\_\-rshp\-\_\-size@{define\-\_\-rshp\-\_\-size}!toeplitz_rshp.c@{toeplitz\-\_\-rshp.\-c}}
+\subsubsection[{define\-\_\-rshp\-\_\-size}]{\setlength{\rightskip}{0pt plus 5cm}int define\-\_\-rshp\-\_\-size (
+\begin{DoxyParamCaption}
+\item[{int}]{flag\-\_\-format\-\_\-rshp, }
+\item[{int}]{fft\-\_\-size, }
+\item[{int}]{nfft, }
+\item[{int}]{v1\-\_\-size, }
+\item[{int}]{vedge\-\_\-size, }
+\item[{int $\ast$}]{nrshp, }
+\item[{int $\ast$}]{mrshp, }
+\item[{int $\ast$}]{lrshp}
+\end{DoxyParamCaption}
+)}}\label{toeplitz__rshp_8c_a2f7b2601a9a5e73c83546978b6a1a35a}
+
+
+Definition at line \hyperlink{toeplitz__rshp_8c_source_l00208}{208} of file \hyperlink{toeplitz__rshp_8c_source}{toeplitz\-\_\-rshp.\-c}.
+
+\hypertarget{toeplitz__rshp_8c_a4e4d58a32816e9e5ffb6dd8d95b943b6}{\index{toeplitz\-\_\-rshp.\-c@{toeplitz\-\_\-rshp.\-c}!build\-\_\-nocol\-\_\-inv@{build\-\_\-nocol\-\_\-inv}}
+\index{build\-\_\-nocol\-\_\-inv@{build\-\_\-nocol\-\_\-inv}!toeplitz_rshp.c@{toeplitz\-\_\-rshp.\-c}}
+\subsubsection[{build\-\_\-nocol\-\_\-inv}]{\setlength{\rightskip}{0pt plus 5cm}int build\-\_\-nocol\-\_\-inv (
+\begin{DoxyParamCaption}
+\item[{int $\ast$}]{nocol, }
+\item[{int}]{nbcol, }
+\item[{int}]{m}
+\end{DoxyParamCaption}
+)}}\label{toeplitz__rshp_8c_a4e4d58a32816e9e5ffb6dd8d95b943b6}
+
+
+Definition at line \hyperlink{toeplitz__rshp_8c_source_l00233}{233} of file \hyperlink{toeplitz__rshp_8c_source}{toeplitz\-\_\-rshp.\-c}.
+
+\hypertarget{toeplitz__rshp_8c_a0a6fdc2b8a9d18173c70ac3f62d3dabd}{\index{toeplitz\-\_\-rshp.\-c@{toeplitz\-\_\-rshp.\-c}!build\-\_\-reshape@{build\-\_\-reshape}}
+\index{build\-\_\-reshape@{build\-\_\-reshape}!toeplitz_rshp.c@{toeplitz\-\_\-rshp.\-c}}
+\subsubsection[{build\-\_\-reshape}]{\setlength{\rightskip}{0pt plus 5cm}int build\-\_\-reshape (
+\begin{DoxyParamCaption}
+\item[{double $\ast$}]{Vin, }
+\item[{int $\ast$}]{nocol, }
+\item[{int}]{nbcol, }
+\item[{int}]{lconc, }
+\item[{int}]{n, }
+\item[{int}]{m, }
+\item[{int}]{id0, }
+\item[{int}]{l, }
+\item[{int}]{lambda, }
+\item[{int}]{nfft, }
+\item[{double $\ast$}]{Vrshp, }
+\item[{int}]{nrshp, }
+\item[{int}]{mrshp, }
+\item[{int}]{lrshp, }
+\item[{int}]{flag\-\_\-format\-\_\-rshp}
+\end{DoxyParamCaption}
+)}}\label{toeplitz__rshp_8c_a0a6fdc2b8a9d18173c70ac3f62d3dabd}
+
+
+Definition at line \hyperlink{toeplitz__rshp_8c_source_l00249}{249} of file \hyperlink{toeplitz__rshp_8c_source}{toeplitz\-\_\-rshp.\-c}.
+
+\hypertarget{toeplitz__rshp_8c_aa006c198e58701067495afeace933382}{\index{toeplitz\-\_\-rshp.\-c@{toeplitz\-\_\-rshp.\-c}!extract\-\_\-result@{extract\-\_\-result}}
+\index{extract\-\_\-result@{extract\-\_\-result}!toeplitz_rshp.c@{toeplitz\-\_\-rshp.\-c}}
+\subsubsection[{extract\-\_\-result}]{\setlength{\rightskip}{0pt plus 5cm}int extract\-\_\-result (
+\begin{DoxyParamCaption}
+\item[{double $\ast$}]{Vout, }
+\item[{int $\ast$}]{nocol, }
+\item[{int}]{nbcol, }
+\item[{int}]{lconc, }
+\item[{int}]{n, }
+\item[{int}]{m, }
+\item[{int}]{id0, }
+\item[{int}]{l, }
+\item[{int}]{lambda, }
+\item[{int}]{nfft, }
+\item[{double $\ast$}]{Vrshp, }
+\item[{int}]{nrshp, }
+\item[{int}]{mrshp, }
+\item[{int}]{lrshp, }
+\item[{int}]{flag\-\_\-format\-\_\-rshp}
+\end{DoxyParamCaption}
+)}}\label{toeplitz__rshp_8c_aa006c198e58701067495afeace933382}
+
+
+Definition at line \hyperlink{toeplitz__rshp_8c_source_l00307}{307} of file \hyperlink{toeplitz__rshp_8c_source}{toeplitz\-\_\-rshp.\-c}.
+

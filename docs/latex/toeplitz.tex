@@ -1,0 +1,160 @@
+
+\begin{DoxyItemize}
+\item \hyperlink{toeplitz_intro}{Introduction}
+\item \hyperlink{toeplitz_functionality}{Functionality and definitions}
+\item \hyperlink{toeplitz_algo}{Numerical algorithms}
+\item \hyperlink{toeplitz_progmodels}{Programming models}
+\item \hyperlink{toeplitz_datadistr}{Data distribution}
+\item \hyperlink{toeplitz_loadbalancing}{Load balancing}
+\item \hyperlink{toeplitz_avail}{Availability and bug tracking}
+\item \hyperlink{toeplitz_install}{Installation}
+\item \hyperlink{toeplitz_example}{User example} 
+\end{DoxyItemize}\hypertarget{toeplitz_intro}{}\section{Introduction}\label{toeplitz_intro}
+The purpose of the Toeplitz algebra package of the M\-I\-D\-A\-P\-A\-C\-K libary is to provide efficient massively, parallel routines, performing products of some special structured matrices and an arbitrary matrix. The special matrices considered here are related to {\bfseries Toeplitz} matrices.
+
+Toeplitz matrices are ubiquitous in the C\-M\-B data analysis as they describe correlation properties of stationary time-\/domain processes (usually instrumental noise). The matrices relevant are therefore {\bfseries symmetric} and {\bfseries non-\/negative} definite. They are also {\bfseries band-\/diagonal} as the noise correlation length, i.\-e., the band-\/width in the parlance of Toeplitz algebra, is typically much shorter than length of the data. A useful and important generalization of those include \-:
+\begin{DoxyItemize}
+\item {\bfseries symmetric}, {\bfseries Toeplitz} {\bfseries block-\/diagonal} matrices -\/ describing piece-\/wise stationary processes, each of the blocks is in turn a symmetric, band-\/diagonal Toeplitz matrix, which can be different for the different blocks. The performance of the routines included in the package is expected to be the best, whenever the bandwidth of each block is much smaller than its size.
+\end{DoxyItemize}
+
+
+\begin{DoxyItemize}
+\item {\bfseries symmetric}, {\bfseries Toeplitz} {\bfseries block-\/diagonal}, {\bfseries gappy} matrices -\/ which are just symmetric, Toeplitz block-\/diagonal matrices but with some of their rows (and corresponding columns) removed. Such matrices describe piece-\/wise stationary processes, which have some short sequences of samples, referred hereafter as {\bfseries gaps}, removed. The gaps are common in the analysis of any real C\-M\-B data sets and can arise due to cosmic rays hits or some short-\/term instrumental transients. If a gap happens to be longer than the matrix correlation length accounting on it, i.\-e., removing relevant rows and columns of the initial matrix, will result in a new block of the matrix, which remains symmetric, block-\/diagonal.
+\end{DoxyItemize}
+
+The library provides distributed (M\-P\-I) and sequential/multithreaded (open\-M\-P) routines, which are based on common low level sequential/open\-M\-P functions. The Fourier Transforms are performed with help of the F\-F\-T\-W library \href{http://www.fftw.org/}{\tt http\-://www.\-fftw.\-org/}.
+
+The overall structure of the library is as follows\-:
+
+\hypertarget{toeplitz_functionality}{}\section{Functionality and definitions}\label{toeplitz_functionality}
+The Toeplitz algebra package described here provides functionality for calculating {\bfseries products} of a {\bfseries generalized} {\bfseries Toeplitz} {\bfseries matrix} (understood as one of those defined \hyperlink{toeplitz_intro}{earlier}) and a {\bfseries general} {\bfseries matrix}. The latter is referred to hereafter typically as a {\bfseries data} {\bfseries matrix}. This is the latter matrix, which defines the reference for the global indexing scheme adopted throughout the package, which is based on its global row number. The data matrices are always stored as vectors in the {\bfseries column-\/wise} order.
+
+In M\-P\-I-\/cases the data matrices are assumed to be distributed over the processes as defined in \hyperlink{toeplitz_datadistr}{Section on data distribution}.
+
+{\bfseries Toeplitz} {\bfseries matrices} are defined by a first row of the Toeplitz matrix trimmed to its half-\/bandwidth $+1$ denoted hereafter as $\lambda$, which one therefore includes half-\/bandwidth and the diagonal element), and three integer numbers giving $\lambda$, indices of the first and last row to which the matrix should be applied. The last two numbers are global row numbers of the data matrix. The size of the Toeplitz matrix is then implictly given as, {\ttfamily last\-\_\-row\-\_\-index} -\/ {\ttfamily first\-\_\-row\-\_\-index} + {\ttfamily 1}. We will refer to an interval defined by these two indices as {\bfseries Toeplitz} {\bfseries matrix} {\bfseries range}.
+
+The list of specific functions provided is as follows\-: \begin{DoxyItemize}
+\item symmetric Toeplitz matrix-\/matrix product (\hyperlink{toeplitz_funct_stmm}{stmm routines}); \item symmetric Toeplitz block-\/diagonal matrix-\/matrix product (\hyperlink{toeplitz_funct_stbmm}{stbmm routines}); \item symmetric, gappy, Toeplitz block-\/diagonal matrix-\/matrix product (\hyperlink{toeplitz_funct_gstbmm}{gstbmm routines}). \end{DoxyItemize}
+\hypertarget{toeplitz_funct_stmm}{}\subsection{stmm routines}\label{toeplitz_funct_stmm}
+{\ttfamily stmm} routines multiply a symmetric banded Toeplitz matrix by the data matrix. The Toeplitz matrix size is assumed to be equal to that of the data matrix. If this is not the case use {\ttfamily stbmm} routines instead. If the data matrix is distributed over multiple processes the Toeplitz matrix has to be defined on each of them and has to be the same on each of them, including the first and the last row indices used to defined its region. \hypertarget{toeplitz_funct_stbmm}{}\subsection{stbmm routines}\label{toeplitz_funct_stbmm}
+{\ttfamily stbmm} routines multiply a symmetric, block-\/diagonal matrix, with Toeplitz banded blocks by a data matrix. This operation is in fact construed as a product of a series of Toeplitz blocks by the data matrix. The Toeplitz blocks are each defined as any Toeplitz matrix (see, e.\-g., \hyperlink{toeplitz_functionality}{Functionality and definitions} above) and have in particular defined a range -\/ an interval of the data matrix rows to which it should be applied. {\bfseries The} {\bfseries ranges} {\bfseries of} {\bfseries any} {\bfseries two} {\bfseries Toeplitz} {\bfseries matrices} {\bfseries must} {\bfseries not} {\bfseries overlap}. The limits of the interval can be looked at as defining the position of each Toeplitz block within a single Toeplitz-\/block diagonal matrix of the size equal that of a number of rows of the data matrix. What the routine then does it is to multiply each block by a respective subblock of the data matrix. The rows of the data matrix, which do not belong to the interval of any block are copied unchanged, meaning that the corresponding blocks of the Toeplitz matrix are implicitly assumed to be equal to $ 1 $.
+
+In the M\-P\-I implementation each processor needs only those of all the Toeplitz blocks which have ranges overlapping with part of the data matrix assigned to it. If more are defined on the input they are ignored. Note that this is the user's responsibility to ensure that the Toeplitz matrices are assigned to different processes in a consistent way meaning they represent a product of a series of diagonal Toeplitz blocks. It is important to observe that the block distribution will in general depend on the assumed distribution pattern for the data matrix. This is discussed in the \hyperlink{toeplitz_funct_stbmm_examples}{examples} below.
+
+If a Toeplitz block corresponds to the data matrix parts assigned to two (or more) processes, the Toeplitz block parameters have to be the same on all implicated processes, as each process will use them to define the amount of data which needs communicate to its neighbors. In general, each process calculates products of the Toeplitz blocks by the corresponding part of the data matrix. If a Toeplitz block corresponds to data of more than one process then the communication is used to copy necessary data to enable such a multiplication locally.
+
+\hyperlink{toeplitz_funct_stbmm_examples}{Examples.} \hypertarget{toeplitz_funct_stbmm_examples}{}\subsubsection{Examples}\label{toeplitz_funct_stbmm_examples}
+{\bfseries Example} {\bfseries \#1}\-: Column-\/wise data distribution.
+
+
+
+This figure illustrates the operations performed by the {\ttfamily mpi\-\_\-stbmm} routine. On the input the routine requires a definition of the Toeplitz-\/blocks and the data matrix. The latter is assumed to be distributed in the column-\/wise order -\/ here between 3 M\-P\-I-\/processes, as marked by three different colors. The routine will multiply each Toeplitz-\/block by the corresponding set of rows of each column of the data matrix. The rows of the data matrix which do not correspond to any of the blocks will be copied without change to the resulting matrix. The dashed lines mark the data divisions between the processes which will require some M\-P\-I communication to be performed. The communication will affect only the data of a single column which happens to be shared between two processes. We note that for the result to be correct each of the three processes considered here has to have both Toeplitz blocks defined in the same way on each of them.
+
+{\bfseries Example} {\bfseries \#2}\-: Row-\/wise data distribution.
+
+
+
+This figure corresponds to the analogous operation as the one in Example \#1 just assuming that the data matrix is distributed between 3 processes in the row-\/wise order. The dashed lines indicate communication instances between the processes. Note that unlike in the previous case this time the data for {\itshape all} columns have to be exchanged. In this case for the operation to be consistent process \#0 needs only the first Toeplitz block in its memory, process \#2 -\/ only the second, and process \#1 -\/ both. \hypertarget{toeplitz_funct_gstbmm}{}\subsection{gstbmm routines}\label{toeplitz_funct_gstbmm}
+{\ttfamily gstbmm} routines multiply a symmetric Toeplitz block diagonal matrix, i.\-e., as used by {\ttfamily stbmm} routines, but with some sets of rows and corresponding columns removed, by an arbitrary data matrix. Such an {\itshape effective} matrix, referred hereafter as a {\ttfamily gstb} (a {\itshape gappy}, {\itshape symmetric}, {\itshape Toeplitz} block matrix), in general will not be made of only Toeplitz blocks anymore. (See the \hyperlink{toeplitz_funct_gstbmm_example}{example} below). On the input this matrix is however still represented as a corresponding {\ttfamily stb} matrix complemented by a list of column (or row) which are to be neglected (or effectively excised). The operation is then construed also as a {\ttfamily stbmm} operation, which the {\ttfamily sbt} matrix representating the {\ttfamily gstb} and, and the data matrix with the corresponding rows set to zero. Note that the data matrix is assumed to have all the rows on the input including the ones to be neglected.
+
+On the output the routine will produce a matrix of the same type as the input one with the values in the rows to be neglected set to zero.
+
+\hyperlink{toeplitz_funct_gstbmm_example}{Example.} \hypertarget{toeplitz_funct_gstbmm_example}{}\subsubsection{Example}\label{toeplitz_funct_gstbmm_example}
+
+
+The figure shows a product of a Toeplitz block matrix with a number of columns and rows to be excised by a data matrix. The excised columns (and rows) are marked by the dashed grids and correspond to the grayish areas of the input and output data matrices. These grayish sets of rows will be set to zero in the final result. We note that two of the three excised intervals, hereafter called {\itshape gaps}, of columns are broad enough that they effectively lead only to change of the size of the Toeplitz blocks including splitting one of them into two smaller ones. The third (rightmost) gap however destroys the Toeplitz structure of the second block. Indeed the {\itshape effective} matrix, by which white shaded part of the data matrix are multiplied by, corresponds to only dark blue areas, and does not have a Toeplitz block structure. \hypertarget{toeplitz_algo}{}\section{Numerical algorithms}\label{toeplitz_algo}
+The package implements two algorithms for performing the operations.
+
+The {\bfseries first} algorithm is based on a {\itshape shift-\/and-\/overlap} approach, where a product of a single band-\/diagonal Toeplitz matrix by an arbitrary matrix is done as a sequence of products of a submatrix of the initial Toeplitz matrix by overlapping blocks of the arbitrary matrix. Each of the latter products is performed in turn by embedding the Toeplitz subblock in a minimal circulant matrix and performing the multiplication via Fast Fourier transforms. The size of the subblock can be set appropriately to optimize the calculation and typically is a function of the bandwith. Denoting by $ \lambda$ a half bandwith, i.\-e., the full bandwidth is $ 2 \lambda + 1 $, the overall complexity of the operation is ${\cal O}( n \ln \lambda)$, where $ n $ is the size of the initial Toeplitz matrix.
+
+Check \hyperlink{toeplitz_algo_shiftoverlap}{Shift and overlap algorithm} for more details.
+
+The {\bfseries second} algorithm is just a {\itshape direct} {\itshape real} {\itshape space} multiplication of a Toeplitz matrix by an arbitrary one. This approach has complexity $ {\cal O}( n \lambda)$ but much better prefactors and therefore can have superior performance over the previous one for very narrow bands.
+
+All the other operations implemented in the package are then expressed as the product of a Toeplitz matrix times a general matrix. This may in turn require on occasions some data objects reformatting (or as called hereafter -\/ reshaping) operations.
+
+The inter-\/process communication is required whenever the same Toeplitz matrix (or a Toeplitz block for Toeplitz block-\/diagonal cases) is to be applied to a segment of the data distributed over more than one process. These are implemented using M\-P\-I calls.
+
+More details can be found here \hyperlink{toeplitz_algo_communication}{M\-P\-I communication patterns} \hypertarget{toeplitz_algo_shiftoverlap}{}\subsection{Shift and overlap algorithm}\label{toeplitz_algo_shiftoverlap}
+This algorithm exploits explicitly the fact that considered Toeplitz matrices are band-\/diagonal with a narrow band, i.\-e., $\lambda \ll n$ and cuts the complexity of the operation down to $ {\cal O|}(n \ln \lambda)$ from ${\cal O}(2 n \ln 2 n)$, where the latter is obtained assuming embedding of the full Toeplitz matrix of a rank $ n$ into a circulant matrix of a twice larger rank and performing the product via Fast Fourier transforms.
+
+The shift and overlap algorithm performs the same task as a series of products of a smaller circulant matrix with a rank $ b$, where $ b > 2\lambda$, by a corresponding, overlapping segments of the arbitrary matrix. The circulant matrix embeds a Toeplitz matrix, which is just the inital matrix trimmed to the size $ b$. The schematic of the algorithm is shown in the figure below.
+
+ Here a product of a Toeplitz matrix marked in black by a vector is split into three products of a circulant matrix of a rank $ b$ by three overlapping segments of the input vector. Each product is marked by a different color, however the circulanr matrix by which the vector segments are multiplied is always the same. The overlaps are clearly necessary to avoid contributions from the circulant corners of the matrix. At the end the entries of the final vector which are biased by the corner contributions are removed from the result and the remainders combined together. Note that the edge segments need to be padded by zeros. The padding is done in the way that the circulant block size used is always the same. This helps to save the time needed for F\-F\-T related precomputation (F\-F\-T plans etc) and optimize a number of required F\-F\-Ts.
+
+The generalization of the algorithm for the case of a general matrix instead of a vector, as shown in the figure, is straightforward. We note that each of the elemental products of the circulant matrix times a general matrix subblock could in principle be performed in a single step using an F\-F\-T, which permits a computation of many identical F\-F\-Ts simultanenously rather than it being implemented as a series of the products of the circulant matrix by subblock columns. Given that the gain in using multi-\/vector is not clear in current implementations of the F\-F\-Ts we looked at and, if present, it is probably at the best limited to a relatively small number of the vectors, the adopted solution in the package represents the product of the circulant block by a general matrix subblocks as series of products each involving the circulant matrix by a subset of all columns of the general matrix. The number of the columns is set by the {\ttfamily toeplitz\-\_\-init} routine.
+
+In general given the size of the input problem $n$ the cost of the computation is\-: \[ n/(n-2\lambda)\times b \ln b \sim n \ln b \sim n \ln \lambda \] where the first factor of the leftmost term gives a number of products to be performed and the latter the cost of each of them. Here we did not account on any gains from a multi-\/vector F\-F\-T, e.\-g., we have assumed that a simulatenous F\-F\-T of $k$-\/vectors is as costly as $k$ F\-F\-Ts of a single vector. \hypertarget{toeplitz_algo_communication}{}\subsection{M\-P\-I communication patterns}\label{toeplitz_algo_communication}
+The inter-\/process communication is needed in the M\-P\-I routines of the package whenever boundaries of the distributed data matrix do not coincide with those of the Toeplitz block. The communication pattern is {\bfseries local} in a sense that it involves only neighboring processes and is therefore expected to scale well with a number of M\-P\-I processes (and it indeed does in the regime in which the tests have been done.) It involves each process sending to and receiving from a neighboring process a vector of data of the length defined by the half-\/bandwidth of the Toeplitz block, $ \lambda$, shared between them. This provides sufficient information to enable each process to compute a part of the Toeplitz-\/vector product corresponding to its input data on its own without any need for further data exchanges. In particular we note that all the F\-F\-T calls used by the package are either sequential or threaded.
+
+The communication pattern as implemented is either {\itshape non-\/blocking} and then instituted with help of {\ttfamily M\-P\-I\-\_\-\-Isend} and {\ttfamily M\-P\-I\-\_\-\-Irecv} calls used twice to send to and receive from left and right, i.\-e.,
+
+
+\begin{DoxyCodeInclude}
+\end{DoxyCodeInclude}
+ what is followed by a series of respective {\ttfamily M\-P\-I\-\_\-\-Wait} calls, i.\-e.,
+
+
+\begin{DoxyCodeInclude}
+\end{DoxyCodeInclude}
+ or {\itshape blocking} implemented with help {\ttfamily M\-P\-I\-\_\-\-Sendrecv} calls, i.\-e.,
+
+
+\begin{DoxyCodeInclude}
+\end{DoxyCodeInclude}
+ The choice between the two is made with help of the global flag {\ttfamily F\-L\-A\-G\-\_\-\-B\-L\-O\-C\-K\-I\-N\-G\-C\-O\-M\-M}, which by default is set to 0 (non-\/blocking communication). \hypertarget{toeplitz_progmodels}{}\section{Programming models}\label{toeplitz_progmodels}
+The Toeplitz algebra library routines allow the user to take advantage of both {\bfseries multithreaded} and {\bfseries memory-\/distributed} programming paradigms and are therefore adapted to run efficiently on heteregeneous computer architectures. The multithreading is implemented using {\bfseries open\-M\-P} directives, while distributed programming uses {\bfseries M\-P\-I}. Both shared and/or distributed parallelism can be switched of, at the compilation time, if so desired. Moreover, the user has always access to two versions of each of the routines\-: open\-M\-P/\-M\-P\-I and open\-M\-P-\/only. \hypertarget{toeplitz_datadistr}{}\section{Data distribution}\label{toeplitz_datadistr}
+In the memory-\/distributed (M\-P\-I) running modes, the data input matrix is assumed to be distributed in between the M\-P\-I processes (nodes, processors, etc). The library routines allow essentially for two different data distributions as well as one inermediate option.
+
+
+
+The first distribution is called hereafter a {\bfseries column-\/wise} distribution. In this case the data matrix is treated as a vector made of columns of the data matrix concatenated together. A valid data distribution can be then nearly any partition of the vector into consecutive segments, which are then assigned one-\/by-\/one to the processes. It is then assumed that the neighboring processes receive consecutive segments. Moreover, each process has to have at least as many data points as a half-\/bandwith of a Toeplitz block corresponding to them, if it has only one Toeplitz block assigned, which does not start or end within the data ranges.
+
+The second distribution is called hereafter a {\bfseries row-\/wise} distribution and it corresponds to dividing the data matrix into subblocks with a number of columns as in the full matrix. This time neighboring processess have to have blocks corresponding to the consecutive rows of the data matrix and each process has to have at least as many rows as the band-\/width of the corresponding Toeplitz blocks, unless one of the Toeplitz blocks assigned to that set of rows starts or end within the rows interval.
+
+The {\bfseries hybrid} data distribution first represents the data matrix as a matrix of $ k $ columns, where $ 1 \le k \le $ {\itshape \#} {\itshape of} {\itshape columns} {\itshape of} {\itshape the} {\itshape data} {\itshape matrix}. This is obtained by concatenating first $ k $ columns of the data matrix, by following $ k$ etc ... -\/ note that the total number of columns of the data matrix has to divide by $ k$ -\/ and then chopping such a matrix into segments assigned to different M\-P\-I process. The requirements as above also apply.
+
+What data layout is used is defined by the input parameters of the M\-P\-I routines.
+
+For all the routines of the package, {\bfseries the} {\bfseries layout} {\bfseries of} {\bfseries the} {\bfseries output} {\bfseries coincides} {\bfseries with} {\bfseries that} {\bfseries of} {\bfseries the} {\bfseries input}. \hypertarget{toeplitz_loadbalancing}{}\section{Load balancing}\label{toeplitz_loadbalancing}
+In the case of the M\-P\-I routines the load balancing will be generally dependent on the adopted data distribution and therefore it is left to the user to select the latter to ensure the former. On the other hand, the library is designed to work, albeit potentially not very efficiently, whether such a goal is achieved or not and therefore also in circumstances far from the load balancing. \hypertarget{toeplitz_avail}{}\section{Availability and bug tracking}\label{toeplitz_avail}
+You can download the last release from the official website of the A\-N\-R-\/\-M\-I\-D\-A\-S'09 project at \href{http://www.apc.univ-paris7.fr/APC_CS/Recherche/Adamis/MIDAS09/software/midapack/}{\tt http\-://www.\-apc.\-univ-\/paris7.\-fr/\-A\-P\-C\-\_\-\-C\-S/\-Recherche/\-Adamis/\-M\-I\-D\-A\-S09/software/midapack/}
+
+Please report any bugs via bug tracker at\-: \href{http://code.google.com/p/cmb-da-library/}{\tt http\-://code.\-google.\-com/p/cmb-\/da-\/library/} \hypertarget{toeplitz_install}{}\section{Installation}\label{toeplitz_install}
+This software is reported to work on several Linux distributions and should work on any modern Unix-\/like system after minimal porting efforts.
+
+The source code is delivered in a set of directories \-:
+
+
+\begin{DoxyItemize}
+\item The /src directory contains the sources files for the core library. It's composed by the differents modules of the M\-I\-D\-A\-S C\-M\-B D\-A library (please refer to the website for more details). You can directly compile theses files and link the generated binaries with your own program.
+\end{DoxyItemize}
+
+
+\begin{DoxyItemize}
+\item The /test directory contains some Utility/demonstration programs to show some examples of how to use the library fonctionnalities. 
+\end{DoxyItemize}\hypertarget{toeplitz_example}{}\section{User example}\label{toeplitz_example}
+Here is a short example showing how to use it\-: 
+\begin{DoxyCode}
+ \textcolor{comment}{// sequential use}
+ fftw\_complex *V\_fft, *T\_fft;
+ \textcolor{keywordtype}{double} *V\_rfft;
+ fftw\_plan plan\_f, plan\_b;
+ \hyperlink{group__group11_ga7f4e77d71f2c6f2caf652bab7520e3f4}{tpltz\_init}(v1\_size, lambda , &nfft, &blocksize, &T\_fft, T, &V\_fft, &
+      V\_rfft, &plan\_f, &plan\_b);
+ \hyperlink{group__group11_gab2face64bf4e429b38b3ae1a6701cc78}{stmm}(V, n, m, id0, local\_V\_size, T\_fft, lambda, V\_fft, V\_rfft, plan\_f, 
+      plan\_b, blocksize, nfft);
+ \hyperlink{group__group11_gac7ac0ee5f6eaee6846814b131671f6e8}{tpltz\_cleanup}(&T\_fft, &V\_fft, &V\_rfft, &plan\_f, &plan\_b);
+\end{DoxyCode}
+ 
+\begin{DoxyCode}
+ \textcolor{comment}{// MPI use}
+ MPI\_Scatterv(V, nranks, displs, MPI\_DOUBLE, Vrank, maxsize, MPI\_DOUBLE, 0, 
+      MPI\_COMM\_WORLD); 
+ \hyperlink{group__group21_ga234bcc963a99bea09ed92b36c711c3ec}{flag\_stgy\_init\_auto}(&flag\_stgy);
+ \hyperlink{group__group22_gaa7ea4ac654fcb9f5fe3bad139febb65d}{mpi\_stbmm}(&Vrank, nrow, m, m\_rowwise, tpltzblocks, nb\_blocks, 
+      nb\_blocks, id0, local\_V\_size, flag\_stgy, MPI\_COMM\_WORLD);
+ MPI\_Gatherv(Vrank, nranks[rank], MPI\_DOUBLE, TV, nranks, displs, MPI\_DOUBLE, 0
+      , MPI\_COMM\_WORLD);
+\end{DoxyCode}
+ 

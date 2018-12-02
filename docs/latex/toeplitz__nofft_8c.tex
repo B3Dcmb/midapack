@@ -1,0 +1,95 @@
+\hypertarget{toeplitz__nofft_8c}{\section{toeplitz\-\_\-nofft.\-c File Reference}
+\label{toeplitz__nofft_8c}\index{toeplitz\-\_\-nofft.\-c@{toeplitz\-\_\-nofft.\-c}}
+}
+
+
+Contains basic product without using ffts for Toeplitz algebra.  
+
+
+\subsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+int \hyperlink{group__group21_gaf19f51ef406bebdb5e9400b6f9962077}{stmm\-\_\-simple\-\_\-basic} (double $\ast$$\ast$V, int n, int m, double $\ast$T, int lambda, double $\ast$$\ast$T\-V)
+\begin{DoxyCompactList}\small\item\em Perform the product of a Toeplitz matrix by a matrix without using F\-F\-T's. \end{DoxyCompactList}\item 
+int \hyperlink{group__group21_ga516de87d3daf22f1a29ba390d5e57caa}{stmm\-\_\-simple\-\_\-core} (double $\ast$$\ast$V, int n, int m, double $\ast$T, int blocksize, int lambda, int nfft, int flag\-\_\-offset)
+\begin{DoxyCompactList}\small\item\em Perform the stand alone product of a Toeplitz matrix by a matrix using the sliding window algorithm. \end{DoxyCompactList}\end{DoxyCompactItemize}
+\subsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+int \hyperlink{toeplitz__nofft_8c_a300d52d9923297872ffb24962a0f0ce6}{P\-R\-I\-N\-T\-\_\-\-R\-A\-N\-K}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Contains basic product without using ffts for Toeplitz algebra. version 1.\-1b, July 2012 \begin{DoxyAuthor}{Author}
+Frederic Dauvergne
+\end{DoxyAuthor}
+Project\-: Midapack library, A\-N\-R M\-I\-D\-A\-S'09 -\/ Toeplitz Algebra module Purpose\-: Provide Toeplitz algebra tools suitable for Cosmic Microwave Background (C\-M\-B) data analysis.
+
+\begin{DoxyNote}{Note}
+Copyright (c) 2010-\/2012 A\-P\-C C\-N\-R\-S Université Paris Diderot 
+
+
+
+This program is free software; you can redistribute it and/or modify it under the terms 
+
+of the G\-N\-U Lesser General Public License as published by the Free Software Foundation; 
+
+either version 3 of the License, or (at your option) any later version. This program is 
+
+distributed in the hope that it will be useful, but W\-I\-T\-H\-O\-U\-T A\-N\-Y W\-A\-R\-R\-A\-N\-T\-Y; without even 
+
+the implied warranty of M\-E\-R\-C\-H\-A\-N\-T\-A\-B\-I\-L\-I\-T\-Y or F\-I\-T\-N\-E\-S\-S F\-O\-R A P\-A\-R\-T\-I\-C\-U\-L\-A\-R P\-U\-R\-P\-O\-S\-E. See the G\-N\-U 
+
+Lesser General Public License for more details. 
+
+
+
+You should have received a copy of the G\-N\-U Lesser General Public License along with this 
+
+program; if not, see \href{http://www.gnu.org/licenses/lgpl.html}{\tt http\-://www.\-gnu.\-org/licenses/lgpl.\-html} 
+
+For more information about A\-N\-R M\-I\-D\-A\-S'09 project see \-: 
+
+\href{http://www.apc.univ-paris7.fr/APC_CS/Recherche/Adamis/MIDAS09/index.html}{\tt http\-://www.\-apc.\-univ-\/paris7.\-fr/\-A\-P\-C\-\_\-\-C\-S/\-Recherche/\-Adamis/\-M\-I\-D\-A\-S09/index.\-html} 
+
+A\-C\-K\-N\-O\-W\-L\-E\-D\-G\-M\-E\-N\-T\-: This work has been supported in part by the French National Research 
+
+Agency (A\-N\-R) through C\-O\-S\-I\-N\-U\-S program (project M\-I\-D\-A\-S no. A\-N\-R-\/09-\/\-C\-O\-S\-I-\/009).
+\end{DoxyNote}
+Log\-: toeplitz$\ast$.c
+
+Revision 1.\-0b 2012/05/07 Frederic Dauvergne (A\-P\-C) Official release 1.\-0beta. The first installement of the library is the Toeplitz algebra module.
+
+Revision 1.\-1b 2012/07/-\/ Frederic Dauvergne (A\-P\-C)
+\begin{DoxyItemize}
+\item mpi\-\_\-stbmm allows now rowi-\/wise order per process datas and no-\/blocking communications.
+\item O\-M\-P improvment for optimal cpu time.
+\item bug fixed for O\-M\-P in the stmm\-\_\-basic routine.
+\item distcorrmin is used to communicate only lambda-\/1 datas when it is needed.
+\item new reshaping routines using transformation functions in stmm. Thus, only one copy at most is needed.
+\item tpltz\-\_\-init improvement using define\-\_\-nfft and define\-\_\-blocksize routines.
+\item add \hyperlink{structBlock}{Block} struture to define each Toeplitz block.
+\item add \hyperlink{structFlag}{Flag} structure and preprocessing parameters to define the computational strategy. All the flag parameters are then available directly from the A\-P\-I.
+\end{DoxyItemize}
+
+Revision 1.\-2b 2012/11/30 Frederic Dauvergne (A\-P\-C)
+\begin{DoxyItemize}
+\item extend the mpi product routine to rowwise order data distribution. This is now allowing tree kinds of distribution.
+\item add int64 for some variables to extend the global volume of data you can use.
+\item Openmp improvments.
+\item Add \hyperlink{toeplitz__wizard_8c}{toeplitz\-\_\-wizard.\-c}, which contains a set of easy to use routines with defined structures. 
+\end{DoxyItemize}
+
+Definition in file \hyperlink{toeplitz__nofft_8c_source}{toeplitz\-\_\-nofft.\-c}.
+
+
+
+\subsection{Variable Documentation}
+\hypertarget{toeplitz__nofft_8c_a300d52d9923297872ffb24962a0f0ce6}{\index{toeplitz\-\_\-nofft.\-c@{toeplitz\-\_\-nofft.\-c}!P\-R\-I\-N\-T\-\_\-\-R\-A\-N\-K@{P\-R\-I\-N\-T\-\_\-\-R\-A\-N\-K}}
+\index{P\-R\-I\-N\-T\-\_\-\-R\-A\-N\-K@{P\-R\-I\-N\-T\-\_\-\-R\-A\-N\-K}!toeplitz_nofft.c@{toeplitz\-\_\-nofft.\-c}}
+\subsubsection[{P\-R\-I\-N\-T\-\_\-\-R\-A\-N\-K}]{\setlength{\rightskip}{0pt plus 5cm}int P\-R\-I\-N\-T\-\_\-\-R\-A\-N\-K}}\label{toeplitz__nofft_8c_a300d52d9923297872ffb24962a0f0ce6}
+
+
+Definition at line \hyperlink{toeplitz_8c_source_l00082}{82} of file \hyperlink{toeplitz_8c_source}{toeplitz.\-c}.
+

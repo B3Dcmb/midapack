@@ -1,0 +1,2521 @@
+This is pdfTeX, Version 3.14159265-2.6-1.40.16 (TeX Live 2015) (preloaded format=pdflatex 2015.11.19)  2 DEC 2018 15:56
+entering extended mode
+ \write18 enabled.
+ %&-line parsing enabled.
+**refman.tex
+(./refman.tex
+LaTeX2e <2015/01/01>
+Babel <3.9l> and hyphenation patterns for 79 languages loaded.
+(/usr/local/texlive/2015/texmf-dist/tex/latex/base/book.cls
+Document Class: book 2014/09/29 v1.4h Standard LaTeX document class
+(/usr/local/texlive/2015/texmf-dist/tex/latex/base/bk10.clo
+File: bk10.clo 2014/09/29 v1.4h Standard LaTeX file (size option)
+)
+\c@part=\count79
+\c@chapter=\count80
+\c@section=\count81
+\c@subsection=\count82
+\c@subsubsection=\count83
+\c@paragraph=\count84
+\c@subparagraph=\count85
+\c@figure=\count86
+\c@table=\count87
+\abovecaptionskip=\skip41
+\belowcaptionskip=\skip42
+\bibindent=\dimen102
+)
+(/usr/local/texlive/2015/texmf-dist/tex/latex/geometry/geometry.sty
+Package: geometry 2010/09/12 v5.6 Page Geometry
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/graphics/keyval.sty
+Package: keyval 2014/10/28 v1.15 key=value parser (DPC)
+\KV@toks@=\toks14
+)
+(/usr/local/texlive/2015/texmf-dist/tex/generic/oberdiek/ifpdf.sty
+Package: ifpdf 2011/01/30 v2.3 Provides the ifpdf switch (HO)
+Package ifpdf Info: pdfTeX in PDF mode is detected.
+)
+(/usr/local/texlive/2015/texmf-dist/tex/generic/oberdiek/ifvtex.sty
+Package: ifvtex 2010/03/01 v1.5 Detect VTeX and its facilities (HO)
+Package ifvtex Info: VTeX not detected.
+)
+(/usr/local/texlive/2015/texmf-dist/tex/generic/ifxetex/ifxetex.sty
+Package: ifxetex 2010/09/12 v0.6 Provides ifxetex conditional
+)
+\Gm@cnth=\count88
+\Gm@cntv=\count89
+\c@Gm@tempcnt=\count90
+\Gm@bindingoffset=\dimen103
+\Gm@wd@mp=\dimen104
+\Gm@odd@mp=\dimen105
+\Gm@even@mp=\dimen106
+\Gm@layoutwidth=\dimen107
+\Gm@layoutheight=\dimen108
+\Gm@layouthoffset=\dimen109
+\Gm@layoutvoffset=\dimen110
+\Gm@dimlist=\toks15
+)
+(/usr/local/texlive/2015/texmf-dist/tex/latex/base/makeidx.sty
+Package: makeidx 2014/09/29 v1.0m Standard LaTeX package
+)
+(/usr/local/texlive/2015/texmf-dist/tex/latex/natbib/natbib.sty
+Package: natbib 2010/09/13 8.31b (PWD, AO)
+\bibhang=\skip43
+\bibsep=\skip44
+LaTeX Info: Redefining \cite on input line 694.
+\c@NAT@ctr=\count91
+)
+(/usr/local/texlive/2015/texmf-dist/tex/latex/graphics/graphicx.sty
+Package: graphicx 2014/10/28 v1.0g Enhanced LaTeX Graphics (DPC,SPQR)
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/graphics/graphics.sty
+Package: graphics 2014/10/28 v1.0p Standard LaTeX Graphics (DPC,SPQR)
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/graphics/trig.sty
+Package: trig 1999/03/16 v1.09 sin cos tan (DPC)
+)
+(/usr/local/texlive/2015/texmf-dist/tex/latex/latexconfig/graphics.cfg
+File: graphics.cfg 2010/04/23 v1.9 graphics configuration of TeX Live
+)
+Package graphics Info: Driver file: pdftex.def on input line 94.
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/pdftex-def/pdftex.def
+File: pdftex.def 2011/05/27 v0.06d Graphics/color for pdfTeX
+
+(/usr/local/texlive/2015/texmf-dist/tex/generic/oberdiek/infwarerr.sty
+Package: infwarerr 2010/04/08 v1.3 Providing info/warning/error messages (HO)
+)
+(/usr/local/texlive/2015/texmf-dist/tex/generic/oberdiek/ltxcmds.sty
+Package: ltxcmds 2011/11/09 v1.22 LaTeX kernel commands for general use (HO)
+)
+\Gread@gobject=\count92
+))
+\Gin@req@height=\dimen111
+\Gin@req@width=\dimen112
+)
+(/usr/local/texlive/2015/texmf-dist/tex/latex/tools/multicol.sty
+Package: multicol 2015/03/31 v1.8m multicolumn formatting (FMi)
+\c@tracingmulticols=\count93
+\mult@box=\box26
+\multicol@leftmargin=\dimen113
+\c@unbalance=\count94
+\c@collectmore=\count95
+\doublecol@number=\count96
+\multicoltolerance=\count97
+\multicolpretolerance=\count98
+\full@width=\dimen114
+\page@free=\dimen115
+\premulticols=\dimen116
+\postmulticols=\dimen117
+\multicolsep=\skip45
+\multicolbaselineskip=\skip46
+\partial@page=\box27
+\last@line=\box28
+\maxbalancingoverflow=\dimen118
+\mult@rightbox=\box29
+\mult@grightbox=\box30
+\mult@gfirstbox=\box31
+\mult@firstbox=\box32
+\@tempa=\box33
+\@tempa=\box34
+\@tempa=\box35
+\@tempa=\box36
+\@tempa=\box37
+\@tempa=\box38
+\@tempa=\box39
+\@tempa=\box40
+\@tempa=\box41
+\@tempa=\box42
+\@tempa=\box43
+\@tempa=\box44
+\@tempa=\box45
+\@tempa=\box46
+\@tempa=\box47
+\@tempa=\box48
+\@tempa=\box49
+\c@columnbadness=\count99
+\c@finalcolumnbadness=\count100
+\last@try=\dimen119
+\multicolovershoot=\dimen120
+\multicolundershoot=\dimen121
+\mult@nat@firstbox=\box50
+\colbreak@box=\box51
+\mc@col@check@num=\count101
+)
+(/usr/local/texlive/2015/texmf-dist/tex/latex/float/float.sty
+Package: float 2001/11/08 v1.3d Float enhancements (AL)
+\c@float@type=\count102
+\float@exts=\toks16
+\float@box=\box52
+\@float@everytoks=\toks17
+\@floatcapt=\box53
+)
+(/usr/local/texlive/2015/texmf-dist/tex/latex/listings/listings.sty
+\lst@mode=\count103
+\lst@gtempboxa=\box54
+\lst@token=\toks18
+\lst@length=\count104
+\lst@currlwidth=\dimen122
+\lst@column=\count105
+\lst@pos=\count106
+\lst@lostspace=\dimen123
+\lst@width=\dimen124
+\lst@newlines=\count107
+\lst@lineno=\count108
+\lst@maxwidth=\dimen125
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/listings/lstmisc.sty
+File: lstmisc.sty 2014/09/06 1.5e (Carsten Heinz)
+\c@lstnumber=\count109
+\lst@skipnumbers=\count110
+\lst@framebox=\box55
+)
+(/usr/local/texlive/2015/texmf-dist/tex/latex/listings/listings.cfg
+File: listings.cfg 2014/09/06 1.5e listings configuration
+))
+Package: listings 2014/09/06 1.5e (Carsten Heinz)
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/graphics/color.sty
+Package: color 2014/10/28 v1.1a Standard LaTeX Color (DPC)
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/latexconfig/color.cfg
+File: color.cfg 2007/01/18 v1.5 color configuration of teTeX/TeXLive
+)
+Package color Info: Driver file: pdftex.def on input line 142.
+)
+(/usr/local/texlive/2015/texmf-dist/tex/latex/base/ifthen.sty
+Package: ifthen 2014/09/29 v1.1c Standard LaTeX ifthen package (DPC)
+)
+(/usr/local/texlive/2015/texmf-dist/tex/latex/xcolor/xcolor.sty
+Package: xcolor 2007/01/21 v2.11 LaTeX color extensions (UK)
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/latexconfig/color.cfg
+File: color.cfg 2007/01/18 v1.5 color configuration of teTeX/TeXLive
+)
+Package xcolor Info: Driver file: pdftex.def on input line 225.
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/colortbl/colortbl.sty
+Package: colortbl 2012/02/13 v1.0a Color table columns (DPC)
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/tools/array.sty
+Package: array 2014/10/28 v2.4c Tabular extension package (FMi)
+\col@sep=\dimen126
+\extrarowheight=\dimen127
+\NC@list=\toks19
+\extratabsurround=\skip47
+\backup@length=\skip48
+)
+\everycr=\toks20
+\minrowclearance=\skip49
+)
+LaTeX Info: Redefining \color on input line 702.
+\rownum=\count111
+Package xcolor Info: Model `cmy' substituted by `cmy0' on input line 1337.
+Package xcolor Info: Model `hsb' substituted by `rgb' on input line 1341.
+Package xcolor Info: Model `RGB' extended on input line 1353.
+Package xcolor Info: Model `HTML' substituted by `rgb' on input line 1355.
+Package xcolor Info: Model `Hsb' substituted by `hsb' on input line 1356.
+Package xcolor Info: Model `tHsb' substituted by `hsb' on input line 1357.
+Package xcolor Info: Model `HSB' substituted by `hsb' on input line 1358.
+Package xcolor Info: Model `Gray' substituted by `gray' on input line 1359.
+Package xcolor Info: Model `wave' substituted by `hsb' on input line 1360.
+)
+(/usr/local/texlive/2015/texmf-dist/tex/latex/base/textcomp.sty
+Package: textcomp 2005/09/27 v1.99g Standard LaTeX package
+Package textcomp Info: Sub-encoding information:
+(textcomp)               5 = only ISO-Adobe without \textcurrency
+(textcomp)               4 = 5 + \texteuro
+(textcomp)               3 = 4 + \textohm
+(textcomp)               2 = 3 + \textestimated + \textcurrency
+(textcomp)               1 = TS1 - \textcircled - \t
+(textcomp)               0 = TS1 (full)
+(textcomp)             Font families with sub-encoding setting implement
+(textcomp)             only a restricted character set as indicated.
+(textcomp)             Family '?' is the default used for unknown fonts.
+(textcomp)             See the documentation for details.
+Package textcomp Info: Setting ? sub-encoding to TS1/1 on input line 79.
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/base/ts1enc.def
+File: ts1enc.def 2001/06/05 v3.0e (jk/car/fm) Standard LaTeX file
+)
+LaTeX Info: Redefining \oldstylenums on input line 334.
+Package textcomp Info: Setting cmr sub-encoding to TS1/0 on input line 349.
+Package textcomp Info: Setting cmss sub-encoding to TS1/0 on input line 350.
+Package textcomp Info: Setting cmtt sub-encoding to TS1/0 on input line 351.
+Package textcomp Info: Setting cmvtt sub-encoding to TS1/0 on input line 352.
+Package textcomp Info: Setting cmbr sub-encoding to TS1/0 on input line 353.
+Package textcomp Info: Setting cmtl sub-encoding to TS1/0 on input line 354.
+Package textcomp Info: Setting ccr sub-encoding to TS1/0 on input line 355.
+Package textcomp Info: Setting ptm sub-encoding to TS1/4 on input line 356.
+Package textcomp Info: Setting pcr sub-encoding to TS1/4 on input line 357.
+Package textcomp Info: Setting phv sub-encoding to TS1/4 on input line 358.
+Package textcomp Info: Setting ppl sub-encoding to TS1/3 on input line 359.
+Package textcomp Info: Setting pag sub-encoding to TS1/4 on input line 360.
+Package textcomp Info: Setting pbk sub-encoding to TS1/4 on input line 361.
+Package textcomp Info: Setting pnc sub-encoding to TS1/4 on input line 362.
+Package textcomp Info: Setting pzc sub-encoding to TS1/4 on input line 363.
+Package textcomp Info: Setting bch sub-encoding to TS1/4 on input line 364.
+Package textcomp Info: Setting put sub-encoding to TS1/5 on input line 365.
+Package textcomp Info: Setting uag sub-encoding to TS1/5 on input line 366.
+Package textcomp Info: Setting ugq sub-encoding to TS1/5 on input line 367.
+Package textcomp Info: Setting ul8 sub-encoding to TS1/4 on input line 368.
+Package textcomp Info: Setting ul9 sub-encoding to TS1/4 on input line 369.
+Package textcomp Info: Setting augie sub-encoding to TS1/5 on input line 370.
+Package textcomp Info: Setting dayrom sub-encoding to TS1/3 on input line 371.
+Package textcomp Info: Setting dayroms sub-encoding to TS1/3 on input line 372.
+
+Package textcomp Info: Setting pxr sub-encoding to TS1/0 on input line 373.
+Package textcomp Info: Setting pxss sub-encoding to TS1/0 on input line 374.
+Package textcomp Info: Setting pxtt sub-encoding to TS1/0 on input line 375.
+Package textcomp Info: Setting txr sub-encoding to TS1/0 on input line 376.
+Package textcomp Info: Setting txss sub-encoding to TS1/0 on input line 377.
+Package textcomp Info: Setting txtt sub-encoding to TS1/0 on input line 378.
+Package textcomp Info: Setting lmr sub-encoding to TS1/0 on input line 379.
+Package textcomp Info: Setting lmdh sub-encoding to TS1/0 on input line 380.
+Package textcomp Info: Setting lmss sub-encoding to TS1/0 on input line 381.
+Package textcomp Info: Setting lmssq sub-encoding to TS1/0 on input line 382.
+Package textcomp Info: Setting lmvtt sub-encoding to TS1/0 on input line 383.
+Package textcomp Info: Setting lmtt sub-encoding to TS1/0 on input line 384.
+Package textcomp Info: Setting qhv sub-encoding to TS1/0 on input line 385.
+Package textcomp Info: Setting qag sub-encoding to TS1/0 on input line 386.
+Package textcomp Info: Setting qbk sub-encoding to TS1/0 on input line 387.
+Package textcomp Info: Setting qcr sub-encoding to TS1/0 on input line 388.
+Package textcomp Info: Setting qcs sub-encoding to TS1/0 on input line 389.
+Package textcomp Info: Setting qpl sub-encoding to TS1/0 on input line 390.
+Package textcomp Info: Setting qtm sub-encoding to TS1/0 on input line 391.
+Package textcomp Info: Setting qzc sub-encoding to TS1/0 on input line 392.
+Package textcomp Info: Setting qhvc sub-encoding to TS1/0 on input line 393.
+Package textcomp Info: Setting futs sub-encoding to TS1/4 on input line 394.
+Package textcomp Info: Setting futx sub-encoding to TS1/4 on input line 395.
+Package textcomp Info: Setting futj sub-encoding to TS1/4 on input line 396.
+Package textcomp Info: Setting hlh sub-encoding to TS1/3 on input line 397.
+Package textcomp Info: Setting hls sub-encoding to TS1/3 on input line 398.
+Package textcomp Info: Setting hlst sub-encoding to TS1/3 on input line 399.
+Package textcomp Info: Setting hlct sub-encoding to TS1/5 on input line 400.
+Package textcomp Info: Setting hlx sub-encoding to TS1/5 on input line 401.
+Package textcomp Info: Setting hlce sub-encoding to TS1/5 on input line 402.
+Package textcomp Info: Setting hlcn sub-encoding to TS1/5 on input line 403.
+Package textcomp Info: Setting hlcw sub-encoding to TS1/5 on input line 404.
+Package textcomp Info: Setting hlcf sub-encoding to TS1/5 on input line 405.
+Package textcomp Info: Setting pplx sub-encoding to TS1/3 on input line 406.
+Package textcomp Info: Setting pplj sub-encoding to TS1/3 on input line 407.
+Package textcomp Info: Setting ptmx sub-encoding to TS1/4 on input line 408.
+Package textcomp Info: Setting ptmj sub-encoding to TS1/4 on input line 409.
+)
+(/usr/local/texlive/2015/texmf-dist/tex/latex/base/alltt.sty
+Package: alltt 1997/06/16 v2.0g defines alltt environment
+)
+(/usr/local/texlive/2015/texmf-dist/tex/latex/hyperref/hyperref.sty
+Package: hyperref 2012/11/06 v6.83m Hypertext links for LaTeX
+
+(/usr/local/texlive/2015/texmf-dist/tex/generic/oberdiek/hobsub-hyperref.sty
+Package: hobsub-hyperref 2012/05/28 v1.13 Bundle oberdiek, subset hyperref (HO)
+
+
+(/usr/local/texlive/2015/texmf-dist/tex/generic/oberdiek/hobsub-generic.sty
+Package: hobsub-generic 2012/05/28 v1.13 Bundle oberdiek, subset generic (HO)
+Package: hobsub 2012/05/28 v1.13 Construct package bundles (HO)
+Package hobsub Info: Skipping package `infwarerr' (already loaded).
+Package hobsub Info: Skipping package `ltxcmds' (already loaded).
+Package: ifluatex 2010/03/01 v1.3 Provides the ifluatex switch (HO)
+Package ifluatex Info: LuaTeX not detected.
+Package hobsub Info: Skipping package `ifvtex' (already loaded).
+Package: intcalc 2007/09/27 v1.1 Expandable calculations with integers (HO)
+Package hobsub Info: Skipping package `ifpdf' (already loaded).
+Package: etexcmds 2011/02/16 v1.5 Avoid name clashes with e-TeX commands (HO)
+Package etexcmds Info: Could not find \expanded.
+(etexcmds)             That can mean that you are not using pdfTeX 1.50 or
+(etexcmds)             that some package has redefined \expanded.
+(etexcmds)             In the latter case, load this package earlier.
+Package: kvsetkeys 2012/04/25 v1.16 Key value parser (HO)
+Package: kvdefinekeys 2011/04/07 v1.3 Define keys (HO)
+Package: pdftexcmds 2011/11/29 v0.20 Utility functions of pdfTeX for LuaTeX (HO
+)
+Package pdftexcmds Info: LuaTeX not detected.
+Package pdftexcmds Info: \pdf@primitive is available.
+Package pdftexcmds Info: \pdf@ifprimitive is available.
+Package pdftexcmds Info: \pdfdraftmode found.
+Package: pdfescape 2011/11/25 v1.13 Implements pdfTeX's escape features (HO)
+Package: bigintcalc 2012/04/08 v1.3 Expandable calculations on big integers (HO
+)
+Package: bitset 2011/01/30 v1.1 Handle bit-vector datatype (HO)
+Package: uniquecounter 2011/01/30 v1.2 Provide unlimited unique counter (HO)
+)
+Package hobsub Info: Skipping package `hobsub' (already loaded).
+Package: letltxmacro 2010/09/02 v1.4 Let assignment for LaTeX macros (HO)
+Package: hopatch 2012/05/28 v1.2 Wrapper for package hooks (HO)
+Package: xcolor-patch 2011/01/30 xcolor patch
+Package: atveryend 2011/06/30 v1.8 Hooks at the very end of document (HO)
+Package atveryend Info: \enddocument detected (standard20110627).
+Package: atbegshi 2011/10/05 v1.16 At begin shipout hook (HO)
+Package: refcount 2011/10/16 v3.4 Data extraction from label references (HO)
+Package: hycolor 2011/01/30 v1.7 Color options for hyperref/bookmark (HO)
+)
+(/usr/local/texlive/2015/texmf-dist/tex/latex/oberdiek/auxhook.sty
+Package: auxhook 2011/03/04 v1.3 Hooks for auxiliary files (HO)
+)
+(/usr/local/texlive/2015/texmf-dist/tex/latex/oberdiek/kvoptions.sty
+Package: kvoptions 2011/06/30 v3.11 Key value format for package options (HO)
+)
+\@linkdim=\dimen128
+\Hy@linkcounter=\count112
+\Hy@pagecounter=\count113
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/hyperref/pd1enc.def
+File: pd1enc.def 2012/11/06 v6.83m Hyperref: PDFDocEncoding definition (HO)
+)
+\Hy@SavedSpaceFactor=\count114
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/latexconfig/hyperref.cfg
+File: hyperref.cfg 2002/06/06 v1.2 hyperref configuration of TeXLive
+)
+Package hyperref Info: Option `colorlinks' set `true' on input line 4319.
+Package hyperref Info: Option `unicode' set `true' on input line 4319.
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/hyperref/puenc.def
+File: puenc.def 2012/11/06 v6.83m Hyperref: PDF Unicode definition (HO)
+)
+Package hyperref Info: Hyper figures OFF on input line 4443.
+Package hyperref Info: Link nesting OFF on input line 4448.
+Package hyperref Info: Hyper index ON on input line 4451.
+Package hyperref Info: Plain pages OFF on input line 4458.
+Package hyperref Info: Backreferencing ON on input line 4461.
+Package hyperref Info: Implicit mode ON; LaTeX internals redefined.
+Package hyperref Info: Bookmarks ON on input line 4688.
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/hyperref/backref.sty
+Package: backref 2012/07/25 v1.38 Bibliographical back referencing
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/oberdiek/rerunfilecheck.sty
+Package: rerunfilecheck 2011/04/15 v1.7 Rerun checks for auxiliary files (HO)
+Package uniquecounter Info: New unique counter `rerunfilecheck' on input line 2
+82.
+))
+\c@Hy@tempcnt=\count115
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/url/url.sty
+\Urlmuskip=\muskip10
+Package: url 2013/09/16  ver 3.4  Verb mode for urls, etc.
+)
+LaTeX Info: Redefining \url on input line 5041.
+\XeTeXLinkMargin=\dimen129
+\Fld@menulength=\count116
+\Field@Width=\dimen130
+\Fld@charsize=\dimen131
+Package hyperref Info: Hyper figures OFF on input line 6295.
+Package hyperref Info: Link nesting OFF on input line 6300.
+Package hyperref Info: Hyper index ON on input line 6303.
+Package hyperref Info: backreferencing ON on input line 6308.
+Package hyperref Info: Link coloring ON on input line 6313.
+Package hyperref Info: Link coloring with OCG OFF on input line 6320.
+Package hyperref Info: PDF/A mode OFF on input line 6325.
+LaTeX Info: Redefining \ref on input line 6365.
+LaTeX Info: Redefining \pageref on input line 6369.
+\Hy@abspage=\count117
+\c@Item=\count118
+\c@Hfootnote=\count119
+)
+
+Package hyperref Message: Driver: hpdftex.
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/hyperref/hpdftex.def
+File: hpdftex.def 2012/11/06 v6.83m Hyperref driver for pdfTeX
+\Fld@listcount=\count120
+\c@bookmark@seq@number=\count121
+\Hy@SectionHShift=\skip50
+)
+(/usr/local/texlive/2015/texmf-dist/tex/latex/base/inputenc.sty
+Package: inputenc 2015/03/17 v1.2c Input encoding file
+\inpenc@prehook=\toks21
+\inpenc@posthook=\toks22
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/base/utf8.def
+File: utf8.def 2014/09/29 v1.1m UTF-8 support for inputenc
+Now handling font encoding OML ...
+... no UTF-8 mapping file for font encoding OML
+Now handling font encoding T1 ...
+... processing UTF-8 mapping file for font encoding T1
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/base/t1enc.dfu
+File: t1enc.dfu 2014/09/29 v1.1m UTF-8 support for inputenc
+   defining Unicode char U+00A1 (decimal 161)
+   defining Unicode char U+00A3 (decimal 163)
+   defining Unicode char U+00AB (decimal 171)
+   defining Unicode char U+00BB (decimal 187)
+   defining Unicode char U+00BF (decimal 191)
+   defining Unicode char U+00C0 (decimal 192)
+   defining Unicode char U+00C1 (decimal 193)
+   defining Unicode char U+00C2 (decimal 194)
+   defining Unicode char U+00C3 (decimal 195)
+   defining Unicode char U+00C4 (decimal 196)
+   defining Unicode char U+00C5 (decimal 197)
+   defining Unicode char U+00C6 (decimal 198)
+   defining Unicode char U+00C7 (decimal 199)
+   defining Unicode char U+00C8 (decimal 200)
+   defining Unicode char U+00C9 (decimal 201)
+   defining Unicode char U+00CA (decimal 202)
+   defining Unicode char U+00CB (decimal 203)
+   defining Unicode char U+00CC (decimal 204)
+   defining Unicode char U+00CD (decimal 205)
+   defining Unicode char U+00CE (decimal 206)
+   defining Unicode char U+00CF (decimal 207)
+   defining Unicode char U+00D0 (decimal 208)
+   defining Unicode char U+00D1 (decimal 209)
+   defining Unicode char U+00D2 (decimal 210)
+   defining Unicode char U+00D3 (decimal 211)
+   defining Unicode char U+00D4 (decimal 212)
+   defining Unicode char U+00D5 (decimal 213)
+   defining Unicode char U+00D6 (decimal 214)
+   defining Unicode char U+00D8 (decimal 216)
+   defining Unicode char U+00D9 (decimal 217)
+   defining Unicode char U+00DA (decimal 218)
+   defining Unicode char U+00DB (decimal 219)
+   defining Unicode char U+00DC (decimal 220)
+   defining Unicode char U+00DD (decimal 221)
+   defining Unicode char U+00DE (decimal 222)
+   defining Unicode char U+00DF (decimal 223)
+   defining Unicode char U+00E0 (decimal 224)
+   defining Unicode char U+00E1 (decimal 225)
+   defining Unicode char U+00E2 (decimal 226)
+   defining Unicode char U+00E3 (decimal 227)
+   defining Unicode char U+00E4 (decimal 228)
+   defining Unicode char U+00E5 (decimal 229)
+   defining Unicode char U+00E6 (decimal 230)
+   defining Unicode char U+00E7 (decimal 231)
+   defining Unicode char U+00E8 (decimal 232)
+   defining Unicode char U+00E9 (decimal 233)
+   defining Unicode char U+00EA (decimal 234)
+   defining Unicode char U+00EB (decimal 235)
+   defining Unicode char U+00EC (decimal 236)
+   defining Unicode char U+00ED (decimal 237)
+   defining Unicode char U+00EE (decimal 238)
+   defining Unicode char U+00EF (decimal 239)
+   defining Unicode char U+00F0 (decimal 240)
+   defining Unicode char U+00F1 (decimal 241)
+   defining Unicode char U+00F2 (decimal 242)
+   defining Unicode char U+00F3 (decimal 243)
+   defining Unicode char U+00F4 (decimal 244)
+   defining Unicode char U+00F5 (decimal 245)
+   defining Unicode char U+00F6 (decimal 246)
+   defining Unicode char U+00F8 (decimal 248)
+   defining Unicode char U+00F9 (decimal 249)
+   defining Unicode char U+00FA (decimal 250)
+   defining Unicode char U+00FB (decimal 251)
+   defining Unicode char U+00FC (decimal 252)
+   defining Unicode char U+00FD (decimal 253)
+   defining Unicode char U+00FE (decimal 254)
+   defining Unicode char U+00FF (decimal 255)
+   defining Unicode char U+0102 (decimal 258)
+   defining Unicode char U+0103 (decimal 259)
+   defining Unicode char U+0104 (decimal 260)
+   defining Unicode char U+0105 (decimal 261)
+   defining Unicode char U+0106 (decimal 262)
+   defining Unicode char U+0107 (decimal 263)
+   defining Unicode char U+010C (decimal 268)
+   defining Unicode char U+010D (decimal 269)
+   defining Unicode char U+010E (decimal 270)
+   defining Unicode char U+010F (decimal 271)
+   defining Unicode char U+0110 (decimal 272)
+   defining Unicode char U+0111 (decimal 273)
+   defining Unicode char U+0118 (decimal 280)
+   defining Unicode char U+0119 (decimal 281)
+   defining Unicode char U+011A (decimal 282)
+   defining Unicode char U+011B (decimal 283)
+   defining Unicode char U+011E (decimal 286)
+   defining Unicode char U+011F (decimal 287)
+   defining Unicode char U+0130 (decimal 304)
+   defining Unicode char U+0131 (decimal 305)
+   defining Unicode char U+0132 (decimal 306)
+   defining Unicode char U+0133 (decimal 307)
+   defining Unicode char U+0139 (decimal 313)
+   defining Unicode char U+013A (decimal 314)
+   defining Unicode char U+013D (decimal 317)
+   defining Unicode char U+013E (decimal 318)
+   defining Unicode char U+0141 (decimal 321)
+   defining Unicode char U+0142 (decimal 322)
+   defining Unicode char U+0143 (decimal 323)
+   defining Unicode char U+0144 (decimal 324)
+   defining Unicode char U+0147 (decimal 327)
+   defining Unicode char U+0148 (decimal 328)
+   defining Unicode char U+014A (decimal 330)
+   defining Unicode char U+014B (decimal 331)
+   defining Unicode char U+0150 (decimal 336)
+   defining Unicode char U+0151 (decimal 337)
+   defining Unicode char U+0152 (decimal 338)
+   defining Unicode char U+0153 (decimal 339)
+   defining Unicode char U+0154 (decimal 340)
+   defining Unicode char U+0155 (decimal 341)
+   defining Unicode char U+0158 (decimal 344)
+   defining Unicode char U+0159 (decimal 345)
+   defining Unicode char U+015A (decimal 346)
+   defining Unicode char U+015B (decimal 347)
+   defining Unicode char U+015E (decimal 350)
+   defining Unicode char U+015F (decimal 351)
+   defining Unicode char U+0160 (decimal 352)
+   defining Unicode char U+0161 (decimal 353)
+   defining Unicode char U+0162 (decimal 354)
+   defining Unicode char U+0163 (decimal 355)
+   defining Unicode char U+0164 (decimal 356)
+   defining Unicode char U+0165 (decimal 357)
+   defining Unicode char U+016E (decimal 366)
+   defining Unicode char U+016F (decimal 367)
+   defining Unicode char U+0170 (decimal 368)
+   defining Unicode char U+0171 (decimal 369)
+   defining Unicode char U+0178 (decimal 376)
+   defining Unicode char U+0179 (decimal 377)
+   defining Unicode char U+017A (decimal 378)
+   defining Unicode char U+017B (decimal 379)
+   defining Unicode char U+017C (decimal 380)
+   defining Unicode char U+017D (decimal 381)
+   defining Unicode char U+017E (decimal 382)
+   defining Unicode char U+200C (decimal 8204)
+   defining Unicode char U+2013 (decimal 8211)
+   defining Unicode char U+2014 (decimal 8212)
+   defining Unicode char U+2018 (decimal 8216)
+   defining Unicode char U+2019 (decimal 8217)
+   defining Unicode char U+201A (decimal 8218)
+   defining Unicode char U+201C (decimal 8220)
+   defining Unicode char U+201D (decimal 8221)
+   defining Unicode char U+201E (decimal 8222)
+   defining Unicode char U+2030 (decimal 8240)
+   defining Unicode char U+2031 (decimal 8241)
+   defining Unicode char U+2039 (decimal 8249)
+   defining Unicode char U+203A (decimal 8250)
+   defining Unicode char U+2423 (decimal 9251)
+)
+Now handling font encoding OT1 ...
+... processing UTF-8 mapping file for font encoding OT1
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/base/ot1enc.dfu
+File: ot1enc.dfu 2014/09/29 v1.1m UTF-8 support for inputenc
+   defining Unicode char U+00A1 (decimal 161)
+   defining Unicode char U+00A3 (decimal 163)
+   defining Unicode char U+00B8 (decimal 184)
+   defining Unicode char U+00BF (decimal 191)
+   defining Unicode char U+00C5 (decimal 197)
+   defining Unicode char U+00C6 (decimal 198)
+   defining Unicode char U+00D8 (decimal 216)
+   defining Unicode char U+00DF (decimal 223)
+   defining Unicode char U+00E6 (decimal 230)
+   defining Unicode char U+00EC (decimal 236)
+   defining Unicode char U+00ED (decimal 237)
+   defining Unicode char U+00EE (decimal 238)
+   defining Unicode char U+00EF (decimal 239)
+   defining Unicode char U+00F8 (decimal 248)
+   defining Unicode char U+0131 (decimal 305)
+   defining Unicode char U+0141 (decimal 321)
+   defining Unicode char U+0142 (decimal 322)
+   defining Unicode char U+0152 (decimal 338)
+   defining Unicode char U+0153 (decimal 339)
+   defining Unicode char U+2013 (decimal 8211)
+   defining Unicode char U+2014 (decimal 8212)
+   defining Unicode char U+2018 (decimal 8216)
+   defining Unicode char U+2019 (decimal 8217)
+   defining Unicode char U+201C (decimal 8220)
+   defining Unicode char U+201D (decimal 8221)
+)
+Now handling font encoding OMS ...
+... processing UTF-8 mapping file for font encoding OMS
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/base/omsenc.dfu
+File: omsenc.dfu 2014/09/29 v1.1m UTF-8 support for inputenc
+   defining Unicode char U+00A7 (decimal 167)
+   defining Unicode char U+00B6 (decimal 182)
+   defining Unicode char U+00B7 (decimal 183)
+   defining Unicode char U+2020 (decimal 8224)
+   defining Unicode char U+2021 (decimal 8225)
+   defining Unicode char U+2022 (decimal 8226)
+)
+Now handling font encoding OMX ...
+... no UTF-8 mapping file for font encoding OMX
+Now handling font encoding U ...
+... no UTF-8 mapping file for font encoding U
+Now handling font encoding TS1 ...
+... processing UTF-8 mapping file for font encoding TS1
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/base/ts1enc.dfu
+File: ts1enc.dfu 2014/09/29 v1.1m UTF-8 support for inputenc
+   defining Unicode char U+00A2 (decimal 162)
+   defining Unicode char U+00A3 (decimal 163)
+   defining Unicode char U+00A4 (decimal 164)
+   defining Unicode char U+00A5 (decimal 165)
+   defining Unicode char U+00A6 (decimal 166)
+   defining Unicode char U+00A7 (decimal 167)
+   defining Unicode char U+00A8 (decimal 168)
+   defining Unicode char U+00A9 (decimal 169)
+   defining Unicode char U+00AA (decimal 170)
+   defining Unicode char U+00AC (decimal 172)
+   defining Unicode char U+00AE (decimal 174)
+   defining Unicode char U+00AF (decimal 175)
+   defining Unicode char U+00B0 (decimal 176)
+   defining Unicode char U+00B1 (decimal 177)
+   defining Unicode char U+00B2 (decimal 178)
+   defining Unicode char U+00B3 (decimal 179)
+   defining Unicode char U+00B4 (decimal 180)
+   defining Unicode char U+00B5 (decimal 181)
+   defining Unicode char U+00B6 (decimal 182)
+   defining Unicode char U+00B7 (decimal 183)
+   defining Unicode char U+00B9 (decimal 185)
+   defining Unicode char U+00BA (decimal 186)
+   defining Unicode char U+00BC (decimal 188)
+   defining Unicode char U+00BD (decimal 189)
+   defining Unicode char U+00BE (decimal 190)
+   defining Unicode char U+00D7 (decimal 215)
+   defining Unicode char U+00F7 (decimal 247)
+   defining Unicode char U+0192 (decimal 402)
+   defining Unicode char U+02C7 (decimal 711)
+   defining Unicode char U+02D8 (decimal 728)
+   defining Unicode char U+02DD (decimal 733)
+   defining Unicode char U+0E3F (decimal 3647)
+   defining Unicode char U+2016 (decimal 8214)
+   defining Unicode char U+2020 (decimal 8224)
+   defining Unicode char U+2021 (decimal 8225)
+   defining Unicode char U+2022 (decimal 8226)
+   defining Unicode char U+2030 (decimal 8240)
+   defining Unicode char U+2031 (decimal 8241)
+   defining Unicode char U+203B (decimal 8251)
+   defining Unicode char U+203D (decimal 8253)
+   defining Unicode char U+2044 (decimal 8260)
+   defining Unicode char U+204E (decimal 8270)
+   defining Unicode char U+2052 (decimal 8274)
+   defining Unicode char U+20A1 (decimal 8353)
+   defining Unicode char U+20A4 (decimal 8356)
+   defining Unicode char U+20A6 (decimal 8358)
+   defining Unicode char U+20A9 (decimal 8361)
+   defining Unicode char U+20AB (decimal 8363)
+   defining Unicode char U+20AC (decimal 8364)
+   defining Unicode char U+20B1 (decimal 8369)
+   defining Unicode char U+2103 (decimal 8451)
+   defining Unicode char U+2116 (decimal 8470)
+   defining Unicode char U+2117 (decimal 8471)
+   defining Unicode char U+211E (decimal 8478)
+   defining Unicode char U+2120 (decimal 8480)
+   defining Unicode char U+2122 (decimal 8482)
+   defining Unicode char U+2126 (decimal 8486)
+   defining Unicode char U+2127 (decimal 8487)
+   defining Unicode char U+212E (decimal 8494)
+   defining Unicode char U+2190 (decimal 8592)
+   defining Unicode char U+2191 (decimal 8593)
+   defining Unicode char U+2192 (decimal 8594)
+   defining Unicode char U+2193 (decimal 8595)
+   defining Unicode char U+2329 (decimal 9001)
+   defining Unicode char U+232A (decimal 9002)
+   defining Unicode char U+2422 (decimal 9250)
+   defining Unicode char U+25E6 (decimal 9702)
+   defining Unicode char U+25EF (decimal 9711)
+   defining Unicode char U+266A (decimal 9834)
+)
+Now handling font encoding PD1 ...
+... no UTF-8 mapping file for font encoding PD1
+Now handling font encoding PU ...
+... no UTF-8 mapping file for font encoding PU
+   defining Unicode char U+00A9 (decimal 169)
+   defining Unicode char U+00AA (decimal 170)
+   defining Unicode char U+00AE (decimal 174)
+   defining Unicode char U+00BA (decimal 186)
+   defining Unicode char U+02C6 (decimal 710)
+   defining Unicode char U+02DC (decimal 732)
+   defining Unicode char U+200C (decimal 8204)
+   defining Unicode char U+2026 (decimal 8230)
+   defining Unicode char U+2122 (decimal 8482)
+   defining Unicode char U+2423 (decimal 9251)
+))
+(/usr/local/texlive/2015/texmf-dist/tex/latex/psnfss/mathptmx.sty
+Package: mathptmx 2005/04/12 PSNFSS-v9.2a Times w/ Math, improved (SPQR, WaS) 
+LaTeX Font Info:    Redeclaring symbol font `operators' on input line 28.
+LaTeX Font Info:    Overwriting symbol font `operators' in version `normal'
+(Font)                  OT1/cmr/m/n --> OT1/ztmcm/m/n on input line 28.
+LaTeX Font Info:    Overwriting symbol font `operators' in version `bold'
+(Font)                  OT1/cmr/bx/n --> OT1/ztmcm/m/n on input line 28.
+LaTeX Font Info:    Redeclaring symbol font `letters' on input line 29.
+LaTeX Font Info:    Overwriting symbol font `letters' in version `normal'
+(Font)                  OML/cmm/m/it --> OML/ztmcm/m/it on input line 29.
+LaTeX Font Info:    Overwriting symbol font `letters' in version `bold'
+(Font)                  OML/cmm/b/it --> OML/ztmcm/m/it on input line 29.
+LaTeX Font Info:    Redeclaring symbol font `symbols' on input line 30.
+LaTeX Font Info:    Overwriting symbol font `symbols' in version `normal'
+(Font)                  OMS/cmsy/m/n --> OMS/ztmcm/m/n on input line 30.
+LaTeX Font Info:    Overwriting symbol font `symbols' in version `bold'
+(Font)                  OMS/cmsy/b/n --> OMS/ztmcm/m/n on input line 30.
+LaTeX Font Info:    Redeclaring symbol font `largesymbols' on input line 31.
+LaTeX Font Info:    Overwriting symbol font `largesymbols' in version `normal'
+(Font)                  OMX/cmex/m/n --> OMX/ztmcm/m/n on input line 31.
+LaTeX Font Info:    Overwriting symbol font `largesymbols' in version `bold'
+(Font)                  OMX/cmex/m/n --> OMX/ztmcm/m/n on input line 31.
+\symbold=\mathgroup4
+\symitalic=\mathgroup5
+LaTeX Font Info:    Redeclaring math alphabet \mathbf on input line 34.
+LaTeX Font Info:    Overwriting math alphabet `\mathbf' in version `normal'
+(Font)                  OT1/cmr/bx/n --> OT1/ptm/bx/n on input line 34.
+LaTeX Font Info:    Overwriting math alphabet `\mathbf' in version `bold'
+(Font)                  OT1/cmr/bx/n --> OT1/ptm/bx/n on input line 34.
+LaTeX Font Info:    Redeclaring math alphabet \mathit on input line 35.
+LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `normal'
+(Font)                  OT1/cmr/m/it --> OT1/ptm/m/it on input line 35.
+LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `bold'
+(Font)                  OT1/cmr/bx/it --> OT1/ptm/m/it on input line 35.
+LaTeX Info: Redefining \hbar on input line 50.
+)
+(/usr/local/texlive/2015/texmf-dist/tex/latex/psnfss/helvet.sty
+Package: helvet 2005/04/12 PSNFSS-v9.2a (WaS) 
+)
+(/usr/local/texlive/2015/texmf-dist/tex/latex/psnfss/courier.sty
+Package: courier 2005/04/12 PSNFSS-v9.2a (WaS) 
+)
+(/usr/local/texlive/2015/texmf-dist/tex/latex/sectsty/sectsty.sty
+Package: sectsty 2002/02/25 v2.0.2 Commands to change all sectional heading sty
+les
+)
+(/usr/local/texlive/2015/texmf-dist/tex/latex/tocloft/tocloft.sty
+Package: tocloft 2013/05/02 v2.3f parameterised ToC, etc., typesetting
+Package tocloft Info: The document has chapter divisions on input line 44.
+\cftparskip=\skip51
+\cftbeforetoctitleskip=\skip52
+\cftaftertoctitleskip=\skip53
+\cftbeforepartskip=\skip54
+\cftpartnumwidth=\skip55
+\cftpartindent=\skip56
+\cftbeforechapskip=\skip57
+\cftchapindent=\skip58
+\cftchapnumwidth=\skip59
+\cftbeforesecskip=\skip60
+\cftsecindent=\skip61
+\cftsecnumwidth=\skip62
+\cftbeforesubsecskip=\skip63
+\cftsubsecindent=\skip64
+\cftsubsecnumwidth=\skip65
+\cftbeforesubsubsecskip=\skip66
+\cftsubsubsecindent=\skip67
+\cftsubsubsecnumwidth=\skip68
+\cftbeforeparaskip=\skip69
+\cftparaindent=\skip70
+\cftparanumwidth=\skip71
+\cftbeforesubparaskip=\skip72
+\cftsubparaindent=\skip73
+\cftsubparanumwidth=\skip74
+\cftbeforeloftitleskip=\skip75
+\cftafterloftitleskip=\skip76
+\cftbeforefigskip=\skip77
+\cftfigindent=\skip78
+\cftfignumwidth=\skip79
+\c@lofdepth=\count122
+\c@lotdepth=\count123
+\cftbeforelottitleskip=\skip80
+\cftafterlottitleskip=\skip81
+\cftbeforetabskip=\skip82
+\cfttabindent=\skip83
+\cfttabnumwidth=\skip84
+)
+(./doxygen.sty
+Package: doxygen 
+ (/usr/local/texlive/2015/texmf-dist/tex/latex/tools/calc.sty
+Package: calc 2014/10/28 v4.3 Infix arithmetic (KKT,FJ)
+\calc@Acount=\count124
+\calc@Bcount=\count125
+\calc@Adimen=\dimen132
+\calc@Bdimen=\dimen133
+\calc@Askip=\skip85
+\calc@Bskip=\skip86
+LaTeX Info: Redefining \setlength on input line 80.
+LaTeX Info: Redefining \addtolength on input line 81.
+\calc@Ccount=\count126
+\calc@Cskip=\skip87
+)
+(/usr/local/texlive/2015/texmf-dist/tex/latex/fancyhdr/fancyhdr.sty
+\fancy@headwidth=\skip88
+\f@ncyO@elh=\skip89
+\f@ncyO@erh=\skip90
+\f@ncyO@olh=\skip91
+\f@ncyO@orh=\skip92
+\f@ncyO@elf=\skip93
+\f@ncyO@erf=\skip94
+\f@ncyO@olf=\skip95
+\f@ncyO@orf=\skip96
+)
+(/usr/local/texlive/2015/texmf-dist/tex/latex/tools/longtable.sty
+Package: longtable 2014/10/28 v4.11 Multi-page Table package (DPC)
+\LTleft=\skip97
+\LTright=\skip98
+\LTpre=\skip99
+\LTpost=\skip100
+\LTchunksize=\count127
+\LTcapwidth=\dimen134
+\LT@head=\box56
+\LT@firsthead=\box57
+\LT@foot=\box58
+\LT@lastfoot=\box59
+\LT@cols=\count128
+\LT@rows=\count129
+\c@LT@tables=\count130
+\c@LT@chunks=\count131
+\LT@p@ftn=\toks23
+)
+(/usr/local/texlive/2015/texmf-dist/tex/latex/tools/verbatim.sty
+Package: verbatim 2014/10/28 v1.5q LaTeX2e package for verbatim enhancements
+\every@verbatim=\toks24
+\verbatim@line=\toks25
+\verbatim@in@stream=\read1
+)
+(/usr/local/texlive/2015/texmf-dist/tex/latex/xtab/xtab.sty
+Package: xtab 2011/07/31 v2.3f Extended supertabular package
+\c@tracingst=\count132
+\PWSTcapht=\dimen135
+\ST@wd=\dimen136
+\ST@rightskip=\skip101
+\ST@leftskip=\skip102
+\ST@parfillskip=\skip103
+\c@PWSTtable=\count133
+\PWSTlastpage=\count134
+\PWSTpenultimate=\count135
+\PWSTcurpage=\count136
+\PWSTtempc=\count137
+\PWSTlines=\count138
+\PWST@lastht=\dimen137
+\PWST@generalht=\dimen138
+\PWST@ht=\dimen139
+\ST@pageleft=\dimen140
+\ST@headht=\dimen141
+\ST@tailht=\dimen142
+\ST@pagesofar=\dimen143
+\ST@pboxht=\dimen144
+\ST@lineht=\dimen145
+\ST@stretchht=\dimen146
+\ST@prevht=\dimen147
+\ST@toadd=\dimen148
+\ST@dimen=\dimen149
+\ST@pbox=\box60
+)
+(/usr/local/texlive/2015/texmf-dist/tex/latex/multirow/multirow.sty
+\bigstrutjot=\dimen150
+)
+\tmplength=\skip104
+\xrefbox=\box61
+\xreflength=\skip105
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/base/fontenc.sty
+Package: fontenc 2005/09/27 v1.99g Standard LaTeX package
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/base/t1enc.def
+File: t1enc.def 2005/09/27 v1.99g Standard LaTeX file
+LaTeX Font Info:    Redeclaring font encoding T1 on input line 48.
+)))
+(/usr/local/texlive/2015/texmf-dist/tex/latex/listings/lstlang1.sty
+File: lstlang1.sty 2014/09/06 1.5e listings language file
+)
+(/usr/local/texlive/2015/texmf-dist/tex/latex/listings/lstlang1.sty
+File: lstlang1.sty 2014/09/06 1.5e listings language file
+)
+(/usr/local/texlive/2015/texmf-dist/tex/latex/listings/lstmisc.sty
+File: lstmisc.sty 2014/09/06 1.5e (Carsten Heinz)
+)
+\@indexfile=\write3
+\openout3 = `refman.idx'.
+
+
+Writing index file refman.idx
+(./refman.aux (./group__matmap__group1.aux) (./group__matmap__group11.aux)
+(./group__matmap__group12.aux) (./group__matmap__group12a.aux)
+(./group__matmap__group12b.aux) (./group__matmap__group2.aux)
+(./group__matmap__group21.aux) (./group__matmap__group22.aux)
+(./group__toeplitz.aux) (./group__group1.aux) (./group__wizard.aux)
+(./group__group11.aux) (./group__group12.aux) (./group__group2.aux)
+(./group__group21.aux) (./group__group22.aux)
+
+LaTeX Warning: Label `alm_8c' multiply defined.
+
+
+LaTeX Warning: Label `alm_8h' multiply defined.
+
+
+LaTeX Warning: Label `als_8c' multiply defined.
+
+
+LaTeX Warning: Label `als_8h' multiply defined.
+
+
+LaTeX Warning: Label `bitop_8c' multiply defined.
+
+
+LaTeX Warning: Label `bitop_8h' multiply defined.
+
+
+LaTeX Warning: Label `butterfly_8c' multiply defined.
+
+
+LaTeX Warning: Label `butterfly_8h' multiply defined.
+
+
+LaTeX Warning: Label `butterfly__extra_8c' multiply defined.
+
+
+LaTeX Warning: Label `butterfly__extra_8h' multiply defined.
+
+
+LaTeX Warning: Label `cindex_8c' multiply defined.
+
+
+LaTeX Warning: Label `cindex_8h' multiply defined.
+
+
+LaTeX Warning: Label `csort_8c' multiply defined.
+
+
+LaTeX Warning: Label `csort_8h' multiply defined.
+
+
+LaTeX Warning: Label `mapmat_8c' multiply defined.
+
+
+LaTeX Warning: Label `mapmat_8h' multiply defined.
+
+
+LaTeX Warning: Label `mapmatc_8c' multiply defined.
+
+
+LaTeX Warning: Label `mapmatc_8h' multiply defined.
+
+
+LaTeX Warning: Label `ring_8c' multiply defined.
+
+
+LaTeX Warning: Label `ring_8h' multiply defined.
+
+
+LaTeX Warning: Label `toeplitz_8c' multiply defined.
+
+
+LaTeX Warning: Label `toeplitz_8h' multiply defined.
+
+
+LaTeX Warning: Label `toeplitz__block_8c' multiply defined.
+
+
+LaTeX Warning: Label `toeplitz__devtools_8c' multiply defined.
+
+
+LaTeX Warning: Label `toeplitz__gappy_8c' multiply defined.
+
+
+LaTeX Warning: Label `toeplitz__gappy__seq_8dev_8c' multiply defined.
+
+
+LaTeX Warning: Label `toeplitz__gappy__seq_8dev_8h' multiply defined.
+
+
+LaTeX Warning: Label `toeplitz__nofft_8c' multiply defined.
+
+
+LaTeX Warning: Label `toeplitz__params_8c' multiply defined.
+
+
+LaTeX Warning: Label `toeplitz__rshp_8c' multiply defined.
+
+
+LaTeX Warning: Label `toeplitz__seq_8c' multiply defined.
+
+
+LaTeX Warning: Label `toeplitz__utils_8c' multiply defined.
+
+
+LaTeX Warning: Label `toeplitz__wizard_8c' multiply defined.
+
+
+LaTeX Warning: Label `truebutterfly_8c' multiply defined.
+
+)
+\openout1 = `refman.aux'.
+
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 47.
+LaTeX Font Info:    ... okay on input line 47.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 47.
+LaTeX Font Info:    ... okay on input line 47.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 47.
+LaTeX Font Info:    ... okay on input line 47.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 47.
+LaTeX Font Info:    ... okay on input line 47.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 47.
+LaTeX Font Info:    ... okay on input line 47.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 47.
+LaTeX Font Info:    ... okay on input line 47.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 47.
+LaTeX Font Info:    Try loading font information for TS1+cmr on input line 47.
+ (/usr/local/texlive/2015/texmf-dist/tex/latex/base/ts1cmr.fd
+File: ts1cmr.fd 2014/09/29 v2.5h Standard LaTeX font definitions
+)
+LaTeX Font Info:    ... okay on input line 47.
+LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 47.
+LaTeX Font Info:    ... okay on input line 47.
+LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 47.
+LaTeX Font Info:    ... okay on input line 47.
+LaTeX Font Info:    Try loading font information for T1+phv on input line 47.
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/psnfss/t1phv.fd
+File: t1phv.fd 2001/06/04 scalable font definitions for T1/phv.
+)
+LaTeX Font Info:    Font shape `T1/phv/m/n' will be
+(Font)              scaled to size 8.99994pt on input line 47.
+
+*geometry* driver: auto-detecting
+*geometry* detected driver: pdftex
+*geometry* verbose mode - [ preamble ] result:
+* driver: pdftex
+* paper: a4paper
+* layout: <same size as paper>
+* layoutoffset:(h,v)=(0.0pt,0.0pt)
+* modes: twoside 
+* h-part:(L,W,R)=(71.13188pt, 455.24411pt, 71.13188pt)
+* v-part:(T,H,B)=(71.13188pt, 702.78308pt, 71.13188pt)
+* \paperwidth=597.50787pt
+* \paperheight=845.04684pt
+* \textwidth=455.24411pt
+* \textheight=702.78308pt
+* \oddsidemargin=-1.1381pt
+* \evensidemargin=-1.1381pt
+* \topmargin=-31.2056pt
+* \headheight=12.0pt
+* \headsep=18.06749pt
+* \topskip=10.0pt
+* \footskip=25.29494pt
+* \marginparwidth=125.0pt
+* \marginparsep=7.0pt
+* \columnsep=10.0pt
+* \skip\footins=9.0pt plus 4.0pt minus 2.0pt
+* \hoffset=0.0pt
+* \voffset=0.0pt
+* \mag=1000
+* \@twocolumnfalse
+* \@twosidetrue
+* \@mparswitchtrue
+* \@reversemarginfalse
+* (1in=72.27pt=25.4mm, 1cm=28.453pt)
+
+(/usr/local/texlive/2015/texmf-dist/tex/context/base/supp-pdf.mkii
+[Loading MPS to PDF converter (version 2006.09.02).]
+\scratchcounter=\count139
+\scratchdimen=\dimen151
+\scratchbox=\box62
+\nofMPsegments=\count140
+\nofMParguments=\count141
+\everyMPshowfont=\toks26
+\MPscratchCnt=\count142
+\MPscratchDim=\dimen152
+\MPnumerator=\count143
+\makeMPintoPDFobject=\count144
+\everyMPtoPDFconversion=\toks27
+) (/usr/local/texlive/2015/texmf-dist/tex/latex/oberdiek/epstopdf-base.sty
+Package: epstopdf-base 2010/02/09 v2.5 Base part for package epstopdf
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/oberdiek/grfext.sty
+Package: grfext 2010/08/19 v1.1 Manage graphics extensions (HO)
+)
+Package grfext Info: Graphics extension search list:
+(grfext)             [.png,.pdf,.jpg,.mps,.jpeg,.jbig2,.jb2,.PNG,.PDF,.JPG,.JPE
+G,.JBIG2,.JB2,.eps]
+(grfext)             \AppendGraphicsExtensions on input line 452.
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/latexconfig/epstopdf-sys.cfg
+File: epstopdf-sys.cfg 2010/07/13 v1.3 Configuration of (r)epstopdf for TeX Liv
+e
+))
+\c@lstlisting=\count145
+\AtBeginShipoutBox=\box63
+Package backref Info: ** backref set up for natbib ** on input line 47.
+Package hyperref Info: Link coloring ON on input line 47.
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/hyperref/nameref.sty
+Package: nameref 2012/10/27 v2.43 Cross-referencing by name of section
+
+(/usr/local/texlive/2015/texmf-dist/tex/generic/oberdiek/gettitlestring.sty
+Package: gettitlestring 2010/12/03 v1.4 Cleanup title references (HO)
+)
+\c@section@level=\count146
+)
+LaTeX Info: Redefining \ref on input line 47.
+LaTeX Info: Redefining \pageref on input line 47.
+LaTeX Info: Redefining \nameref on input line 47.
+
+(./refman.out) (./refman.out)
+\@outlinefile=\write4
+\openout4 = `refman.out'.
+
+\big@size=\dimen153
+Package hyperref Info: Option `pageanchor' set `false' on input line 48.
+LaTeX Font Info:    Font shape `T1/phv/m/n' will be
+(Font)              scaled to size 12.9599pt on input line 52.
+LaTeX Font Info:    Font shape `T1/phv/m/n' will be
+(Font)              scaled to size 10.79993pt on input line 52.
+LaTeX Font Info:    Font shape `T1/phv/m/n' will be
+(Font)              scaled to size 8.09995pt on input line 56.
+ [1
+
+
+{/usr/local/texlive/2015/texmf-var/fonts/map/pdftex/updmap/pdftex.map}] [2
+
+]
+LaTeX Font Info:    Font shape `T1/phv/m/n' will be
+(Font)              scaled to size 22.39185pt on input line 61.
+LaTeX Font Info:    Font shape `T1/phv/bx/n' in size <24.88> not available
+(Font)              Font shape `T1/phv/b/n' tried instead on input line 61.
+LaTeX Font Info:    Font shape `T1/phv/b/n' will be
+(Font)              scaled to size 22.39185pt on input line 61.
+LaTeX Font Info:    Try loading font information for OT1+phv on input line 61.
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/psnfss/ot1phv.fd
+File: ot1phv.fd 2001/06/04 scalable font definitions for OT1/phv.
+)
+LaTeX Font Info:    Font shape `OT1/phv/bc/n' will be
+(Font)              scaled to size 22.39185pt on input line 61.
+ (./refman.toc
+LaTeX Font Info:    Font shape `T1/phv/bx/n' in size <10> not available
+(Font)              Font shape `T1/phv/b/n' tried instead on input line 1.
+LaTeX Font Info:    Font shape `T1/phv/b/n' will be
+(Font)              scaled to size 8.99994pt on input line 1.
+LaTeX Font Info:    Try loading font information for OT1+ztmcm on input line 1.
+
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/psnfss/ot1ztmcm.fd
+File: ot1ztmcm.fd 2000/01/03 Fontinst v1.801 font definitions for OT1/ztmcm.
+)
+LaTeX Font Info:    Try loading font information for OML+ztmcm on input line 1.
+
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/psnfss/omlztmcm.fd
+File: omlztmcm.fd 2000/01/03 Fontinst v1.801 font definitions for OML/ztmcm.
+)
+LaTeX Font Info:    Try loading font information for OMS+ztmcm on input line 1.
+
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/psnfss/omsztmcm.fd
+File: omsztmcm.fd 2000/01/03 Fontinst v1.801 font definitions for OMS/ztmcm.
+)
+LaTeX Font Info:    Try loading font information for OMX+ztmcm on input line 1.
+
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/psnfss/omxztmcm.fd
+File: omxztmcm.fd 2000/01/03 Fontinst v1.801 font definitions for OMX/ztmcm.
+)
+LaTeX Font Info:    Try loading font information for OT1+ptm on input line 1.
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/psnfss/ot1ptm.fd
+File: ot1ptm.fd 2001/06/04 font definitions for OT1/ptm.
+)
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <10> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 1.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <7.4> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 1.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <6> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 1.
+ [1
+
+]
+LaTeX Font Info:    Font shape `T1/phv/bx/n' in size <7> not available
+(Font)              Font shape `T1/phv/b/n' tried instead on input line 66.
+LaTeX Font Info:    Font shape `T1/phv/b/n' will be
+(Font)              scaled to size 6.29996pt on input line 66.
+ [2]
+[3] [4] [5] [6] [7] [8] [9] [10] [11] [12] [13])
+\tf@toc=\write5
+\openout5 = `refman.toc'.
+
+ [14]
+Package hyperref Info: Option `pageanchor' set `true' on input line 64.
+
+Chapter 1.
+LaTeX Font Info:    Font shape `T1/phv/m/n' will be
+(Font)              scaled to size 18.66588pt on input line 65.
+LaTeX Font Info:    Font shape `T1/phv/bx/n' in size <20.74> not available
+(Font)              Font shape `T1/phv/b/n' tried instead on input line 65.
+LaTeX Font Info:    Font shape `T1/phv/b/n' will be
+(Font)              scaled to size 18.66588pt on input line 65.
+LaTeX Font Info:    Font shape `OT1/phv/bc/n' will be
+(Font)              scaled to size 18.66588pt on input line 65.
+(./index.tex
+LaTeX Font Info:    Try loading font information for T1+pcr on input line 5.
+ (/usr/local/texlive/2015/texmf-dist/tex/latex/psnfss/t1pcr.fd
+File: t1pcr.fd 2001/06/04 font definitions for T1/pcr.
+)
+LaTeX Font Info:    Try loading font information for TS1+phv on input line 11.
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/psnfss/ts1phv.fd
+File: ts1phv.fd 2001/06/04 scalable font definitions for TS1/phv.
+)
+LaTeX Font Info:    Font shape `TS1/phv/m/n' will be
+(Font)              scaled to size 8.99994pt on input line 11.
+) [1
+
+
+] [2
+
+]
+Chapter 2.
+(./pointing.tex
+LaTeX Font Info:    Font shape `T1/phv/bx/n' in size <14.4> not available
+(Font)              Font shape `T1/phv/b/n' tried instead on input line 7.
+LaTeX Font Info:    Font shape `T1/phv/b/n' will be
+(Font)              scaled to size 12.9599pt on input line 7.
+LaTeX Font Info:    Font shape `OT1/phv/bc/n' will be
+(Font)              scaled to size 12.9599pt on input line 7.
+LaTeX Font Info:    Font shape `T1/phv/bx/n' in size <12> not available
+(Font)              Font shape `T1/phv/b/n' tried instead on input line 8.
+LaTeX Font Info:    Font shape `T1/phv/b/n' will be
+(Font)              scaled to size 10.79993pt on input line 8.
+LaTeX Font Info:    Font shape `OT1/phv/bc/n' will be
+(Font)              scaled to size 10.79993pt on input line 8.
+ [3] [4]
+
+Package hyperref Warning: Suppressing link with empty target on input line 39.
+
+LaTeX Font Info:    Font shape `T1/phv/m/n' will be
+(Font)              scaled to size 6.29996pt on input line 77.
+[5]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [6])
+[7] [8
+
+]
+Chapter 3.
+(./sect_team.tex) [9] [10
+
+]
+Chapter 4.
+(./sect_ackno.tex) [11] [12
+
+]
+Chapter 5.
+(./page_license.tex) [13] [14
+
+]
+Chapter 6.
+(./page_install.tex) [15] [16
+
+]
+Chapter 7.
+(./sect_bugreporting.tex) [17] [18
+
+]
+Chapter 8.
+(./toeplitz.tex [19] [20]
+LaTeX Font Info:    Font shape `OT1/phv/bc/n' will be
+(Font)              scaled to size 8.99994pt on input line 46.
+LaTeX Font Info:    Font shape `T1/phv/m/it' in size <10> not available
+(Font)              Font shape `T1/phv/m/sl' tried instead on input line 57.
+LaTeX Font Info:    Font shape `T1/phv/m/sl' will be
+(Font)              scaled to size 8.99994pt on input line 57.
+
+Underfull \vbox (badness 1009) has occurred while \output is active []
+
+ [21]
+[22] [23] [24]) [25] [26
+
+]
+Chapter 9.
+(./todo.tex) [27] [28
+
+]
+Chapter 10.
+(./modules.tex) [29] [30
+
+]
+Chapter 11.
+(./annotated.tex
+Runaway argument?
+{\hyperlink {structCMat}{C\-Mat} \\*Matrix structure 
+! Paragraph ended before \contentsline was complete.
+<to be read again> 
+                   \par 
+l.4 ...tructCMat}{C\-Mat} \\*Matrix structure \par
+                                                  
+? q
+OK, entering \batchmode...
+! Extra }, or forgotten \endgroup.
+l.5 ...$ $|$ A1$\ast$ $|$ ... $|$ Ap-\/1$\ast$ ) }
+                                                  {\pageref{structCMat}}{}
+I've deleted a group-closing symbol because it seems to be
+spurious, as in `$x}$'. But perhaps the } is legitimate and
+you forgot something else, as in `\hbox{$x}'. In such cases
+the way to recover is to insert both the forgotten and the
+deleted material, e.g., by typing `I$}'.
+
+Runaway argument?
+{\hyperlink {structMat}{Mat} \\*Matrix structure 
+! Paragraph ended before \contentsline was complete.
+<to be read again> 
+                   \par 
+l.8 ...nk{structMat}{Mat} \\*Matrix structure \par
+                                                  
+I suspect you've forgotten a `}', causing me to apply this
+control sequence to too much text. How can we recover?
+My plan is to forget the whole thing and hope for the best.
+
+! Extra }, or forgotten \endgroup.
+l.9 ...$ $|$ A1$\ast$ $|$ ... $|$ Ap-\/1$\ast$ ) }
+                                                  {\pageref{structMat}}{}
+I've deleted a group-closing symbol because it seems to be
+spurious, as in `$x}$'. But perhaps the } is legitimate and
+you forgot something else, as in `\hbox{$x}'. In such cases
+the way to recover is to insert both the forgotten and the
+deleted material, e.g., by typing `I$}'.
+
+) [31] [32
+
+]
+Chapter 12.
+ (./files.tex
+Runaway argument?
+{\hyperlink {mapmat_8h}{mapmat.\-h} \\*{\bfseries Declarations of the\ETC.
+! Paragraph ended before \contentsline was complete.
+<to be read again> 
+                   \par 
+l.18 ...ix type and his associated routines.} \par
+                                                  
+I suspect you've forgotten a `}', causing me to apply this
+control sequence to too much text. How can we recover?
+My plan is to forget the whole thing and hope for the best.
+
+! Extra }, or forgotten \endgroup.
+l.19 ... be done without redefining a new matrix }
+                                                  {\pageref{mapmat_8h}}{}
+I've deleted a group-closing symbol because it seems to be
+spurious, as in `$x}$'. But perhaps the } is legitimate and
+you forgot something else, as in `\hbox{$x}'. In such cases
+the way to recover is to insert both the forgotten and the
+deleted material, e.g., by typing `I$}'.
+
+ [33]) [34]
+Chapter 13.
+ (./group__matmap.tex) [35
+
+]
+\openout2 = `group__matmap__group1.aux'.
+
+ (./group__matmap__group1.tex) [36
+
+]
+\openout2 = `group__matmap__group11.aux'.
+
+ (./group__matmap__group11.tex
+LaTeX Font Info:    Font shape `T1/phv/m/it' in size <9> not available
+(Font)              Font shape `T1/phv/m/sl' tried instead on input line 26.
+LaTeX Font Info:    Font shape `T1/phv/m/sl' will be
+(Font)              scaled to size 8.09995pt on input line 26.
+LaTeX Font Info:    Font shape `OT1/phv/bc/it' in size <10> not available
+(Font)              Font shape `OT1/phv/bc/sl' tried instead on input line 45.
+LaTeX Font Info:    Font shape `OT1/phv/bc/sl' will be
+(Font)              scaled to size 8.99994pt on input line 45.
+
+Underfull \vbox (badness 10000) detected at line 75
+ []
+
+ [37
+
+
+]
+Underfull \vbox (badness 10000) detected at line 103
+ []
+
+
+Underfull \vbox (badness 10000) detected at line 131
+ []
+
+
+Underfull \vbox (badness 10000) detected at line 150
+ []
+
+ [38]
+Underfull \vbox (badness 10000) detected at line 177
+ []
+
+
+Underfull \vbox (badness 10000) detected at line 199
+ []
+
+ [39]
+Underfull \vbox (badness 10000) detected at line 278
+ []
+
+
+Underfull \vbox (badness 10000) detected at line 304
+ []
+
+) [40]
+\openout2 = `group__matmap__group12.aux'.
+
+ (./group__matmap__group12.tex) [41
+
+
+]
+\openout2 = `group__matmap__group12a.aux'.
+
+ (./group__matmap__group12a.tex
+Underfull \vbox (badness 10000) detected at line 33
+ []
+
+) [42
+
+
+]
+\openout2 = `group__matmap__group12b.aux'.
+
+ (./group__matmap__group12b.tex
+Underfull \vbox (badness 10000) detected at line 41
+ []
+
+) [43
+
+
+]
+\openout2 = `group__matmap__group2.aux'.
+
+ (./group__matmap__group2.tex) [44
+
+
+]
+\openout2 = `group__matmap__group21.aux'.
+
+ (./group__matmap__group21.tex) [45
+
+
+]
+\openout2 = `group__matmap__group22.aux'.
+
+ (./group__matmap__group22.tex [46
+
+
+]
+Underfull \vbox (badness 10000) detected at line 121
+ []
+
+ [47]
+Underfull \vbox (badness 10000) detected at line 149
+ []
+
+
+Underfull \vbox (badness 10000) detected at line 180
+ []
+
+
+Underfull \vbox (badness 10000) detected at line 211
+ []
+
+ [48]
+Underfull \vbox (badness 10000) detected at line 261
+ []
+
+
+Underfull \vbox (badness 10000) detected at line 308
+ []
+
+ [49]
+Underfull \vbox (badness 10000) detected at line 355
+ []
+
+
+Underfull \vbox (badness 10000) detected at line 402
+ []
+
+ [50]
+Underfull \vbox (badness 10000) detected at line 451
+ []
+
+
+Underfull \vbox (badness 10000) detected at line 479
+ []
+
+
+Underfull \vbox (badness 10000) detected at line 507
+ []
+
+ [51]
+Underfull \vbox (badness 10000) detected at line 541
+ []
+
+
+Underfull \vbox (badness 10000) detected at line 579
+ []
+
+ [52]
+Underfull \vbox (badness 10000) detected at line 628
+ []
+
+
+Underfull \vbox (badness 10000) detected at line 678
+ []
+
+ [53]
+Underfull \vbox (badness 10000) detected at line 726
+ []
+
+
+Underfull \vbox (badness 10000) detected at line 768
+ []
+
+
+Underfull \vbox (badness 10000) detected at line 816
+ []
+
+ [54]
+Underfull \vbox (badness 10000) detected at line 864
+ []
+
+
+Underfull \vbox (badness 10000) detected at line 914
+ []
+
+) [55] [56]
+\openout2 = `group__toeplitz.aux'.
+
+ (./group__toeplitz.tex) [57
+
+
+]
+\openout2 = `group__group1.aux'.
+
+ (./group__group1.tex) [58
+
+
+]
+\openout2 = `group__wizard.aux'.
+
+ (./group__wizard.tex) [59
+
+
+]
+\openout2 = `group__group11.aux'.
+
+ (./group__group11.tex
+Underfull \vbox (badness 10000) detected at line 73
+ []
+
+
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [60
+
+
+]
+Underfull \vbox (badness 10000) detected at line 108
+ []
+
+
+Underfull \vbox (badness 10000) detected at line 163
+ []
+
+
+Underfull \vbox (badness 10000) detected at line 195
+ []
+
+
+Overfull \vbox (13.81708pt too high) has occurred while \output is active []
+
+ [61]
+Underfull \vbox (badness 10000) detected at line 232
+ []
+
+
+Underfull \vbox (badness 10000) detected at line 295
+ []
+
+) [62]
+\openout2 = `group__group12.aux'.
+
+ (./group__group12.tex
+Underfull \vbox (badness 10000) detected at line 58
+ []
+
+ [63
+
+
+]
+Underfull \vbox (badness 10000) detected at line 123
+ []
+
+
+Underfull \vbox (badness 10000) detected at line 167
+ []
+
+) [64]
+\openout2 = `group__group2.aux'.
+
+ (./group__group2.tex) [65
+
+
+]
+\openout2 = `group__group21.aux'.
+
+ (./group__group21.tex [66
+
+
+]
+Underfull \vbox (badness 10000) detected at line 69
+ []
+
+
+Underfull \vbox (badness 10000) detected at line 95
+ []
+
+
+Underfull \vbox (badness 10000) detected at line 148
+ []
+
+ [67]
+Underfull \vbox (badness 10000) detected at line 180
+ []
+
+
+Underfull \vbox (badness 10000) detected at line 224
+ []
+
+ [68]
+Underfull \vbox (badness 10000) detected at line 271
+ []
+
+
+Underfull \vbox (badness 10000) detected at line 330
+ []
+
+
+Underfull \vbox (badness 1281) has occurred while \output is active []
+
+ [69]
+Underfull \vbox (badness 10000) detected at line 392
+ []
+
+
+Underfull \vbox (badness 10000) detected at line 442
+ []
+
+
+Overfull \vbox (4.32335pt too high) has occurred while \output is active []
+
+ [70]
+Underfull \vbox (badness 10000) detected at line 503
+ []
+
+
+Underfull \vbox (badness 10000) detected at line 523
+ []
+
+
+Underfull \vbox (badness 10000) detected at line 543
+ []
+
+ [71]
+Underfull \vbox (badness 10000) detected at line 563
+ []
+
+
+Underfull \vbox (badness 10000) detected at line 583
+ []
+
+) [72]
+\openout2 = `group__group22.aux'.
+
+ (./group__group22.tex
+Underfull \vbox (badness 10000) detected at line 42
+ []
+
+ [73
+
+
+]
+Underfull \vbox (badness 10000) detected at line 126
+ []
+
+LaTeX Font Info:    Font shape `T1/phv/m/n' will be
+(Font)              scaled to size 7.19995pt on input line 129.
+) [74]
+Chapter 14.
+ (./structBlock.tex) (./structCMat.tex [75
+
+
+] [76] [77]) (./structFlag.tex [78]) (./structGap.tex [79]) (./structMat.tex [8
+0] [81]) (./structTpltz.tex [82]) [83] [84
+
+]
+Chapter 15.
+ (./alm_8c.tex
+LaTeX Font Info:    Font shape `T1/phv/bx/it' in size <9> not available
+(Font)              Font shape `T1/phv/b/it' tried instead on input line 13.
+LaTeX Font Info:    Font shape `T1/phv/b/it' in size <9> not available
+(Font)              Font shape `T1/phv/b/sl' tried instead on input line 13.
+LaTeX Font Info:    Font shape `T1/phv/b/sl' will be
+(Font)              scaled to size 8.09995pt on input line 13.
+ [85]
+Underfull \vbox (badness 10000) detected at line 71
+ []
+
+
+Underfull \vbox (badness 10000) detected at line 101
+ []
+
+
+Underfull \vbox (badness 10000) detected at line 129
+ []
+
+ [86]
+Underfull \vbox (badness 10000) detected at line 157
+ []
+
+) (./alm_8c_source.texpdfTeX warning (ext4): destination with the same identifi
+er (name{alm_8c}) has been already used, duplicate ignored
+<to be read again> 
+                   \relax 
+l.3 }
+      [87]) (./alm_8h.tex [88]
+Underfull \vbox (badness 10000) detected at line 71
+ []
+
+ [89]
+Underfull \vbox (badness 10000) detected at line 81
+ []
+
+
+Underfull \vbox (badness 10000) detected at line 109
+ []
+
+
+Underfull \vbox (badness 10000) detected at line 137
+ []
+
+ [90]
+Underfull \vbox (badness 10000) detected at line 190
+ []
+
+) (./alm_8h_source.texpdfTeX warning (ext4): destination with the same identifi
+er (name{alm_8h}) has been already used, duplicate ignored
+<to be read again> 
+                   \relax 
+l.3 }
+     ) (./als_8c.tex [91]
+Underfull \vbox (badness 10000) detected at line 65
+ []
+
+ [92]
+Underfull \vbox (badness 10000) detected at line 90
+ []
+
+
+Underfull \vbox (badness 10000) detected at line 125
+ []
+
+
+Underfull \vbox (badness 10000) detected at line 153
+ []
+
+) (./als_8c_source.texpdfTeX warning (ext4): destination with the same identifi
+er (name{als_8c}) has been already used, duplicate ignored
+<to be read again> 
+                   \relax 
+l.3 }
+      [93] [94]) (./als_8h.tex [95]
+Underfull \vbox (badness 10000) detected at line 63
+ []
+
+ [96]
+Underfull \vbox (badness 10000) detected at line 88
+ []
+
+
+Underfull \vbox (badness 10000) detected at line 123
+ []
+
+
+Underfull \vbox (badness 10000) detected at line 151
+ []
+
+) (./als_8h_source.texpdfTeX warning (ext4): destination with the same identifi
+er (name{als_8h}) has been already used, duplicate ignored
+<to be read again> 
+                   \relax 
+l.3 }
+      [97]) (./bitop_8c.tex) (./bitop_8c_source.tex [98pdfTeX warning (ext4): d
+estination with the same identifier (name{bitop_8c}) has been already used, dup
+licate ignored
+
+\AtBegShi@Output ...ipout \box \AtBeginShipoutBox 
+                                                  \fi \fi 
+l.11 00009
+          ]) (./bitop_8h.tex) (./bitop_8h_source.tex) (./butterfly_8c.tex [99pd
+fTeX warning (ext4): destination with the same identifier (name{bitop_8h}) has 
+been already used, duplicate ignored
+
+\AtBegShi@Output ...ipout \box \AtBeginShipoutBox 
+                                                  \fi \fi 
+l.13 \begin{DoxyCompactList}\small\item\em
+                                           Initialize tables for butterfly-\...
+]) (./butterfly_8c_source.texpdfTeX warning (ext4): destination with the same i
+dentifier (name{butterfly_8c}) has been already used, duplicate ignored
+<to be read again> 
+                   \relax 
+l.3 }
+      [100]
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <7> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 43.
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <5> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 43.
+
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [101]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [102]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [103]) (./butterfly_8h.tex [104]) (./butterfly_8h_source.texpdfTeX warning (ex
+t4): destination with the same identifier (name{butterfly_8h}) has been already
+ used, duplicate ignored
+<to be read again> 
+                   \relax 
+l.3 }
+     ) (./butterfly__extra_8c.tex [105]) (./butterfly__extra_8c_source.texpdfTe
+X warning (ext4): destination with the same identifier (name{butterfly__extra_8
+c}) has been already used, duplicate ignored
+<to be read again> 
+                   \relax 
+l.3 }
+      [106]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [107]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [108]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [109]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [110]) (./butterfly__extra_8h.tex [111]) (./butterfly__extra_8h_source.texpdfT
+eX warning (ext4): destination with the same identifier (name{butterfly__extra_
+8h}) has been already used, duplicate ignored
+<to be read again> 
+                   \relax 
+l.3 }
+     ) (./cindex_8c.tex [112]
+Underfull \vbox (badness 10000) detected at line 58
+ []
+
+) (./cindex_8c_source.texpdfTeX warning (ext4): destination with the same ident
+ifier (name{cindex_8c}) has been already used, duplicate ignored
+<to be read again> 
+                   \relax 
+l.3 }
+      [113]) (./cindex_8h.tex [114]) (./cindex_8h_source.texpdfTeX warning (ext
+4): destination with the same identifier (name{cindex_8h}) has been already use
+d, duplicate ignored
+<to be read again> 
+                   \relax 
+l.3 }
+     ) (./csort_8c.tex [115]
+Underfull \vbox (badness 10000) detected at line 69
+ []
+
+
+Underfull \vbox (badness 10000) detected at line 94
+ []
+
+
+Underfull \vbox (badness 10000) detected at line 116
+ []
+
+ [116]
+Underfull \vbox (badness 10000) detected at line 138
+ []
+
+
+Underfull \vbox (badness 10000) detected at line 160
+ []
+
+) (./csort_8c_source.texpdfTeX warning (ext4): destination with the same identi
+fier (name{csort_8c}) has been already used, duplicate ignored
+<to be read again> 
+                   \relax 
+l.3 }
+      [117]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [118]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [119]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [120]) (./csort_8h.tex [121]) (./csort_8h_source.texpdfTeX warning (ext4): des
+tination with the same identifier (name{csort_8h}) has been already used, dupli
+cate ignored
+<to be read again> 
+                   \relax 
+l.3 }
+     ) (./mapmat_8c.tex [122]) (./mapmat_8c_source.texpdfTeX warning (ext4): de
+stination with the same identifier (name{mapmat_8c}) has been already used, dup
+licate ignored
+<to be read again> 
+                   \relax 
+l.3 }
+      [123]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [124]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [125]
+LaTeX Font Info:    Try loading font information for TS1+pcr on input line 179.
+
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/psnfss/ts1pcr.fd
+File: ts1pcr.fd 2001/06/04 font definitions for TS1/pcr.
+)
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [126]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [127]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [128]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [129]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [130]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [131]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [132]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [133]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [134]) (./mapmat_8dox.tex) (./mapmat_8h.tex
+Underfull \vbox (badness 1303) has occurred while \output is active []
+
+ [135]
+LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <9> not available
+(Font)              Font shape `OT1/ptm/b/n' tried instead on input line 15.
+) (./mapmat_8h_source.texpdfTeX warning (ext4): destination with the same ident
+ifier (name{mapmat_8h}) has been already used, duplicate ignored
+<to be read again> 
+                   \relax 
+l.3 }
+      [136]) (./mapmatc_8c.tex
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [137]) (./mapmatc_8c_source.texpdfTeX warning (ext4): destination with the sam
+e identifier (name{mapmatc_8c}) has been already used, duplicate ignored
+<to be read again> 
+                   \relax 
+l.3 }
+      [138]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [139]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [140]) (./mapmatc_8h.tex [141]) (./mapmatc_8h_source.texpdfTeX warning (ext4):
+ destination with the same identifier (name{mapmatc_8h}) has been already used,
+ duplicate ignored
+<to be read again> 
+                   \relax 
+l.3 }
+      [142]) (./midapack_8dox.tex) (./mkdoc_8dox.tex
+Underfull \vbox (badness 3735) has occurred while \output is active []
+
+ [143] [144]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [145]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [146] [147] [148] [149]
+LaTeX Font Info:    Try loading font information for OT1+pcr on input line 414.
+
+
+(/usr/local/texlive/2015/texmf-dist/tex/latex/psnfss/ot1pcr.fd
+File: ot1pcr.fd 2001/06/04 font definitions for OT1/pcr.
+)
+
+LaTeX Font Warning: Font shape `OT1/pcr/bc/n' undefined
+(Font)              using `OT1/pcr/m/n' instead on input line 414.
+
+Runaway argument?
+{\index {mkdoc.\-dox@{mkdoc.\-dox}!T\-Y\-P\-E\-D\-E\-F\-\_\-\-H\-I\-D\ETC.
+! Paragraph ended before \hypertarget was complete.
+<to be read again> 
+                   \par 
+l.461 
+      
+I suspect you've forgotten a `}', causing me to apply this
+control sequence to too much text. How can we recover?
+My plan is to forget the whole thing and hope for the best.
+
+! Too many }'s.
+l.462 ...-\-H\-I\-D\-E\-S\-\_\-\-S\-T\-R\-U\-C\-T}
+                                                  }\label{mkdoc_8dox_a588f15...
+You've closed more groups than you opened.
+Such booboos are generally harmless, so keep going.
+
+! Too many }'s.
+l.462 ...\-H\-I\-D\-E\-S\-\_\-\-S\-T\-R\-U\-C\-T}}
+                                                  \label{mkdoc_8dox_a588f152...
+You've closed more groups than you opened.
+Such booboos are generally harmless, so keep going.
+
+ [150] [151] [152] [153] [154] [155] [156]) (./ring_8c.tex [157] [158]) (./ring
+_8c_source.texpdfTeX warning (ext4): destination with the same identifier (name
+{ring_8c}) has been already used, duplicate ignored
+<to be read again> 
+                   \relax 
+l.3 }
+      [159]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [160]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [161]) (./ring_8h.tex [162]) (./ring_8h_source.texpdfTeX warning (ext4): desti
+nation with the same identifier (name{ring_8h}) has been already used, duplicat
+e ignored
+<to be read again> 
+                   \relax 
+l.3 }
+     ) (./toeplitz_8c.tex [163] [164] [165]) (./toeplitz_8c_source.texpdfTeX wa
+rning (ext4): destination with the same identifier (name{toeplitz_8c}) has been
+ already used, duplicate ignored
+<to be read again> 
+                   \relax 
+l.3 }
+      [166]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [167]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [168]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [169]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [170]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [171]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [172]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [173]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [174]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [175]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [176]) (./toeplitz_8dox.tex) (./toeplitz_8h.tex [177] [178] [179] [180]) (./to
+eplitz_8h_source.texpdfTeX warning (ext4): destination with the same identifier
+ (name{toeplitz_8h}) has been already used, duplicate ignored
+<to be read again> 
+                   \relax 
+l.3 }
+      [181]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [182]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [183]) (./toeplitz__block_8c.tex [184]) (./toeplitz__block_8c_source.texpdfTeX
+ warning (ext4): destination with the same identifier (name{toeplitz__block_8c}
+) has been already used, duplicate ignored
+<to be read again> 
+                   \relax 
+l.3 }
+      [185]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [186]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [187]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [188]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [189]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [190]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [191]) (./toeplitz__devtools_8c.tex
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [192] [193]) (./toeplitz__devtools_8c_source.texpdfTeX warning (ext4): destina
+tion with the same identifier (name{toeplitz__devtools_8c}) has been already us
+ed, duplicate ignored
+<to be read again> 
+                   \relax 
+l.3 }
+      [194]) (./toeplitz__gappy_8c.tex) (./toeplitz__gappy_8c_source.tex [195pd
+fTeX warning (ext4): destination with the same identifier (name{toeplitz__gappy
+_8c}) has been already used, duplicate ignored
+
+\AtBegShi@Output ...ipout \box \AtBeginShipoutBox 
+                                                  \fi \fi 
+l.21        under the terms}
+                            ]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [196]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [197]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [198]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [199]) (./toeplitz__gappy__seq_8dev_8c.tex
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [200]) (./toeplitz__gappy__seq_8dev_8c_source.texpdfTeX warning (ext4): destin
+ation with the same identifier (name{toeplitz__gappy__seq_8dev_8c}) has been al
+ready used, duplicate ignored
+<to be read again> 
+                   \relax 
+l.3 }
+      [201]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [202]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [203]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [204]) (./toeplitz__gappy__seq_8dev_8h.tex [205] [206]) (./toeplitz__gappy__se
+q_8dev_8h_source.texpdfTeX warning (ext4): destination with the same identifier
+ (name{toeplitz__gappy__seq_8dev_8h}) has been already used, duplicate ignored
+<to be read again> 
+                   \relax 
+l.3 }
+      [207]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [208]) (./toeplitz__nofft_8c.tex [209]) (./toeplitz__nofft_8c_source.texpdfTeX
+ warning (ext4): destination with the same identifier (name{toeplitz__nofft_8c}
+) has been already used, duplicate ignored
+<to be read again> 
+                   \relax 
+l.3 }
+      [210]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [211]) (./toeplitz__params_8c.tex [212]) (./toeplitz__params_8c_source.texpdfT
+eX warning (ext4): destination with the same identifier (name{toeplitz__params_
+8c}) has been already used, duplicate ignored
+<to be read again> 
+                   \relax 
+l.3 }
+      [213]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [214]) (./toeplitz__rshp_8c.tex [215] [216]) (./toeplitz__rshp_8c_source.texpd
+fTeX warning (ext4): destination with the same identifier (name{toeplitz__rshp_
+8c}) has been already used, duplicate ignored
+<to be read again> 
+                   \relax 
+l.3 }
+      [217]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [218]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [219]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [220]) (./toeplitz__seq_8c.tex [221]) (./toeplitz__seq_8c_source.texpdfTeX war
+ning (ext4): destination with the same identifier (name{toeplitz__seq_8c}) has 
+been already used, duplicate ignored
+<to be read again> 
+                   \relax 
+l.3 }
+      [222]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [223]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [224]) (./toeplitz__utils_8c.tex [225] [226]) (./toeplitz__utils_8c_source.tex
+pdfTeX warning (ext4): destination with the same identifier (name{toeplitz__uti
+ls_8c}) has been already used, duplicate ignored
+<to be read again> 
+                   \relax 
+l.3 }
+      [227]) (./toeplitz__wizard_8c.tex [228] [229]) (./toeplitz__wizard_8c_sou
+rce.texpdfTeX warning (ext4): destination with the same identifier (name{toepli
+tz__wizard_8c}) has been already used, duplicate ignored
+<to be read again> 
+                   \relax 
+l.3 }
+      [230]) (./truebutterfly_8c.tex) (./truebutterfly_8c_source.tex [231pdfTeX
+ warning (ext4): destination with the same identifier (name{truebutterfly_8c}) 
+has been already used, duplicate ignored
+
+\AtBegShi@Output ...ipout \box \AtBeginShipoutBox 
+                                                  \fi \fi 
+l.7 00009 \textcolor{preprocessor}{#ifdef W\_MPI}
+                                                 ]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [232]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [233]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [234])
+No file refman.ind.
+Package atveryend Info: Empty hook `BeforeClearDocument' on input line 204.
+ [235]
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 204.
+ (./refman.aux (./group__matmap__group1.aux) (./group__matmap__group11.aux) (./
+group__matmap__group12.aux) (./group__matmap__group12a.aux) (./group__matmap__g
+roup12b.aux) (./group__matmap__group2.aux) (./group__matmap__group21.aux) (./gr
+oup__matmap__group22.aux) (./group__toeplitz.aux) (./group__group1.aux) (./grou
+p__wizard.aux) (./group__group11.aux) (./group__group12.aux) (./group__group2.a
+ux) (./group__group21.aux) (./group__group22.aux))
+Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 204.
+Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 204.
+Package rerunfilecheck Info: File `refman.out' has not changed.
+(rerunfilecheck)             Checksum: B75E7FC88E9BF24F46E5A89DAF1E822A;76291.
+
+LaTeX Font Warning: Some font shapes were not available, defaults substituted.
+
+
+LaTeX Warning: There were multiply-defined labels.
+
+Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 204.
+ ) 
+Here is how much of TeX's memory you used:
+ 16299 strings out of 493089
+ 256646 string characters out of 6134841
+ 324270 words of memory out of 5000000
+ 17699 multiletter control sequences out of 15000+600000
+ 85812 words of font info for 124 fonts, out of 8000000 for 9000
+ 1141 hyphenation exceptions out of 8191
+ 41i,13n,58p,1265b,560s stack positions out of 5000i,500n,10000p,200000b,80000s
+pdfTeX warning (dest): name{toeplitz__utils_8c_source} has been referenced bu
+t does not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{toeplitz__rshp_8c_source} has been referenced but d
+oes not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{toeplitz__devtools_8c_source} has been referenced b
+ut does not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{ring_8h_source} has been referenced but does not ex
+ist, replaced by a fixed one
+
+pdfTeX warning (dest): name{mkdoc_8dox_source_l00256} has been referenced but d
+oes not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{mkdoc_8dox_source_l00249} has been referenced but d
+oes not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{mkdoc_8dox_source_l00234} has been referenced but d
+oes not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{mkdoc_8dox_source_l00229} has been referenced but d
+oes not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{mkdoc_8dox_source_l00197} has been referenced but d
+oes not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{mkdoc_8dox_source_l00190} has been referenced but d
+oes not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{mkdoc_8dox_source_l00183} has been referenced but d
+oes not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{mkdoc_8dox_source_l00169} has been referenced but d
+oes not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{mkdoc_8dox_source_l00149} has been referenced but d
+oes not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{mkdoc_8dox_source_l00141} has been referenced but d
+oes not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{mkdoc_8dox_source_l00133} has been referenced but d
+oes not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{mkdoc_8dox_source_l00127} has been referenced but d
+oes not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{mkdoc_8dox_source_l00103} has been referenced but d
+oes not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{mkdoc_8dox_source_l00090} has been referenced but d
+oes not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{mkdoc_8dox_source_l00078} has been referenced but d
+oes not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{mkdoc_8dox_source_l00064} has been referenced but d
+oes not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{mkdoc_8dox_source_l00051} has been referenced but d
+oes not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{mkdoc_8dox_source_l00042} has been referenced but d
+oes not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{mkdoc_8dox_source_l00023} has been referenced but d
+oes not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{mkdoc_8dox_source_l00361} has been referenced but d
+oes not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{mkdoc_8dox_source_l00354} has been referenced but d
+oes not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{mkdoc_8dox_source_l00347} has been referenced but d
+oes not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{mkdoc_8dox_source_l00340} has been referenced but d
+oes not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{mkdoc_8dox_source_l00332} has been referenced but d
+oes not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{mkdoc_8dox_source_l00324} has been referenced but d
+oes not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{mkdoc_8dox_source_l00266} has been referenced but d
+oes not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{mkdoc_8dox_source} has been referenced but does not
+ exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{mkdoc_8dox_source_l00264} has been referenced but d
+oes not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{mkdoc_8dox_a588f1527029611acb900d62c540e1007} has b
+een referenced but does not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{mapmatc_8c_source} has been referenced but does not
+ exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{csort_8h_source} has been referenced but does not e
+xist, replaced by a fixed one
+
+pdfTeX warning (dest): name{cindex_8h_source} has been referenced but does not 
+exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{butterfly_8h_source} has been referenced but does n
+ot exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{bitop_8c_source} has been referenced but does not e
+xist, replaced by a fixed one
+
+pdfTeX warning (dest): name{als_8h_source} has been referenced but does not exi
+st, replaced by a fixed one
+
+pdfTeX warning (dest): name{alm_8h_source} has been referenced but does not exi
+st, replaced by a fixed one
+
+pdfTeX warning (dest): name{mapmat_8h_source} has been referenced but does not 
+exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{mapmatc_8h_source} has been referenced but does not
+ exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{toeplitz_8h_source} has been referenced but does no
+t exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{toeplitz__block_8c_source} has been referenced but 
+does not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{toeplitz__params_8c_source} has been referenced but
+ does not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{toeplitz__nofft_8c_source} has been referenced but 
+does not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{toeplitz__seq_8c_source} has been referenced but do
+es not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{toeplitz__gappy__seq_8dev_8c_source} has been refer
+enced but does not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{toeplitz__gappy_8c_source} has been referenced but 
+does not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{toeplitz_8c_source} has been referenced but does no
+t exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{toeplitz__wizard_8c_source} has been referenced but
+ does not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{truebutterfly_8c_source} has been referenced but do
+es not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{ring_8c_source} has been referenced but does not ex
+ist, replaced by a fixed one
+
+pdfTeX warning (dest): name{csort_8c_source} has been referenced but does not e
+xist, replaced by a fixed one
+
+pdfTeX warning (dest): name{cindex_8c_source} has been referenced but does not 
+exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{butterfly__extra_8c_source} has been referenced but
+ does not exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{butterfly_8c_source} has been referenced but does n
+ot exist, replaced by a fixed one
+
+pdfTeX warning (dest): name{als_8c_source} has been referenced but does not exi
+st, replaced by a fixed one
+
+pdfTeX warning (dest): name{alm_8c_source} has been referenced but does not exi
+st, replaced by a fixed one
+
+pdfTeX warning (dest): name{mapmat_8c_source} has been referenced but does not 
+exist, replaced by a fixed one
+
+{/usr/local/texlive/2015/texmf-dist/fonts/enc/dvips/base/8r.enc}</usr/local/tex
+live/2015/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></usr/local/texl
+ive/2015/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></usr/local/texli
+ve/2015/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/local/texlive
+/2015/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/local/texlive/
+2015/texmf-dist/fonts/type1/public/rsfs/rsfs10.pfb></usr/local/texlive/2015/tex
+mf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/local/texlive/2015/texmf-dist/
+fonts/type1/urw/helvetic/uhvb8a.pfb></usr/local/texlive/2015/texmf-dist/fonts/t
+ype1/urw/helvetic/uhvb8ac.pfb></usr/local/texlive/2015/texmf-dist/fonts/type1/u
+rw/helvetic/uhvbo8a.pfb></usr/local/texlive/2015/texmf-dist/fonts/type1/urw/hel
+vetic/uhvbo8ac.pfb></usr/local/texlive/2015/texmf-dist/fonts/type1/urw/helvetic
+/uhvr8a.pfb></usr/local/texlive/2015/texmf-dist/fonts/type1/urw/helvetic/uhvro8
+a.pfb></usr/local/texlive/2015/texmf-dist/fonts/type1/urw/symbol/usyr.pfb></usr
+/local/texlive/2015/texmf-dist/fonts/type1/urw/symbol/usyr.pfb></usr/local/texl
+ive/2015/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/local/texlive/2015/t
+exmf-dist/fonts/type1/urw/times/utmri8a.pfb>
+Output written on refman.pdf (251 pages, 834716 bytes).
+PDF statistics:
+ 8090 PDF objects out of 8907 (max. 8388607)
+ 7740 compressed objects within 78 object streams
+ 1524 named destinations out of 1728 (max. 500000)
+ 4137 words of extra memory for PDF output out of 10000 (max. 10000000)
+

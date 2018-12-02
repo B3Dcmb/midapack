@@ -1,0 +1,154 @@
+\hypertarget{toeplitz__gappy__seq_8dev_8h}{\section{toeplitz\-\_\-gappy\-\_\-seq.\-dev.\-h}
+\label{toeplitz__gappy__seq_8dev_8h}\index{toeplitz\-\_\-gappy\-\_\-seq.\-dev.\-h@{toeplitz\-\_\-gappy\-\_\-seq.\-dev.\-h}}
+}
+
+\begin{DoxyCode}
+00001 
+00002 \textcolor{preprocessor}{#ifndef         TOEPLITZ\_H\_}
+00003 \textcolor{preprocessor}{}\textcolor{preprocessor}{#define         TOEPLITZ\_H\_}
+00004 \textcolor{preprocessor}{}
+00005 \textcolor{preprocessor}{#ifdef MPI}
+00006 \textcolor{preprocessor}{}\textcolor{preprocessor}{#include <mpi.h>}
+00007 \textcolor{preprocessor}{#endif}
+00008 \textcolor{preprocessor}{}
+00009 \textcolor{preprocessor}{#include <fftw3.h>}
+00010 \textcolor{preprocessor}{#include <omp.h>}
+00011 \textcolor{preprocessor}{#include <stdlib.h>}
+00012 \textcolor{preprocessor}{#include <stdio.h>}
+00013 \textcolor{preprocessor}{#include <math.h>}
+00014 \textcolor{preprocessor}{#include <string.h>}
+00015 
+00016 \textcolor{comment}{//=========================================================================}
+00017 \textcolor{comment}{//Basic functions definition}
+00018 \textcolor{preprocessor}{#define max(a,b) (((a) > (b)) ? (a) : (b))}
+00019 \textcolor{preprocessor}{}\textcolor{preprocessor}{#define min(a,b) (((a) < (b)) ? (a) : (b))}
+00020 \textcolor{preprocessor}{} 
+00021 \textcolor{comment}{//=========================================================================}
+00022 \textcolor{comment}{//Fixed parameters}
+00023 
+00025 
+00027 \textcolor{preprocessor}{#ifndef VERBOSE}
+00028 \textcolor{preprocessor}{}\textcolor{preprocessor}{#define VERBOSE 0 }
+00029 \textcolor{preprocessor}{}\textcolor{preprocessor}{#endif}
+00030 \textcolor{preprocessor}{}
+00032 
+00034 \textcolor{preprocessor}{#ifndef MPI\_USER\_TAG}
+00035 \textcolor{preprocessor}{}\textcolor{preprocessor}{#define MPI\_USER\_TAG 123}
+00036 \textcolor{preprocessor}{}\textcolor{preprocessor}{#endif}
+00037 \textcolor{preprocessor}{}
+00038 
+00039 \textcolor{comment}{//=========================================================================}
+00040 \textcolor{comment}{// User routines definition}
+00041 
+00042 \textcolor{comment}{//Sequential routines (11)}
+00043 \textcolor{keywordtype}{int} \hyperlink{group__group11_ga7f4e77d71f2c6f2caf652bab7520e3f4}{tpltz\_init}(\textcolor{keywordtype}{int} n, \textcolor{keywordtype}{int} lambda, \textcolor{keywordtype}{int} *nfft, \textcolor{keywordtype}{int} *blocksize, 
+      fftw\_complex **T\_fft, \textcolor{keywordtype}{double} *T, fftw\_complex **V\_fft, \textcolor{keywordtype}{double} **V\_rfft, fftw\_plan *
+      plan\_f, fftw\_plan *plan\_b);
+00044 
+00045 \textcolor{keywordtype}{int} \hyperlink{group__group11_gac7ac0ee5f6eaee6846814b131671f6e8}{tpltz\_cleanup}(fftw\_complex **T\_fft, fftw\_complex **V\_fft, \textcolor{keywordtype}{
+      double} **V\_rfft,fftw\_plan *plan\_f, fftw\_plan *plan\_b);
+00046 
+00047 \textcolor{keywordtype}{int} \hyperlink{group__group21_ga2731f1bbfce2d47c4cc3381150470da4}{stmm\_core}(\textcolor{keywordtype}{double} **V, \textcolor{keywordtype}{int} n, \textcolor{keywordtype}{int} m, fftw\_complex *T\_fft, \textcolor{keywordtype}{int} 
+      blocksize, \textcolor{keywordtype}{int} lambda, fftw\_complex *V\_fft, \textcolor{keywordtype}{double} *V\_rfft, \textcolor{keywordtype}{int} nfft, fftw\_plan 
+      plan\_f, fftw\_plan plan\_b, \textcolor{keywordtype}{int} flag\_offset);
+00048 
+00049 \textcolor{keywordtype}{int} \hyperlink{group__group11_gab2face64bf4e429b38b3ae1a6701cc78}{stmm}(\textcolor{keywordtype}{double} **V, \textcolor{keywordtype}{int} n, \textcolor{keywordtype}{int} m, \textcolor{keywordtype}{int} id0, \textcolor{keywordtype}{int} l, fftw\_complex *T\_fft, \textcolor{keywordtype}{int}
+       lambda, fftw\_complex *V\_fft, \textcolor{keywordtype}{double} *V\_rfft, fftw\_plan plan\_f, fftw\_plan plan\_b
+      , \textcolor{keywordtype}{int} blocksize, \textcolor{keywordtype}{int} nfft);
+00050 
+00051 \textcolor{keywordtype}{int} \hyperlink{toeplitz__gappy__seq_8dev_8c_af66e44de454002389ec9a52953526a59}{gstmm}(\textcolor{keywordtype}{double} **V, \textcolor{keywordtype}{int} n, \textcolor{keywordtype}{int} m, \textcolor{keywordtype}{int} id0, \textcolor{keywordtype}{int} l, fftw\_complex *T\_fft, \textcolor{keywordtype}{
+      int} lambda, fftw\_complex *V\_fft, \textcolor{keywordtype}{double} *V\_rfft, fftw\_plan plan\_f, fftw\_plan 
+      plan\_b, \textcolor{keywordtype}{int} blocksize, \textcolor{keywordtype}{int} nfft, \textcolor{keywordtype}{int} *id0gap, \textcolor{keywordtype}{int} *lgap, \textcolor{keywordtype}{int} ngap);
+00052 
+00053 \textcolor{comment}{//int stbmm(double **V, int *n, int m, int nrow, double *T, int
+       nb\_blocks\_local, int nb\_blocks\_all, int *lambda, int *idv, int idp, int local\_V\_size);}
+00054 
+00055 \textcolor{comment}{//int gstbmm(double **V, int *n, int m, int nrow, double *T, int
+       nb\_blocks\_local, int nb\_blocks\_all, int *lambda, int *idv, int id0p, int local\_V\_size, int
+       *id0gap, int *lgap, int ngap);}
+00056 
+00057 \textcolor{keywordtype}{int} \hyperlink{group__group11_ga8a16933581102fbad56d8ef6610eac81}{gap\_masking}(\textcolor{keywordtype}{double} **V, \textcolor{keywordtype}{int} l, \textcolor{keywordtype}{int} *id0gap, \textcolor{keywordtype}{int} *lgap, \textcolor{keywordtype}{int} ngap)
+      ;
+00058 
+00059 \textcolor{keywordtype}{int} \hyperlink{group__group11_gaf84a476c33acadd1dbfa6e9833e16499}{gap\_filling}(\textcolor{keywordtype}{double} **V, \textcolor{keywordtype}{int} l, \textcolor{keywordtype}{int} *id0gap, \textcolor{keywordtype}{int} *lgap, \textcolor{keywordtype}{int} ngap)
+      ;
+00060 
+00061 \textcolor{keywordtype}{int} \hyperlink{group__group11_ga639be254160aa6fdb502dfff6190950a}{reset\_gaps}(\textcolor{keywordtype}{double} **V, \textcolor{keywordtype}{int} id0,\textcolor{keywordtype}{int} local\_V\_size, \textcolor{keywordtype}{int} m, \textcolor{keywordtype}{int} nrow,
+       \textcolor{keywordtype}{int} *id0gap, \textcolor{keywordtype}{int} *lgap, \textcolor{keywordtype}{int} ngap);
+00062 
+00063 
+00064 \textcolor{comment}{//Mpi routines (12)}
+00065 \textcolor{preprocessor}{#ifdef MPI}
+00066 \textcolor{preprocessor}{}\textcolor{keywordtype}{int} \hyperlink{group__group12_gadd9394c94ea5769dc0a2064f48dfc94c}{mpi\_stmm}(\textcolor{keywordtype}{double} **V, \textcolor{keywordtype}{int} n, \textcolor{keywordtype}{int} m, \textcolor{keywordtype}{int} id0, \textcolor{keywordtype}{int} l, \textcolor{keywordtype}{double} *T, \textcolor{keywordtype}{int} 
+      lambda, MPI\_Comm comm);
+00067 
+00068 \textcolor{keywordtype}{int} \hyperlink{group__group22_gaa7ea4ac654fcb9f5fe3bad139febb65d}{mpi\_stbmm}(\textcolor{keywordtype}{double} **V, \textcolor{keywordtype}{int} *n, \textcolor{keywordtype}{int} m, \textcolor{keywordtype}{int} nrow, \textcolor{keywordtype}{double} *T, \textcolor{keywordtype}{int} 
+      nb\_blocks\_local, \textcolor{keywordtype}{int} nb\_blocks\_all, \textcolor{keywordtype}{int} *lambda, \textcolor{keywordtype}{int} *idv, \textcolor{keywordtype}{int} idp, \textcolor{keywordtype}{int} local\_V\_size
+      , MPI\_Comm comm);
+00069 
+00070 \textcolor{keywordtype}{int} \hyperlink{group__group12_ga7c3bdb98f0e937e6e84c8652e101acac}{mpi\_gstbmm}(\textcolor{keywordtype}{double} **V, \textcolor{keywordtype}{int} *n, \textcolor{keywordtype}{int} m, \textcolor{keywordtype}{int} nrow, \textcolor{keywordtype}{double} *T, \textcolor{keywordtype}{int} 
+      nb\_blocks\_local, \textcolor{keywordtype}{int} nb\_blocks\_all, \textcolor{keywordtype}{int} *lambda, \textcolor{keywordtype}{int} *idv, \textcolor{keywordtype}{int} id0p, \textcolor{keywordtype}{int} 
+      local\_V\_size, \textcolor{keywordtype}{int} *id0gap, \textcolor{keywordtype}{int} *lgap, \textcolor{keywordtype}{int} ngap, MPI\_Comm comm);
+00071 
+00072 \textcolor{preprocessor}{#endif}
+00073 \textcolor{preprocessor}{}
+00074 
+00075 \textcolor{comment}{//=========================================================================}
+00076 \textcolor{comment}{// User routines definition}
+00077 
+00078 \textcolor{comment}{//Low level routines (21)}
+00079 \textcolor{keywordtype}{int} \hyperlink{toeplitz__gappy__seq_8dev_8h_a25f3dc895f5f09158a8b621fdc0d6040}{optimal\_blocksize}(\textcolor{keywordtype}{int} n, \textcolor{keywordtype}{int} lambda, \textcolor{keywordtype}{int} bs\_flag);
+00080 
+00081 \textcolor{keywordtype}{int} \hyperlink{group__group21_gae3d694bcffacaf24706f0586a223538e}{fftw\_init\_omp\_threads}();
+00082 
+00083 \textcolor{keywordtype}{int} \hyperlink{group__group21_ga1a6106fbaa68aab85595935252299097}{rhs\_init\_fftw}(\textcolor{keywordtype}{int} *nfft, \textcolor{keywordtype}{int} fft\_size, fftw\_complex **V\_fft, \textcolor{keywordtype}{
+      double} **V\_rfft, fftw\_plan *plan\_f, fftw\_plan *plan\_b, \textcolor{keywordtype}{int} fftw\_flag);
+00084 
+00085 \textcolor{keywordtype}{int} \hyperlink{group__group21_ga6c68921dafc6dc184d335a59df68e5f7}{circ\_init\_fftw}(\textcolor{keywordtype}{double} *T, \textcolor{keywordtype}{int} fft\_size, \textcolor{keywordtype}{int} lambda, 
+      fftw\_complex **T\_fft);
+00086 
+00087 \textcolor{keywordtype}{int} \hyperlink{group__group21_ga2c399885221722e98f72206ddce8d0d3}{scmm\_direct}(\textcolor{keywordtype}{int} fft\_size, fftw\_complex *C\_fft, \textcolor{keywordtype}{int} ncol, \textcolor{keywordtype}{double} 
+      *V\_rfft, \textcolor{keywordtype}{double} **CV, fftw\_complex *V\_fft, fftw\_plan plan\_f\_V, fftw\_plan 
+      plan\_b\_CV);
+00088 
+00089 \textcolor{keywordtype}{int} \hyperlink{group__group21_gab8839f416f8f8165b31a5363c405428d}{scmm\_basic}(\textcolor{keywordtype}{double} **V, \textcolor{keywordtype}{int} blocksize, \textcolor{keywordtype}{int} m, fftw\_complex *C\_fft,
+       \textcolor{keywordtype}{int} lambda, \textcolor{keywordtype}{double} **CV, fftw\_complex *V\_fft, \textcolor{keywordtype}{double} *V\_rfft, \textcolor{keywordtype}{int} nfft, 
+      fftw\_plan plan\_f\_V, fftw\_plan plan\_b\_CV);
+00090 
+00091 \textcolor{keywordtype}{int} \hyperlink{toeplitz__gappy__seq_8dev_8h_aa9a4536e35066d263ff025a4e8b55fea}{stmm\_reshape}(\textcolor{keywordtype}{double} **V, \textcolor{keywordtype}{int} n, \textcolor{keywordtype}{int} m, \textcolor{keywordtype}{int} id0, \textcolor{keywordtype}{int} l, 
+      fftw\_complex *T\_fft, \textcolor{keywordtype}{int} lambda, fftw\_complex *V\_fft, \textcolor{keywordtype}{double} *V\_rfft, fftw\_plan plan\_f, 
+      fftw\_plan plan\_b, \textcolor{keywordtype}{int} blocksize, \textcolor{keywordtype}{int} nfft);
+00092 
+00093 \textcolor{keywordtype}{int} \hyperlink{group__group21_gaf6b3f49e179ac9ed28354ddd7dbb6a04}{build\_gappy\_blocks}(\textcolor{keywordtype}{int} *n, \textcolor{keywordtype}{int} m, \textcolor{keywordtype}{int} nrow, \textcolor{keywordtype}{double} *T, \textcolor{keywordtype}{
+      int} nb\_blocks\_local, \textcolor{keywordtype}{int} nb\_blocks\_all, \textcolor{keywordtype}{int} *lambda, \textcolor{keywordtype}{int} *idv, \textcolor{keywordtype}{int} *id0gap, \textcolor{keywordtype}{int} *
+      lgap, \textcolor{keywordtype}{int} ngap, \textcolor{keywordtype}{int} *nb\_blocks\_gappy\_final, \textcolor{keywordtype}{double} *Tgappy, \textcolor{keywordtype}{int} *idvgappy, \textcolor{keywordtype}{int} *
+      ngappy, \textcolor{keywordtype}{int} *lambdagappy, \textcolor{keywordtype}{int} flag\_param\_distmin\_fixed);
+00094 
+00095 
+00096 \textcolor{comment}{//Internal routines (22)}
+00097 \textcolor{keywordtype}{int} \hyperlink{group__group22_ga24331a8efb6e0b77df7c645ef45b2830}{print\_error\_message}(\textcolor{keywordtype}{int} error\_number, \textcolor{keywordtype}{char} \textcolor{keyword}{const} *\hyperlink{mkdoc_8dox_a049a073e5602cc325f7559a06c5a2420}{file}
+      , \textcolor{keywordtype}{int} line);
+00098 
+00099 \textcolor{keywordtype}{int} \hyperlink{group__group22_ga7dddc7df6f787d6aa92dfc25e9d0465a}{copy\_block}(\textcolor{keywordtype}{int} ninrow, \textcolor{keywordtype}{int} nincol, \textcolor{keywordtype}{double} *Vin, \textcolor{keywordtype}{int} noutrow, \textcolor{keywordtype}{int} 
+      noutcol, \textcolor{keywordtype}{double} *Vout, \textcolor{keywordtype}{int} inrow, \textcolor{keywordtype}{int} incol, \textcolor{keywordtype}{int} nblockrow, \textcolor{keywordtype}{int} nblockcol, \textcolor{keywordtype}{int} 
+      outrow, \textcolor{keywordtype}{int} outcol, \textcolor{keywordtype}{double} norm, \textcolor{keywordtype}{int} set\_zero\_flag);
+00100 
+00101 \textcolor{keywordtype}{int} \hyperlink{toeplitz_8h_ad7f9816073909a5e082df93ec7c9827b}{vect2nfftblock}(\textcolor{keywordtype}{double} *V1, \textcolor{keywordtype}{int} v1\_size, \textcolor{keywordtype}{double} *V2, \textcolor{keywordtype}{int} 
+      fft\_size, \textcolor{keywordtype}{int} nfft, \textcolor{keywordtype}{int} lambda);
+00102 
+00103 \textcolor{keywordtype}{int} \hyperlink{toeplitz_8h_ae9b428bf8c2322b38d725bbb6140b20a}{nfftblock2vect}(\textcolor{keywordtype}{double} *V2, \textcolor{keywordtype}{int} fft\_size, \textcolor{keywordtype}{int} nfft, \textcolor{keywordtype}{int} lambda
+      , \textcolor{keywordtype}{double} *V1, \textcolor{keywordtype}{int} v1\_size);
+00104 
+00105 \textcolor{keywordtype}{int} \hyperlink{group__group22_ga8c05d2ff1d358740d1c8965040e7080a}{gap\_reduce}(\textcolor{keywordtype}{double} **V, \textcolor{keywordtype}{int} id0, \textcolor{keywordtype}{int} l, \textcolor{keywordtype}{int} lambda, \textcolor{keywordtype}{int} *id0gap, \textcolor{keywordtype}{
+      int} *lgap, \textcolor{keywordtype}{int} ngap, \textcolor{keywordtype}{int} *newl, \textcolor{keywordtype}{int} id0out);
+00106 
+00107 \textcolor{keywordtype}{int} \hyperlink{toeplitz_8h_aec19e9200f0b8b258ce04dc8a38fc96d}{get\_overlapping\_blocks\_params}(\textcolor{keywordtype}{int} nbloc, \textcolor{keywordtype}{int} *
+      idv, \textcolor{keywordtype}{int} *n, \textcolor{keywordtype}{int} local\_V\_size, \textcolor{keywordtype}{int} nrow, \textcolor{keywordtype}{int} idp, \textcolor{keywordtype}{int} *idpnew, \textcolor{keywordtype}{int} *
+      local\_V\_size\_new, \textcolor{keywordtype}{int} *nnew, \textcolor{keywordtype}{int} *ifirstBlock, \textcolor{keywordtype}{int} *ilastBlock);
+00108 
+00109 
+00110 \textcolor{comment}{//=========================================================================}
+00111 \textcolor{preprocessor}{#endif      }\textcolor{comment}{/* !TOEPLITZ\_H\_ */}\textcolor{preprocessor}{}
+00112 \textcolor{preprocessor}{}
+00113 
+\end{DoxyCode}

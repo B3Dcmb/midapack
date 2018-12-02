@@ -1,0 +1,84 @@
+\hypertarget{toeplitz__params_8c}{\section{toeplitz\-\_\-params.\-c File Reference}
+\label{toeplitz__params_8c}\index{toeplitz\-\_\-params.\-c@{toeplitz\-\_\-params.\-c}}
+}
+
+
+Routines to set the flag strategy parameters for Toeplitz algebra.  
+
+
+\subsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+int \hyperlink{group__group21_ga234bcc963a99bea09ed92b36c711c3ec}{flag\-\_\-stgy\-\_\-init\-\_\-auto} (\hyperlink{structFlag}{Flag} $\ast$flag\-\_\-stgy)
+\begin{DoxyCompactList}\small\item\em Set the flag to automatic paramaters. \end{DoxyCompactList}\item 
+int \hyperlink{group__group21_ga6de858af090da4b96df6a195015ce09e}{flag\-\_\-stgy\-\_\-init\-\_\-zeros} (\hyperlink{structFlag}{Flag} $\ast$flag\-\_\-stgy)
+\begin{DoxyCompactList}\small\item\em Set the flag parameters to zeros. This is almost the same as automatic. \end{DoxyCompactList}\item 
+int \hyperlink{group__group21_gae334670891033aa91dd0bb7f8b707dc4}{flag\-\_\-stgy\-\_\-init\-\_\-defined} (\hyperlink{structFlag}{Flag} $\ast$flag\-\_\-stgy)
+\begin{DoxyCompactList}\small\item\em Set the parameters flag to the defined ones. \end{DoxyCompactList}\item 
+int \hyperlink{group__group21_ga2d566ebeba6474d1bbac93315e1f578a}{print\-\_\-flag\-\_\-stgy\-\_\-init} (\hyperlink{structFlag}{Flag} flag\-\_\-stgy)
+\begin{DoxyCompactList}\small\item\em Print the flag parameters values. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Routines to set the flag strategy parameters for Toeplitz algebra. version 1.\-1b, July 2012 \begin{DoxyAuthor}{Author}
+Frederic Dauvergne
+\end{DoxyAuthor}
+Project\-: Midapack library, A\-N\-R M\-I\-D\-A\-S'09 -\/ Toeplitz Algebra module Purpose\-: Provide Toeplitz algebra tools suitable for Cosmic Microwave Background (C\-M\-B) data analysis.
+
+\begin{DoxyNote}{Note}
+Copyright (c) 2010-\/2012 A\-P\-C C\-N\-R\-S Université Paris Diderot 
+
+
+
+This program is free software; you can redistribute it and/or modify it under the terms 
+
+of the G\-N\-U Lesser General Public License as published by the Free Software Foundation; 
+
+either version 3 of the License, or (at your option) any later version. This program is 
+
+distributed in the hope that it will be useful, but W\-I\-T\-H\-O\-U\-T A\-N\-Y W\-A\-R\-R\-A\-N\-T\-Y; without even 
+
+the implied warranty of M\-E\-R\-C\-H\-A\-N\-T\-A\-B\-I\-L\-I\-T\-Y or F\-I\-T\-N\-E\-S\-S F\-O\-R A P\-A\-R\-T\-I\-C\-U\-L\-A\-R P\-U\-R\-P\-O\-S\-E. See the G\-N\-U 
+
+Lesser General Public License for more details. 
+
+
+
+You should have received a copy of the G\-N\-U Lesser General Public License along with this 
+
+program; if not, see \href{http://www.gnu.org/licenses/lgpl.html}{\tt http\-://www.\-gnu.\-org/licenses/lgpl.\-html} 
+
+For more information about A\-N\-R M\-I\-D\-A\-S'09 project see \-: 
+
+\href{http://www.apc.univ-paris7.fr/APC_CS/Recherche/Adamis/MIDAS09/index.html}{\tt http\-://www.\-apc.\-univ-\/paris7.\-fr/\-A\-P\-C\-\_\-\-C\-S/\-Recherche/\-Adamis/\-M\-I\-D\-A\-S09/index.\-html} 
+
+A\-C\-K\-N\-O\-W\-L\-E\-D\-G\-M\-E\-N\-T\-: This work has been supported in part by the French National Research 
+
+Agency (A\-N\-R) through C\-O\-S\-I\-N\-U\-S program (project M\-I\-D\-A\-S no. A\-N\-R-\/09-\/\-C\-O\-S\-I-\/009).
+\end{DoxyNote}
+Log\-: toeplitz$\ast$.c
+
+Revision 1.\-0b 2012/05/07 Frederic Dauvergne (A\-P\-C) Official release 1.\-0beta. The first installement of the library is the Toeplitz algebra module.
+
+Revision 1.\-1b 2012/07/-\/ Frederic Dauvergne (A\-P\-C)
+\begin{DoxyItemize}
+\item mpi\-\_\-stbmm allows now rowi-\/wise order per process datas and no-\/blocking communications.
+\item O\-M\-P improvment for optimal cpu time.
+\item bug fixed for O\-M\-P in the stmm\-\_\-basic routine.
+\item distcorrmin is used to communicate only lambda-\/1 datas when it is needed.
+\item new reshaping routines using transformation functions in stmm. Thus, only one copy at most is needed.
+\item tpltz\-\_\-init improvement using define\-\_\-nfft and define\-\_\-blocksize routines.
+\item add \hyperlink{structBlock}{Block} struture to define each Toeplitz block.
+\item add \hyperlink{structFlag}{Flag} structure and preprocessing parameters to define the computational strategy. All the flag parameters are then available directly from the A\-P\-I.
+\end{DoxyItemize}
+
+Revision 1.\-2b 2012/11/30 Frederic Dauvergne (A\-P\-C)
+\begin{DoxyItemize}
+\item extend the mpi product routine to rowwise order data distribution. This is now allowing tree kinds of distribution.
+\item add int64 for some variables to extend the global volume of data you can use.
+\item Openmp improvments.
+\item Add \hyperlink{toeplitz__wizard_8c}{toeplitz\-\_\-wizard.\-c}, which contains a set of easy to use routines with defined structures. 
+\end{DoxyItemize}
+
+Definition in file \hyperlink{toeplitz__params_8c_source}{toeplitz\-\_\-params.\-c}.
+

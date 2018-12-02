@@ -1,0 +1,56 @@
+\hypertarget{butterfly_8h}{\section{butterfly.\-h File Reference}
+\label{butterfly_8h}\index{butterfly.\-h@{butterfly.\-h}}
+}
+
+
+{\bfseries  Declaration of routines for butterfly-\/like communication scheme. }  
+
+
+\subsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+int \hyperlink{group__matmap__group22_gabe7077466aef706a7825e650a78f4e5e}{butterfly\-\_\-init} (int $\ast$indices, int count, int $\ast$$\ast$R, int $\ast$n\-R, int $\ast$$\ast$S, int $\ast$n\-S, int $\ast$$\ast$com\-\_\-indices, int $\ast$com\-\_\-count, int steps, M\-P\-I\-\_\-\-Comm comm)
+\begin{DoxyCompactList}\small\item\em Initialize tables for butterfly-\/like communication scheme This routine set up needed tables for the butterfly communication scheme. Sending and receiving tabs should be well allocated(at least size of number of steps in butterfly scheme). Double pointer are partially allocated, the last allocation is performed inside the routine. com\-\_\-indices and com\-\_\-count are also allocated inside the routine, thus they are passing by reference. They represent indices which have to be communicated an their number. Algotithm is based 2 parts. The first one identify intersection between processors indices, using 3 successives butterfly communication schemes \-: bottom up, top down, and top down again. The second part works locally to build sets of indices to communicate. \end{DoxyCompactList}\item 
+int \hyperlink{group__matmap__group22_ga3ab052e5ba3e18427574481f64916b3a}{butterfly\-\_\-reduce} (int $\ast$$\ast$R, int $\ast$n\-R, int n\-Rmax, int $\ast$$\ast$S, int $\ast$n\-S, int n\-Smax, double $\ast$val, int steps, M\-P\-I\-\_\-\-Comm comm)
+\begin{DoxyCompactList}\small\item\em Perform a sparse sum reduction (or mapped reduction) using a butterfly-\/like communication scheme. \end{DoxyCompactList}\item 
+int \hyperlink{group__matmap__group22_gaddc1509a3b18b1d35b7a4fc411eba3a6}{butterfly\-\_\-blocking\-\_\-1instr\-\_\-reduce} (int $\ast$$\ast$R, int $\ast$n\-R, int n\-Rmax, int $\ast$$\ast$S, int $\ast$n\-S, int n\-Smax, double $\ast$val, int steps, M\-P\-I\-\_\-\-Comm comm)
+\begin{DoxyCompactList}\small\item\em Perform a sparse sum reduction (or mapped reduction) using a butterfly-\/like communication scheme. \end{DoxyCompactList}\item 
+int \hyperlink{group__matmap__group22_ga2760469151322cc847123dfa097fb93a}{butterfly\-\_\-blocking\-\_\-2instr\-\_\-reduce} (int $\ast$$\ast$R, int $\ast$n\-R, int n\-Rmax, int $\ast$$\ast$S, int $\ast$n\-S, int n\-Smax, double $\ast$val, int steps, M\-P\-I\-\_\-\-Comm comm)
+\begin{DoxyCompactList}\small\item\em Perform a sparse sum reduction (or mapped reduction) using a butterfly-\/like communication scheme. \end{DoxyCompactList}\item 
+double \hyperlink{butterfly_8h_aaa0b90782afb0c6be2e0ae0f119d5317}{butterfly\-\_\-reduce\-\_\-b} (int $\ast$$\ast$R, int $\ast$n\-R, int n\-Rmax, int $\ast$$\ast$S, int $\ast$n\-S, int n\-Smax, double $\ast$val, int b, int steps, M\-P\-I\-\_\-\-Comm comm)
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+{\bfseries  Declaration of routines for butterfly-\/like communication scheme. } \begin{DoxyNote}{Note}
+Copyright (C) 2010 A\-P\-C C\-N\-R\-S Université Paris Diderot  program is free software; you can redistribute it and/or modify it under the terms of the G\-N\-U General Public License as published by the Free Software Foundation; either version 3 of the License, or (at your option) any later version. This program is distributed in the hope that it will be useful, but W\-I\-T\-H\-O\-U\-T A\-N\-Y W\-A\-R\-R\-A\-N\-T\-Y; without even the implied warranty of M\-E\-R\-C\-H\-A\-N\-T\-A\-B\-I\-L\-I\-T\-Y or F\-I\-T\-N\-E\-S\-S F\-O\-R A P\-A\-R\-T\-I\-C\-U\-L\-A\-R P\-U\-R\-P\-O\-S\-E. See the G\-N\-U General Public License for more details.  should have received a copy of the G\-N\-U General Public License along with this program; if not, see \href{http://www.gnu.org/licenses/gpl.html}{\tt http\-://www.\-gnu.\-org/licenses/gpl.\-html} 
+\end{DoxyNote}
+\begin{DoxyAuthor}{Author}
+Pierre Cargemel 
+\end{DoxyAuthor}
+\begin{DoxyDate}{Date}
+April 2012 
+\end{DoxyDate}
+
+
+Definition in file \hyperlink{butterfly_8h_source}{butterfly.\-h}.
+
+
+
+\subsection{Function Documentation}
+\hypertarget{butterfly_8h_aaa0b90782afb0c6be2e0ae0f119d5317}{\index{butterfly.\-h@{butterfly.\-h}!butterfly\-\_\-reduce\-\_\-b@{butterfly\-\_\-reduce\-\_\-b}}
+\index{butterfly\-\_\-reduce\-\_\-b@{butterfly\-\_\-reduce\-\_\-b}!butterfly.h@{butterfly.\-h}}
+\subsubsection[{butterfly\-\_\-reduce\-\_\-b}]{\setlength{\rightskip}{0pt plus 5cm}double butterfly\-\_\-reduce\-\_\-b (
+\begin{DoxyParamCaption}
+\item[{int $\ast$$\ast$}]{R, }
+\item[{int $\ast$}]{n\-R, }
+\item[{int}]{n\-Rmax, }
+\item[{int $\ast$$\ast$}]{S, }
+\item[{int $\ast$}]{n\-S, }
+\item[{int}]{n\-Smax, }
+\item[{double $\ast$}]{val, }
+\item[{int}]{b, }
+\item[{int}]{steps, }
+\item[{M\-P\-I\-\_\-\-Comm}]{comm}
+\end{DoxyParamCaption}
+)}}\label{butterfly_8h_aaa0b90782afb0c6be2e0ae0f119d5317}
