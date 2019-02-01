@@ -1,0 +1,160 @@
+\hypertarget{group__group22}{\section{lower internal routines}
+\label{group__group22}\index{lower internal routines@{lower internal routines}}
+}
+\subsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+int \hyperlink{group__group22_ga24331a8efb6e0b77df7c645ef45b2830}{print\-\_\-error\-\_\-message} (int error\-\_\-number, char const $\ast$file, int line)
+\begin{DoxyCompactList}\small\item\em Prints error message corresponding to an error number. \end{DoxyCompactList}\item 
+int \hyperlink{group__group22_ga7dddc7df6f787d6aa92dfc25e9d0465a}{copy\-\_\-block} (int ninrow, int nincol, double $\ast$Vin, int noutrow, int noutcol, double $\ast$Vout, int inrow, int incol, int nblockrow, int nblockcol, int outrow, int outcol, double norm, int set\-\_\-zero\-\_\-flag)
+\begin{DoxyCompactList}\small\item\em Copies (and potentially reshapes) a selected block of the input matrix to a specified position of the output matrix. \end{DoxyCompactList}\item 
+int \hyperlink{group__group22_gaa7ea4ac654fcb9f5fe3bad139febb65d}{mpi\-\_\-stbmm} (double $\ast$$\ast$V, int64\-\_\-t nrow, int m, int m\-\_\-rowwise, \hyperlink{structBlock}{Block} $\ast$tpltzblocks, int nb\-\_\-blocks\-\_\-local, int nb\-\_\-blocks\-\_\-all, int64\-\_\-t idp, int local\-\_\-\-V\-\_\-size, \hyperlink{structFlag}{Flag} flag\-\_\-stgy, M\-P\-I\-\_\-\-Comm comm)
+\begin{DoxyCompactList}\small\item\em Performs the multiplication of a symmetric, Toeplitz block-\/diagonal matrix, T, by an arbitrary matrix, V, distributed over processes in the generalized column-\/wise way. \end{DoxyCompactList}\item 
+int \hyperlink{group__group22_ga8c05d2ff1d358740d1c8965040e7080a}{gap\-\_\-reduce} (double $\ast$$\ast$V, int id0, int l, int lambda, int $\ast$id0gap, int $\ast$lgap, int ngap, int $\ast$newl, int id0out)
+\begin{DoxyCompactList}\small\item\em ...convert the data vector structure into a matrix structure optimized for nfft \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+These are lower internal routines. 
+
+\subsection{Function Documentation}
+\hypertarget{group__group22_ga24331a8efb6e0b77df7c645ef45b2830}{\index{lower internal routines@{lower internal routines}!print\-\_\-error\-\_\-message@{print\-\_\-error\-\_\-message}}
+\index{print\-\_\-error\-\_\-message@{print\-\_\-error\-\_\-message}!lower internal routines@{lower internal routines}}
+\subsubsection[{print\-\_\-error\-\_\-message}]{\setlength{\rightskip}{0pt plus 5cm}int print\-\_\-error\-\_\-message (
+\begin{DoxyParamCaption}
+\item[{int}]{error\-\_\-number, }
+\item[{char const $\ast$}]{file, }
+\item[{int}]{line}
+\end{DoxyParamCaption}
+)}}\label{group__group22_ga24331a8efb6e0b77df7c645ef45b2830}
+
+
+Prints error message corresponding to an error number. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em error\-\_\-number} & error number \\
+\hline
+{\em file} & file name \\
+\hline
+{\em line} & line number \\
+\hline
+\end{DoxyParams}
+
+
+Definition at line \hyperlink{toeplitz_8c_source_l00093}{93} of file \hyperlink{toeplitz_8c_source}{toeplitz.\-c}.
+
+\hypertarget{group__group22_ga7dddc7df6f787d6aa92dfc25e9d0465a}{\index{lower internal routines@{lower internal routines}!copy\-\_\-block@{copy\-\_\-block}}
+\index{copy\-\_\-block@{copy\-\_\-block}!lower internal routines@{lower internal routines}}
+\subsubsection[{copy\-\_\-block}]{\setlength{\rightskip}{0pt plus 5cm}int copy\-\_\-block (
+\begin{DoxyParamCaption}
+\item[{int}]{ninrow, }
+\item[{int}]{nincol, }
+\item[{double $\ast$}]{Vin, }
+\item[{int}]{noutrow, }
+\item[{int}]{noutcol, }
+\item[{double $\ast$}]{Vout, }
+\item[{int}]{inrow, }
+\item[{int}]{incol, }
+\item[{int}]{nblockrow, }
+\item[{int}]{nblockcol, }
+\item[{int}]{outrow, }
+\item[{int}]{outcol, }
+\item[{double}]{norm, }
+\item[{int}]{set\-\_\-zero\-\_\-flag}
+\end{DoxyParamCaption}
+)}}\label{group__group22_ga7dddc7df6f787d6aa92dfc25e9d0465a}
+
+
+Copies (and potentially reshapes) a selected block of the input matrix to a specified position of the output matrix. 
+
+Copy a matrix block of a size nblockrow x nblockcol from the input matrix Vin (size ninrow x nincol) starting with the element (inrow, incol) to the output matrix Vout (size notrow x noutcol) starting with the element (outrow, outcol) after multiplying by norm. If the output matrix is larger than the block the extra elements are either left as they were on the input or zeroed if zero\-\_\-flag is set to 1. If the block to be copied is larger than either the input or the output matrix an error occurs. 
+
+Definition at line \hyperlink{toeplitz_8c_source_l00459}{459} of file \hyperlink{toeplitz_8c_source}{toeplitz.\-c}.
+
+\hypertarget{group__group22_gaa7ea4ac654fcb9f5fe3bad139febb65d}{\index{lower internal routines@{lower internal routines}!mpi\-\_\-stbmm@{mpi\-\_\-stbmm}}
+\index{mpi\-\_\-stbmm@{mpi\-\_\-stbmm}!lower internal routines@{lower internal routines}}
+\subsubsection[{mpi\-\_\-stbmm}]{\setlength{\rightskip}{0pt plus 5cm}int mpi\-\_\-stbmm (
+\begin{DoxyParamCaption}
+\item[{double $\ast$$\ast$}]{V, }
+\item[{int64\-\_\-t}]{nrow, }
+\item[{int}]{m, }
+\item[{int}]{m\-\_\-rowwise, }
+\item[{{\bf Block} $\ast$}]{tpltzblocks, }
+\item[{int}]{nb\-\_\-blocks\-\_\-local, }
+\item[{int}]{nb\-\_\-blocks\-\_\-all, }
+\item[{int64\-\_\-t}]{idp, }
+\item[{int}]{local\-\_\-\-V\-\_\-size, }
+\item[{{\bf Flag}}]{flag\-\_\-stgy, }
+\item[{M\-P\-I\-\_\-\-Comm}]{comm}
+\end{DoxyParamCaption}
+)}}\label{group__group22_gaa7ea4ac654fcb9f5fe3bad139febb65d}
+
+
+Performs the multiplication of a symmetric, Toeplitz block-\/diagonal matrix, T, by an arbitrary matrix, V, distributed over processes in the generalized column-\/wise way. 
+
+Each process performs the multiplication sequentially for each diagonal block and based on the sliding window algorithm. Prior to that M\-P\-I calls are used to exchange data between neighboring process. Each of the diagonal blocks is a symmetric, band-\/diagonal Toeplitz matrix, which can be different for each block. The parameters are \-: 
+\begin{DoxyParams}{Parameters}
+{\em V} & {\bfseries }\mbox{[}input\mbox{]} distributed data matrix (with the convention V(i,j)=V\mbox{[}i+j$\ast$n\mbox{]}) ; {\bfseries }\mbox{[}out\mbox{]} result of the product T\-V \\
+\hline
+{\em nrow} & number of rows of the global data matrix V \\
+\hline
+{\em m} & number of columns for the data matrix V in the global rowwise order \\
+\hline
+{\em m\-\_\-rowwise} & number of columns for the data matrix V in the rowwise order per processor \\
+\hline
+{\em tpltzblocks} & list of the toeplitz blocks struture with its own parameters (idv, n, T\-\_\-block, lambda) \-:
+\begin{DoxyItemize}
+\item idv is the global row index defining for each Toeplitz block as stored in the vector T ;
+\item n size of each Toeplitz block
+\item T\-\_\-block location of each Toeplitz matrix data composed of the non-\/zero entries of the first row ;
+\item lambda size of each Toeplitz block data T\-\_\-block. The bandwith size is then equal to lambda$\ast$2-\/1 
+\end{DoxyItemize}\\
+\hline
+{\em nb\-\_\-blocks\-\_\-all} & number of all Toeplitz block on the diagonal of the full Toeplitz matrix \\
+\hline
+{\em nb\-\_\-blocks\-\_\-local} & number of Toeplitz blocks as stored in T \\
+\hline
+{\em idp} & global index of the first element of the local part of V \\
+\hline
+{\em local\-\_\-\-V\-\_\-size} & a number of all elements in local V \\
+\hline
+{\em flag\-\_\-stgy} & flag strategy for the product computation \\
+\hline
+{\em comm} & M\-P\-I communicator \\
+\hline
+\end{DoxyParams}
+Select the useful flotting blocks for the local data of the current processor. parameters (idpnew, local\-\_\-\-V\-\_\-size\-\_\-new, nnew) for the computation. ide the local range are set with a size nnew equal to zero.
+
+\begin{DoxyVerb}This compute the right parameters (idpnew, local_V_size_new, nnew) for the computation.
+All the block outside the local range are set with a size nnew equal to zero. local_V_size_new
+correspond to the size without the shift between the global rank index and the global index of
+the first flotting block. idnew is then set to the index of this first flotting block.
+\end{DoxyVerb}
+
+
+Definition at line \hyperlink{toeplitz__block_8c_source_l00087}{87} of file \hyperlink{toeplitz__block_8c_source}{toeplitz\-\_\-block.\-c}.
+
+\hypertarget{group__group22_ga8c05d2ff1d358740d1c8965040e7080a}{\index{lower internal routines@{lower internal routines}!gap\-\_\-reduce@{gap\-\_\-reduce}}
+\index{gap\-\_\-reduce@{gap\-\_\-reduce}!lower internal routines@{lower internal routines}}
+\subsubsection[{gap\-\_\-reduce}]{\setlength{\rightskip}{0pt plus 5cm}int gap\-\_\-reduce (
+\begin{DoxyParamCaption}
+\item[{double $\ast$$\ast$}]{V, }
+\item[{int}]{id0, }
+\item[{int}]{l, }
+\item[{int}]{lambda, }
+\item[{int $\ast$}]{id0gap, }
+\item[{int $\ast$}]{lgap, }
+\item[{int}]{ngap, }
+\item[{int $\ast$}]{newl, }
+\item[{int}]{id0out}
+\end{DoxyParamCaption}
+)}}\label{group__group22_ga8c05d2ff1d358740d1c8965040e7080a}
+
+
+...convert the data vector structure into a matrix structure optimized for nfft 
+
+....Copy the data vector structure into an equivalent matrix with nfft column. Thus, the obtained matrix is optimize for the nfft multithreading algorithm use. The middle part is a direct copy of the data vector and we copy on the edges of each column the lambda terms needed to fullfill the correlation of theses data. 
+
+Definition at line \hyperlink{toeplitz__gappy__seq_8dev_8c_source_l00163}{163} of file \hyperlink{toeplitz__gappy__seq_8dev_8c_source}{toeplitz\-\_\-gappy\-\_\-seq.\-dev.\-c}.
+

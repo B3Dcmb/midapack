@@ -1,0 +1,107 @@
+\hypertarget{mapmatc_8h}{\section{mapmatc.\-h File Reference}
+\label{mapmatc_8h}\index{mapmatc.\-h@{mapmatc.\-h}}
+}
+\subsection*{Data Structures}
+\begin{DoxyCompactItemize}
+\item 
+struct \hyperlink{structCMat}{C\-Mat}
+\begin{DoxyCompactList}\small\item\em Matrix structure \par
+ A$\ast$ = (A0$\ast$ $|$ A1$\ast$ $|$ ... $|$ Ap-\/1$\ast$ ) \end{DoxyCompactList}\end{DoxyCompactItemize}
+\subsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+int \hyperlink{mapmatc_8h_aba46792c20f02603b76527c8cc20d943}{C\-Mat\-Init} (\hyperlink{structCMat}{C\-Mat} $\ast$A, int r, int $\ast$m, int $\ast$nnz, int $\ast$$\ast$indices, double $\ast$$\ast$values, int flag\#ifdef W\-\_\-\-M\-P\-I, M\-P\-I\-\_\-\-Comm comm\#endif)
+\item 
+int \hyperlink{mapmatc_8h_a6107ed3ac61bbe135d70b0c8d896bf07}{C\-Mat\-Free} (\hyperlink{structCMat}{C\-Mat} $\ast$A)
+\item 
+int \hyperlink{mapmatc_8h_afb81ba7e354bbbae53776ee2e5e6d263}{C\-Mat\-Com\-Shape} (\hyperlink{structCMat}{C\-Mat} $\ast$A, int flag)
+\item 
+int \hyperlink{mapmatc_8h_a704718e90998e79523802b6d258ded82}{C\-Mat\-Vec\-Prod} (\hyperlink{structCMat}{C\-Mat} $\ast$A, double $\ast$x, double $\ast$y, int pflag)
+\item 
+int \hyperlink{mapmatc_8h_a5e456fa57587ae5653b9906c8d9df76f}{C\-Tr\-Mat\-Vec\-Prod} (\hyperlink{structCMat}{C\-Mat} $\ast$A, double $\ast$y, double $\ast$x, int pflag)
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+\begin{DoxyAuthor}{Author}
+Pierre Cargemel 
+\end{DoxyAuthor}
+\begin{DoxyDate}{Date}
+October 2012 
+\end{DoxyDate}
+
+
+Definition in file \hyperlink{mapmatc_8h_source}{mapmatc.\-h}.
+
+
+
+\subsection{Function Documentation}
+\hypertarget{mapmatc_8h_aba46792c20f02603b76527c8cc20d943}{\index{mapmatc.\-h@{mapmatc.\-h}!C\-Mat\-Init@{C\-Mat\-Init}}
+\index{C\-Mat\-Init@{C\-Mat\-Init}!mapmatc.h@{mapmatc.\-h}}
+\subsubsection[{C\-Mat\-Init}]{\setlength{\rightskip}{0pt plus 5cm}int C\-Mat\-Init (
+\begin{DoxyParamCaption}
+\item[{{\bf C\-Mat} $\ast$}]{A, }
+\item[{int}]{r, }
+\item[{int $\ast$}]{m, }
+\item[{int $\ast$}]{nnz, }
+\item[{int $\ast$$\ast$}]{indices, }
+\item[{double $\ast$$\ast$}]{values, }
+\item[{int flag\#ifdef}]{W\-\_\-\-M\-P\-I, }
+\item[{M\-P\-I\-\_\-\-Comm comm\#}]{endif}
+\end{DoxyParamCaption}
+)}}\label{mapmatc_8h_aba46792c20f02603b76527c8cc20d943}
+
+
+Definition at line \hyperlink{mapmatc_8c_source_l00017}{17} of file \hyperlink{mapmatc_8c_source}{mapmatc.\-c}.
+
+\hypertarget{mapmatc_8h_a6107ed3ac61bbe135d70b0c8d896bf07}{\index{mapmatc.\-h@{mapmatc.\-h}!C\-Mat\-Free@{C\-Mat\-Free}}
+\index{C\-Mat\-Free@{C\-Mat\-Free}!mapmatc.h@{mapmatc.\-h}}
+\subsubsection[{C\-Mat\-Free}]{\setlength{\rightskip}{0pt plus 5cm}int C\-Mat\-Free (
+\begin{DoxyParamCaption}
+\item[{{\bf C\-Mat} $\ast$}]{A}
+\end{DoxyParamCaption}
+)}}\label{mapmatc_8h_a6107ed3ac61bbe135d70b0c8d896bf07}
+
+
+Definition at line \hyperlink{mapmatc_8c_source_l00075}{75} of file \hyperlink{mapmatc_8c_source}{mapmatc.\-c}.
+
+\hypertarget{mapmatc_8h_afb81ba7e354bbbae53776ee2e5e6d263}{\index{mapmatc.\-h@{mapmatc.\-h}!C\-Mat\-Com\-Shape@{C\-Mat\-Com\-Shape}}
+\index{C\-Mat\-Com\-Shape@{C\-Mat\-Com\-Shape}!mapmatc.h@{mapmatc.\-h}}
+\subsubsection[{C\-Mat\-Com\-Shape}]{\setlength{\rightskip}{0pt plus 5cm}int C\-Mat\-Com\-Shape (
+\begin{DoxyParamCaption}
+\item[{{\bf C\-Mat} $\ast$}]{A, }
+\item[{int}]{flag}
+\end{DoxyParamCaption}
+)}}\label{mapmatc_8h_afb81ba7e354bbbae53776ee2e5e6d263}
+
+
+Definition at line \hyperlink{mapmatc_8c_source_l00096}{96} of file \hyperlink{mapmatc_8c_source}{mapmatc.\-c}.
+
+\hypertarget{mapmatc_8h_a704718e90998e79523802b6d258ded82}{\index{mapmatc.\-h@{mapmatc.\-h}!C\-Mat\-Vec\-Prod@{C\-Mat\-Vec\-Prod}}
+\index{C\-Mat\-Vec\-Prod@{C\-Mat\-Vec\-Prod}!mapmatc.h@{mapmatc.\-h}}
+\subsubsection[{C\-Mat\-Vec\-Prod}]{\setlength{\rightskip}{0pt plus 5cm}int C\-Mat\-Vec\-Prod (
+\begin{DoxyParamCaption}
+\item[{{\bf C\-Mat} $\ast$}]{A, }
+\item[{double $\ast$}]{x, }
+\item[{double $\ast$}]{y, }
+\item[{int}]{pflag}
+\end{DoxyParamCaption}
+)}}\label{mapmatc_8h_a704718e90998e79523802b6d258ded82}
+
+
+Definition at line \hyperlink{mapmatc_8c_source_l00139}{139} of file \hyperlink{mapmatc_8c_source}{mapmatc.\-c}.
+
+\hypertarget{mapmatc_8h_a5e456fa57587ae5653b9906c8d9df76f}{\index{mapmatc.\-h@{mapmatc.\-h}!C\-Tr\-Mat\-Vec\-Prod@{C\-Tr\-Mat\-Vec\-Prod}}
+\index{C\-Tr\-Mat\-Vec\-Prod@{C\-Tr\-Mat\-Vec\-Prod}!mapmatc.h@{mapmatc.\-h}}
+\subsubsection[{C\-Tr\-Mat\-Vec\-Prod}]{\setlength{\rightskip}{0pt plus 5cm}int C\-Tr\-Mat\-Vec\-Prod (
+\begin{DoxyParamCaption}
+\item[{{\bf C\-Mat} $\ast$}]{A, }
+\item[{double $\ast$}]{y, }
+\item[{double $\ast$}]{x, }
+\item[{int}]{pflag}
+\end{DoxyParamCaption}
+)}}\label{mapmatc_8h_a5e456fa57587ae5653b9906c8d9df76f}
+
+
+Definition at line \hyperlink{mapmatc_8c_source_l00159}{159} of file \hyperlink{mapmatc_8c_source}{mapmatc.\-c}.
+

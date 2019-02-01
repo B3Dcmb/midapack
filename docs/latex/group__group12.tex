@@ -1,0 +1,171 @@
+\hypertarget{group__group12}{\section{distributed memory (M\-P\-I) routines}
+\label{group__group12}\index{distributed memory (\-M\-P\-I) routines@{distributed memory (\-M\-P\-I) routines}}
+}
+\subsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+int \hyperlink{group__group12_gadd9394c94ea5769dc0a2064f48dfc94c}{mpi\-\_\-stmm} (double $\ast$$\ast$V, int n, int m, int id0, int l, double $\ast$T, int lambda, \hyperlink{structFlag}{Flag} flag\-\_\-stgy, M\-P\-I\-\_\-\-Comm comm)
+\begin{DoxyCompactList}\small\item\em Performs the product of a Toeplitz matrix by a general matrix using M\-P\-I. We assume that the matrix has already been scattered. (a U\-S\-E\-R routine) \end{DoxyCompactList}\item 
+int \hyperlink{group__group12_ga7c3bdb98f0e937e6e84c8652e101acac}{mpi\-\_\-gstbmm} (double $\ast$$\ast$V, int nrow, int m, int m\-\_\-rowwise, \hyperlink{structBlock}{Block} $\ast$tpltzblocks, int nb\-\_\-blocks\-\_\-local, int nb\-\_\-blocks\-\_\-all, int id0p, int local\-\_\-\-V\-\_\-size, int64\-\_\-t $\ast$id0gap, int $\ast$lgap, int ngap, \hyperlink{structFlag}{Flag} flag\-\_\-stgy, M\-P\-I\-\_\-\-Comm comm)
+\begin{DoxyCompactList}\small\item\em Performs the multiplication of a symmetric, Toeplitz block-\/diagonal matrix, T, by an arbitrary matrix, V, distributed over processes in the generalized column-\/wise way. This matrix V contains defined gaps which represents the useless data for the comutation. The gaps indexes are defined in the global time space as the generized toeplitz matrix, meaning the row dimension. Each of his diagonal blocks is a symmetric, band-\/diagonal Toeplitz matrix, which can be different for each block. \end{DoxyCompactList}\item 
+int \hyperlink{group__group12_gab51a5dfa887d47b4ce627eb0e01a2e0a}{stbmm} (double $\ast$$\ast$V, int nrow, int m\-\_\-cw, int m\-\_\-rw, \hyperlink{structBlock}{Block} $\ast$tpltzblocks, int nb\-\_\-blocks, int64\-\_\-t idp, int local\-\_\-\-V\-\_\-size, \hyperlink{structFlag}{Flag} flag\-\_\-stgy)
+\begin{DoxyCompactList}\small\item\em Performs the multiplication of a symmetric, Toeplitz block-\/diagonal matrix, T, by an arbitrary matrix, V, distributed over processes in the generalized column-\/wise way. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+These are distributed-\/memory routines. 
+
+\subsection{Function Documentation}
+\hypertarget{group__group12_gadd9394c94ea5769dc0a2064f48dfc94c}{\index{distributed memory (\-M\-P\-I) routines@{distributed memory (\-M\-P\-I) routines}!mpi\-\_\-stmm@{mpi\-\_\-stmm}}
+\index{mpi\-\_\-stmm@{mpi\-\_\-stmm}!distributed memory (MPI) routines@{distributed memory (\-M\-P\-I) routines}}
+\subsubsection[{mpi\-\_\-stmm}]{\setlength{\rightskip}{0pt plus 5cm}int mpi\-\_\-stmm (
+\begin{DoxyParamCaption}
+\item[{double $\ast$$\ast$}]{V, }
+\item[{int}]{n, }
+\item[{int}]{m, }
+\item[{int}]{id0, }
+\item[{int}]{l, }
+\item[{double $\ast$}]{T, }
+\item[{int}]{lambda, }
+\item[{{\bf Flag}}]{flag\-\_\-stgy, }
+\item[{M\-P\-I\-\_\-\-Comm}]{comm}
+\end{DoxyParamCaption}
+)}}\label{group__group12_gadd9394c94ea5769dc0a2064f48dfc94c}
+
+
+Performs the product of a Toeplitz matrix by a general matrix using M\-P\-I. We assume that the matrix has already been scattered. (a U\-S\-E\-R routine) 
+
+The multiplication is performed using F\-F\-T applied to circulant matrix in order to diagonalized it. The parameters are \-: 
+\begin{DoxyParams}{Parameters}
+{\em V} & {\bfseries }\mbox{[}input\mbox{]} distributed data matrix (with the convention V(i,j)=V\mbox{[}i+j$\ast$n\mbox{]}); {\bfseries }\mbox{[}out\mbox{]} result of the product T\-V \\
+\hline
+{\em n} & number of rows of V \\
+\hline
+{\em m} & number of columns of V \\
+\hline
+{\em id0} & first index of scattered V \\
+\hline
+{\em l} & length of the scattered V \\
+\hline
+{\em T} & Toeplitz matrix. \\
+\hline
+{\em lambda} & Toeplitz band width. \\
+\hline
+{\em flag\-\_\-stgy} & flag strategy for the product computation \\
+\hline
+{\em comm} & communicator (usually M\-P\-I\-\_\-\-C\-O\-M\-M\-\_\-\-W\-O\-R\-L\-D) \\
+\hline
+\end{DoxyParams}
+
+
+Definition at line \hyperlink{toeplitz_8c_source_l00980}{980} of file \hyperlink{toeplitz_8c_source}{toeplitz.\-c}.
+
+\hypertarget{group__group12_ga7c3bdb98f0e937e6e84c8652e101acac}{\index{distributed memory (\-M\-P\-I) routines@{distributed memory (\-M\-P\-I) routines}!mpi\-\_\-gstbmm@{mpi\-\_\-gstbmm}}
+\index{mpi\-\_\-gstbmm@{mpi\-\_\-gstbmm}!distributed memory (MPI) routines@{distributed memory (\-M\-P\-I) routines}}
+\subsubsection[{mpi\-\_\-gstbmm}]{\setlength{\rightskip}{0pt plus 5cm}int mpi\-\_\-gstbmm (
+\begin{DoxyParamCaption}
+\item[{double $\ast$$\ast$}]{V, }
+\item[{int}]{nrow, }
+\item[{int}]{m, }
+\item[{int}]{m\-\_\-rowwise, }
+\item[{{\bf Block} $\ast$}]{tpltzblocks, }
+\item[{int}]{nb\-\_\-blocks\-\_\-local, }
+\item[{int}]{nb\-\_\-blocks\-\_\-all, }
+\item[{int}]{id0p, }
+\item[{int}]{local\-\_\-\-V\-\_\-size, }
+\item[{int64\-\_\-t $\ast$}]{id0gap, }
+\item[{int $\ast$}]{lgap, }
+\item[{int}]{ngap, }
+\item[{{\bf Flag}}]{flag\-\_\-stgy, }
+\item[{M\-P\-I\-\_\-\-Comm}]{comm}
+\end{DoxyParamCaption}
+)}}\label{group__group12_ga7c3bdb98f0e937e6e84c8652e101acac}
+
+
+Performs the multiplication of a symmetric, Toeplitz block-\/diagonal matrix, T, by an arbitrary matrix, V, distributed over processes in the generalized column-\/wise way. This matrix V contains defined gaps which represents the useless data for the comutation. The gaps indexes are defined in the global time space as the generized toeplitz matrix, meaning the row dimension. Each of his diagonal blocks is a symmetric, band-\/diagonal Toeplitz matrix, which can be different for each block. 
+
+We first rebuild the Toeplitz block matrix structure to reduce the computation cost and skip the computations of the values on the defined gaps. then, each process performs the multiplication sequentially for each of the gappy block and based on the sliding window algorithm. Prior to that M\-P\-I calls are used to exchange data between neighboring process. The parameters are \-: 
+\begin{DoxyParams}{Parameters}
+{\em V} & {\bfseries }\mbox{[}input\mbox{]} distributed data matrix (with the convention V(i,j)=V\mbox{[}i+j$\ast$n\mbox{]}) ; {\bfseries }\mbox{[}out\mbox{]} result of the product T\-V \\
+\hline
+{\em nrow} & number of rows of the global data matrix V \\
+\hline
+{\em m} & number of columns for the data matrix V in the global rowwise order \\
+\hline
+{\em m\-\_\-rowwise} & number of columns for the data matrix V in the rowwise order per processor \\
+\hline
+{\em tpltzblocks} & list of the toeplitz blocks struture with its own parameters (idv, n, T\-\_\-block, lambda) \-:
+\begin{DoxyItemize}
+\item idv is the global row index defining for each Toeplitz block as stored in the vector T ;
+\item n size of each Toeplitz block
+\item T\-\_\-block location of each Toeplitz matrix data composed of the non-\/zero entries of the first row ;
+\item lambda size of each Toeplitz block data T\-\_\-block. The bandwith size is then equal to lambda$\ast$2-\/1 
+\end{DoxyItemize}\\
+\hline
+{\em nb\-\_\-blocks\-\_\-all} & number of all Toeplitz block on the diagonal of the full Toeplitz matrix \\
+\hline
+{\em nb\-\_\-blocks\-\_\-local} & number of Toeplitz blocks as stored in T \\
+\hline
+{\em idp} & global index of the first element of the local part of V \\
+\hline
+{\em local\-\_\-\-V\-\_\-size} & a number of all elements in local V \\
+\hline
+{\em id0gap} & index of the first element of each defined gap \\
+\hline
+{\em lgap} & length of each defined gaps \\
+\hline
+{\em ngap} & number of defined gaps \\
+\hline
+{\em flag\-\_\-stgy} & flag strategy for the product computation \\
+\hline
+{\em comm} & M\-P\-I communicator \\
+\hline
+\end{DoxyParams}
+
+
+Definition at line \hyperlink{toeplitz__gappy_8c_source_l00088}{88} of file \hyperlink{toeplitz__gappy_8c_source}{toeplitz\-\_\-gappy.\-c}.
+
+\hypertarget{group__group12_gab51a5dfa887d47b4ce627eb0e01a2e0a}{\index{distributed memory (\-M\-P\-I) routines@{distributed memory (\-M\-P\-I) routines}!stbmm@{stbmm}}
+\index{stbmm@{stbmm}!distributed memory (MPI) routines@{distributed memory (\-M\-P\-I) routines}}
+\subsubsection[{stbmm}]{\setlength{\rightskip}{0pt plus 5cm}int stbmm (
+\begin{DoxyParamCaption}
+\item[{double $\ast$$\ast$}]{V, }
+\item[{int}]{nrow, }
+\item[{int}]{m\-\_\-cw, }
+\item[{int}]{m\-\_\-rw, }
+\item[{{\bf Block} $\ast$}]{tpltzblocks, }
+\item[{int}]{nb\-\_\-blocks, }
+\item[{int64\-\_\-t}]{idp, }
+\item[{int}]{local\-\_\-\-V\-\_\-size, }
+\item[{{\bf Flag}}]{flag\-\_\-stgy}
+\end{DoxyParamCaption}
+)}}\label{group__group12_gab51a5dfa887d47b4ce627eb0e01a2e0a}
+
+
+Performs the multiplication of a symmetric, Toeplitz block-\/diagonal matrix, T, by an arbitrary matrix, V, distributed over processes in the generalized column-\/wise way. 
+
+Each process performs the multiplication sequentially for each diagonal block and based on the sliding window algorithm. Prior to that M\-P\-I calls are used to exchange data between neighboring process. Each of the diagonal blocks is a symmetric, band-\/diagonal Toeplitz matrix, which can be different for each block. The parameters are \-: 
+\begin{DoxyParams}{Parameters}
+{\em V} & {\bfseries }\mbox{[}input\mbox{]} distributed data matrix (with the convention V(i,j)=V\mbox{[}i+j$\ast$n\mbox{]}) ; {\bfseries }\mbox{[}out\mbox{]} result of the product T\-V \\
+\hline
+{\em nrow} & number of rows of the global data matrix V \\
+\hline
+{\em m} & number of columns for the data matrix V in the global rowwise order \\
+\hline
+{\em m\-\_\-rowwise} & number of columns for the data matrix V in the rowwise order per processor \\
+\hline
+{\em tpltzblocks} & list of the toeplitz blocks struture with its own parameters (idv, n, T\-\_\-block, lambda) \-: \\
+\hline
+{\em nb\-\_\-blocks} & number of Toeplitz blocks as stored in T \\
+\hline
+{\em idp} & global index of the first element of the local part of V \\
+\hline
+{\em local\-\_\-\-V\-\_\-size} & a number of all elements in local V \\
+\hline
+{\em flag\-\_\-stgy} & flag strategy for the product computation \\
+\hline
+\end{DoxyParams}
+
+
+Definition at line \hyperlink{toeplitz__seq_8c_source_l00121}{121} of file \hyperlink{toeplitz__seq_8c_source}{toeplitz\-\_\-seq.\-c}.
+

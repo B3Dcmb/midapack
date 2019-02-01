@@ -1,0 +1,22 @@
+\hypertarget{butterfly_8h}{\section{butterfly.\-h}
+\label{butterfly_8h}\index{butterfly.\-h@{butterfly.\-h}}
+}
+
+\begin{DoxyCode}
+00001 
+00008 \textcolor{keywordtype}{int} \hyperlink{group__matmap__group22_gabe7077466aef706a7825e650a78f4e5e}{butterfly\_init}(\textcolor{keywordtype}{int} *indices, \textcolor{keywordtype}{int} count, \textcolor{keywordtype}{int} **R, \textcolor{keywordtype}{int} *nR, \textcolor{keywordtype}{int}
+       **S, \textcolor{keywordtype}{int} *nS, \textcolor{keywordtype}{int} **com\_indices, \textcolor{keywordtype}{int} *com\_count, \textcolor{keywordtype}{int} steps, MPI\_Comm comm);
+00009 
+00010 \textcolor{keywordtype}{int} \hyperlink{group__matmap__group22_ga3ab052e5ba3e18427574481f64916b3a}{butterfly\_reduce}(\textcolor{keywordtype}{int} **R, \textcolor{keywordtype}{int} *nR, \textcolor{keywordtype}{int}  nRmax, \textcolor{keywordtype}{int} **S, \textcolor{keywordtype}{int}
+       *nS, \textcolor{keywordtype}{int} nSmax, \textcolor{keywordtype}{double} *val, \textcolor{keywordtype}{int} steps, MPI\_Comm comm);
+00011 
+00012 \textcolor{keywordtype}{int} \hyperlink{group__matmap__group22_gaddc1509a3b18b1d35b7a4fc411eba3a6}{butterfly\_blocking\_1instr\_reduce}(\textcolor{keywordtype}{int} **R, \textcolor{keywordtype}{
+      int} *nR, \textcolor{keywordtype}{int}  nRmax, \textcolor{keywordtype}{int} **S, \textcolor{keywordtype}{int} *nS, \textcolor{keywordtype}{int} nSmax, \textcolor{keywordtype}{double} *val, \textcolor{keywordtype}{int} steps, 
+      MPI\_Comm comm);
+00013 \textcolor{keywordtype}{int} \hyperlink{group__matmap__group22_ga2760469151322cc847123dfa097fb93a}{butterfly\_blocking\_2instr\_reduce}(\textcolor{keywordtype}{int} **R, \textcolor{keywordtype}{
+      int} *nR, \textcolor{keywordtype}{int}  nRmax, \textcolor{keywordtype}{int} **S, \textcolor{keywordtype}{int} *nS, \textcolor{keywordtype}{int} nSmax, \textcolor{keywordtype}{double} *val, \textcolor{keywordtype}{int} steps, 
+      MPI\_Comm comm);
+00014 
+00015 \textcolor{keywordtype}{double} \hyperlink{butterfly_8h_aaa0b90782afb0c6be2e0ae0f119d5317}{butterfly\_reduce\_b}(\textcolor{keywordtype}{int} **R, \textcolor{keywordtype}{int} *nR, \textcolor{keywordtype}{int} nRmax, \textcolor{keywordtype}{int} **
+      S, \textcolor{keywordtype}{int} *nS, \textcolor{keywordtype}{int} nSmax, \textcolor{keywordtype}{double} *val, \textcolor{keywordtype}{int} b, \textcolor{keywordtype}{int} steps, MPI\_Comm comm);
+\end{DoxyCode}

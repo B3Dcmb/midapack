@@ -1,0 +1,45 @@
+\hypertarget{group__matmap__group12b}{\section{distributed memory (M\-P\-I) routines}
+\label{group__matmap__group12b}\index{distributed memory (\-M\-P\-I) routines@{distributed memory (\-M\-P\-I) routines}}
+}
+\subsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+int \hyperlink{group__matmap__group12b_ga46ad4af50377be15a0aa50f416a53ade}{Tr\-Mat\-Vec\-Prod\-\_\-\-Naive} (\hyperlink{structMat}{Mat} $\ast$A, double $\ast$y, double $\ast$x, int pflag)
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+These are distributed-\/memory routines.
+
+{\bfseries Note} that if the M\-P\-I flag is not set on the compilation stage, most of the routines listed here will run sequentially unless explicitly stated to the contrary in their description. 
+
+\subsection{Function Documentation}
+\hypertarget{group__matmap__group12b_ga46ad4af50377be15a0aa50f416a53ade}{\index{distributed memory (\-M\-P\-I) routines@{distributed memory (\-M\-P\-I) routines}!Tr\-Mat\-Vec\-Prod\-\_\-\-Naive@{Tr\-Mat\-Vec\-Prod\-\_\-\-Naive}}
+\index{Tr\-Mat\-Vec\-Prod\-\_\-\-Naive@{Tr\-Mat\-Vec\-Prod\-\_\-\-Naive}!distributed memory (MPI) routines@{distributed memory (\-M\-P\-I) routines}}
+\subsubsection[{Tr\-Mat\-Vec\-Prod\-\_\-\-Naive}]{\setlength{\rightskip}{0pt plus 5cm}int Tr\-Mat\-Vec\-Prod\-\_\-\-Naive (
+\begin{DoxyParamCaption}
+\item[{{\bf Mat} $\ast$}]{A, }
+\item[{double $\ast$}]{y, }
+\item[{double $\ast$}]{x, }
+\item[{int}]{pflag}
+\end{DoxyParamCaption}
+)}}\label{group__matmap__group12b_ga46ad4af50377be15a0aa50f416a53ade}
+Perform transposed matrix-\/vector multiplication, $x \leftarrow A^t y$. This naive version does not require a precomputed communication structure. But communication volumes may be significant. Consequently in most of the cases is not optimized. \begin{DoxyWarning}{Warning}
+\mbox{[}M\-P\-I O\-N\-L\-Y!\mbox{]} this function does not exist in Midapack sequential version 
+\end{DoxyWarning}
+\begin{DoxySeeAlso}{See also}
+\hyperlink{group__matmap__group11_ga1a51d7e8153d33045482100bbd07d0a9}{Tr\-Mat\-Vec\-Prod} \hyperlink{group__matmap__group11_gae31f7ccb10cda5c97e49f640feed1ad4}{Mat\-Local\-Shape} 
+\end{DoxySeeAlso}
+
+\begin{DoxyParams}{Parameters}
+{\em mat} & pointer \\
+\hline
+{\em y} & local input vector (distributed) \\
+\hline
+{\em x} & local output vector (overlapped) \\
+\hline
+\end{DoxyParams}
+
+
+Definition at line \hyperlink{mapmat_8c_source_l00658}{658} of file \hyperlink{mapmat_8c_source}{mapmat.\-c}.
+

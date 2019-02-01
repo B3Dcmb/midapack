@@ -1,0 +1,958 @@
+\hypertarget{toeplitz_8c}{\section{toeplitz.\-c}
+\label{toeplitz_8c}\index{toeplitz.\-c@{toeplitz.\-c}}
+}
+
+\begin{DoxyCode}
+00001 
+00059 \textcolor{preprocessor}{#include "\hyperlink{toeplitz_8h}{toeplitz.h}"}
+00060 
+00061 \textcolor{comment}{//r1.2 - Frederic Dauvergne (APC)}
+00062 \textcolor{comment}{//This file contains the main part of the Toeplitz algebra module. This include}
+00063 \textcolor{comment}{//the elementary product routines (using FFT) and initialization routines.}
+00064 \textcolor{comment}{//This also contains the mpi version of the Toeplitz matrix product with global}
+00065 \textcolor{comment}{//row-wise order distribution of the data.}
+00066 \textcolor{comment}{//}
+00067 \textcolor{comment}{//todo:}
+00068 \textcolor{comment}{//- add in stmm non blocking communication as it is done for the stbmm routine}
+00069 \textcolor{comment}{//- scmm\_direct dont need nfft parameter}
+00070 
+00071 
+00072 \textcolor{comment}{//=========================================================================}
+00073 \textcolor{comment}{//Global parameters}
+00074 
+00076 
+\hypertarget{toeplitz_8c_source_l00078}{}\hyperlink{toeplitz_8h_ab848ce91ba14d3dc5c87d0b42f3a1c0d}{00078} \textcolor{keywordtype}{int} \hyperlink{toeplitz_8c_ab848ce91ba14d3dc5c87d0b42f3a1c0d}{VERBOSE};
+\hypertarget{toeplitz_8c_source_l00079}{}\hyperlink{toeplitz_8c_a005f790383498397d0fdad1513881e3f}{00079} \textcolor{keywordtype}{int} \hyperlink{toeplitz_8c_a005f790383498397d0fdad1513881e3f}{VERBOSE\_FIRSTINIT}=1;
+00080 
+00081 \textcolor{comment}{//Parameter just to know the rank for printing when VERBOSE mode is on}
+\hypertarget{toeplitz_8c_source_l00082}{}\hyperlink{toeplitz__utils_8c_a300d52d9923297872ffb24962a0f0ce6}{00082} \textcolor{keywordtype}{int} \hyperlink{toeplitz_8c_a300d52d9923297872ffb24962a0f0ce6}{PRINT\_RANK} = -1;
+00083 
+00084 
+00085 \textcolor{comment}{//=========================================================================}
+00086 
+00088 
+\hypertarget{toeplitz_8c_source_l00093}{}\hyperlink{group__group22_ga24331a8efb6e0b77df7c645ef45b2830}{00093} \textcolor{keywordtype}{int} \hyperlink{group__group22_ga24331a8efb6e0b77df7c645ef45b2830}{print\_error\_message}(\textcolor{keywordtype}{int} error\_number, \textcolor{keywordtype}{char} \textcolor{keyword}{const} *file, \textcolor{keywordtype}{
+      int} line)
+00094 \{
+00095   \textcolor{keywordtype}{char} *str\_mess;
+00096   str\_mess = (\textcolor{keywordtype}{char} *) malloc(100 * \textcolor{keyword}{sizeof}(\textcolor{keywordtype}{char}));
+00097   \textcolor{keywordflow}{if}(error\_number == 1)    
+00098     sprintf (str\_mess, \textcolor{stringliteral}{"Error on line %d of %s. Toeplitz band width > vector
+       size\(\backslash\)n"}, line, file);
+00099   \textcolor{keywordflow}{if}(error\_number == 2)    
+00100     sprintf (str\_mess, \textcolor{stringliteral}{"Error on line %d of %s. Bad allocation.\(\backslash\)n"}, line, file)
+      ;
+00101   \textcolor{keywordflow}{if}(error\_number == 3)    
+00102     sprintf (str\_mess, \textcolor{stringliteral}{"Error on line %d of %s. Error at fftw multithread
+       initialization.\(\backslash\)n"}, line, file);
+00103   \textcolor{keywordflow}{if}(error\_number == 7)
+00104     sprintf (str\_mess, \textcolor{stringliteral}{"Error on line %d of %s.\(\backslash\)n"}, line, file);
+00105   fprintf(stderr, \textcolor{stringliteral}{"%s"}, str\_mess);
+00106   printf(\textcolor{stringliteral}{"%s"}, str\_mess);
+00107   \textcolor{keywordflow}{return} error\_number;
+00108   
+00109 \}
+00110 
+00111 
+00112 \textcolor{comment}{//=========================================================================}
+00113 
+00115 
+\hypertarget{toeplitz_8c_source_l00130}{}\hyperlink{group__group21_ga186fc8d8825da293e94de77b77d01fba}{00130} \textcolor{keywordtype}{int} \hyperlink{group__group21_ga186fc8d8825da293e94de77b77d01fba}{define\_blocksize}(\textcolor{keywordtype}{int} n, \textcolor{keywordtype}{int} lambda, \textcolor{keywordtype}{int} bs\_flag, \textcolor{keywordtype}{int} 
+      fixed\_bs)
+00131 \{
+00132   \textcolor{keywordtype}{int} bs;  \textcolor{comment}{//computed optimal block size}
+00133   \textcolor{keywordtype}{int} min\_bs;  \textcolor{comment}{//minimum block size used for the computation}
+00134   \textcolor{keywordtype}{int} min\_pow2;  \textcolor{comment}{//minimum power of two index used for the block size
+       computation}
+00135 
+00136   \textcolor{comment}{//cheating}
+00137 \textcolor{comment}{//  bs\_flag = 5;//1;//5;}
+00138 \textcolor{comment}{//  fixed\_bs = pow(2,15);  //2^14 winner because smaller block than 2^15 (as
+       same speed)}
+00139 
+00140   \textcolor{keywordflow}{if} (bs\_flag==1) \{
+00141     bs = fixed\_bs;
+00142 
+00143   \}
+00144   \textcolor{keywordflow}{else} \textcolor{keywordflow}{if} (bs\_flag==2) \{  \textcolor{comment}{//this formula need to be check - seems there is a pb}
+00145     min\_bs = 2*lambda;    \textcolor{comment}{//when bs = 2 lambda. Not enough data left in the
+       middle}
+00146     min\_pow2 = (int) ceil( log(min\_bs)/log(2) );
+00147     bs = pow(2, min\_pow2);
+00148     \textcolor{keywordflow}{if} (bs > n)       \textcolor{comment}{//This is to avoid block size much bigger than the
+       matrix. Append mostly}
+00149       bs = min\_bs;  \textcolor{comment}{//when the matrix is small compared to his bandwith}
+00150 
+00151   \}
+00152   \textcolor{keywordflow}{else} \textcolor{keywordflow}{if} (bs\_flag==3) \{
+00153     min\_bs = 3*lambda;
+00154     min\_pow2 = (int) ceil( log(min\_bs)/log(2) );
+00155     bs = pow(2, min\_pow2);
+00156     \textcolor{keywordflow}{if} (bs > n)       \textcolor{comment}{//This is to avoid block size much bigger than the
+       matrix. Append mostly}
+00157       bs = min\_bs;  \textcolor{comment}{//when the matrix is small compared to his bandwith}
+00158 
+00159   \}
+00160   \textcolor{keywordflow}{else} \textcolor{keywordflow}{if} (bs\_flag==4 || bs\_flag==0) \{
+00161     min\_bs = 4*lambda;
+00162     min\_pow2 = (int) ceil( log(min\_bs)/log(2) );
+00163     bs = pow(2, min\_pow2);
+00164     \textcolor{keywordflow}{if} (bs > n)       \textcolor{comment}{//This is to avoid block size much bigger than the
+       matrix. Append mostly}
+00165       bs = min\_bs;  \textcolor{comment}{//when the matrix is small compared to his bandwith}
+00166 
+00167   \}
+00168   \textcolor{keywordflow}{else} \textcolor{keywordflow}{if} (bs\_flag==5) \{
+00169     \textcolor{comment}{//Different formula to compute the optimal block size}
+00170     bs=1;
+00171     \textcolor{keywordflow}{while}(bs < 2*(lambda-1)*log(bs+1) && bs<n) \{
+00172       bs = bs*2;  \}
+00173 
+00174   \}
+00175   \textcolor{keywordflow}{else} \textcolor{keywordflow}{if} (bs\_flag==6) \{ \textcolor{comment}{//the same as bs\_flag==5 but with constrain on the
+       minimal size}
+00176                                        \textcolor{comment}{// and the number of subblocks.}
+00177 
+00178     min\_bs = 4*lambda;
+00179     min\_pow2 = (int) ceil( log(min\_bs)/log(2) );
+00180 
+00181     min\_pow2 = max(min\_pow2, pow(2,14)); \textcolor{comment}{//add condition to have a minimum size
+       2^14 for bs}
+00182                                          \textcolor{comment}{//This is based on empirical
+       estimation and can be justified}
+00183                                          \textcolor{comment}{//by the speed benchmark of FFTW3 (see
+       the FFTW official website).}
+00184     bs = pow(2, min\_pow2);
+00185 
+00186     \textcolor{keywordflow}{if} (bs > n)       \textcolor{comment}{//This is to avoid block size much bigger than the
+       matrix. Append mostly}
+00187       bs = min\_bs;  \textcolor{comment}{//when the matrix is small compared to his bandwith}
+00188 
+00189 \textcolor{comment}{//test if enough subblock for sliding windows algorithm:}
+00190 \textcolor{comment}{//    int nbloc\_bs = ceil( (1.0*n)/(bs-2*distcorrmin));}
+00191 \textcolor{comment}{//    if (nbloc\_bs<8) //Empirical condition to avoid small number of subblocks}
+00192 \textcolor{comment}{//      bs = 0;   //Switch to no sliding windows algorithm}
+00193 
+00194   \}
+00195   \textcolor{keywordflow}{else} \{
+00196     printf(\textcolor{stringliteral}{"Error. Wrong value for bs\_flag. Set to auto mode.\(\backslash\)n"});
+00197     min\_bs = 4*lambda;
+00198     min\_pow2 = (int) ceil( log(min\_bs)/log(2) );
+00199     bs = pow(2, min\_pow2);
+00200     \textcolor{keywordflow}{if} (bs > n)       \textcolor{comment}{//This is to avoid block size much bigger than the
+       matrix. Append mostly}
+00201       bs = min\_bs;  \textcolor{comment}{//when the matrix is small compared to his bandwith}
+00202   \}
+00203 
+00204 
+00205   \textcolor{keywordflow}{if}(\hyperlink{toeplitz_8c_a300d52d9923297872ffb24962a0f0ce6}{PRINT\_RANK}==0 && \hyperlink{toeplitz_8c_ab848ce91ba14d3dc5c87d0b42f3a1c0d}{VERBOSE}>1)
+00206     printf(\textcolor{stringliteral}{"Computed optimal blocksize is %d (with lambda = %d)\(\backslash\)n"}, bs, lambda)
+      ;
+00207 
+00208   \textcolor{keywordflow}{return} bs;
+00209 \}
+00210 
+00211 
+00212 \textcolor{comment}{//=========================================================================}
+00213 
+00215 
+\hypertarget{toeplitz_8c_source_l00220}{}\hyperlink{group__group21_ga4c2846ca9f67faae5746325d1ec63aac}{00220} \textcolor{keywordtype}{int} \hyperlink{group__group21_ga4c2846ca9f67faae5746325d1ec63aac}{define\_nfft}(\textcolor{keywordtype}{int} n\_thread, \textcolor{keywordtype}{int} flag\_nfft, \textcolor{keywordtype}{int} fixed\_nfft)
+00221 \{
+00222   \textcolor{keywordtype}{int} nfft;
+00223 
+00224   \textcolor{keywordflow}{if} (flag\_nfft==0)
+00225     nfft = NFFT\_DEFAULT;
+00226   \textcolor{keywordflow}{else} \textcolor{keywordflow}{if} (flag\_nfft==1)
+00227     nfft = fixed\_nfft;
+00228   \textcolor{keywordflow}{else} \textcolor{keywordflow}{if} (flag\_nfft==2) 
+00229     nfft = n\_thread;
+00230   \textcolor{keywordflow}{else} \{
+00231     printf(\textcolor{stringliteral}{"Error. Wrong value for flag\_nfft. Set to auto mode.\(\backslash\)n"});
+00232     nfft = NFFT\_DEFAULT;
+00233   \}
+00234 
+00235   \textcolor{keywordflow}{return} nfft;
+00236 \}
+00237 
+00238 
+00239 \textcolor{comment}{//=========================================================================}
+00240 
+00242 
+\hypertarget{toeplitz_8c_source_l00257}{}\hyperlink{group__group11_ga7f4e77d71f2c6f2caf652bab7520e3f4}{00257} \textcolor{keywordtype}{int} \hyperlink{group__group11_ga7f4e77d71f2c6f2caf652bab7520e3f4}{tpltz\_init}(\textcolor{keywordtype}{int} n, \textcolor{keywordtype}{int} lambda, \textcolor{keywordtype}{int} *nfft, \textcolor{keywordtype}{int} *blocksize, 
+      fftw\_complex **T\_fft, \textcolor{keywordtype}{double} *T, fftw\_complex **V\_fft, \textcolor{keywordtype}{double} **V\_rfft, fftw\_plan *
+      plan\_f, fftw\_plan *plan\_b, \hyperlink{structFlag}{Flag} flag\_stgy)
+00258 \{
+00259   \textcolor{keywordtype}{int} n\_thread;
+00260   \textcolor{keywordtype}{double} t1, t2;
+00261 
+00262   \textcolor{comment}{//Set the VERBOSE global variable  }
+00263   \hyperlink{toeplitz_8c_ab848ce91ba14d3dc5c87d0b42f3a1c0d}{VERBOSE} = flag\_stgy.\hyperlink{structFlag_a2a95d22f9f2430453cfba79d30f12f98}{flag\_verbose};
+00264 
+00265 
+00266   \textcolor{comment}{//initialize block size}
+00267   *blocksize = \hyperlink{group__group21_ga186fc8d8825da293e94de77b77d01fba}{define\_blocksize}(n, lambda, flag\_stgy.\hyperlink{structFlag_abeb9784f834d231864f1a722c7d79398}{flag\_bs}
+      , flag\_stgy.\hyperlink{structFlag_a32e56c6cf96b69f4dd6e0f2dcdb88678}{fixed\_bs});
+00268 
+00269 
+00270   \textcolor{comment}{//if (bs==0)}
+00271 \textcolor{comment}{//     flag\_stgy.flag\_bs = 9999 //swich to noslidingwindowsalgo}
+00272 
+00273 
+00274 \textcolor{comment}{//#pragma omp parallel}
+00275 \textcolor{comment}{//\{  n\_thread = omp\_get\_num\_threads(); \} }
+00276 
+00277 \textcolor{comment}{//  if ((NB\_OMPTHREADS <= n\_thread) && (NB\_OMPTHREADS != 0))}
+00278 \textcolor{comment}{//    omp\_set\_num\_threads(NB\_OMPTHREADS);}
+00279 
+00280   n\_thread = omp\_get\_max\_threads(); 
+00281 
+00282 
+00283   \textcolor{comment}{//initialize nfft}
+00284   *nfft = \hyperlink{group__group21_ga4c2846ca9f67faae5746325d1ec63aac}{define\_nfft}(n\_thread, flag\_stgy.\hyperlink{structFlag_a6c22a65604c9dd03d58ecf602bb67952}{flag\_nfft}, 
+      flag\_stgy.\hyperlink{structFlag_a3e8ec6d9ff8ecf0ceff5de51ca98e65b}{fixed\_nfft});   \textcolor{comment}{//*nfft=n\_thread;}
+00285 
+00286 
+00287   \textcolor{keywordflow}{if}(\hyperlink{toeplitz_8c_a300d52d9923297872ffb24962a0f0ce6}{PRINT\_RANK}==0 && \hyperlink{toeplitz_8c_ab848ce91ba14d3dc5c87d0b42f3a1c0d}{VERBOSE}>0 && \hyperlink{toeplitz_8c_a005f790383498397d0fdad1513881e3f}{VERBOSE\_FIRSTINIT}
+      ==1) \{
+00288     printf(\textcolor{stringliteral}{"Using %d threads\(\backslash\)n"}, n\_thread);
+00289     printf(\textcolor{stringliteral}{"nfft = %d\(\backslash\)n"}, *nfft);
+00290   \}
+00291 
+00292   \textcolor{comment}{//initialize fftw plan allocation flag}
+00293   \textcolor{keywordtype}{int} fftw\_flag = flag\_stgy.\hyperlink{structFlag_adf245cb515d8a26bdc70c7226d3dfb39}{flag\_fftw}; \textcolor{comment}{//FFTW\_FLAG;}
+00294 
+00295   \textcolor{comment}{//initialize fftw for omp threads}
+00296 \textcolor{preprocessor}{#ifdef fftw\_MULTITHREADING}
+00297 \textcolor{preprocessor}{}  \hyperlink{group__group21_gae3d694bcffacaf24706f0586a223538e}{fftw\_init\_omp\_threads}(n\_thread);
+00298 \textcolor{preprocessor}{#endif}
+00299 \textcolor{preprocessor}{}
+00300   \textcolor{comment}{//initialize fftw array and plan for T (and make it circulant first)}
+00301 \textcolor{comment}{// t1=MPI\_Wtime();}
+00302   \hyperlink{group__group21_ga6c68921dafc6dc184d335a59df68e5f7}{circ\_init\_fftw}(T, (*blocksize), lambda, T\_fft);
+00303 \textcolor{comment}{//  t2=  MPI\_Wtime();}
+00304 
+00305 \textcolor{comment}{//  if (PRINT\_RANK==0 && VERBOSE>0)}
+00306 \textcolor{comment}{//    printf("time circ\_init\_fftw=%f\(\backslash\)n", t2-t1);}
+00307 
+00308   \textcolor{comment}{//initialize fftw array and plan for V  }
+00309 \textcolor{comment}{// t1=MPI\_Wtime();}
+00310   \hyperlink{group__group21_ga1a6106fbaa68aab85595935252299097}{rhs\_init\_fftw}(nfft, (*blocksize), V\_fft, V\_rfft, plan\_f, plan\_b,
+       fftw\_flag);
+00311 \textcolor{comment}{//  t2=  MPI\_Wtime();}
+00312 
+00313 \textcolor{comment}{//  if (PRINT\_RANK==0 && VERBOSE>0)}
+00314 \textcolor{comment}{//    printf("time rhs\_init\_fftw=%f\(\backslash\)n", t2-t1);}
+00315 
+00316   \textcolor{keywordflow}{if}(\hyperlink{toeplitz_8c_a300d52d9923297872ffb24962a0f0ce6}{PRINT\_RANK}==0 && \hyperlink{toeplitz_8c_ab848ce91ba14d3dc5c87d0b42f3a1c0d}{VERBOSE}>1)
+00317     printf(\textcolor{stringliteral}{"Initialization finished successfully\(\backslash\)n"});
+00318 
+00319   \hyperlink{toeplitz_8c_a005f790383498397d0fdad1513881e3f}{VERBOSE\_FIRSTINIT}=0;
+00320 
+00321   \textcolor{keywordflow}{return} 0;
+00322 \}
+00323 
+00324 
+00325 \textcolor{comment}{//=========================================================================}
+00326 
+00328 
+\hypertarget{toeplitz_8c_source_l00333}{}\hyperlink{group__group21_gae3d694bcffacaf24706f0586a223538e}{00333} \textcolor{keywordtype}{int} \hyperlink{group__group21_gae3d694bcffacaf24706f0586a223538e}{fftw\_init\_omp\_threads}(\textcolor{keywordtype}{int} fftw\_n\_thread)
+00334 \{
+00335   \textcolor{keywordtype}{int} status;
+00336 
+00337   \textcolor{comment}{//initialize fftw omp threads}
+00338   status = fftw\_init\_threads();
+00339   \textcolor{keywordflow}{if} (status==0)
+00340     \textcolor{keywordflow}{return} \hyperlink{group__group22_ga24331a8efb6e0b77df7c645ef45b2830}{print\_error\_message} (3, \_\_FILE\_\_, \_\_LINE\_\_);
+00341 
+00342   \textcolor{comment}{//set the number of FFTW threads}
+00343   fftw\_plan\_with\_nthreads(fftw\_n\_thread);
+00344 
+00345   \textcolor{keywordflow}{if}(\hyperlink{toeplitz_8c_a300d52d9923297872ffb24962a0f0ce6}{PRINT\_RANK}==0 && \hyperlink{toeplitz_8c_ab848ce91ba14d3dc5c87d0b42f3a1c0d}{VERBOSE}>1 && \hyperlink{toeplitz_8c_a005f790383498397d0fdad1513881e3f}{VERBOSE\_FIRSTINIT}
+      ==1)
+00346     printf(\textcolor{stringliteral}{"Using multithreaded FFTW with %d threads\(\backslash\)n"}, fftw\_n\_thread);
+00347 
+00348   \textcolor{keywordflow}{return} 0;
+00349 \}
+00350 
+00351 
+00352 \textcolor{comment}{//=========================================================================}
+00353 
+00355 
+\hypertarget{toeplitz_8c_source_l00365}{}\hyperlink{group__group21_ga1a6106fbaa68aab85595935252299097}{00365} \textcolor{keywordtype}{int} \hyperlink{group__group21_ga1a6106fbaa68aab85595935252299097}{rhs\_init\_fftw}(\textcolor{keywordtype}{int} *nfft, \textcolor{keywordtype}{int} fft\_size, fftw\_complex **V\_fft, \textcolor{keywordtype}{
+      double} **V\_rfft, fftw\_plan *plan\_f, fftw\_plan *plan\_b, \textcolor{keywordtype}{int} fftw\_flag)
+00366 \{
+00367   \textcolor{comment}{//allocate fftw arrays and plans for V}
+00368   *V\_fft  = (fftw\_complex*) fftw\_malloc((*nfft)*(fft\_size/2+1) * \textcolor{keyword}{sizeof}(
+      fftw\_complex) );
+00369   *V\_rfft = (\textcolor{keywordtype}{double}*) fftw\_malloc((*nfft)*fft\_size * \textcolor{keyword}{sizeof}(double) );
+00370   \textcolor{keywordflow}{if} (*V\_fft==0 || *V\_rfft==0)
+00371     \textcolor{keywordflow}{return} \hyperlink{group__group22_ga24331a8efb6e0b77df7c645ef45b2830}{print\_error\_message} (2, \_\_FILE\_\_, \_\_LINE\_\_);
+00372 
+00373   *plan\_f = fftw\_plan\_many\_dft\_r2c(1, &fft\_size, (*nfft), *V\_rfft, &fft\_size, 1
+      , fft\_size, *V\_fft, NULL, 1, fft\_size/2+1, fftw\_flag );
+00374   *plan\_b = fftw\_plan\_many\_dft\_c2r(1, &fft\_size, (*nfft), *V\_fft, NULL, 1, 
+      fft\_size/2+1, *V\_rfft, &fft\_size, 1, fft\_size, fftw\_flag );
+00375 
+00376 
+00377   \textcolor{keywordflow}{return} 0;
+00378 \}
+00379 
+00380 
+00381 \textcolor{comment}{//=========================================================================}
+00382 
+00384 
+\hypertarget{toeplitz_8c_source_l00392}{}\hyperlink{group__group21_ga6c68921dafc6dc184d335a59df68e5f7}{00392} \textcolor{keywordtype}{int} \hyperlink{group__group21_ga6c68921dafc6dc184d335a59df68e5f7}{circ\_init\_fftw}(\textcolor{keywordtype}{double} *T, \textcolor{keywordtype}{int} fft\_size, \textcolor{keywordtype}{int} lambda, 
+      fftw\_complex **T\_fft)
+00393 \{
+00394   \textcolor{comment}{//routine variable}
+00395   \textcolor{keywordtype}{int} i;
+00396   \textcolor{keywordtype}{int} circ\_fftw\_flag = FFTW\_ESTIMATE;
+00397   \textcolor{comment}{//allocation for T\_fft}
+00398   *T\_fft = (fftw\_complex*) fftw\_malloc( (fft\_size/2+1) * \textcolor{keyword}{sizeof}(fftw\_complex) )
+      ;
+00399   \textcolor{keywordflow}{if} (*T\_fft==0)
+00400     \textcolor{keywordflow}{return} \hyperlink{group__group22_ga24331a8efb6e0b77df7c645ef45b2830}{print\_error\_message} (2, \_\_FILE\_\_, \_\_LINE\_\_);
+00401   \textcolor{keywordtype}{double} *T\_circ = (\textcolor{keywordtype}{double}*) (*T\_fft);
+00402 
+00403   \textcolor{comment}{//inplace fft}
+00404   fftw\_plan plan\_f\_T;
+00405   plan\_f\_T   = fftw\_plan\_dft\_r2c\_1d( fft\_size, T\_circ, *T\_fft, circ\_fftw\_flag )
+      ;
+00406 
+00407   \textcolor{comment}{//make T circulant}
+00408 \textcolor{preprocessor}{#pragma omp parallel for }
+00409 \textcolor{preprocessor}{}  \textcolor{keywordflow}{for}(i=0; i<fft\_size+2;i++) 
+00410     T\_circ[i] = 0.0;
+00411 
+00412   T\_circ[0] = T[0];
+00413   \textcolor{keywordflow}{for}(i=1;i<lambda;i++) \{
+00414     T\_circ[i] = T[i]; 
+00415     T\_circ[fft\_size-i] = T[i];    \} 
+00416 
+00417   fftw\_execute(plan\_f\_T);
+00418   fftw\_destroy\_plan(plan\_f\_T);
+00419 
+00420   \textcolor{keywordflow}{return} 0;
+00421 \}
+00422 
+00423 
+00424 \textcolor{comment}{//=========================================================================}
+00425 
+00427 
+\hypertarget{toeplitz_8c_source_l00435}{}\hyperlink{group__group11_gac7ac0ee5f6eaee6846814b131671f6e8}{00435} \textcolor{keywordtype}{int} \hyperlink{group__group11_gac7ac0ee5f6eaee6846814b131671f6e8}{tpltz\_cleanup}(fftw\_complex **T\_fft, fftw\_complex **V\_fft, \textcolor{keywordtype}{
+      double} **V\_rfft,fftw\_plan *plan\_f, fftw\_plan *plan\_b)\{
+00436   fftw\_destroy\_plan(*plan\_f);
+00437   fftw\_destroy\_plan(*plan\_b);
+00438   fftw\_free(*T\_fft);
+00439   fftw\_free(*V\_fft);
+00440   fftw\_free(*V\_rfft);
+00441 \textcolor{preprocessor}{#ifdef fftw\_MULTITHREADING}
+00442 \textcolor{preprocessor}{}  fftw\_cleanup\_threads();
+00443 \textcolor{preprocessor}{#endif}
+00444 \textcolor{preprocessor}{}  fftw\_cleanup();
+00445 \}
+00446 
+00447 
+00448 \textcolor{comment}{//=========================================================================}
+00449 
+00451 
+\hypertarget{toeplitz_8c_source_l00459}{}\hyperlink{group__group22_ga7dddc7df6f787d6aa92dfc25e9d0465a}{00459} \textcolor{keywordtype}{int} \hyperlink{group__group22_ga7dddc7df6f787d6aa92dfc25e9d0465a}{copy\_block}(\textcolor{keywordtype}{int} ninrow, \textcolor{keywordtype}{int} nincol, \textcolor{keywordtype}{double} *Vin, \textcolor{keywordtype}{int} noutrow, \textcolor{keywordtype}{int} 
+      noutcol, \textcolor{keywordtype}{double} *Vout, \textcolor{keywordtype}{int} inrow, \textcolor{keywordtype}{int} incol, \textcolor{keywordtype}{int} nblockrow, \textcolor{keywordtype}{int} nblockcol, \textcolor{keywordtype}{int} 
+      outrow, \textcolor{keywordtype}{int} outcol, \textcolor{keywordtype}{double} norm, \textcolor{keywordtype}{int} set\_zero\_flag)
+00460 \{
+00461   \textcolor{keywordtype}{int} i, j, p, offsetIn, offsetOut;
+00462 
+00463   \textcolor{comment}{//do some size checks first}
+00464   \textcolor{keywordflow}{if}( (nblockcol > nincol) || (nblockrow > ninrow) || (nblockcol > noutcol) || 
+      (nblockrow > noutrow)) \{
+00465     printf(\textcolor{stringliteral}{"Error in routine copy\_block. Bad size setup.\(\backslash\)n"});
+00466     \textcolor{keywordflow}{return} \hyperlink{group__group22_ga24331a8efb6e0b77df7c645ef45b2830}{print\_error\_message}(7, \_\_FILE\_\_, \_\_LINE\_\_);  
+00467   \}
+00468 
+00469   \textcolor{keywordflow}{if}(set\_zero\_flag) \{
+00470 \textcolor{preprocessor}{#pragma omp parallel for //private(i) num\_threads(NB\_OMPTHREADS\_CPBLOCK)}
+00471 \textcolor{preprocessor}{}    \textcolor{keywordflow}{for}(i=0;i<noutrow*noutcol;i++)  \textcolor{comment}{//could use maybe memset but how about
+       threading}
+00472       Vout[i] = 0.0;  
+00473   \}
+00474 
+00475   offsetIn = ninrow*incol+inrow;
+00476   offsetOut = noutrow*outcol+outrow;
+00477 
+00478 \textcolor{comment}{//#pragma omp parallel for private(i,j,p) num\_threads(NB\_OMPTHREADS\_CPBLOCK)}
+00479   \textcolor{keywordflow}{for}(i=0;i<nblockcol*nblockrow;i++) \{    \textcolor{comment}{//copy the block}
+00480     j = i/nblockrow;
+00481     p = i%nblockrow;
+00482     Vout[offsetOut+j*noutrow+p] = Vin[offsetIn+j*ninrow+p]*norm;
+00483   \}
+00484 
+00485   \textcolor{keywordflow}{return} 0;
+00486 \}
+00487 
+00488 
+00489 \textcolor{comment}{//=========================================================================}
+00490 
+00492 
+\hypertarget{toeplitz_8c_source_l00509}{}\hyperlink{group__group21_ga2c399885221722e98f72206ddce8d0d3}{00509} \textcolor{keywordtype}{int} \hyperlink{group__group21_ga2c399885221722e98f72206ddce8d0d3}{scmm\_direct}(\textcolor{keywordtype}{int} fft\_size, \textcolor{keywordtype}{int} nfft, fftw\_complex *C\_fft, \textcolor{keywordtype}{int} 
+      ncol, \textcolor{keywordtype}{double} *V\_rfft, \textcolor{keywordtype}{double} **CV, fftw\_complex *V\_fft, fftw\_plan plan\_f\_V, 
+      fftw\_plan plan\_b\_CV)
+00510 \{
+00511   \textcolor{comment}{//routine variables}
+00512   \textcolor{keywordtype}{int} sizeT = fft\_size/2+1;
+00513   \textcolor{keywordtype}{int} i, idx;
+00514 
+00515   \textcolor{comment}{//perform forward FFT}
+00516   fftw\_execute(plan\_f\_V); \textcolor{comment}{//input in V\_rfft; output in V\_fft}
+00517 
+00518 \textcolor{comment}{//  printf("ncol=%d, fft\_size=%d, sizeT=%d\(\backslash\)n", ncol, fft\_size, sizeT);}
+00519 
+00520 \textcolor{comment}{//double t1, t2;}
+00521 \textcolor{comment}{//  t1=MPI\_Wtime();}
+00522 
+00523 \textcolor{preprocessor}{#pragma omp parallel for private(idx) //num\_threads(nfft)}
+00524 \textcolor{preprocessor}{}  \textcolor{keywordflow}{for}(i=0;i<ncol*sizeT;i++) \{
+00525     idx = i%sizeT;
+00526     V\_fft[i][0] = C\_fft[idx][0]*V\_fft[i][0]-C\_fft[idx][1]*V\_fft[i][1];
+00527     V\_fft[i][1] = C\_fft[idx][0]*V\_fft[i][1]+C\_fft[idx][1]*V\_fft[i][0];    \}
+00528 
+00529 \textcolor{comment}{//  t2=  MPI\_Wtime();}
+00530 \textcolor{comment}{//  printf("Computation time : %lf s.\(\backslash\)n", t2-t1);}
+00531 
+00532 
+00533 \textcolor{comment}{// This is wrong :}
+00534 \textcolor{comment}{/*}
+00535 \textcolor{comment}{int icol;}
+00536 \textcolor{comment}{double t1, t2;}
+00537 \textcolor{comment}{  t1=MPI\_Wtime();}
+00538 \textcolor{comment}{#pragma omp parallel for private(i, idx) }
+00539 \textcolor{comment}{  for(icol=0;icol<ncol;icol++) \{}
+00540 \textcolor{comment}{  for(idx=0;idx<sizeT;idx++) \{}
+00541 \textcolor{comment}{    i=icol*idx;}
+00542 \textcolor{comment}{    V\_fft[i][0] = C\_fft[idx][0]*V\_fft[i][0]-C\_fft[idx][1]*V\_fft[i][1];}
+00543 \textcolor{comment}{    V\_fft[i][1] = C\_fft[idx][0]*V\_fft[i][1]+C\_fft[idx][1]*V\_fft[i][0];    }
+00544 \textcolor{comment}{  \}\}}
+00545 \textcolor{comment}{  t2=  MPI\_Wtime();}
+00546 \textcolor{comment}{*/}
+00547 \textcolor{comment}{//  printf("Computation time : %lf s.\(\backslash\)n", t2-t1);}
+00548 
+00549 
+00550 
+00551   \textcolor{comment}{//perform  backward FFts}
+00552   fftw\_execute(plan\_b\_CV); \textcolor{comment}{//input in V\_fft; output in V\_rfft }
+00553 
+00554   \textcolor{keywordflow}{return} 0;
+00555 \}
+00556 
+00557 
+00558 \textcolor{comment}{//=========================================================================}
+00559 
+00561 
+\hypertarget{toeplitz_8c_source_l00587}{}\hyperlink{group__group21_gab8839f416f8f8165b31a5363c405428d}{00587} \textcolor{keywordtype}{int} \hyperlink{group__group21_gab8839f416f8f8165b31a5363c405428d}{scmm\_basic}(\textcolor{keywordtype}{double} **V, \textcolor{keywordtype}{int} blocksize, \textcolor{keywordtype}{int} m, fftw\_complex *C\_fft,
+       \textcolor{keywordtype}{double} **CV, fftw\_complex *V\_fft, \textcolor{keywordtype}{double} *V\_rfft, \textcolor{keywordtype}{int} nfft, fftw\_plan plan\_f\_V,
+       fftw\_plan plan\_b\_CV)
+00588 \{
+00589   \textcolor{comment}{//routine variables}
+00590   \textcolor{keywordtype}{int} i,k; \textcolor{comment}{//loop index}
+00591   \textcolor{keywordtype}{int} nloop = (int) ceil((1.0*m)/nfft);  \textcolor{comment}{//number of subblocks}
+00592 
+00593   \textcolor{comment}{// Loop over set of columns}
+00594   \textcolor{keywordtype}{int} ncol = min(nfft, m);  \textcolor{comment}{//a number of columns to be copied from the data to
+       working matrix}
+00595                             \textcolor{comment}{//equal the number of simultaneous FFTs}
+00596 
+00597 
+00598 \textcolor{preprocessor}{#pragma omp parallel for //num\_threads(NB\_OMPTHREADS\_BASIC)//
+      schedule(dynamic,1)}
+00599 \textcolor{preprocessor}{}  \textcolor{keywordflow}{for}( i=0;i<blocksize*ncol;i++)
+00600     V\_rfft[i] = 0.0;  \textcolor{comment}{//could use maybe memset but how about threading}
+00601 
+00602 
+00603 \textcolor{comment}{//bug fixed conflit between num\_threads and nfft}
+00604 \textcolor{comment}{//#pragma omp parallel for schedule(dynamic,1) num\_threads(8)
+       //num\_threads(nfft) }
+00605   \textcolor{keywordflow}{for}(k=0;k<nloop;k++) \{   \textcolor{comment}{//this is the main loop over the set of columns}
+00606     \textcolor{keywordflow}{if} (k==nloop-1)   \textcolor{comment}{//last loop ncol may be smaller than nfft}
+00607       ncol = m-(nloop-1)*nfft;  
+00608 
+00609   \textcolor{comment}{//init fftw matrices. }
+00610   \textcolor{comment}{//extracts a block of ncol full-length columns from the data matrix and
+       embeds in a bigger}
+00611   \textcolor{comment}{//matrix padding each column with lambda zeros. Note that all columns will be
+       zero padded }
+00612   \textcolor{comment}{//thanks to the "memset" call above}
+00613 
+00614   \hyperlink{group__group22_ga7dddc7df6f787d6aa92dfc25e9d0465a}{copy\_block}(blocksize, m, (*V), blocksize, ncol, V\_rfft, 0, k*nfft, 
+      blocksize, ncol, 0, 0, 1.0, 0);
+00615   \textcolor{comment}{//note: all nfft vectors are transformed below ALWAYS in a single go (if ncol
+       < nfft) the extra}
+00616   \textcolor{comment}{//useless work is done. }
+00617 
+00618   \hyperlink{group__group21_ga2c399885221722e98f72206ddce8d0d3}{scmm\_direct}(blocksize, nfft, C\_fft, ncol, V\_rfft, CV, V\_fft, 
+      plan\_f\_V, plan\_b\_CV);
+00619   \textcolor{comment}{//note: the parameter CV is not really used}
+00620 
+00621   \textcolor{comment}{//extract the relevant part from the result}
+00622   \hyperlink{group__group22_ga7dddc7df6f787d6aa92dfc25e9d0465a}{copy\_block}(blocksize, ncol, V\_rfft, blocksize, m, (*CV), 0, 0, 
+      blocksize, ncol, 0, k*nfft, 1.0/((\textcolor{keywordtype}{double}) blocksize), 0);
+00623 
+00624   \}  \textcolor{comment}{//end of loop over the column-sets}
+00625 
+00626 
+00627   \textcolor{keywordflow}{return} 0;
+00628 \}
+00629 
+00630 
+00631 \textcolor{comment}{//=========================================================================}
+00632 
+00634 
+\hypertarget{toeplitz_8c_source_l00659}{}\hyperlink{group__group21_ga2731f1bbfce2d47c4cc3381150470da4}{00659} \textcolor{keywordtype}{int} \hyperlink{group__group21_ga2731f1bbfce2d47c4cc3381150470da4}{stmm\_core}(\textcolor{keywordtype}{double} **V, \textcolor{keywordtype}{int} n, \textcolor{keywordtype}{int} m, \textcolor{keywordtype}{double} *T, fftw\_complex *T\_fft
+      , \textcolor{keywordtype}{int} blocksize, \textcolor{keywordtype}{int} lambda, fftw\_complex *V\_fft, \textcolor{keywordtype}{double} *V\_rfft, \textcolor{keywordtype}{int} nfft, 
+      fftw\_plan plan\_f, fftw\_plan plan\_b, \textcolor{keywordtype}{int} flag\_offset, \textcolor{keywordtype}{int} flag\_nofft)
+00660 \{
+00661 
+00662   \textcolor{keywordtype}{double} t1,t2;
+00663 
+00664   t1=  MPI\_Wtime();
+00665 
+00666   \textcolor{comment}{//cheating:}
+00667 \textcolor{comment}{//  flag\_offset = 1;}
+00668 
+00669   \textcolor{comment}{//routine variable }
+00670   \textcolor{keywordtype}{int} status;
+00671   \textcolor{keywordtype}{int} i,j,k,p;  \textcolor{comment}{//loop index }
+00672   \textcolor{keywordtype}{int} currentsize;
+00673   \textcolor{keywordtype}{int} distcorrmin= lambda-1;
+00674 
+00675   \textcolor{keywordtype}{int} blocksize\_eff = blocksize-2*distcorrmin;  \textcolor{comment}{//just a good part after
+       removing the overlaps}
+00676   \textcolor{keywordtype}{int} nbloc;  \textcolor{comment}{//number of subblock of slide/overlap algorithm}
+00677 
+00678   \textcolor{keywordflow}{if} (flag\_offset==1)
+00679     nbloc = ceil((1.0*(n-2*distcorrmin))/blocksize\_eff);
+00680   \textcolor{keywordflow}{else}
+00681     nbloc = ceil( (1.0*n)/blocksize\_eff);  \textcolor{comment}{//we need n because of reshaping}
+00682 
+00683   \textcolor{keywordflow}{if}(\hyperlink{toeplitz_8c_a300d52d9923297872ffb24962a0f0ce6}{PRINT\_RANK}==0 && \hyperlink{toeplitz_8c_ab848ce91ba14d3dc5c87d0b42f3a1c0d}{VERBOSE}>0)
+00684     printf(\textcolor{stringliteral}{"nbloc=%d, n=%d, m=%d, blocksize=%d, blocksize\_eff=%d\(\backslash\)n"}, nbloc, n, 
+      m, blocksize, blocksize\_eff);
+00685 
+00686   \textcolor{keywordtype}{double} *V\_bloc, *TV\_bloc;
+00687   V\_bloc  = (\textcolor{keywordtype}{double} *) calloc(blocksize*m, \textcolor{keyword}{sizeof}(\textcolor{keywordtype}{double}));
+00688   TV\_bloc = (\textcolor{keywordtype}{double} *) calloc(blocksize*m, \textcolor{keyword}{sizeof}(\textcolor{keywordtype}{double}));      
+00689   \textcolor{keywordflow}{if}((V\_bloc==0)||(TV\_bloc==0))
+00690     \textcolor{keywordflow}{return} \hyperlink{group__group22_ga24331a8efb6e0b77df7c645ef45b2830}{print\_error\_message}(2, \_\_FILE\_\_, \_\_LINE\_\_);
+00691 
+00692   \textcolor{keywordtype}{int} offset=0;
+00693   \textcolor{keywordflow}{if} (flag\_offset==1)
+00694     offset=distcorrmin;
+00695 
+00696   \textcolor{keywordtype}{int} iV = 0;  \textcolor{comment}{//"-distcorrmin+offset";  //first index in V }
+00697   \textcolor{keywordtype}{int} iTV = offset;  \textcolor{comment}{//first index in TV }
+00698 
+00699   \textcolor{comment}{//"k=0";}
+00700   \textcolor{comment}{//first subblock separately as it requires some padding. prepare the block of
+       the data vector}
+00701   \textcolor{comment}{//with the overlaps on both sides}
+00702   currentsize = min( blocksize-distcorrmin+offset, n-iV); 
+00703   \textcolor{comment}{//note: if flag\_offset=0, pad first distcorrmin elements with zeros (for the
+       first subblock only)}
+00704   \textcolor{comment}{// and if flag\_offset=1 there is no padding with zeros.}
+00705   \hyperlink{group__group22_ga7dddc7df6f787d6aa92dfc25e9d0465a}{copy\_block}( n, m, *V, blocksize, m, V\_bloc, 0, 0, currentsize, m, 
+      distcorrmin-offset, 0, 1.0, 0);
+00706 
+00707   \textcolor{comment}{//do block computation }
+00708   \textcolor{keywordflow}{if} (flag\_nofft==1)
+00709     status = \hyperlink{group__group21_gaf19f51ef406bebdb5e9400b6f9962077}{stmm\_simple\_basic}(&V\_bloc, blocksize, m, T, 
+      lambda, &TV\_bloc);
+00710   \textcolor{keywordflow}{else}
+00711     status = \hyperlink{group__group21_gab8839f416f8f8165b31a5363c405428d}{scmm\_basic}(&V\_bloc, blocksize, m, T\_fft, &TV\_bloc, V\_fft
+      , V\_rfft, nfft, plan\_f, plan\_b);
+00712 
+00713   \textcolor{keywordflow}{if} (status!=0) \{
+00714     printf(\textcolor{stringliteral}{"Error in stmm\_core."});
+00715     \textcolor{keywordflow}{return} \hyperlink{group__group22_ga24331a8efb6e0b77df7c645ef45b2830}{print\_error\_message}(7, \_\_FILE\_\_, \_\_LINE\_\_);  \}
+00716 
+00717 
+00718   \textcolor{comment}{//now copy first the new chunk of the data matrix **before** overwriting the
+       input due to overlaps !}
+00719   iV = blocksize\_eff-distcorrmin+offset;
+00720 
+00721   \textcolor{keywordflow}{if}(nbloc > 1) \{
+00722     currentsize  = min( blocksize, n-iV);  \textcolor{comment}{//not to overshoot          }
+00723 
+00724     \textcolor{keywordtype}{int} flag\_reset = (currentsize!=blocksize);  \textcolor{comment}{//with flag\_reset=1, always
+       "memset" the block.}
+00725     \hyperlink{group__group22_ga7dddc7df6f787d6aa92dfc25e9d0465a}{copy\_block}( n, m, *V, blocksize, m, V\_bloc, iV, 0, currentsize, m
+      , 0, 0, 1.0, flag\_reset);
+00726   \}
+00727 
+00728   \textcolor{comment}{//and now store the ouput back in V}
+00729   currentsize  = min( blocksize\_eff, n-iTV);       \textcolor{comment}{// to trim the extra rows}
+00730   \hyperlink{group__group22_ga7dddc7df6f787d6aa92dfc25e9d0465a}{copy\_block}( blocksize, m, TV\_bloc, n, m, *V, distcorrmin, 0, 
+      currentsize, m, iTV, 0, 1.0, 0);
+00731 
+00732 
+00733   iTV += blocksize\_eff;
+00734   \textcolor{comment}{//now continue with all the other subblocks    }
+00735   \textcolor{keywordflow}{for}(k=1;k<nbloc;k++) \{
+00736 
+00737     \textcolor{comment}{//do bloc computation }
+00738   \textcolor{keywordflow}{if} (flag\_nofft==1)
+00739     status = \hyperlink{group__group21_gaf19f51ef406bebdb5e9400b6f9962077}{stmm\_simple\_basic}(&V\_bloc, blocksize, m, T, 
+      lambda, &TV\_bloc);
+00740   \textcolor{keywordflow}{else}
+00741     status = \hyperlink{group__group21_gab8839f416f8f8165b31a5363c405428d}{scmm\_basic}(&V\_bloc, blocksize, m, T\_fft, &TV\_bloc, V\_fft
+      , V\_rfft, nfft, plan\_f, plan\_b);
+00742 
+00743   \textcolor{keywordflow}{if} (status!=0) \textcolor{keywordflow}{break};
+00744 
+00745 
+00746     iV += blocksize\_eff;
+00747     \textcolor{comment}{//copy first the next subblock to process }
+00748     \textcolor{keywordflow}{if}(k != nbloc-1) \{
+00749       currentsize = min(blocksize, n-iV);  \textcolor{comment}{//not to overshoot          }
+00750 
+00751       \textcolor{keywordtype}{int} flag\_resetk = (currentsize!=blocksize);  \textcolor{comment}{//with flag\_reset=1, always
+       "memset" the block.}
+00752       \hyperlink{group__group22_ga7dddc7df6f787d6aa92dfc25e9d0465a}{copy\_block}( n, m, *V, blocksize, m, V\_bloc, iV, 0, currentsize,
+       m, 0, 0, 1.0, flag\_resetk);
+00753     \}
+00754 
+00755     \textcolor{comment}{//and then store the output in V }
+00756     currentsize  = min( blocksize\_eff, n-iTV);  \textcolor{comment}{//not to overshoot             
+        }
+00757     \hyperlink{group__group22_ga7dddc7df6f787d6aa92dfc25e9d0465a}{copy\_block}( blocksize, m, TV\_bloc, n, m, *V, distcorrmin, 0, 
+      currentsize, m, iTV, 0, 1.0, 0);
+00758     iTV += blocksize\_eff;
+00759 
+00760   \}\textcolor{comment}{//end bloc computation }
+00761 
+00762 
+00763   free(V\_bloc);
+00764   free(TV\_bloc);
+00765 
+00766 
+00767   t2=  MPI\_Wtime();
+00768 
+00769   \textcolor{keywordflow}{if} (\hyperlink{toeplitz_8c_a300d52d9923297872ffb24962a0f0ce6}{PRINT\_RANK}==0 && \hyperlink{toeplitz_8c_ab848ce91ba14d3dc5c87d0b42f3a1c0d}{VERBOSE}>0)
+00770     printf(\textcolor{stringliteral}{"time stmm\_core=%f\(\backslash\)n"}, t2-t1);
+00771 
+00772   \textcolor{keywordflow}{return} status;
+00773 \}
+00774 
+00775 
+00776 \textcolor{comment}{//=========================================================================}
+00777 
+00779 
+\hypertarget{toeplitz_8c_source_l00803}{}\hyperlink{group__group21_gace7322011cd24b469e9b5d530e8a71ba}{00803} \textcolor{keywordtype}{int} \hyperlink{group__group21_gace7322011cd24b469e9b5d530e8a71ba}{stmm\_main}(\textcolor{keywordtype}{double} **V, \textcolor{keywordtype}{int} n, \textcolor{keywordtype}{int} m, \textcolor{keywordtype}{int} id0, \textcolor{keywordtype}{int} l, \textcolor{keywordtype}{double} *T, 
+      fftw\_complex *T\_fft, \textcolor{keywordtype}{int} lambda, fftw\_complex *V\_fft, \textcolor{keywordtype}{double} *V\_rfft, fftw\_plan 
+      plan\_f, fftw\_plan plan\_b, \textcolor{keywordtype}{int} blocksize, \textcolor{keywordtype}{int} nfft, \hyperlink{structFlag}{Flag} flag\_stgy)
+00804 \{
+00805 
+00806   \textcolor{comment}{//routine variable }
+00807   \textcolor{keywordtype}{int} i,j,k,p;  \textcolor{comment}{//loop index }
+00808   \textcolor{keywordtype}{int} distcorrmin= lambda-1;
+00809   \textcolor{keywordtype}{int} flag\_prod\_strategy\_nofft=0;  \textcolor{comment}{//0: ffts   1: no ffts}
+00810   \textcolor{keywordtype}{int} flag\_shortcut\_m\_eff\_eq\_1=1;\textcolor{comment}{//1;//1;}
+00811   \textcolor{keywordtype}{int} flag\_shortcut\_nbcol\_eq\_1=1;\textcolor{comment}{//1;//1;}
+00812   \textcolor{keywordtype}{int} flag\_nfullcol\_in\_middle=0;\textcolor{comment}{//0; //in the case where m=1 can be good to
+       direct stmm\_core too}
+00813   \textcolor{keywordtype}{int} flag\_optim\_offset\_for\_nfft=0;
+00814   \textcolor{keywordtype}{int} flag\_no\_rshp=flag\_stgy.\hyperlink{structFlag_a59bc77f2a4fd6e11947b65033c9dea25}{flag\_no\_rshp};\textcolor{comment}{//0;}
+00815   \textcolor{keywordtype}{int} flag\_nofft=flag\_stgy.\hyperlink{structFlag_ae6ae474d648b80963df05ac9bcf64e48}{flag\_nofft};\textcolor{comment}{//1;}
+00816 
+00817   \textcolor{keywordtype}{int} m\_eff     = (id0+l-1)/n - id0/n + 1 ;  \textcolor{comment}{//number of columns}
+00818   \textcolor{keywordtype}{int} nfullcol;
+00819   \textcolor{keywordtype}{int} nloop\_middle;  \textcolor{comment}{//change it to number of full column to improve memory}
+00820 
+00821   FILE *file;
+00822   file = stdout;
+00823 
+00824   \textcolor{keywordflow}{if} (l<distcorrmin) \textcolor{comment}{//test to avoid communications errors}
+00825     \textcolor{keywordflow}{return} \hyperlink{group__group22_ga24331a8efb6e0b77df7c645ef45b2830}{print\_error\_message} (1, \_\_FILE\_\_, \_\_LINE\_\_);
+00826 
+00827 
+00828 \textcolor{comment}{//shortcut for m==1 if flag\_shortcut\_m\_eff\_eq\_1==1  && nfft==1 ??}
+00829   \textcolor{keywordflow}{if} (m\_eff==1 && flag\_shortcut\_m\_eff\_eq\_1==1 && nfft==1 || flag\_no\_rshp==1 && 
+      id0==0 && l==n*m) \{ 
+00830 
+00831     \textcolor{keywordtype}{int} flag\_offset=0;
+00832 
+00833 \textcolor{comment}{//  if (flag\_prod\_strategy\_nofft==1)   //need to have T as input to make it
+       work}
+00834    \textcolor{comment}{// stmm\_simple\_core(V, n, m, T, blocksize, lambda, nfft, flag\_offset);}
+00835 \textcolor{comment}{//  else}
+00836     \textcolor{keywordtype}{int} nr=min(l,n);
+00837     \hyperlink{group__group21_ga2731f1bbfce2d47c4cc3381150470da4}{stmm\_core}(V, nr, m\_eff, T, T\_fft, blocksize, lambda, V\_fft, V\_rfft
+      , nfft, plan\_f, plan\_b, flag\_offset, flag\_nofft);
+00838 
+00839 
+00840     \textcolor{keywordflow}{return} 0;
+00841   \}\textcolor{comment}{//End shortcut for m==1}
+00842 
+00843 
+00844 \textcolor{comment}{//the middle}
+00845   \textcolor{keywordtype}{int} m\_middle;
+00846 
+00847 \textcolor{comment}{//define splitting for the product computation}
+00848   nfullcol = max(0, (l-(n-id0%n)%n-(id0+l)%n)/n );  \textcolor{comment}{//check how many full
+       columns input data we have}
+00849 
+00850   \textcolor{keywordflow}{if} (flag\_nfullcol\_in\_middle==1) 
+00851     nloop\_middle = ceil(1.0*(nfullcol)/nfft);
+00852   \textcolor{keywordflow}{else}
+00853     nloop\_middle = (nfullcol)/nfft;
+00854 
+00855   \textcolor{keywordflow}{if} (flag\_nfullcol\_in\_middle==1)
+00856     m\_middle = nfullcol;
+00857   \textcolor{keywordflow}{else}
+00858     m\_middle = nfft*nloop\_middle;
+00859 
+00860 
+00861   \textcolor{keywordtype}{int} vmiddle\_size = n*m\_middle;
+00862 
+00863 
+00864   \textcolor{keywordflow}{if}(\hyperlink{toeplitz_8c_a300d52d9923297872ffb24962a0f0ce6}{PRINT\_RANK}==0 && \hyperlink{toeplitz_8c_ab848ce91ba14d3dc5c87d0b42f3a1c0d}{VERBOSE}>2)
+00865     printf(\textcolor{stringliteral}{"nloop\_middle=%d , m\_middle=%d\(\backslash\)n"}, nloop\_middle, m\_middle);
+00866 
+00867 
+00868 \textcolor{comment}{//compute the middle if needed}
+00869   \textcolor{keywordflow}{if} (nloop\_middle>0) \{           
+00870     \textcolor{keywordtype}{double} *Vmiddle;
+00871     \textcolor{keywordtype}{int} offset\_middle = (n-id0%n)%n;
+00872     Vmiddle = (*V)+offset\_middle;
+00873 
+00874     \textcolor{keywordtype}{int} flag\_offset=0;
+00875     \hyperlink{group__group21_ga2731f1bbfce2d47c4cc3381150470da4}{stmm\_core}(&Vmiddle, n, m\_middle, T, T\_fft, blocksize, lambda, 
+      V\_fft, V\_rfft, nfft, plan\_f, plan\_b, flag\_offset, flag\_nofft);
+00876 
+00877   \} \textcolor{comment}{//(nloop\_middle>0)}
+00878 
+00879 
+00880 \textcolor{comment}{//edge  (first+last columns + extra column from the euclidian division)}
+00881   \textcolor{keywordtype}{int} v1edge\_size = min(l,(n-id0%n)%n);
+00882   \textcolor{keywordtype}{int} v2edge\_size = max( l-(v1edge\_size+vmiddle\_size) , 0);
+00883   \textcolor{keywordtype}{int} vedge\_size = v1edge\_size+v2edge\_size;
+00884 
+00885 \textcolor{comment}{//compute the edges if needed}
+00886   \textcolor{keywordflow}{if} (vedge\_size>0) \{
+00887 
+00888   \textcolor{keywordtype}{int} m\_v1edge, m\_v2edge;
+00889   m\_v1edge = (v1edge\_size>0)*1;  \textcolor{comment}{//m\_v1 = 1 or 0 cannot be more}
+00890   m\_v2edge = m-(m\_v1edge+m\_middle);
+00891   \textcolor{keywordtype}{int} nbcol = m\_v1edge+m\_v2edge;
+00892   \textcolor{keywordtype}{int} *nocol;
+00893   nocol = (\textcolor{keywordtype}{int} *) calloc(nbcol, \textcolor{keyword}{sizeof}(\textcolor{keywordtype}{double}));
+00894 
+00895   \textcolor{comment}{//define the columns for the edge computation}
+00896   \textcolor{keywordflow}{if} (m\_v1edge==1)  
+00897     nocol[0]=0;
+00898   \textcolor{keywordflow}{for}(i=(m\_v1edge);i<nbcol;i++) 
+00899     nocol[i]=m\_middle+i;
+00900   
+00901   \textcolor{keywordflow}{if}(\hyperlink{toeplitz_8c_a300d52d9923297872ffb24962a0f0ce6}{PRINT\_RANK}==0 && \hyperlink{toeplitz_8c_ab848ce91ba14d3dc5c87d0b42f3a1c0d}{VERBOSE}>2)
+00902     printf(\textcolor{stringliteral}{"nbcol=%d , m\_v1edge=%d , m\_v2edge=%d\(\backslash\)n"}, nbcol, m\_v1edge, m\_v2edge)
+      ;
+00903 
+00904 \textcolor{comment}{//shorcut for nbcol==1}
+00905   \textcolor{keywordflow}{if} (nbcol==1 && nfft==1 && flag\_shortcut\_nbcol\_eq\_1==1) \{  
+00906             \textcolor{comment}{//this is the case where no reshaping is needed. This is equivalent
+       to flag\_format\_rshp==0}
+00907     \textcolor{keywordtype}{double} *Vedge;
+00908     \textcolor{keywordtype}{int} offset\_edge = n*nocol[0];\textcolor{comment}{//work because all the previous columns are
+       obligatory full}
+00909     Vedge = (*V)+offset\_edge;
+00910     \textcolor{keywordtype}{int} flag\_offset=0;
+00911     \hyperlink{group__group21_ga2731f1bbfce2d47c4cc3381150470da4}{stmm\_core}(&Vedge, vedge\_size, nbcol, T, T\_fft, blocksize, lambda, 
+      V\_fft, V\_rfft, nfft, plan\_f, plan\_b, flag\_offset, flag\_nofft);
+00912 
+00913   \}
+00914   \textcolor{keywordflow}{else} \{  \textcolor{comment}{//general case to compute de edges}
+00915 
+00916   \textcolor{keywordtype}{double} *Vin;
+00917   Vin = (*V);
+00918 
+00919 \textcolor{comment}{//size for the different kinds of reshaping}
+00920   \textcolor{keywordtype}{int} lconc = vedge\_size; \textcolor{comment}{//another way to compute : lconc = n*nbcol -
+       (nocol[0]==0)*(id0%n) - (nocol[nbcol-1]==(m-1))*(n-(id0+l)%n);}
+00921   \textcolor{keywordtype}{int} v1\_size=lconc+(distcorrmin)*(nbcol-1);
+00922   \textcolor{keywordtype}{int} fft\_size = ceil(1.0*v1\_size/nfft)+2*distcorrmin;
+00923 
+00924   \textcolor{keywordtype}{int} flag\_format\_rshp = (nfft>1)*2 + (nfft==1 && nbcol>1)*1 + (nfft==1 && 
+      nbcol==1)*0;
+00925   \textcolor{keywordtype}{int} nrshp, mrshp, lrshp;
+00926 
+00927   \hyperlink{toeplitz__rshp_8c_a2f7b2601a9a5e73c83546978b6a1a35a}{define\_rshp\_size}(flag\_format\_rshp, fft\_size, nfft, v1\_size, 
+      vedge\_size, &nrshp, &mrshp, &lrshp);
+00928 
+00929 \textcolor{comment}{//allocate Vrshp for computation}
+00930   \textcolor{keywordtype}{double} *Vrshp;
+00931   Vrshp = (\textcolor{keywordtype}{double} *) calloc(lrshp, \textcolor{keyword}{sizeof}(\textcolor{keywordtype}{double}));
+00932   \textcolor{keywordtype}{double} *Vout;
+00933   Vout = (*V);
+00934 
+00935   \textcolor{keywordflow}{if}(\hyperlink{toeplitz_8c_a300d52d9923297872ffb24962a0f0ce6}{PRINT\_RANK}==0 && \hyperlink{toeplitz_8c_ab848ce91ba14d3dc5c87d0b42f3a1c0d}{VERBOSE}>2) \{
+00936     fprintf(file, \textcolor{stringliteral}{"nrshp=%d , mrshp=%d , lrshp=%d\(\backslash\)n"}, nrshp, mrshp, lrshp);
+00937     fprintf(file, \textcolor{stringliteral}{"flag\_format\_rshp=%d\(\backslash\)n"}, flag\_format\_rshp);
+00938   \}
+00939 
+00940   \hyperlink{toeplitz__rshp_8c_a0a6fdc2b8a9d18173c70ac3f62d3dabd}{build\_reshape}(Vin, nocol, nbcol, lconc, n, m, id0, l, lambda, 
+      nfft, Vrshp, nrshp, mrshp, lrshp, flag\_format\_rshp);
+00941 
+00942   \textcolor{keywordtype}{int} flag\_offset;
+00943   \textcolor{keywordflow}{if} (flag\_format\_rshp==2 && flag\_optim\_offset\_for\_nfft==1)
+00944     flag\_offset=1;
+00945   \textcolor{keywordflow}{else}
+00946     flag\_offset=0;
+00947 
+00948 \textcolor{comment}{//compute Vrshp}
+00949     \hyperlink{group__group21_ga2731f1bbfce2d47c4cc3381150470da4}{stmm\_core}(&Vrshp, nrshp, mrshp, T, T\_fft, blocksize, lambda, V\_fft
+      , V\_rfft, nfft, plan\_f, plan\_b, flag\_offset, flag\_nofft);
+00950 
+00951     \hyperlink{toeplitz__rshp_8c_aa006c198e58701067495afeace933382}{extract\_result}(Vout, nocol, nbcol, lconc, n, m, id0, l, 
+      lambda, nfft, Vrshp, nrshp, mrshp, lrshp, flag\_format\_rshp);
+00952 
+00953 
+00954   \}\textcolor{comment}{//End general case to compute de edges}
+00955   \}\textcolor{comment}{//End (vedge\_size>0)}
+00956 
+00957 
+00958   \textcolor{keywordflow}{return} 0;
+00959 \}
+00960 
+00961 
+00962 \textcolor{comment}{//=========================================================================}
+00963 \textcolor{preprocessor}{#ifdef W\_MPI}
+00964 \textcolor{preprocessor}{}
+00965 
+\hypertarget{toeplitz_8c_source_l00980}{}\hyperlink{group__group12_gadd9394c94ea5769dc0a2064f48dfc94c}{00980} \textcolor{keywordtype}{int} \hyperlink{group__group12_gadd9394c94ea5769dc0a2064f48dfc94c}{mpi\_stmm}(\textcolor{keywordtype}{double} **V, \textcolor{keywordtype}{int} n, \textcolor{keywordtype}{int} m, \textcolor{keywordtype}{int} id0, \textcolor{keywordtype}{int} l, \textcolor{keywordtype}{double} *T, \textcolor{keywordtype}{int} 
+      lambda, \hyperlink{structFlag}{Flag} flag\_stgy, MPI\_Comm comm) 
+00981 \{
+00982 
+00983   \textcolor{comment}{//mpi variables }
+00984   \textcolor{keywordtype}{int} rank;   \textcolor{comment}{//rank process }
+00985   \textcolor{keywordtype}{int} size;   \textcolor{comment}{//number of processes }
+00986   MPI\_Status status; 
+00987   MPI\_Comm\_rank(comm, &rank);     
+00988   MPI\_Comm\_size(comm, &size);     
+00989 
+00990  
+00991   \textcolor{comment}{//routine variables }
+00992   \textcolor{keywordtype}{int} i,j,k; \textcolor{comment}{// some index }
+00993   \textcolor{keywordtype}{int} idf = id0+l;  \textcolor{comment}{// first index of scattered V for rank "rank + 1"; }
+00994   \textcolor{keywordtype}{int} cfirst = id0/n;   \textcolor{comment}{// first column index }
+00995   \textcolor{keywordtype}{int} clast  = idf/n; \textcolor{comment}{// last column index }
+00996   \textcolor{keywordtype}{int} clast\_r = (idf-1)/n; 
+00997   \textcolor{keywordtype}{int} m\_eff  = clast\_r - cfirst + 1 ; 
+00998   \textcolor{keywordtype}{double} *V1, *Lambda;
+00999 
+01000   \textcolor{comment}{// Mpi communication conditions }
+01001   \textcolor{comment}{// Mpi comm is needed when columns are truncated }
+01002   \textcolor{keywordtype}{int} right = rank + 1; 
+01003   \textcolor{keywordtype}{int} left  = rank - 1; 
+01004   \textcolor{keywordtype}{int} v1\_size = l + 2*lambda; \textcolor{comment}{// size including comm }
+01005   \textcolor{keywordflow}{if} (rank==0 || cfirst*n==id0)\{ \textcolor{comment}{// no left comm }
+01006     v1\_size -= lambda; 
+01007     left = MPI\_PROC\_NULL;\}  
+01008   \textcolor{keywordflow}{if} (rank==(size-1) || clast*n==idf)\{ \textcolor{comment}{// no right comm }
+01009     v1\_size -= lambda; 
+01010     right = MPI\_PROC\_NULL;\} 
+01011 
+01012   \textcolor{comment}{// init data to send }
+01013   Lambda=(\textcolor{keywordtype}{double} *) malloc(2*lambda * \textcolor{keyword}{sizeof}(\textcolor{keywordtype}{double})); 
+01014   \textcolor{keywordflow}{if} (Lambda==0) 
+01015     \textcolor{keywordflow}{return} \hyperlink{group__group22_ga24331a8efb6e0b77df7c645ef45b2830}{print\_error\_message} (2, \_\_FILE\_\_, \_\_LINE\_\_); 
+01016  
+01017   \textcolor{keywordflow}{for}(i=0;i<lambda;i++)    \{ 
+01018     Lambda[i]=(*V)[i]; 
+01019     Lambda[i+lambda]=(*V)[i+l-lambda];    \} 
+01020 
+01021   \textcolor{keywordflow}{if}(\hyperlink{toeplitz_8c_a300d52d9923297872ffb24962a0f0ce6}{PRINT\_RANK}==0 && \hyperlink{toeplitz_8c_ab848ce91ba14d3dc5c87d0b42f3a1c0d}{VERBOSE}>2)
+01022     printf(\textcolor{stringliteral}{"[rank %d] Left comm with %d | Right comm with %d\(\backslash\)n"}, rank, left, 
+      right); 
+01023 
+01024   \textcolor{comment}{//send and receive data }
+01025   MPI\_Sendrecv\_replace(Lambda, lambda, MPI\_DOUBLE, left, MPI\_USER\_TAG, right, 
+      MPI\_USER\_TAG, comm, &status);  \textcolor{comment}{//1st comm }
+01026   MPI\_Sendrecv\_replace((Lambda+lambda), lambda, MPI\_DOUBLE, right, MPI\_USER\_TAG
+      , left, MPI\_USER\_TAG, comm, &status);  \textcolor{comment}{//2nd comm }
+01027   
+01028  
+01029   \textcolor{keywordflow}{if} (l<lambda)  \textcolor{comment}{//After sendrecv to avoid problems of communication for others
+       processors}
+01030     \textcolor{keywordflow}{return} \hyperlink{group__group22_ga24331a8efb6e0b77df7c645ef45b2830}{print\_error\_message} (1, \_\_FILE\_\_, \_\_LINE\_\_); 
+01031 
+01032   \textcolor{comment}{//copy received data  }
+01033   \textcolor{keywordflow}{if}(left==MPI\_PROC\_NULL && right==MPI\_PROC\_NULL)  \textcolor{comment}{// 0--0 : nothing to do}
+01034     V1 = *V;
+01035   \textcolor{keywordflow}{else} \textcolor{keywordflow}{if}(left==MPI\_PROC\_NULL) \{ \textcolor{comment}{// 0--1 : realloc}
+01036     *V = realloc(*V, v1\_size * \textcolor{keyword}{sizeof}(\textcolor{keywordtype}{double}));
+01037     \textcolor{keywordflow}{if}(*V == NULL) 
+01038       \textcolor{keywordflow}{return} \hyperlink{group__group22_ga24331a8efb6e0b77df7c645ef45b2830}{print\_error\_message} (2, \_\_FILE\_\_, \_\_LINE\_\_); 
+01039     V1 = *V;  \}
+01040   \textcolor{keywordflow}{else}  \textcolor{comment}{// 1--1 or 1--0 : new allocation}
+01041     V1  = (\textcolor{keywordtype}{double} *) malloc(v1\_size * \textcolor{keyword}{sizeof}(\textcolor{keywordtype}{double})); 
+01042   
+01043   \textcolor{keywordflow}{if} (left!=MPI\_PROC\_NULL)\{ 
+01044     \textcolor{keywordflow}{for}(i=0;i<lambda;i++) 
+01045       V1[i] = Lambda[i+lambda]; 
+01046     id0 -= lambda;\} 
+01047   \textcolor{keywordflow}{if} (right!=MPI\_PROC\_NULL)\{ 
+01048     \textcolor{keywordflow}{for}(i=0;i<lambda;i++) 
+01049       V1[i+v1\_size-lambda] = Lambda[i];      \} 
+01050   
+01051   \textcolor{comment}{// Copy input matrix V }
+01052   \textcolor{keywordtype}{int} offset = 0; 
+01053   \textcolor{keywordflow}{if} (left!=MPI\_PROC\_NULL)\{ 
+01054     offset = lambda;
+01055 \textcolor{preprocessor}{#pragma omp parallel for  }
+01056 \textcolor{preprocessor}{}    \textcolor{keywordflow}{for}(i=offset;i<l+offset;i++) 
+01057       V1[i] = (*V)[i-offset]; \}
+01058   
+01059   fftw\_complex *V\_fft, *T\_fft; 
+01060   \textcolor{keywordtype}{double} *V\_rfft; 
+01061   fftw\_plan plan\_f, plan\_b; 
+01062 
+01063 
+01064   \textcolor{comment}{//Compute matrix product }
+01065   \textcolor{keywordtype}{int} nfft,  blocksize;
+01066 
+01067   \hyperlink{group__group11_ga7f4e77d71f2c6f2caf652bab7520e3f4}{tpltz\_init}(v1\_size, lambda , &nfft, &blocksize, &T\_fft, T, &V\_fft, 
+      &V\_rfft, &plan\_f, &plan\_b, flag\_stgy);
+01068 
+01069   \textcolor{keywordflow}{if}(\hyperlink{toeplitz_8c_a300d52d9923297872ffb24962a0f0ce6}{PRINT\_RANK}==0 && \hyperlink{toeplitz_8c_ab848ce91ba14d3dc5c87d0b42f3a1c0d}{VERBOSE}>1)
+01070     printf(\textcolor{stringliteral}{"[rank %d] Before middle-level call : blocksize=%d, nfft=%d\(\backslash\)n"}, rank
+      , blocksize, nfft);
+01071 
+01072   \hyperlink{group__group21_gace7322011cd24b469e9b5d530e8a71ba}{stmm\_main}(&V1, n, m, id0, v1\_size, T, T\_fft, lambda, V\_fft, V\_rfft, 
+      plan\_f, plan\_b, blocksize, nfft, flag\_stgy);
+01073 
+01074 
+01075   \hyperlink{group__group11_gac7ac0ee5f6eaee6846814b131671f6e8}{tpltz\_cleanup}(&T\_fft, &V\_fft, &V\_rfft,&plan\_f, &plan\_b ); 
+01076   
+01077   \textcolor{comment}{// Copy output matrix TV}
+01078   offset = 0;
+01079   \textcolor{keywordflow}{if} (left!=MPI\_PROC\_NULL)
+01080     offset = lambda;
+01081   \textcolor{keywordflow}{if}(left==MPI\_PROC\_NULL && right==MPI\_PROC\_NULL) \textcolor{comment}{// 0--0}
+01082     *V=V1;
+01083   \textcolor{keywordflow}{else} \textcolor{keywordflow}{if}(left==MPI\_PROC\_NULL) \{ \textcolor{comment}{// 0--1}
+01084     V1 = realloc(V1, l * \textcolor{keyword}{sizeof}(\textcolor{keywordtype}{double}));
+01085     \textcolor{keywordflow}{if}(V1 == NULL)
+01086       \textcolor{keywordflow}{return} \hyperlink{group__group22_ga24331a8efb6e0b77df7c645ef45b2830}{print\_error\_message} (2, \_\_FILE\_\_, \_\_LINE\_\_);
+01087     *V = V1;     \}
+01088   \textcolor{keywordflow}{else} \{ \textcolor{comment}{// 1--0 or 1--1}
+01089 \textcolor{preprocessor}{#pragma omp parallel for }
+01090 \textcolor{preprocessor}{}    \textcolor{keywordflow}{for}(i=offset;i<l+offset;i++)
+01091       (*V)[i-offset] = V1[i];    \}
+01092 
+01093   \textcolor{keywordflow}{if}(left!=MPI\_PROC\_NULL)
+01094     free(V1);
+01095   
+01096   \textcolor{keywordflow}{return} 0; 
+01097 \} 
+01098 
+01099 \textcolor{preprocessor}{#endif}
+01100 \textcolor{preprocessor}{}
+01101 
+\end{DoxyCode}

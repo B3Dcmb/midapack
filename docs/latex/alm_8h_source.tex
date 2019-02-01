@@ -1,0 +1,26 @@
+\hypertarget{alm_8h}{\section{alm.\-h}
+\label{alm_8h}\index{alm.\-h@{alm.\-h}}
+}
+
+\begin{DoxyCode}
+00001 
+00011 \textcolor{keywordtype}{void} \hyperlink{alm_8c_a025f3e840ed5ec45c53aedc002feff2e}{m2s}(\textcolor{keywordtype}{double} *mapval, \textcolor{keywordtype}{double} *submapval, \textcolor{keywordtype}{int} *subset, \textcolor{keywordtype}{int} count);
+00012 
+00013 \textcolor{keywordtype}{void} \hyperlink{alm_8c_a6e63772ec097a4b407a183ba90668771}{s2m\_sum}(\textcolor{keywordtype}{double} *mapval, \textcolor{keywordtype}{double} *submapval, \textcolor{keywordtype}{int} *subset, \textcolor{keywordtype}{int} count);
+00014 \textcolor{keywordtype}{void} \hyperlink{alm_8c_a3215545f5ef51df80f796a4b727d6548}{s2m}(\textcolor{keywordtype}{double} *mapval, \textcolor{keywordtype}{double} *submapval, \textcolor{keywordtype}{int} *subset, \textcolor{keywordtype}{int} count);
+00015 
+00016 \textcolor{keywordtype}{void} \hyperlink{alm_8c_af2051489cb86480d4c9768b758db5313}{cnt\_nnz\_dot\_prod}(\textcolor{keywordtype}{double} *out, \textcolor{keywordtype}{double} *in, \textcolor{keywordtype}{int} cnt, \textcolor{keywordtype}{int} *
+      ind, \textcolor{keywordtype}{double} *val, \textcolor{keywordtype}{int} nnz);
+00017 \textcolor{keywordtype}{void} \hyperlink{alm_8c_a25f5f633a4483d645db5b72b1de6038e}{lmatvecprod}(\textcolor{keywordtype}{int} *ind, \textcolor{keywordtype}{double} *val, \textcolor{keywordtype}{int} m, \textcolor{keywordtype}{int} nnz, \textcolor{keywordtype}{double} *in, \textcolor{keywordtype}{
+      double} *out);
+00018 
+00019 \textcolor{preprocessor}{#if OPENMP}
+00020 \textcolor{preprocessor}{}\textcolor{keywordtype}{void} \hyperlink{alm_8c_a3ff5266a59baa0dfcf7f4a62b935d35e}{omp\_cnt\_nnz\_dot\_prod}(\textcolor{keywordtype}{double} *out, \textcolor{keywordtype}{double} *in, \textcolor{keywordtype}{int} cnt,
+       \textcolor{keywordtype}{int} *ind, \textcolor{keywordtype}{double} *val, \textcolor{keywordtype}{int} nnz);
+00021 \textcolor{keywordtype}{void} \hyperlink{alm_8h_a488e3dc364594406a8fba5a6be7efc88}{omp\_lmatvecprod}(\textcolor{keywordtype}{int} *ind, \textcolor{keywordtype}{double} *val, \textcolor{keywordtype}{int} m, \textcolor{keywordtype}{int} nnz, \textcolor{keywordtype}{
+      double} *in, \textcolor{keywordtype}{double} *out);
+00022 \textcolor{preprocessor}{#endif}
+00023 \textcolor{preprocessor}{}\textcolor{keywordtype}{int} \hyperlink{group__matmap__group22_ga3097d396b49c10414a79152f4ebd2902}{m2m}(\textcolor{keywordtype}{double} *vA1, \textcolor{keywordtype}{int} *A1, \textcolor{keywordtype}{int} n1, \textcolor{keywordtype}{double} *vA2, \textcolor{keywordtype}{int} *A2, \textcolor{keywordtype}{int} n2);
+00024 
+00025 \textcolor{keywordtype}{int} \hyperlink{group__matmap__group22_ga28c05d496e6168337d8a466affc1d0ac}{m2m\_sum}(\textcolor{keywordtype}{double} *vA1, \textcolor{keywordtype}{int} *A1, \textcolor{keywordtype}{int} n1, \textcolor{keywordtype}{double} *vA2, \textcolor{keywordtype}{int} *A2, \textcolor{keywordtype}{int} n2);
+\end{DoxyCode}

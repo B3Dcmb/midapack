@@ -1,0 +1,31 @@
+\hypertarget{bitop_8c}{\section{bitop.\-c}
+\label{bitop_8c}\index{bitop.\-c@{bitop.\-c}}
+}
+
+\begin{DoxyCode}
+00001 
+\hypertarget{bitop_8c_source_l00005}{}\hyperlink{bitop_8h_a0713ef440514e81791d55128343959ff}{00005} \textcolor{keywordtype}{int} \hyperlink{bitop_8c_a0713ef440514e81791d55128343959ff}{is\_pow\_2}(\textcolor{keywordtype}{int} n)\{
+00006     \textcolor{keywordflow}{return}((n & -n) ^ n);
+00007 \}
+00008 
+00009 
+\hypertarget{bitop_8c_source_l00010}{}\hyperlink{bitop_8h_a7dca42c78d4069f6fe63cdcd41700916}{00010} \textcolor{keywordtype}{int} \hyperlink{bitop_8c_a7dca42c78d4069f6fe63cdcd41700916}{pow\_2}(\textcolor{keywordtype}{int} k)\{
+00011    \textcolor{keywordtype}{int} n=1;
+00012    \textcolor{keywordflow}{while}(k!=0)\{
+00013      n = n << 1;
+00014      k--;
+00015    \}
+00016    \textcolor{keywordflow}{return} n;
+00017 \}
+00018 
+00019 
+\hypertarget{bitop_8c_source_l00020}{}\hyperlink{bitop_8h_ad0f0d6f1ceedfc8bdd3e76e7f8160abe}{00020} \textcolor{keywordtype}{int} \hyperlink{bitop_8c_ad0f0d6f1ceedfc8bdd3e76e7f8160abe}{log\_2}(\textcolor{keywordtype}{int} n)\{
+00021    \textcolor{keywordtype}{int} k=0;
+00022    \textcolor{keywordflow}{while}(n!=1 && k<32)\{
+00023      n= n >> 1;
+00024      k++;
+00025    \}
+00026    \textcolor{keywordflow}{return} k;
+00027 \}
+00028 
+\end{DoxyCode}

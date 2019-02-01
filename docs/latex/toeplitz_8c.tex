@@ -1,0 +1,145 @@
+\hypertarget{toeplitz_8c}{\section{toeplitz.\-c File Reference}
+\label{toeplitz_8c}\index{toeplitz.\-c@{toeplitz.\-c}}
+}
+
+
+Contains the main part of the sequential routines for Toeplitz algebra.  
+
+
+\subsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+int \hyperlink{group__group22_ga24331a8efb6e0b77df7c645ef45b2830}{print\-\_\-error\-\_\-message} (int error\-\_\-number, char const $\ast$file, int line)
+\begin{DoxyCompactList}\small\item\em Prints error message corresponding to an error number. \end{DoxyCompactList}\item 
+int \hyperlink{group__group21_ga186fc8d8825da293e94de77b77d01fba}{define\-\_\-blocksize} (int n, int lambda, int bs\-\_\-flag, int fixed\-\_\-bs)
+\begin{DoxyCompactList}\small\item\em Defines an optimal size of the block used in the sliding windows algorithm. \end{DoxyCompactList}\item 
+int \hyperlink{group__group21_ga4c2846ca9f67faae5746325d1ec63aac}{define\-\_\-nfft} (int n\-\_\-thread, int flag\-\_\-nfft, int fixed\-\_\-nfft)
+\begin{DoxyCompactList}\small\item\em Defines the number of simultaneous ffts for the Toeplitz matrix product computation. \end{DoxyCompactList}\item 
+int \hyperlink{group__group11_ga7f4e77d71f2c6f2caf652bab7520e3f4}{tpltz\-\_\-init} (int n, int lambda, int $\ast$nfft, int $\ast$blocksize, fftw\-\_\-complex $\ast$$\ast$T\-\_\-fft, double $\ast$T, fftw\-\_\-complex $\ast$$\ast$V\-\_\-fft, double $\ast$$\ast$V\-\_\-rfft, fftw\-\_\-plan $\ast$plan\-\_\-f, fftw\-\_\-plan $\ast$plan\-\_\-b, \hyperlink{structFlag}{Flag} flag\-\_\-stgy)
+\begin{DoxyCompactList}\small\item\em Sets a block size and initializes all fftw arrays and plans needed for the computation. \end{DoxyCompactList}\item 
+int \hyperlink{group__group21_gae3d694bcffacaf24706f0586a223538e}{fftw\-\_\-init\-\_\-omp\-\_\-threads} (int fftw\-\_\-n\-\_\-thread)
+\begin{DoxyCompactList}\small\item\em Initialize omp threads for fftw plans. \end{DoxyCompactList}\item 
+int \hyperlink{group__group21_ga1a6106fbaa68aab85595935252299097}{rhs\-\_\-init\-\_\-fftw} (int $\ast$nfft, int fft\-\_\-size, fftw\-\_\-complex $\ast$$\ast$V\-\_\-fft, double $\ast$$\ast$V\-\_\-rfft, fftw\-\_\-plan $\ast$plan\-\_\-f, fftw\-\_\-plan $\ast$plan\-\_\-b, int fftw\-\_\-flag)
+\begin{DoxyCompactList}\small\item\em Initializes fftw array and plan for the right hand side, general matrix V. \end{DoxyCompactList}\item 
+int \hyperlink{group__group21_ga6c68921dafc6dc184d335a59df68e5f7}{circ\-\_\-init\-\_\-fftw} (double $\ast$T, int fft\-\_\-size, int lambda, fftw\-\_\-complex $\ast$$\ast$T\-\_\-fft)
+\begin{DoxyCompactList}\small\item\em Initializes fftw array and plan for the circulant matrix T\-\_\-circ obtained from T. \end{DoxyCompactList}\item 
+int \hyperlink{group__group11_gac7ac0ee5f6eaee6846814b131671f6e8}{tpltz\-\_\-cleanup} (fftw\-\_\-complex $\ast$$\ast$T\-\_\-fft, fftw\-\_\-complex $\ast$$\ast$V\-\_\-fft, double $\ast$$\ast$V\-\_\-rfft, fftw\-\_\-plan $\ast$plan\-\_\-f, fftw\-\_\-plan $\ast$plan\-\_\-b)
+\begin{DoxyCompactList}\small\item\em Cleans fftw workspace used in the Toeplitz matrix matrix product's computation. \end{DoxyCompactList}\item 
+int \hyperlink{group__group22_ga7dddc7df6f787d6aa92dfc25e9d0465a}{copy\-\_\-block} (int ninrow, int nincol, double $\ast$Vin, int noutrow, int noutcol, double $\ast$Vout, int inrow, int incol, int nblockrow, int nblockcol, int outrow, int outcol, double norm, int set\-\_\-zero\-\_\-flag)
+\begin{DoxyCompactList}\small\item\em Copies (and potentially reshapes) a selected block of the input matrix to a specified position of the output matrix. \end{DoxyCompactList}\item 
+int \hyperlink{group__group21_ga2c399885221722e98f72206ddce8d0d3}{scmm\-\_\-direct} (int fft\-\_\-size, int nfft, fftw\-\_\-complex $\ast$C\-\_\-fft, int ncol, double $\ast$V\-\_\-rfft, double $\ast$$\ast$C\-V, fftw\-\_\-complex $\ast$V\-\_\-fft, fftw\-\_\-plan plan\-\_\-f\-\_\-\-V, fftw\-\_\-plan plan\-\_\-b\-\_\-\-C\-V)
+\begin{DoxyCompactList}\small\item\em Performs the product of a circulant matrix C\-\_\-fft by a matrix V\-\_\-rfft using fftw plans. \end{DoxyCompactList}\item 
+int \hyperlink{group__group21_gab8839f416f8f8165b31a5363c405428d}{scmm\-\_\-basic} (double $\ast$$\ast$V, int blocksize, int m, fftw\-\_\-complex $\ast$C\-\_\-fft, double $\ast$$\ast$C\-V, fftw\-\_\-complex $\ast$V\-\_\-fft, double $\ast$V\-\_\-rfft, int nfft, fftw\-\_\-plan plan\-\_\-f\-\_\-\-V, fftw\-\_\-plan plan\-\_\-b\-\_\-\-C\-V)
+\begin{DoxyCompactList}\small\item\em Performs the product of a circulant matrix by a matrix using F\-F\-T's (an I\-N\-T\-E\-R\-N\-A\-L routine) \end{DoxyCompactList}\item 
+int \hyperlink{group__group21_ga2731f1bbfce2d47c4cc3381150470da4}{stmm\-\_\-core} (double $\ast$$\ast$V, int n, int m, double $\ast$T, fftw\-\_\-complex $\ast$T\-\_\-fft, int blocksize, int lambda, fftw\-\_\-complex $\ast$V\-\_\-fft, double $\ast$V\-\_\-rfft, int nfft, fftw\-\_\-plan plan\-\_\-f, fftw\-\_\-plan plan\-\_\-b, int flag\-\_\-offset, int flag\-\_\-nofft)
+\begin{DoxyCompactList}\small\item\em Performs the stand alone product of a Toeplitz matrix by a matrix using the sliding window algorithm. (an I\-N\-T\-E\-R\-N\-A\-L routine) \end{DoxyCompactList}\item 
+int \hyperlink{group__group21_gace7322011cd24b469e9b5d530e8a71ba}{stmm\-\_\-main} (double $\ast$$\ast$V, int n, int m, int id0, int l, double $\ast$T, fftw\-\_\-complex $\ast$T\-\_\-fft, int lambda, fftw\-\_\-complex $\ast$V\-\_\-fft, double $\ast$V\-\_\-rfft, fftw\-\_\-plan plan\-\_\-f, fftw\-\_\-plan plan\-\_\-b, int blocksize, int nfft, \hyperlink{structFlag}{Flag} flag\-\_\-stgy)
+\begin{DoxyCompactList}\small\item\em Performs the product of a Toeplitz matrix by a general matrix using the sliding window algorithm with optimize reshaping. (an I\-N\-T\-E\-R\-N\-A\-L routine) \end{DoxyCompactList}\item 
+int \hyperlink{group__group12_gadd9394c94ea5769dc0a2064f48dfc94c}{mpi\-\_\-stmm} (double $\ast$$\ast$V, int n, int m, int id0, int l, double $\ast$T, int lambda, \hyperlink{structFlag}{Flag} flag\-\_\-stgy, M\-P\-I\-\_\-\-Comm comm)
+\begin{DoxyCompactList}\small\item\em Performs the product of a Toeplitz matrix by a general matrix using M\-P\-I. We assume that the matrix has already been scattered. (a U\-S\-E\-R routine) \end{DoxyCompactList}\end{DoxyCompactItemize}
+\subsection*{Variables}
+\begin{DoxyCompactItemize}
+\item 
+int \hyperlink{toeplitz_8c_ab848ce91ba14d3dc5c87d0b42f3a1c0d}{V\-E\-R\-B\-O\-S\-E}
+\begin{DoxyCompactList}\small\item\em Verbose mode. \end{DoxyCompactList}\item 
+int \hyperlink{toeplitz_8c_a005f790383498397d0fdad1513881e3f}{V\-E\-R\-B\-O\-S\-E\-\_\-\-F\-I\-R\-S\-T\-I\-N\-I\-T} = 1
+\item 
+int \hyperlink{toeplitz_8c_a300d52d9923297872ffb24962a0f0ce6}{P\-R\-I\-N\-T\-\_\-\-R\-A\-N\-K} = -\/1
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Contains the main part of the sequential routines for Toeplitz algebra. version 1.\-2b, November 2012 \begin{DoxyAuthor}{Author}
+Frederic Dauvergne, Maude Le Jeune, Antoine Rogier, Radek Stompor
+\end{DoxyAuthor}
+Project\-: Midapack library, A\-N\-R M\-I\-D\-A\-S'09 -\/ Toeplitz Algebra module Purpose\-: Provide Toeplitz algebra tools suitable for Cosmic Microwave Background (C\-M\-B) data analysis.
+
+\begin{DoxyNote}{Note}
+Copyright (c) 2010-\/2012 A\-P\-C C\-N\-R\-S Université Paris Diderot 
+
+
+
+This program is free software; you can redistribute it and/or modify it under the terms 
+
+of the G\-N\-U Lesser General Public License as published by the Free Software Foundation; 
+
+either version 3 of the License, or (at your option) any later version. This program is 
+
+distributed in the hope that it will be useful, but W\-I\-T\-H\-O\-U\-T A\-N\-Y W\-A\-R\-R\-A\-N\-T\-Y; without even 
+
+the implied warranty of M\-E\-R\-C\-H\-A\-N\-T\-A\-B\-I\-L\-I\-T\-Y or F\-I\-T\-N\-E\-S\-S F\-O\-R A P\-A\-R\-T\-I\-C\-U\-L\-A\-R P\-U\-R\-P\-O\-S\-E. See the G\-N\-U 
+
+Lesser General Public License for more details. 
+
+
+
+You should have received a copy of the G\-N\-U Lesser General Public License along with this 
+
+program; if not, see \href{http://www.gnu.org/licenses/lgpl.html}{\tt http\-://www.\-gnu.\-org/licenses/lgpl.\-html} 
+
+
+
+For more information about A\-N\-R M\-I\-D\-A\-S'09 project see \-: 
+
+\href{http://www.apc.univ-paris7.fr/APC_CS/Recherche/Adamis/MIDAS09/index.html}{\tt http\-://www.\-apc.\-univ-\/paris7.\-fr/\-A\-P\-C\-\_\-\-C\-S/\-Recherche/\-Adamis/\-M\-I\-D\-A\-S09/index.\-html} 
+
+
+
+A\-C\-K\-N\-O\-W\-L\-E\-D\-G\-M\-E\-N\-T\-: This work has been supported in part by the French National Research 
+
+Agency (A\-N\-R) through C\-O\-S\-I\-N\-U\-S program (project M\-I\-D\-A\-S no. A\-N\-R-\/09-\/\-C\-O\-S\-I-\/009).
+\end{DoxyNote}
+Log\-: toeplitz$\ast$.c
+
+Revision 1.\-0b 2012/05/07 Frederic Dauvergne (A\-P\-C) Official release 1.\-0beta. The first installement of the library is the Toeplitz algebra module.
+
+Revision 1.\-1b 2012/07/-\/ Frederic Dauvergne (A\-P\-C)
+\begin{DoxyItemize}
+\item mpi\-\_\-stbmm allows now rowi-\/wise order per process datas and no-\/blocking communications.
+\item O\-M\-P improvment for optimal cpu time.
+\item bug fixed for O\-M\-P in the stmm\-\_\-basic routine.
+\item distcorrmin is used to communicate only lambda-\/1 datas when it is needed.
+\item new reshaping routines using transformation functions in stmm. Thus, only one copy at most is needed.
+\item tpltz\-\_\-init improvement using define\-\_\-nfft and define\-\_\-blocksize routines.
+\item add \hyperlink{structBlock}{Block} struture to define each Toeplitz block.
+\item add \hyperlink{structFlag}{Flag} structure and preprocessing parameters to define the computational strategy. All the flag parameters are then available directly from the A\-P\-I.
+\end{DoxyItemize}
+
+Revision 1.\-2b 2012/11/30 Frederic Dauvergne (A\-P\-C)
+\begin{DoxyItemize}
+\item extend the mpi product routine to rowwise order data distribution. This is now allowing tree kinds of distribution.
+\item add int64 for some variables to extend the global volume of data you can use.
+\item Openmp improvments.
+\item Add \hyperlink{toeplitz__wizard_8c}{toeplitz\-\_\-wizard.\-c}, which contains a set of easy to use routines with defined structures. 
+\end{DoxyItemize}
+
+Definition in file \hyperlink{toeplitz_8c_source}{toeplitz.\-c}.
+
+
+
+\subsection{Variable Documentation}
+\hypertarget{toeplitz_8c_ab848ce91ba14d3dc5c87d0b42f3a1c0d}{\index{toeplitz.\-c@{toeplitz.\-c}!V\-E\-R\-B\-O\-S\-E@{V\-E\-R\-B\-O\-S\-E}}
+\index{V\-E\-R\-B\-O\-S\-E@{V\-E\-R\-B\-O\-S\-E}!toeplitz.c@{toeplitz.\-c}}
+\subsubsection[{V\-E\-R\-B\-O\-S\-E}]{\setlength{\rightskip}{0pt plus 5cm}int V\-E\-R\-B\-O\-S\-E}}\label{toeplitz_8c_ab848ce91ba14d3dc5c87d0b42f3a1c0d}
+
+
+Verbose mode. 
+
+Prints some informative messages during the computation. 
+
+Definition at line \hyperlink{toeplitz_8c_source_l00078}{78} of file \hyperlink{toeplitz_8c_source}{toeplitz.\-c}.
+
+\hypertarget{toeplitz_8c_a005f790383498397d0fdad1513881e3f}{\index{toeplitz.\-c@{toeplitz.\-c}!V\-E\-R\-B\-O\-S\-E\-\_\-\-F\-I\-R\-S\-T\-I\-N\-I\-T@{V\-E\-R\-B\-O\-S\-E\-\_\-\-F\-I\-R\-S\-T\-I\-N\-I\-T}}
+\index{V\-E\-R\-B\-O\-S\-E\-\_\-\-F\-I\-R\-S\-T\-I\-N\-I\-T@{V\-E\-R\-B\-O\-S\-E\-\_\-\-F\-I\-R\-S\-T\-I\-N\-I\-T}!toeplitz.c@{toeplitz.\-c}}
+\subsubsection[{V\-E\-R\-B\-O\-S\-E\-\_\-\-F\-I\-R\-S\-T\-I\-N\-I\-T}]{\setlength{\rightskip}{0pt plus 5cm}int V\-E\-R\-B\-O\-S\-E\-\_\-\-F\-I\-R\-S\-T\-I\-N\-I\-T = 1}}\label{toeplitz_8c_a005f790383498397d0fdad1513881e3f}
+
+
+Definition at line \hyperlink{toeplitz_8c_source_l00079}{79} of file \hyperlink{toeplitz_8c_source}{toeplitz.\-c}.
+
+\hypertarget{toeplitz_8c_a300d52d9923297872ffb24962a0f0ce6}{\index{toeplitz.\-c@{toeplitz.\-c}!P\-R\-I\-N\-T\-\_\-\-R\-A\-N\-K@{P\-R\-I\-N\-T\-\_\-\-R\-A\-N\-K}}
+\index{P\-R\-I\-N\-T\-\_\-\-R\-A\-N\-K@{P\-R\-I\-N\-T\-\_\-\-R\-A\-N\-K}!toeplitz.c@{toeplitz.\-c}}
+\subsubsection[{P\-R\-I\-N\-T\-\_\-\-R\-A\-N\-K}]{\setlength{\rightskip}{0pt plus 5cm}int P\-R\-I\-N\-T\-\_\-\-R\-A\-N\-K = -\/1}}\label{toeplitz_8c_a300d52d9923297872ffb24962a0f0ce6}
+
+
+Definition at line \hyperlink{toeplitz_8c_source_l00082}{82} of file \hyperlink{toeplitz_8c_source}{toeplitz.\-c}.
+

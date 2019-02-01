@@ -1,0 +1,102 @@
+\hypertarget{toeplitz__params_8c}{\section{toeplitz\-\_\-params.\-c}
+\label{toeplitz__params_8c}\index{toeplitz\-\_\-params.\-c@{toeplitz\-\_\-params.\-c}}
+}
+
+\begin{DoxyCode}
+00001 
+00057 \textcolor{preprocessor}{#include "\hyperlink{toeplitz_8h}{toeplitz.h}"}
+00058 
+00059 
+00060 \textcolor{comment}{//r1.1 - Frederic Dauvergne (APC)}
+00061 \textcolor{comment}{//This is some routines to set the flag strategy parameters}
+00062 
+00063 \textcolor{comment}{//todo:}
+00064 \textcolor{comment}{//- add some routines to estimate the best choice strategy when automatic }
+00065 \textcolor{comment}{//parameters are choosen.}
+00066 
+00067 \textcolor{comment}{//=========================================================================}
+00068 
+00070 
+\hypertarget{toeplitz__params_8c_source_l00073}{}\hyperlink{group__group21_ga234bcc963a99bea09ed92b36c711c3ec}{00073} \textcolor{keywordtype}{int} \hyperlink{group__group21_ga234bcc963a99bea09ed92b36c711c3ec}{flag\_stgy\_init\_auto}(\hyperlink{structFlag}{Flag} *flag\_stgy)
+00074 \{
+00075   \textcolor{keyword}{static} \textcolor{keyword}{const} \hyperlink{structFlag}{Flag} z = \{0\};
+00076    *flag\_stgy = z;
+00077 
+00078   flag\_stgy->\hyperlink{structFlag_adf245cb515d8a26bdc70c7226d3dfb39}{flag\_fftw}=FLAG\_FFTW;
+00079 \textcolor{comment}{//  flag\_stgy->flag\_verbose=FLAG\_VERBOSE;}
+00080 
+00081   \textcolor{keywordflow}{return} 0;
+00082 \}
+00083 
+00084 
+00085 \textcolor{comment}{//=========================================================================}
+00086 
+00088 
+\hypertarget{toeplitz__params_8c_source_l00091}{}\hyperlink{group__group21_ga6de858af090da4b96df6a195015ce09e}{00091} \textcolor{keywordtype}{int} \hyperlink{group__group21_ga6de858af090da4b96df6a195015ce09e}{flag\_stgy\_init\_zeros}(\hyperlink{structFlag}{Flag} *flag\_stgy)
+00092 \{
+00093   \textcolor{keyword}{static} \textcolor{keyword}{const} \hyperlink{structFlag}{Flag} z = \{0\};
+00094    *flag\_stgy = z;
+00095 
+00096   \textcolor{keywordflow}{return} 0;
+00097 \}
+00098 
+00099 
+00100 \textcolor{comment}{//=========================================================================}
+00101 
+00103 
+\hypertarget{toeplitz__params_8c_source_l00106}{}\hyperlink{group__group21_gae334670891033aa91dd0bb7f8b707dc4}{00106} \textcolor{keywordtype}{int} \hyperlink{group__group21_gae334670891033aa91dd0bb7f8b707dc4}{flag\_stgy\_init\_defined}(\hyperlink{structFlag}{Flag} *flag\_stgy)
+00107 \{
+00108 
+00109   flag\_stgy->\hyperlink{structFlag_abeb9784f834d231864f1a722c7d79398}{flag\_bs}=FLAG\_BS;  \textcolor{comment}{//0:auto 1:fixed 2:zero 3:3lambda
+       4:4lambda 5:formula2}
+00110   flag\_stgy->\hyperlink{structFlag_a6c22a65604c9dd03d58ecf602bb67952}{flag\_nfft}=FLAG\_NFFT;  \textcolor{comment}{//0:auto  1:fixed  2:numthreads 
+       3:fftwthreads }
+00111   flag\_stgy->\hyperlink{structFlag_adf245cb515d8a26bdc70c7226d3dfb39}{flag\_fftw}=FLAG\_FFTW;
+00112   flag\_stgy->\hyperlink{structFlag_a59bc77f2a4fd6e11947b65033c9dea25}{flag\_no\_rshp}=FLAG\_NO\_RSHP;  \textcolor{comment}{//0:auto  1:yes  1:no}
+00113   flag\_stgy->\hyperlink{structFlag_ae6ae474d648b80963df05ac9bcf64e48}{flag\_nofft}=FLAG\_NOFFT; \textcolor{comment}{//0:auto  1:yes  1:no}
+00114   flag\_stgy->\hyperlink{structFlag_a9a3d002dea599c154b60af540c868cb5}{flag\_blockingcomm}=FLAG\_BLOCKINGCOMM;  \textcolor{comment}{//0:auto
+       1:noblocking 2:blocking 3:blocking\_nooptim}
+00115   flag\_stgy->\hyperlink{structFlag_a3e8ec6d9ff8ecf0ceff5de51ca98e65b}{fixed\_nfft}=FIXED\_NFFT;  \textcolor{comment}{//fixed init value for nfft}
+00116   flag\_stgy->\hyperlink{structFlag_a32e56c6cf96b69f4dd6e0f2dcdb88678}{fixed\_bs}=FIXED\_BS;    \textcolor{comment}{//fixed init value for blockside}
+00117   flag\_stgy->\hyperlink{structFlag_a2a95d22f9f2430453cfba79d30f12f98}{flag\_verbose}=FLAG\_VERBOSE;
+00118   flag\_stgy->\hyperlink{structFlag_a554392271ddce269c1f562aaecd4a17b}{flag\_skip\_build\_gappy\_blocks}=
+      FLAG\_SKIP\_BUILD\_GAPPY\_BLOCKS;
+00119   flag\_stgy->\hyperlink{structFlag_a51e7368d87f7d743dbf7c04dde411af1}{flag\_param\_distmin\_fixed}=
+      FLAG\_PARAM\_DISTMIN\_FIXED;
+00120   flag\_stgy->\hyperlink{structFlag_a479c04f9761b9b91c55362f491df0ea1}{flag\_precompute\_lvl}=FLAG\_PRECOMPUTE\_LVL;
+00121   \textcolor{keywordflow}{return} 0;
+00122 \}
+00123 
+00124 
+00125 \textcolor{comment}{//=========================================================================}
+00126 
+00128 
+\hypertarget{toeplitz__params_8c_source_l00131}{}\hyperlink{group__group21_ga2d566ebeba6474d1bbac93315e1f578a}{00131} \textcolor{keywordtype}{int} \hyperlink{group__group21_ga2d566ebeba6474d1bbac93315e1f578a}{print\_flag\_stgy\_init}(\hyperlink{structFlag}{Flag} flag\_stgy)
+00132 \{
+00133 
+00134   FILE *file;
+00135   file = stdout;
+00136 
+00137   fprintf(file, \textcolor{stringliteral}{"flag\_bs=%d\(\backslash\)n"}, flag\_stgy.\hyperlink{structFlag_abeb9784f834d231864f1a722c7d79398}{flag\_bs});
+00138   fprintf(file, \textcolor{stringliteral}{"flag\_nfft=%d\(\backslash\)n"}, flag\_stgy.\hyperlink{structFlag_a6c22a65604c9dd03d58ecf602bb67952}{flag\_nfft});
+00139   fprintf(file, \textcolor{stringliteral}{"flag\_fftw=%d\(\backslash\)n"}, flag\_stgy.\hyperlink{structFlag_adf245cb515d8a26bdc70c7226d3dfb39}{flag\_fftw});
+00140   fprintf(file, \textcolor{stringliteral}{"flag\_no\_rshp=%d\(\backslash\)n"}, flag\_stgy.\hyperlink{structFlag_a59bc77f2a4fd6e11947b65033c9dea25}{flag\_no\_rshp});
+00141   fprintf(file, \textcolor{stringliteral}{"flag\_nofft=%d\(\backslash\)n"}, flag\_stgy.\hyperlink{structFlag_ae6ae474d648b80963df05ac9bcf64e48}{flag\_nofft});
+00142   fprintf(file, \textcolor{stringliteral}{"flag\_blockingcomm=%d\(\backslash\)n"}, flag\_stgy.\hyperlink{structFlag_a9a3d002dea599c154b60af540c868cb5}{flag\_blockingcomm}
+      );
+00143   fprintf(file, \textcolor{stringliteral}{"fixed\_nfft=%d\(\backslash\)n"}, flag\_stgy.\hyperlink{structFlag_a3e8ec6d9ff8ecf0ceff5de51ca98e65b}{fixed\_nfft});
+00144   fprintf(file, \textcolor{stringliteral}{"fixed\_bs=%d\(\backslash\)n"}, flag\_stgy.\hyperlink{structFlag_a32e56c6cf96b69f4dd6e0f2dcdb88678}{fixed\_bs});
+00145   fprintf(file, \textcolor{stringliteral}{"flag\_verbose=%d\(\backslash\)n"}, flag\_stgy.\hyperlink{structFlag_a2a95d22f9f2430453cfba79d30f12f98}{flag\_verbose});
+00146   fprintf(file, \textcolor{stringliteral}{"flag\_skip\_build\_gappy\_blocks=%d\(\backslash\)n"}, flag\_stgy.
+      \hyperlink{structFlag_a554392271ddce269c1f562aaecd4a17b}{flag\_skip\_build\_gappy\_blocks});
+00147   fprintf(file, \textcolor{stringliteral}{"flag\_param\_distmin\_fixed=%d\(\backslash\)n"}, flag\_stgy.
+      \hyperlink{structFlag_a51e7368d87f7d743dbf7c04dde411af1}{flag\_param\_distmin\_fixed});
+00148   fprintf(file, \textcolor{stringliteral}{"flag\_precompute\_lvl=%d\(\backslash\)n"}, flag\_stgy.\hyperlink{structFlag_a479c04f9761b9b91c55362f491df0ea1}{flag\_precompute\_lvl}
+      );
+00149 
+00150   \textcolor{keywordflow}{return} 0;
+00151 \}
+00152 
+00153 
+00154 
+\end{DoxyCode}

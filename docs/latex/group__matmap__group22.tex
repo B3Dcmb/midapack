@@ -1,0 +1,921 @@
+\hypertarget{group__matmap__group22}{\section{lower internal routines}
+\label{group__matmap__group22}\index{lower internal routines@{lower internal routines}}
+}
+\subsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+int \hyperlink{group__matmap__group22_ga3097d396b49c10414a79152f4ebd2902}{m2m} (double $\ast$v\-A1, int $\ast$A1, int n1, double $\ast$v\-A2, int $\ast$A2, int n2)
+\item 
+int \hyperlink{group__matmap__group22_ga28c05d496e6168337d8a466affc1d0ac}{m2m\-\_\-sum} (double $\ast$v\-A1, int $\ast$A1, int n1, double $\ast$v\-A2, int $\ast$A2, int n2)
+\item 
+int \hyperlink{group__matmap__group22_ga53acb71f83d76d42080a2fd8b4ad06b1}{card\-\_\-or} (int $\ast$A1, int n1, int $\ast$A2, int n2)
+\item 
+int \hyperlink{group__matmap__group22_ga67a8ef3c535fc47af99024fa2de0b3c5}{card\-\_\-and} (int $\ast$A1, int n1, int $\ast$A2, int n2)
+\item 
+int \hyperlink{group__matmap__group22_ga07e3dbbce334f3744a3eb27174780a7c}{set\-\_\-or} (int $\ast$A1, int n1, int $\ast$A2, int n2, int $\ast$A1or\-A2)
+\item 
+int \hyperlink{group__matmap__group22_ga3beac6a118c373a422f4772144306add}{set\-\_\-and} (int $\ast$A1, int n1, int $\ast$A2, int n2, int $\ast$A1and\-A2)
+\item 
+int \hyperlink{group__matmap__group22_gabe7077466aef706a7825e650a78f4e5e}{butterfly\-\_\-init} (int $\ast$indices, int count, int $\ast$$\ast$R, int $\ast$n\-R, int $\ast$$\ast$S, int $\ast$n\-S, int $\ast$$\ast$com\-\_\-indices, int $\ast$com\-\_\-count, int steps, M\-P\-I\-\_\-\-Comm comm)
+\begin{DoxyCompactList}\small\item\em Initialize tables for butterfly-\/like communication scheme This routine set up needed tables for the butterfly communication scheme. Sending and receiving tabs should be well allocated(at least size of number of steps in butterfly scheme). Double pointer are partially allocated, the last allocation is performed inside the routine. com\-\_\-indices and com\-\_\-count are also allocated inside the routine, thus they are passing by reference. They represent indices which have to be communicated an their number. Algotithm is based 2 parts. The first one identify intersection between processors indices, using 3 successives butterfly communication schemes \-: bottom up, top down, and top down again. The second part works locally to build sets of indices to communicate. \end{DoxyCompactList}\item 
+int \hyperlink{group__matmap__group22_ga3ab052e5ba3e18427574481f64916b3a}{butterfly\-\_\-reduce} (int $\ast$$\ast$R, int $\ast$n\-R, int n\-Rmax, int $\ast$$\ast$S, int $\ast$n\-S, int n\-Smax, double $\ast$val, int steps, M\-P\-I\-\_\-\-Comm comm)
+\begin{DoxyCompactList}\small\item\em Perform a sparse sum reduction (or mapped reduction) using a butterfly-\/like communication scheme. \end{DoxyCompactList}\item 
+int \hyperlink{group__matmap__group22_ga2760469151322cc847123dfa097fb93a}{butterfly\-\_\-blocking\-\_\-2instr\-\_\-reduce} (int $\ast$$\ast$R, int $\ast$n\-R, int n\-Rmax, int $\ast$$\ast$S, int $\ast$n\-S, int n\-Smax, double $\ast$val, int steps, M\-P\-I\-\_\-\-Comm comm)
+\begin{DoxyCompactList}\small\item\em Perform a sparse sum reduction (or mapped reduction) using a butterfly-\/like communication scheme. \end{DoxyCompactList}\item 
+int \hyperlink{group__matmap__group22_gaddc1509a3b18b1d35b7a4fc411eba3a6}{butterfly\-\_\-blocking\-\_\-1instr\-\_\-reduce} (int $\ast$$\ast$R, int $\ast$n\-R, int n\-Rmax, int $\ast$$\ast$S, int $\ast$n\-S, int n\-Smax, double $\ast$val, int steps, M\-P\-I\-\_\-\-Comm comm)
+\begin{DoxyCompactList}\small\item\em Perform a sparse sum reduction (or mapped reduction) using a butterfly-\/like communication scheme. \end{DoxyCompactList}\item 
+double \hyperlink{group__matmap__group22_ga5198c5dcb4ff06c9b9cdd323398f1541}{truebutterfly\-\_\-reduce} (int $\ast$$\ast$R, int $\ast$n\-R, int n\-Rmax, int $\ast$$\ast$S, int $\ast$n\-S, int n\-Smax, double $\ast$val, int steps, M\-P\-I\-\_\-\-Comm comm)
+\begin{DoxyCompactList}\small\item\em Perform a sparse sum reduction (or mapped reduction) using a butterfly-\/like communication scheme. \end{DoxyCompactList}\item 
+int \hyperlink{group__matmap__group22_ga130490c253962e8ce30d4e0041e1d596}{sindex} (int $\ast$T, int n\-T, int $\ast$A, int n\-A)
+\item 
+int \hyperlink{group__matmap__group22_ga65cf9a1978567020172f6262de6d9c42}{omp\-\_\-pindex} (int $\ast$T, int n\-T, int $\ast$A, int n\-A)
+\item 
+int \hyperlink{group__matmap__group22_ga132957cdd06b08ad58760aab421bc3e1}{ssort} (int $\ast$indices, int count, int flag)
+\item 
+int \hyperlink{group__matmap__group22_ga61063512934de793c2040eb32c2cda3d}{omp\-\_\-psort} (int $\ast$A, int n\-A, int flag)
+\item 
+int \hyperlink{group__matmap__group22_gab4bcafb298be124aaa5bfed34348b1ea}{ring\-\_\-init} (int $\ast$indices, int count, int $\ast$$\ast$R, int $\ast$n\-R, int $\ast$$\ast$S, int $\ast$n\-S, int steps, M\-P\-I\-\_\-\-Comm comm)
+\begin{DoxyCompactList}\small\item\em Initialize tables for ring-\/like communication scheme. \end{DoxyCompactList}\item 
+int \hyperlink{group__matmap__group22_gadacbaae4e4aa8283e5fd4effbd61da30}{ring\-\_\-reduce} (int $\ast$$\ast$R, int $\ast$n\-R, int n\-Rmax, int $\ast$$\ast$S, int $\ast$n\-S, int n\-Smax, double $\ast$val, double $\ast$res\-\_\-val, int steps, M\-P\-I\-\_\-\-Comm comm)
+\begin{DoxyCompactList}\small\item\em Perform a sparse sum reduction (or mapped reduction) using a ring-\/like communication scheme. \end{DoxyCompactList}\item 
+int \hyperlink{group__matmap__group22_ga7aeab779fca40cc4c4e402192f89d242}{alltoallv\-\_\-reduce} (int $\ast$$\ast$R, int $\ast$n\-R, int n\-Rtot, int $\ast$$\ast$S, int $\ast$n\-S, int n\-Stot, double $\ast$val, double $\ast$res\-\_\-val, int steps, M\-P\-I\-\_\-\-Comm comm)
+\begin{DoxyCompactList}\small\item\em Perform a sparse sum reduction (or mapped reduction) using an M\-P\-I-\/\-Alltoallv call. \end{DoxyCompactList}\item 
+int \hyperlink{group__matmap__group22_gaa30b9825dac2a7e8bbc56d4b1837fda7}{ring\-\_\-nonblocking\-\_\-reduce} (int $\ast$$\ast$R, int $\ast$n\-R, int $\ast$$\ast$S, int $\ast$n\-S, double $\ast$val, double $\ast$res\-\_\-val, int steps, M\-P\-I\-\_\-\-Comm comm)
+\begin{DoxyCompactList}\small\item\em Perform a sparse sum reduction (or mapped reduction) using a ring-\/like non-\/blocking communication scheme. \end{DoxyCompactList}\item 
+int \hyperlink{group__matmap__group22_gaa9afd399996bf2b2b11dc6b4cdb9dda8}{ring\-\_\-noempty\-\_\-reduce} (int $\ast$$\ast$R, int $\ast$n\-R, int nne\-R, int $\ast$$\ast$S, int $\ast$n\-S, int nne\-S, double $\ast$val, double $\ast$res\-\_\-val, int steps, M\-P\-I\-\_\-\-Comm comm)
+\begin{DoxyCompactList}\small\item\em Perform a sparse sum reduction (or mapped reduction) using a ring-\/like non-\/blocking no-\/empty communication scheme. \end{DoxyCompactList}\item 
+int \hyperlink{group__matmap__group22_ga70fb12cfb290a86dc085d51ba13b2b41}{ring\-\_\-noempty\-\_\-step\-\_\-reduce} (int $\ast$$\ast$R, int $\ast$n\-R, int n\-Rmax, int $\ast$$\ast$S, int $\ast$n\-S, int n\-Smax, double $\ast$val, double $\ast$res\-\_\-val, int steps, M\-P\-I\-\_\-\-Comm comm)
+\begin{DoxyCompactList}\small\item\em Perform a sparse sum reduction (or mapped reduction) using a ring-\/like communication scheme. \end{DoxyCompactList}\item 
+int \hyperlink{group__matmap__group22_ga5136d676330c6257fddf3c614e5cedcc}{truebutterfly\-\_\-init} (int $\ast$indices, int count, int $\ast$$\ast$R, int $\ast$n\-R, int $\ast$$\ast$S, int $\ast$n\-S, int $\ast$$\ast$com\-\_\-indices, int $\ast$com\-\_\-count, int steps, M\-P\-I\-\_\-\-Comm comm)
+\begin{DoxyCompactList}\small\item\em Initialize tables for butterfly-\/like communication scheme (true means pair wise) This routine set up needed tables for the butterfly communication scheme. Sending and receiving tabs should be well allocated(at least size of number of steps in butterfly scheme). Double pointer are partially allocated, the last allocation is performed inside the routine. com\-\_\-indices and com\-\_\-count are also allocated inside the routine, thus they are passing by reference. They represent indices which have to be communicated an their number. Algotithm is based 2 parts. The first one identify intersection between processors indices, using 3 successives butterfly communication schemes \-: bottom up, top down, and top down again. The second part works locally to build sets of indices to communicate. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+These are low level internal routines. These are generally not to be used by external users. 
+
+\subsection{Function Documentation}
+\hypertarget{group__matmap__group22_ga3097d396b49c10414a79152f4ebd2902}{\index{lower internal routines@{lower internal routines}!m2m@{m2m}}
+\index{m2m@{m2m}!lower internal routines@{lower internal routines}}
+\subsubsection[{m2m}]{\setlength{\rightskip}{0pt plus 5cm}int m2m (
+\begin{DoxyParamCaption}
+\item[{double $\ast$}]{v\-A1, }
+\item[{int $\ast$}]{A1, }
+\item[{int}]{n1, }
+\item[{double $\ast$}]{v\-A2, }
+\item[{int $\ast$}]{A2, }
+\item[{int}]{n2}
+\end{DoxyParamCaption}
+)}}\label{group__matmap__group22_ga3097d396b49c10414a79152f4ebd2902}
+Function m2m for \char`\"{}map to map\char`\"{} Extract values from one map (A1, v\-A1), and for each pixel shared with an other map (A2, v\-A2), assign pixel value in v\-A1 and to pixel value in v\-A2. \begin{DoxyReturn}{Returns}
+a number of elements shared between A1 and A2 
+\end{DoxyReturn}
+\begin{DoxySeeAlso}{See also}
+\hyperlink{group__matmap__group22_ga28c05d496e6168337d8a466affc1d0ac}{m2m\-\_\-sum} 
+\end{DoxySeeAlso}
+
+
+Definition at line \hyperlink{alm_8c_source_l00093}{93} of file \hyperlink{alm_8c_source}{alm.\-c}.
+
+\hypertarget{group__matmap__group22_ga28c05d496e6168337d8a466affc1d0ac}{\index{lower internal routines@{lower internal routines}!m2m\-\_\-sum@{m2m\-\_\-sum}}
+\index{m2m\-\_\-sum@{m2m\-\_\-sum}!lower internal routines@{lower internal routines}}
+\subsubsection[{m2m\-\_\-sum}]{\setlength{\rightskip}{0pt plus 5cm}int m2m\-\_\-sum (
+\begin{DoxyParamCaption}
+\item[{double $\ast$}]{v\-A1, }
+\item[{int $\ast$}]{A1, }
+\item[{int}]{n1, }
+\item[{double $\ast$}]{v\-A2, }
+\item[{int $\ast$}]{A2, }
+\item[{int}]{n2}
+\end{DoxyParamCaption}
+)}}\label{group__matmap__group22_ga28c05d496e6168337d8a466affc1d0ac}
+Function m2m\-\_\-sum for \char`\"{}sum map to map\char`\"{} Extract values from one map (A1, v\-A1), and for each pixel shared with an other map (A2, v\-A2), sum pixel value in v\-A1 to pixel value in v\-A2. \begin{DoxyReturn}{Returns}
+a number of elements shared between A1 and A2 
+\end{DoxyReturn}
+\begin{DoxySeeAlso}{See also}
+\hyperlink{group__matmap__group22_ga3097d396b49c10414a79152f4ebd2902}{m2m} 
+\end{DoxySeeAlso}
+
+
+Definition at line \hyperlink{alm_8c_source_l00118}{118} of file \hyperlink{alm_8c_source}{alm.\-c}.
+
+\hypertarget{group__matmap__group22_ga53acb71f83d76d42080a2fd8b4ad06b1}{\index{lower internal routines@{lower internal routines}!card\-\_\-or@{card\-\_\-or}}
+\index{card\-\_\-or@{card\-\_\-or}!lower internal routines@{lower internal routines}}
+\subsubsection[{card\-\_\-or}]{\setlength{\rightskip}{0pt plus 5cm}int card\-\_\-or (
+\begin{DoxyParamCaption}
+\item[{int $\ast$}]{A1, }
+\item[{int}]{n1, }
+\item[{int $\ast$}]{A2, }
+\item[{int}]{n2}
+\end{DoxyParamCaption}
+)}}\label{group__matmap__group22_ga53acb71f83d76d42080a2fd8b4ad06b1}
+Compute $ card(A_1 \cup A_2) $ A1 and A2 should be two ascending ordered monotmony sets. of size n1 and n2. 
+\begin{DoxyParams}{Parameters}
+{\em n1} & number of elemnets in A1 \\
+\hline
+{\em A1} & set of indices \\
+\hline
+{\em n2} & number of elemnets in A2 \\
+\hline
+{\em A2} & set of indices \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+size of the union 
+\end{DoxyReturn}
+
+
+Definition at line \hyperlink{als_8c_source_l00060}{60} of file \hyperlink{als_8c_source}{als.\-c}.
+
+\hypertarget{group__matmap__group22_ga67a8ef3c535fc47af99024fa2de0b3c5}{\index{lower internal routines@{lower internal routines}!card\-\_\-and@{card\-\_\-and}}
+\index{card\-\_\-and@{card\-\_\-and}!lower internal routines@{lower internal routines}}
+\subsubsection[{card\-\_\-and}]{\setlength{\rightskip}{0pt plus 5cm}int card\-\_\-and (
+\begin{DoxyParamCaption}
+\item[{int $\ast$}]{A1, }
+\item[{int}]{n1, }
+\item[{int $\ast$}]{A2, }
+\item[{int}]{n2}
+\end{DoxyParamCaption}
+)}}\label{group__matmap__group22_ga67a8ef3c535fc47af99024fa2de0b3c5}
+Compute $ card(A_1 \cap A_2) $ A1 and A2 should be two ascending ordered monotony sets, of size n1 and n2. 
+\begin{DoxyParams}{Parameters}
+{\em n1} & number of elemnets in A1 \\
+\hline
+{\em A1} & set of indices \\
+\hline
+{\em n2} & number of elemnets in A2 \\
+\hline
+{\em A2} & set of indices \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+size of the intersection 
+\end{DoxyReturn}
+
+
+Definition at line \hyperlink{als_8c_source_l00089}{89} of file \hyperlink{als_8c_source}{als.\-c}.
+
+\hypertarget{group__matmap__group22_ga07e3dbbce334f3744a3eb27174780a7c}{\index{lower internal routines@{lower internal routines}!set\-\_\-or@{set\-\_\-or}}
+\index{set\-\_\-or@{set\-\_\-or}!lower internal routines@{lower internal routines}}
+\subsubsection[{set\-\_\-or}]{\setlength{\rightskip}{0pt plus 5cm}int set\-\_\-or (
+\begin{DoxyParamCaption}
+\item[{int $\ast$}]{A1, }
+\item[{int}]{n1, }
+\item[{int $\ast$}]{A2, }
+\item[{int}]{n2, }
+\item[{int $\ast$}]{A1or\-A2}
+\end{DoxyParamCaption}
+)}}\label{group__matmap__group22_ga07e3dbbce334f3744a3eb27174780a7c}
+Compute $ A1 \cup A_2 $ A1 and A2 should be two ascending ordered sets. It requires the sizes of these two sets, n1 and n2. A1and\-A2 has to be previouly allocated. 
+\begin{DoxyParams}{Parameters}
+{\em n1} & number of elemnets in A1 \\
+\hline
+{\em A1} & set of indices \\
+\hline
+{\em n2} & number of elemnets in A2 \\
+\hline
+{\em A2} & set of indices \\
+\hline
+{\em address} & to the set A1or\-A2 \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+number of elements in A1or\-A2 
+\end{DoxyReturn}
+
+
+Definition at line \hyperlink{als_8c_source_l00118}{118} of file \hyperlink{als_8c_source}{als.\-c}.
+
+\hypertarget{group__matmap__group22_ga3beac6a118c373a422f4772144306add}{\index{lower internal routines@{lower internal routines}!set\-\_\-and@{set\-\_\-and}}
+\index{set\-\_\-and@{set\-\_\-and}!lower internal routines@{lower internal routines}}
+\subsubsection[{set\-\_\-and}]{\setlength{\rightskip}{0pt plus 5cm}int set\-\_\-and (
+\begin{DoxyParamCaption}
+\item[{int $\ast$}]{A1, }
+\item[{int}]{n1, }
+\item[{int $\ast$}]{A2, }
+\item[{int}]{n2, }
+\item[{int $\ast$}]{A1and\-A2}
+\end{DoxyParamCaption}
+)}}\label{group__matmap__group22_ga3beac6a118c373a422f4772144306add}
+Compute $ A_1 \cap A_2 $ A1 and A2 should be two monotony sets in ascending order. It requires the sizes of these two sets, n1 and n2. A1and\-A2 has to be previously allocated. 
+\begin{DoxyParams}{Parameters}
+{\em n1} & number of elemnets in A1 \\
+\hline
+{\em A1} & set of indices \\
+\hline
+{\em n2} & number of elemnets in A2 \\
+\hline
+{\em A2} & set of indices \\
+\hline
+{\em address} & to the set A1and\-A2 \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+number of elements in A1and\-A2 
+\end{DoxyReturn}
+
+
+Definition at line \hyperlink{als_8c_source_l00162}{162} of file \hyperlink{als_8c_source}{als.\-c}.
+
+\hypertarget{group__matmap__group22_gabe7077466aef706a7825e650a78f4e5e}{\index{lower internal routines@{lower internal routines}!butterfly\-\_\-init@{butterfly\-\_\-init}}
+\index{butterfly\-\_\-init@{butterfly\-\_\-init}!lower internal routines@{lower internal routines}}
+\subsubsection[{butterfly\-\_\-init}]{\setlength{\rightskip}{0pt plus 5cm}int butterfly\-\_\-init (
+\begin{DoxyParamCaption}
+\item[{int $\ast$}]{indices, }
+\item[{int}]{count, }
+\item[{int $\ast$$\ast$}]{R, }
+\item[{int $\ast$}]{n\-R, }
+\item[{int $\ast$$\ast$}]{S, }
+\item[{int $\ast$}]{n\-S, }
+\item[{int $\ast$$\ast$}]{com\-\_\-indices, }
+\item[{int $\ast$}]{com\-\_\-count, }
+\item[{int}]{steps, }
+\item[{M\-P\-I\-\_\-\-Comm}]{comm}
+\end{DoxyParamCaption}
+)}}\label{group__matmap__group22_gabe7077466aef706a7825e650a78f4e5e}
+
+
+Initialize tables for butterfly-\/like communication scheme This routine set up needed tables for the butterfly communication scheme. Sending and receiving tabs should be well allocated(at least size of number of steps in butterfly scheme). Double pointer are partially allocated, the last allocation is performed inside the routine. com\-\_\-indices and com\-\_\-count are also allocated inside the routine, thus they are passing by reference. They represent indices which have to be communicated an their number. Algotithm is based 2 parts. The first one identify intersection between processors indices, using 3 successives butterfly communication schemes \-: bottom up, top down, and top down again. The second part works locally to build sets of indices to communicate. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em indices} & set of indices(monotony) handle by a process. \\
+\hline
+{\em count} & number of elements \\
+\hline
+{\em R} & pointer to receiving maps \\
+\hline
+{\em n\-R} & array of number of elements in each receiving map \\
+\hline
+{\em S} & pointer to sending maps \\
+\hline
+{\em n\-S} & array of number of elements in each sending map \\
+\hline
+{\em com\-\_\-indices} & set of indices(monotony) communicated by a process \\
+\hline
+{\em com\-\_\-count} & number of elements \\
+\hline
+{\em steps} & number of communication exchange in the butterfly scheme \\
+\hline
+{\em comm} & M\-P\-I communicator \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+0 if no error 
+\end{DoxyReturn}
+
+
+Definition at line \hyperlink{butterfly_8c_source_l00037}{37} of file \hyperlink{butterfly_8c_source}{butterfly.\-c}.
+
+\hypertarget{group__matmap__group22_ga3ab052e5ba3e18427574481f64916b3a}{\index{lower internal routines@{lower internal routines}!butterfly\-\_\-reduce@{butterfly\-\_\-reduce}}
+\index{butterfly\-\_\-reduce@{butterfly\-\_\-reduce}!lower internal routines@{lower internal routines}}
+\subsubsection[{butterfly\-\_\-reduce}]{\setlength{\rightskip}{0pt plus 5cm}double butterfly\-\_\-reduce (
+\begin{DoxyParamCaption}
+\item[{int $\ast$$\ast$}]{R, }
+\item[{int $\ast$}]{n\-R, }
+\item[{int}]{n\-Rmax, }
+\item[{int $\ast$$\ast$}]{S, }
+\item[{int $\ast$}]{n\-S, }
+\item[{int}]{n\-Smax, }
+\item[{double $\ast$}]{val, }
+\item[{int}]{steps, }
+\item[{M\-P\-I\-\_\-\-Comm}]{comm}
+\end{DoxyParamCaption}
+)}}\label{group__matmap__group22_ga3ab052e5ba3e18427574481f64916b3a}
+
+
+Perform a sparse sum reduction (or mapped reduction) using a butterfly-\/like communication scheme. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em R} & pointer to receiving maps \\
+\hline
+{\em n\-R} & array of number of elements in each receiving map \\
+\hline
+{\em n\-Rmax} & maximum size of received message \\
+\hline
+{\em S} & pointer to sending maps \\
+\hline
+{\em n\-S} & array of number of elements in each sending map \\
+\hline
+{\em n\-Smax} & maximum size of sent message \\
+\hline
+{\em val} & set of values (typically values associated to communicated indices) \\
+\hline
+{\em steps} & number of communication exchange in the butterfly scheme \\
+\hline
+{\em comm} & M\-P\-I communicator \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+0 if no error 
+\end{DoxyReturn}
+
+
+Definition at line \hyperlink{butterfly_8c_source_l00209}{209} of file \hyperlink{butterfly_8c_source}{butterfly.\-c}.
+
+\hypertarget{group__matmap__group22_ga2760469151322cc847123dfa097fb93a}{\index{lower internal routines@{lower internal routines}!butterfly\-\_\-blocking\-\_\-2instr\-\_\-reduce@{butterfly\-\_\-blocking\-\_\-2instr\-\_\-reduce}}
+\index{butterfly\-\_\-blocking\-\_\-2instr\-\_\-reduce@{butterfly\-\_\-blocking\-\_\-2instr\-\_\-reduce}!lower internal routines@{lower internal routines}}
+\subsubsection[{butterfly\-\_\-blocking\-\_\-2instr\-\_\-reduce}]{\setlength{\rightskip}{0pt plus 5cm}int butterfly\-\_\-blocking\-\_\-2instr\-\_\-reduce (
+\begin{DoxyParamCaption}
+\item[{int $\ast$$\ast$}]{R, }
+\item[{int $\ast$}]{n\-R, }
+\item[{int}]{n\-Rmax, }
+\item[{int $\ast$$\ast$}]{S, }
+\item[{int $\ast$}]{n\-S, }
+\item[{int}]{n\-Smax, }
+\item[{double $\ast$}]{val, }
+\item[{int}]{steps, }
+\item[{M\-P\-I\-\_\-\-Comm}]{comm}
+\end{DoxyParamCaption}
+)}}\label{group__matmap__group22_ga2760469151322cc847123dfa097fb93a}
+
+
+Perform a sparse sum reduction (or mapped reduction) using a butterfly-\/like communication scheme. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em R} & pointer to receiving maps \\
+\hline
+{\em n\-R} & array of number of elements in each receiving map \\
+\hline
+{\em n\-Rmax} & maximum size of received message \\
+\hline
+{\em S} & pointer to sending maps \\
+\hline
+{\em n\-S} & array of number of elements in each sending map \\
+\hline
+{\em n\-Smax} & maximum size of sent message \\
+\hline
+{\em val} & set of values (typically values associated to communicated indices) \\
+\hline
+{\em steps} & number of communication exchange in the butterfly scheme \\
+\hline
+{\em comm} & M\-P\-I communicator \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+0 if no error 
+\end{DoxyReturn}
+
+
+Definition at line \hyperlink{butterfly_8c_source_l00258}{258} of file \hyperlink{butterfly_8c_source}{butterfly.\-c}.
+
+\hypertarget{group__matmap__group22_gaddc1509a3b18b1d35b7a4fc411eba3a6}{\index{lower internal routines@{lower internal routines}!butterfly\-\_\-blocking\-\_\-1instr\-\_\-reduce@{butterfly\-\_\-blocking\-\_\-1instr\-\_\-reduce}}
+\index{butterfly\-\_\-blocking\-\_\-1instr\-\_\-reduce@{butterfly\-\_\-blocking\-\_\-1instr\-\_\-reduce}!lower internal routines@{lower internal routines}}
+\subsubsection[{butterfly\-\_\-blocking\-\_\-1instr\-\_\-reduce}]{\setlength{\rightskip}{0pt plus 5cm}int butterfly\-\_\-blocking\-\_\-1instr\-\_\-reduce (
+\begin{DoxyParamCaption}
+\item[{int $\ast$$\ast$}]{R, }
+\item[{int $\ast$}]{n\-R, }
+\item[{int}]{n\-Rmax, }
+\item[{int $\ast$$\ast$}]{S, }
+\item[{int $\ast$}]{n\-S, }
+\item[{int}]{n\-Smax, }
+\item[{double $\ast$}]{val, }
+\item[{int}]{steps, }
+\item[{M\-P\-I\-\_\-\-Comm}]{comm}
+\end{DoxyParamCaption}
+)}}\label{group__matmap__group22_gaddc1509a3b18b1d35b7a4fc411eba3a6}
+
+
+Perform a sparse sum reduction (or mapped reduction) using a butterfly-\/like communication scheme. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em R} & pointer to receiving maps \\
+\hline
+{\em n\-R} & array of number of elements in each receiving map \\
+\hline
+{\em n\-Rmax} & maximum size of received message \\
+\hline
+{\em S} & pointer to sending maps \\
+\hline
+{\em n\-S} & array of number of elements in each sending map \\
+\hline
+{\em n\-Smax} & maximum size of sent message \\
+\hline
+{\em val} & set of values (typically values associated to communicated indices) \\
+\hline
+{\em steps} & number of communication exchange in the butterfly scheme \\
+\hline
+{\em comm} & M\-P\-I communicator \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+0 if no error 
+\end{DoxyReturn}
+
+
+Definition at line \hyperlink{butterfly_8c_source_l00303}{303} of file \hyperlink{butterfly_8c_source}{butterfly.\-c}.
+
+\hypertarget{group__matmap__group22_ga5198c5dcb4ff06c9b9cdd323398f1541}{\index{lower internal routines@{lower internal routines}!truebutterfly\-\_\-reduce@{truebutterfly\-\_\-reduce}}
+\index{truebutterfly\-\_\-reduce@{truebutterfly\-\_\-reduce}!lower internal routines@{lower internal routines}}
+\subsubsection[{truebutterfly\-\_\-reduce}]{\setlength{\rightskip}{0pt plus 5cm}int truebutterfly\-\_\-reduce (
+\begin{DoxyParamCaption}
+\item[{int $\ast$$\ast$}]{R, }
+\item[{int $\ast$}]{n\-R, }
+\item[{int}]{n\-Rmax, }
+\item[{int $\ast$$\ast$}]{S, }
+\item[{int $\ast$}]{n\-S, }
+\item[{int}]{n\-Smax, }
+\item[{double $\ast$}]{val, }
+\item[{int}]{steps, }
+\item[{M\-P\-I\-\_\-\-Comm}]{comm}
+\end{DoxyParamCaption}
+)}}\label{group__matmap__group22_ga5198c5dcb4ff06c9b9cdd323398f1541}
+
+
+Perform a sparse sum reduction (or mapped reduction) using a butterfly-\/like communication scheme. 
+
+Perform a sparse sum reduction (or mapped reduction) using a butterfly-\/like communication scheme (true means pairwise)
+
+
+\begin{DoxyParams}{Parameters}
+{\em R} & pointer to receiving maps \\
+\hline
+{\em n\-R} & array of number of elements in each receiving map \\
+\hline
+{\em n\-Rmax} & maximum size of received message \\
+\hline
+{\em S} & pointer to sending maps \\
+\hline
+{\em n\-S} & array of number of elements in each sending map \\
+\hline
+{\em n\-Smax} & maximum size of sent message \\
+\hline
+{\em val} & set of values (typically values associated to communicated indices) \\
+\hline
+{\em steps} & number of communication exchange in the butterfly scheme \\
+\hline
+{\em comm} & M\-P\-I communicator \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+0 if no error 
+\end{DoxyReturn}
+
+
+Definition at line \hyperlink{butterfly__extra_8c_source_l00430}{430} of file \hyperlink{butterfly__extra_8c_source}{butterfly\-\_\-extra.\-c}.
+
+\hypertarget{group__matmap__group22_ga130490c253962e8ce30d4e0041e1d596}{\index{lower internal routines@{lower internal routines}!sindex@{sindex}}
+\index{sindex@{sindex}!lower internal routines@{lower internal routines}}
+\subsubsection[{sindex}]{\setlength{\rightskip}{0pt plus 5cm}int sindex (
+\begin{DoxyParamCaption}
+\item[{int $\ast$}]{T, }
+\item[{int}]{n\-T, }
+\item[{int $\ast$}]{A, }
+\item[{int}]{n\-A}
+\end{DoxyParamCaption}
+)}}\label{group__matmap__group22_ga130490c253962e8ce30d4e0041e1d596}
+Sequential reindexing 
+\begin{DoxyParams}{Parameters}
+{\em T} & monotony array \\
+\hline
+{\em n\-T} & number of index \\
+\hline
+{\em A} & tab to reindex \\
+\hline
+{\em n\-A} & number of element to reindex \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+array of indices 
+\end{DoxyReturn}
+
+
+Definition at line \hyperlink{cindex_8c_source_l00018}{18} of file \hyperlink{cindex_8c_source}{cindex.\-c}.
+
+\hypertarget{group__matmap__group22_ga65cf9a1978567020172f6262de6d9c42}{\index{lower internal routines@{lower internal routines}!omp\-\_\-pindex@{omp\-\_\-pindex}}
+\index{omp\-\_\-pindex@{omp\-\_\-pindex}!lower internal routines@{lower internal routines}}
+\subsubsection[{omp\-\_\-pindex}]{\setlength{\rightskip}{0pt plus 5cm}int omp\-\_\-pindex (
+\begin{DoxyParamCaption}
+\item[{int $\ast$}]{T, }
+\item[{int}]{n\-T, }
+\item[{int $\ast$}]{A, }
+\item[{int}]{n\-A}
+\end{DoxyParamCaption}
+)}}\label{group__matmap__group22_ga65cf9a1978567020172f6262de6d9c42}
+Multithread (Open\-M\-P) reindexing 
+\begin{DoxyParams}{Parameters}
+{\em T} & monotony array \\
+\hline
+{\em n\-T} & number of index \\
+\hline
+{\em A} & tab to reindex \\
+\hline
+{\em n\-A} & inumber of element to reindex \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+array of indices 
+\end{DoxyReturn}
+
+
+Definition at line \hyperlink{cindex_8c_source_l00036}{36} of file \hyperlink{cindex_8c_source}{cindex.\-c}.
+
+\hypertarget{group__matmap__group22_ga132957cdd06b08ad58760aab421bc3e1}{\index{lower internal routines@{lower internal routines}!ssort@{ssort}}
+\index{ssort@{ssort}!lower internal routines@{lower internal routines}}
+\subsubsection[{ssort}]{\setlength{\rightskip}{0pt plus 5cm}int ssort (
+\begin{DoxyParamCaption}
+\item[{int $\ast$}]{indices, }
+\item[{int}]{count, }
+\item[{int}]{flag}
+\end{DoxyParamCaption}
+)}}\label{group__matmap__group22_ga132957cdd06b08ad58760aab421bc3e1}
+Sort and merge redundant elements of a set of indices using a specified method. The indices tab, initially an arbitrary set of integers, becomes a monotony set. Available methods \-:
+\begin{DoxyItemize}
+\item quick sort
+\item bubble sort
+\item insertion sort
+\item counting sort
+\item shell sort
+\end{DoxyItemize}
+
+
+\begin{DoxyParams}{Parameters}
+{\em indices} & tab (modified) \\
+\hline
+{\em count} & number of indices \\
+\hline
+{\em flag} & method \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+number of sorted elements 
+\end{DoxyReturn}
+
+
+Definition at line \hyperlink{csort_8c_source_l00161}{161} of file \hyperlink{csort_8c_source}{csort.\-c}.
+
+\hypertarget{group__matmap__group22_ga61063512934de793c2040eb32c2cda3d}{\index{lower internal routines@{lower internal routines}!omp\-\_\-psort@{omp\-\_\-psort}}
+\index{omp\-\_\-psort@{omp\-\_\-psort}!lower internal routines@{lower internal routines}}
+\subsubsection[{omp\-\_\-psort}]{\setlength{\rightskip}{0pt plus 5cm}int omp\-\_\-psort (
+\begin{DoxyParamCaption}
+\item[{int $\ast$}]{A, }
+\item[{int}]{n\-A, }
+\item[{int}]{flag}
+\end{DoxyParamCaption}
+)}}\label{group__matmap__group22_ga61063512934de793c2040eb32c2cda3d}
+Sort and merge redundant elements of a set of indices, using open\-M\-P. The indices tab, initially an arbitrary set of integers, becomes a monotony set. Algorithm is diivided in two steps \-:
+\begin{DoxyItemize}
+\item each thread sorts, in parallel, a subpart of the set using a specified method.
+\item subsets obtained are merged successively in a binary tree manner.
+\end{DoxyItemize}
+
+Available methods for the fully parallel step \-:
+\begin{DoxyItemize}
+\item quick sort
+\item bubble sort
+\item insertion sort
+\item counting sort
+\item shell sort
+\end{DoxyItemize}
+
+
+\begin{DoxyParams}{Parameters}
+{\em indices} & tab (modified) \\
+\hline
+{\em count} & number of elements to sort \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+flag method 
+\end{DoxyReturn}
+
+
+Definition at line \hyperlink{csort_8c_source_l00291}{291} of file \hyperlink{csort_8c_source}{csort.\-c}.
+
+\hypertarget{group__matmap__group22_gab4bcafb298be124aaa5bfed34348b1ea}{\index{lower internal routines@{lower internal routines}!ring\-\_\-init@{ring\-\_\-init}}
+\index{ring\-\_\-init@{ring\-\_\-init}!lower internal routines@{lower internal routines}}
+\subsubsection[{ring\-\_\-init}]{\setlength{\rightskip}{0pt plus 5cm}int ring\-\_\-init (
+\begin{DoxyParamCaption}
+\item[{int $\ast$}]{indices, }
+\item[{int}]{count, }
+\item[{int $\ast$$\ast$}]{R, }
+\item[{int $\ast$}]{n\-R, }
+\item[{int $\ast$$\ast$}]{S, }
+\item[{int $\ast$}]{n\-S, }
+\item[{int}]{steps, }
+\item[{M\-P\-I\-\_\-\-Comm}]{comm}
+\end{DoxyParamCaption}
+)}}\label{group__matmap__group22_gab4bcafb298be124aaa5bfed34348b1ea}
+
+
+Initialize tables for ring-\/like communication scheme. 
+
+\par
+ This routine set up needed tables for the ring communication scheme. Sending and receiving tabs should be well allocated(at least size of number of steps in ring scheme). Double pointer are partially allocated, the last allocation is performed inside the routine (only for R S are just pointer). 
+\begin{DoxyParams}{Parameters}
+{\em indices} & set of indices(monotony) handle by a process. \\
+\hline
+{\em count} & number of elements \\
+\hline
+{\em R} & pointer to receiving maps \\
+\hline
+{\em n\-R} & array of number of elements in each receiving map \\
+\hline
+{\em S} & pointer to sending maps \\
+\hline
+{\em n\-S} & array of number of elements in each sending map \\
+\hline
+{\em com\-\_\-indices} & set of indices(monotony) communicated by a process \\
+\hline
+{\em com\-\_\-count} & number of elements \\
+\hline
+{\em steps} & number of communication exchange in the ring scheme \\
+\hline
+{\em comm} & M\-P\-I communicator \\
+\hline
+\end{DoxyParams}
+\begin{DoxyRefDesc}{Todo}
+\item[\hyperlink{todo__todo000002}{Todo}]Ring loop and ring table are set from index 1 to size. Should be shift and be set from index 0 to size-\/1. \end{DoxyRefDesc}
+\begin{DoxyReturn}{Returns}
+0 if no error 
+\end{DoxyReturn}
+
+
+Definition at line \hyperlink{ring_8c_source_l00033}{33} of file \hyperlink{ring_8c_source}{ring.\-c}.
+
+\hypertarget{group__matmap__group22_gadacbaae4e4aa8283e5fd4effbd61da30}{\index{lower internal routines@{lower internal routines}!ring\-\_\-reduce@{ring\-\_\-reduce}}
+\index{ring\-\_\-reduce@{ring\-\_\-reduce}!lower internal routines@{lower internal routines}}
+\subsubsection[{ring\-\_\-reduce}]{\setlength{\rightskip}{0pt plus 5cm}int ring\-\_\-reduce (
+\begin{DoxyParamCaption}
+\item[{int $\ast$$\ast$}]{R, }
+\item[{int $\ast$}]{n\-R, }
+\item[{int}]{n\-Rmax, }
+\item[{int $\ast$$\ast$}]{S, }
+\item[{int $\ast$}]{n\-S, }
+\item[{int}]{n\-Smax, }
+\item[{double $\ast$}]{val, }
+\item[{double $\ast$}]{res\-\_\-val, }
+\item[{int}]{steps, }
+\item[{M\-P\-I\-\_\-\-Comm}]{comm}
+\end{DoxyParamCaption}
+)}}\label{group__matmap__group22_gadacbaae4e4aa8283e5fd4effbd61da30}
+
+
+Perform a sparse sum reduction (or mapped reduction) using a ring-\/like communication scheme. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em R} & pointer to receiving maps \\
+\hline
+{\em n\-R} & array of number of elements in each receiving map \\
+\hline
+{\em n\-Rmax} & maximum size of received message \\
+\hline
+{\em S} & pointer to sending maps \\
+\hline
+{\em n\-S} & array of number of elements in each sending map \\
+\hline
+{\em n\-Smax} & maximum size of sent message \\
+\hline
+{\em val} & set of values (typically values associated to communicated indices) \\
+\hline
+{\em steps} & number of communication exchange in the butterfly scheme \\
+\hline
+{\em comm} & M\-P\-I communicator \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+0 if no error 
+\end{DoxyReturn}
+
+
+Definition at line \hyperlink{ring_8c_source_l00083}{83} of file \hyperlink{ring_8c_source}{ring.\-c}.
+
+\hypertarget{group__matmap__group22_ga7aeab779fca40cc4c4e402192f89d242}{\index{lower internal routines@{lower internal routines}!alltoallv\-\_\-reduce@{alltoallv\-\_\-reduce}}
+\index{alltoallv\-\_\-reduce@{alltoallv\-\_\-reduce}!lower internal routines@{lower internal routines}}
+\subsubsection[{alltoallv\-\_\-reduce}]{\setlength{\rightskip}{0pt plus 5cm}int alltoallv\-\_\-reduce (
+\begin{DoxyParamCaption}
+\item[{int $\ast$$\ast$}]{R, }
+\item[{int $\ast$}]{n\-R, }
+\item[{int}]{n\-Rtot, }
+\item[{int $\ast$$\ast$}]{S, }
+\item[{int $\ast$}]{n\-S, }
+\item[{int}]{n\-Stot, }
+\item[{double $\ast$}]{val, }
+\item[{double $\ast$}]{res\-\_\-val, }
+\item[{int}]{steps, }
+\item[{M\-P\-I\-\_\-\-Comm}]{comm}
+\end{DoxyParamCaption}
+)}}\label{group__matmap__group22_ga7aeab779fca40cc4c4e402192f89d242}
+
+
+Perform a sparse sum reduction (or mapped reduction) using an M\-P\-I-\/\-Alltoallv call. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em R} & pointer to receiving maps \\
+\hline
+{\em n\-R} & array of number of elements in each receiving map \\
+\hline
+{\em n\-Rtot} & size of the receive buffer \\
+\hline
+{\em S} & pointer to sending maps \\
+\hline
+{\em n\-S} & array of number of elements in each sending map \\
+\hline
+{\em n\-Stot} & size of the send buffer \\
+\hline
+{\em val} & set of values (typically values associated to communicated indices) \\
+\hline
+{\em steps} & number of communication exchange in the butterfly scheme \\
+\hline
+{\em comm} & M\-P\-I communicator \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+0 if no error 
+\end{DoxyReturn}
+
+
+Definition at line \hyperlink{ring_8c_source_l00129}{129} of file \hyperlink{ring_8c_source}{ring.\-c}.
+
+\hypertarget{group__matmap__group22_gaa30b9825dac2a7e8bbc56d4b1837fda7}{\index{lower internal routines@{lower internal routines}!ring\-\_\-nonblocking\-\_\-reduce@{ring\-\_\-nonblocking\-\_\-reduce}}
+\index{ring\-\_\-nonblocking\-\_\-reduce@{ring\-\_\-nonblocking\-\_\-reduce}!lower internal routines@{lower internal routines}}
+\subsubsection[{ring\-\_\-nonblocking\-\_\-reduce}]{\setlength{\rightskip}{0pt plus 5cm}int ring\-\_\-nonblocking\-\_\-reduce (
+\begin{DoxyParamCaption}
+\item[{int $\ast$$\ast$}]{R, }
+\item[{int $\ast$}]{n\-R, }
+\item[{int $\ast$$\ast$}]{S, }
+\item[{int $\ast$}]{n\-S, }
+\item[{double $\ast$}]{val, }
+\item[{double $\ast$}]{res\-\_\-val, }
+\item[{int}]{steps, }
+\item[{M\-P\-I\-\_\-\-Comm}]{comm}
+\end{DoxyParamCaption}
+)}}\label{group__matmap__group22_gaa30b9825dac2a7e8bbc56d4b1837fda7}
+
+
+Perform a sparse sum reduction (or mapped reduction) using a ring-\/like non-\/blocking communication scheme. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em R} & pointer to receiving maps \\
+\hline
+{\em n\-R} & array of number of elements in each receiving map \\
+\hline
+{\em S} & pointer to sending maps \\
+\hline
+{\em n\-S} & array of number of elements in each sending map \\
+\hline
+{\em val} & set of values (typically values associated to communicated indices) \\
+\hline
+{\em steps} & number of communication exchange in the butterfly scheme \\
+\hline
+{\em comm} & M\-P\-I communicator \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+0 if no error 
+\end{DoxyReturn}
+
+
+Definition at line \hyperlink{ring_8c_source_l00199}{199} of file \hyperlink{ring_8c_source}{ring.\-c}.
+
+\hypertarget{group__matmap__group22_gaa9afd399996bf2b2b11dc6b4cdb9dda8}{\index{lower internal routines@{lower internal routines}!ring\-\_\-noempty\-\_\-reduce@{ring\-\_\-noempty\-\_\-reduce}}
+\index{ring\-\_\-noempty\-\_\-reduce@{ring\-\_\-noempty\-\_\-reduce}!lower internal routines@{lower internal routines}}
+\subsubsection[{ring\-\_\-noempty\-\_\-reduce}]{\setlength{\rightskip}{0pt plus 5cm}int ring\-\_\-noempty\-\_\-reduce (
+\begin{DoxyParamCaption}
+\item[{int $\ast$$\ast$}]{R, }
+\item[{int $\ast$}]{n\-R, }
+\item[{int}]{nne\-R, }
+\item[{int $\ast$$\ast$}]{S, }
+\item[{int $\ast$}]{n\-S, }
+\item[{int}]{nne\-S, }
+\item[{double $\ast$}]{val, }
+\item[{double $\ast$}]{res\-\_\-val, }
+\item[{int}]{steps, }
+\item[{M\-P\-I\-\_\-\-Comm}]{comm}
+\end{DoxyParamCaption}
+)}}\label{group__matmap__group22_gaa9afd399996bf2b2b11dc6b4cdb9dda8}
+
+
+Perform a sparse sum reduction (or mapped reduction) using a ring-\/like non-\/blocking no-\/empty communication scheme. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em R} & pointer to receiving maps \\
+\hline
+{\em n\-R} & array of number of elements in each receiving map \\
+\hline
+{\em nne\-R} & number of no-\/empty receiving messages \\
+\hline
+{\em S} & pointer to sending maps \\
+\hline
+{\em n\-S} & array of number of elements in each sending map \\
+\hline
+{\em nne\-S} & number of no-\/empty sending messages \\
+\hline
+{\em val} & set of values (typically values associated to communicated indices) \\
+\hline
+{\em steps} & number of communication exchange in the butterfly scheme \\
+\hline
+{\em comm} & M\-P\-I communicator \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+0 if no error 
+\end{DoxyReturn}
+
+
+Definition at line \hyperlink{ring_8c_source_l00257}{257} of file \hyperlink{ring_8c_source}{ring.\-c}.
+
+\hypertarget{group__matmap__group22_ga70fb12cfb290a86dc085d51ba13b2b41}{\index{lower internal routines@{lower internal routines}!ring\-\_\-noempty\-\_\-step\-\_\-reduce@{ring\-\_\-noempty\-\_\-step\-\_\-reduce}}
+\index{ring\-\_\-noempty\-\_\-step\-\_\-reduce@{ring\-\_\-noempty\-\_\-step\-\_\-reduce}!lower internal routines@{lower internal routines}}
+\subsubsection[{ring\-\_\-noempty\-\_\-step\-\_\-reduce}]{\setlength{\rightskip}{0pt plus 5cm}int ring\-\_\-noempty\-\_\-step\-\_\-reduce (
+\begin{DoxyParamCaption}
+\item[{int $\ast$$\ast$}]{R, }
+\item[{int $\ast$}]{n\-R, }
+\item[{int}]{n\-Rmax, }
+\item[{int $\ast$$\ast$}]{S, }
+\item[{int $\ast$}]{n\-S, }
+\item[{int}]{n\-Smax, }
+\item[{double $\ast$}]{val, }
+\item[{double $\ast$}]{res\-\_\-val, }
+\item[{int}]{steps, }
+\item[{M\-P\-I\-\_\-\-Comm}]{comm}
+\end{DoxyParamCaption}
+)}}\label{group__matmap__group22_ga70fb12cfb290a86dc085d51ba13b2b41}
+
+
+Perform a sparse sum reduction (or mapped reduction) using a ring-\/like communication scheme. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em R} & pointer to receiving maps \\
+\hline
+{\em n\-R} & array of number of elements in each receiving map \\
+\hline
+{\em n\-Rmax} & maximum size of received message \\
+\hline
+{\em S} & pointer to sending maps \\
+\hline
+{\em n\-S} & array of number of elements in each sending map \\
+\hline
+{\em n\-Smax} & maximum size of sent message \\
+\hline
+{\em val} & set of values (typically values associated to communicated indices) \\
+\hline
+{\em steps} & number of communication exchange in the butterfly scheme \\
+\hline
+{\em comm} & M\-P\-I communicator \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+0 if no error 
+\end{DoxyReturn}
+
+
+Definition at line \hyperlink{ring_8c_source_l00331}{331} of file \hyperlink{ring_8c_source}{ring.\-c}.
+
+\hypertarget{group__matmap__group22_ga5136d676330c6257fddf3c614e5cedcc}{\index{lower internal routines@{lower internal routines}!truebutterfly\-\_\-init@{truebutterfly\-\_\-init}}
+\index{truebutterfly\-\_\-init@{truebutterfly\-\_\-init}!lower internal routines@{lower internal routines}}
+\subsubsection[{truebutterfly\-\_\-init}]{\setlength{\rightskip}{0pt plus 5cm}int truebutterfly\-\_\-init (
+\begin{DoxyParamCaption}
+\item[{int $\ast$}]{indices, }
+\item[{int}]{count, }
+\item[{int $\ast$$\ast$}]{R, }
+\item[{int $\ast$}]{n\-R, }
+\item[{int $\ast$$\ast$}]{S, }
+\item[{int $\ast$}]{n\-S, }
+\item[{int $\ast$$\ast$}]{com\-\_\-indices, }
+\item[{int $\ast$}]{com\-\_\-count, }
+\item[{int}]{steps, }
+\item[{M\-P\-I\-\_\-\-Comm}]{comm}
+\end{DoxyParamCaption}
+)}}\label{group__matmap__group22_ga5136d676330c6257fddf3c614e5cedcc}
+
+
+Initialize tables for butterfly-\/like communication scheme (true means pair wise) This routine set up needed tables for the butterfly communication scheme. Sending and receiving tabs should be well allocated(at least size of number of steps in butterfly scheme). Double pointer are partially allocated, the last allocation is performed inside the routine. com\-\_\-indices and com\-\_\-count are also allocated inside the routine, thus they are passing by reference. They represent indices which have to be communicated an their number. Algotithm is based 2 parts. The first one identify intersection between processors indices, using 3 successives butterfly communication schemes \-: bottom up, top down, and top down again. The second part works locally to build sets of indices to communicate. 
+
+
+\begin{DoxyParams}{Parameters}
+{\em indices} & set of indices(monotony) handle by a process. \\
+\hline
+{\em count} & number of elements \\
+\hline
+{\em R} & pointer to receiving maps \\
+\hline
+{\em n\-R} & array of number of elements in each receiving map \\
+\hline
+{\em S} & pointer to sending maps \\
+\hline
+{\em n\-S} & array of number of elements in each sending map \\
+\hline
+{\em com\-\_\-indices} & set of indices(monotony) communicated by a process \\
+\hline
+{\em com\-\_\-count} & number of elements \\
+\hline
+{\em steps} & number of communication exchange in the butterfly scheme \\
+\hline
+{\em comm} & M\-P\-I communicator \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+0 if no error 
+\end{DoxyReturn}
+
+
+Definition at line \hyperlink{truebutterfly_8c_source_l00037}{37} of file \hyperlink{truebutterfly_8c_source}{truebutterfly.\-c}.
+

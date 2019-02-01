@@ -1,0 +1,62 @@
+\hypertarget{toeplitz__wizard_8c}{\section{toeplitz\-\_\-wizard.\-c}
+\label{toeplitz__wizard_8c}\index{toeplitz\-\_\-wizard.\-c@{toeplitz\-\_\-wizard.\-c}}
+}
+
+\begin{DoxyCode}
+00001 
+00057 \textcolor{preprocessor}{#include "\hyperlink{toeplitz_8h}{toeplitz.h}"}
+00058 
+00060 
+\hypertarget{toeplitz__wizard_8c_source_l00063}{}\hyperlink{group__wizard_gaeebf9c59eb08efb1f4ce0cf93c8a4565}{00063} \textcolor{keywordtype}{int} \hyperlink{group__wizard_gaeebf9c59eb08efb1f4ce0cf93c8a4565}{stbmmProd}( \hyperlink{structTpltz}{Tpltz} Nm1, \textcolor{keywordtype}{double} *V)
+00064 \{
+00065 
+00066 \textcolor{preprocessor}{#ifdef W\_MPI}
+00067 \textcolor{preprocessor}{}
+00068   \hyperlink{group__group22_gaa7ea4ac654fcb9f5fe3bad139febb65d}{mpi\_stbmm}(&V, Nm1.\hyperlink{structTpltz_ae6401204807b06471ae4cf9ce7c2022b}{nrow}, Nm1.\hyperlink{structTpltz_a6025c0048255a299edfb4f88ca01e7ec}{m\_cw}, Nm1.\hyperlink{structTpltz_a0ad1c2bba1b44cc8e1a700813195d0a0}{m\_rw}, Nm1.
+      \hyperlink{structTpltz_ae2ec369f6eaac15a2353231b50270990}{tpltzblocks}, Nm1.\hyperlink{structTpltz_a4090e9931928ca56b30db246ff77ce29}{nb\_blocks\_loc}, Nm1.\hyperlink{structTpltz_a6275c3f32f3d790d92a7c8f257d3dcf9}{nb\_blocks\_tot}
+      , Nm1.\hyperlink{structTpltz_af669b52bd5c07d8e41b4dddfc8c62312}{idp}, Nm1.\hyperlink{structTpltz_a03c363fb09ce439bcbbe0fd1f419ff3a}{local\_V\_size}, Nm1.\hyperlink{structTpltz_af136a7cb103383ffab2080c566b8c7ab}{flag\_stgy}, Nm1.\hyperlink{structTpltz_ac000d7cb5fa8d9a204a38255e5d00098}{comm}
+      );
+00069 
+00070 \textcolor{preprocessor}{#else}
+00071 \textcolor{preprocessor}{}
+00072 \textcolor{comment}{//int stbmm(double **V, int nrow, int m\_cw, int m\_rw, Block *tpltzblocks, int
+       nb\_blocks, int64\_t idp, int local\_V\_size, Flag flag\_stgy)}
+00073 
+00074   \hyperlink{group__group12_gab51a5dfa887d47b4ce627eb0e01a2e0a}{stbmm}(&V, Nm1.\hyperlink{structTpltz_ae6401204807b06471ae4cf9ce7c2022b}{nrow}, Nm1.\hyperlink{structTpltz_a6025c0048255a299edfb4f88ca01e7ec}{m\_cw}, Nm1.\hyperlink{structTpltz_a0ad1c2bba1b44cc8e1a700813195d0a0}{m\_rw}, Nm1.\hyperlink{structTpltz_ae2ec369f6eaac15a2353231b50270990}{tpltzblocks}
+      , Nm1.\hyperlink{structTpltz_a4090e9931928ca56b30db246ff77ce29}{nb\_blocks\_loc}, Nm1.\hyperlink{structTpltz_af669b52bd5c07d8e41b4dddfc8c62312}{idp}, Nm1.\hyperlink{structTpltz_a03c363fb09ce439bcbbe0fd1f419ff3a}{local\_V\_size}, Nm1.
+      \hyperlink{structTpltz_af136a7cb103383ffab2080c566b8c7ab}{flag\_stgy});
+00075 
+00076 \textcolor{preprocessor}{#endif}
+00077 \textcolor{preprocessor}{}
+00078   \textcolor{keywordflow}{return} 0;
+00079 \}
+00080 
+00081 
+00082 
+\hypertarget{toeplitz__wizard_8c_source_l00083}{}\hyperlink{toeplitz__wizard_8c_a473d1ee11c83c7d9f6db6e057dc86125}{00083} \textcolor{keywordtype}{int} \hyperlink{toeplitz__wizard_8c_a473d1ee11c83c7d9f6db6e057dc86125}{gstbmmProd}( \hyperlink{structTpltz}{Tpltz} Nm1, \textcolor{keywordtype}{double} *V, \hyperlink{structGap}{Gap} Gaps)
+00084 \{
+00085 
+00086 \textcolor{preprocessor}{#ifdef W\_MPI}
+00087 \textcolor{preprocessor}{}
+00088   \hyperlink{group__group12_ga7c3bdb98f0e937e6e84c8652e101acac}{mpi\_gstbmm}(&V, Nm1.\hyperlink{structTpltz_ae6401204807b06471ae4cf9ce7c2022b}{nrow}, Nm1.\hyperlink{structTpltz_a6025c0048255a299edfb4f88ca01e7ec}{m\_cw}, Nm1.\hyperlink{structTpltz_a0ad1c2bba1b44cc8e1a700813195d0a0}{m\_rw}, Nm1.
+      \hyperlink{structTpltz_ae2ec369f6eaac15a2353231b50270990}{tpltzblocks}, Nm1.\hyperlink{structTpltz_a4090e9931928ca56b30db246ff77ce29}{nb\_blocks\_loc}, Nm1.\hyperlink{structTpltz_a6275c3f32f3d790d92a7c8f257d3dcf9}{nb\_blocks\_tot}
+      , Nm1.\hyperlink{structTpltz_af669b52bd5c07d8e41b4dddfc8c62312}{idp}, Nm1.\hyperlink{structTpltz_a03c363fb09ce439bcbbe0fd1f419ff3a}{local\_V\_size}, Gaps.\hyperlink{structGap_af394dc30d7e23b7e65ba71d318335860}{id0gap}, Gaps.\hyperlink{structGap_a0ada50a4c5be9497f18198ab73290ae2}{lgap}, 
+      Gaps.\hyperlink{structGap_a210dec7193ddb9dfdd57e60ab83f2ee0}{ngap}, Nm1.\hyperlink{structTpltz_af136a7cb103383ffab2080c566b8c7ab}{flag\_stgy}, Nm1.\hyperlink{structTpltz_ac000d7cb5fa8d9a204a38255e5d00098}{comm});
+00089 
+00090 \textcolor{preprocessor}{#else}
+00091 \textcolor{preprocessor}{}
+00092 \textcolor{comment}{//int gstbmm0(double **V, int nrow, int m\_cw, int m\_rw, Block *tpltzblocks, int
+       nb\_blocks, int64\_t idp, int local\_V\_size, int *id0gap, int *lgap, int ngap,
+       Flag flag\_stgy)}
+00093 
+00094   \hyperlink{group__group11_ga4cd10fd194db5a77c0366cddeda596ae}{gstbmm}(&V, Nm1.\hyperlink{structTpltz_ae6401204807b06471ae4cf9ce7c2022b}{nrow}, Nm1.\hyperlink{structTpltz_a6025c0048255a299edfb4f88ca01e7ec}{m\_cw}, Nm1.\hyperlink{structTpltz_a0ad1c2bba1b44cc8e1a700813195d0a0}{m\_rw}, Nm1.\hyperlink{structTpltz_ae2ec369f6eaac15a2353231b50270990}{tpltzblocks}
+      , Nm1.\hyperlink{structTpltz_a4090e9931928ca56b30db246ff77ce29}{nb\_blocks\_loc}, Nm1.\hyperlink{structTpltz_af669b52bd5c07d8e41b4dddfc8c62312}{idp}, Nm1.\hyperlink{structTpltz_a03c363fb09ce439bcbbe0fd1f419ff3a}{local\_V\_size}, Gaps
+      .\hyperlink{structGap_af394dc30d7e23b7e65ba71d318335860}{id0gap}, Gaps.\hyperlink{structGap_a0ada50a4c5be9497f18198ab73290ae2}{lgap}, Gaps.\hyperlink{structGap_a210dec7193ddb9dfdd57e60ab83f2ee0}{ngap}, Nm1.\hyperlink{structTpltz_af136a7cb103383ffab2080c566b8c7ab}{flag\_stgy});
+00095 
+00096 \textcolor{preprocessor}{#endif}
+00097 \textcolor{preprocessor}{}
+00098   \textcolor{keywordflow}{return} 0;
+00099 \}
+00100 
+00101 
+\end{DoxyCode}

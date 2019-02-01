@@ -1,0 +1,333 @@
+\hypertarget{toeplitz__rshp_8c}{\section{toeplitz\-\_\-rshp.\-c}
+\label{toeplitz__rshp_8c}\index{toeplitz\-\_\-rshp.\-c@{toeplitz\-\_\-rshp.\-c}}
+}
+
+\begin{DoxyCode}
+00001 
+00057 \textcolor{preprocessor}{#include "\hyperlink{toeplitz_8h}{toeplitz.h}"}
+00058 
+00059 \textcolor{comment}{//r1.1 - Frederic Dauvergne (APC)}
+00060 \textcolor{comment}{//This is the reshaping routines to build the optimal data structure when
+       needed. }
+00061 \textcolor{comment}{//The index functions find the right index number of the data location for a
+       choosen}
+00062 \textcolor{comment}{//transformation.}
+00063 
+00064 
+\hypertarget{toeplitz__rshp_8c_source_l00065}{}\hyperlink{toeplitz__rshp_8c_ab939dbb745b7f484b6ea199bb97b8047}{00065} \textcolor{keywordtype}{int} \hyperlink{toeplitz__rshp_8c_ab939dbb745b7f484b6ea199bb97b8047}{fctid\_mat2vect}(\textcolor{keywordtype}{int} i, \textcolor{keywordtype}{int} id0, \textcolor{keywordtype}{int} n, \textcolor{keywordtype}{int} lambda)
+00066 \{
+00067   \textcolor{keywordtype}{int} I,J, i\_out;
+00068   \textcolor{keywordtype}{int} distcorrmin= lambda-1;
+00069   \textcolor{keywordtype}{int} rfirst=id0%n;
+00070 
+00071   \textcolor{keywordflow}{if} (i==-1) 
+00072     \textcolor{keywordflow}{return} (-1);
+00073   
+00074 
+00075   I = (i+rfirst)%(n+distcorrmin);
+00076   J = (i+rfirst)/(n+distcorrmin);
+00077 
+00078   \textcolor{keywordflow}{if} (I<n)
+00079     i\_out = I-rfirst+J*n;  
+00080   \textcolor{keywordflow}{else}
+00081     i\_out = -1; \textcolor{comment}{//not defined. value is zero.}
+00082 
+00083 
+00084   \textcolor{keywordflow}{return} i\_out;
+00085 \}
+00086 
+00087 
+\hypertarget{toeplitz__rshp_8c_source_l00088}{}\hyperlink{toeplitz__rshp_8c_ae78ae0f7f2d99a5784932da5623faec1}{00088} \textcolor{keywordtype}{int} \hyperlink{toeplitz__rshp_8c_ae78ae0f7f2d99a5784932da5623faec1}{fctid\_mat2vect\_inv}(\textcolor{keywordtype}{int} i, \textcolor{keywordtype}{int} id0, \textcolor{keywordtype}{int} n, \textcolor{keywordtype}{int} lambda)
+00089 \{
+00090   \textcolor{keywordtype}{int} I,J, i\_out;
+00091   \textcolor{keywordtype}{int} distcorrmin= lambda-1;
+00092   \textcolor{keywordtype}{int} rfirst=id0%n;
+00093 
+00094   \textcolor{keywordflow}{if} (i==-1)
+00095     i\_out = -1; \textcolor{comment}{//not defined. value is zero.}
+00096 
+00097   I = (i+rfirst)%(n);
+00098   J = (i+rfirst)/(n);
+00099 
+00100   i\_out = I-rfirst+J*(n+distcorrmin);
+00101 
+00102   \textcolor{keywordflow}{return} i\_out;
+00103 \}
+00104 
+00105 
+\hypertarget{toeplitz__rshp_8c_source_l00106}{}\hyperlink{toeplitz__rshp_8c_a60fd6d5e5ef75b619c6709bfc6c285cf}{00106} \textcolor{keywordtype}{int} \hyperlink{toeplitz__rshp_8c_a60fd6d5e5ef75b619c6709bfc6c285cf}{fctid\_concatcol}(\textcolor{keywordtype}{int} i, \textcolor{keywordtype}{int} id0, \textcolor{keywordtype}{int} n, \textcolor{keywordtype}{int} m, \textcolor{keywordtype}{int} l, \textcolor{keywordtype}{int} 
+      lconc, \textcolor{keywordtype}{int} lambda, \textcolor{keywordtype}{int} *nocol, \textcolor{keywordtype}{int} nbcol)
+00107 \{
+00108   \textcolor{keywordtype}{int} I,J, i\_out;
+00109   \textcolor{keywordtype}{int} distcorrmin= lambda-1;
+00110   \textcolor{keywordtype}{int} rfirst=id0%n;
+00111 
+00112   \textcolor{keywordflow}{if} (i==-1)
+00113     \textcolor{keywordflow}{return} (-1);
+00114 
+00115   \textcolor{keywordflow}{if} (i>=lconc)
+00116     \textcolor{keywordflow}{return} (-2);\textcolor{comment}{//this indice not define. It shouldn't be used}
+00117 
+00118   I = (i+rfirst)%(n);
+00119   J = (i+rfirst)/(n);
+00120 
+00121     i\_out = I-rfirst+nocol[J]*(n);
+00122 
+00123 
+00124   \textcolor{keywordflow}{return} i\_out;
+00125 \}
+00126 
+00127 
+\hypertarget{toeplitz__rshp_8c_source_l00128}{}\hyperlink{toeplitz__rshp_8c_a548030b0dd8348a79e837aac51482962}{00128} \textcolor{keywordtype}{int} \hyperlink{toeplitz__rshp_8c_a548030b0dd8348a79e837aac51482962}{fctid\_concatcol\_inv}(\textcolor{keywordtype}{int} i, \textcolor{keywordtype}{int} id0, \textcolor{keywordtype}{int} n, \textcolor{keywordtype}{int} m, \textcolor{keywordtype}{int} l,
+       \textcolor{keywordtype}{int} lconc, \textcolor{keywordtype}{int} lambda, \textcolor{keywordtype}{int} *nocol\_inv, \textcolor{keywordtype}{int} nbcol)
+00129 \{
+00130   \textcolor{keywordtype}{int} I,J, i\_out;
+00131   \textcolor{keywordtype}{int} distcorrmin= lambda-1;
+00132   \textcolor{keywordtype}{int} rfirst=id0%n;
+00133 
+00134   \textcolor{keywordflow}{if} (i==-1)
+00135     \textcolor{keywordflow}{return} (-1);
+00136 
+00137   \textcolor{keywordflow}{if} (i>=l)
+00138     \textcolor{keywordflow}{return} (-2);\textcolor{comment}{//this indice not define. It shouldn't be used}
+00139 
+00140   I = (i+rfirst)%(n);
+00141   J = (i+rfirst)/(n);
+00142 
+00143   \textcolor{keywordflow}{if} (nocol\_inv[J]==(-1))
+00144     i\_out = -1;
+00145   \textcolor{keywordflow}{else}
+00146     i\_out = I-rfirst+nocol\_inv[J]*(n);
+00147 
+00148 
+00149   \textcolor{keywordflow}{return} i\_out;
+00150 \}
+00151 
+00152 
+00153 
+\hypertarget{toeplitz__rshp_8c_source_l00154}{}\hyperlink{toeplitz__rshp_8c_ac9c1b645a62e6a958eac0bdf7ad622c8}{00154} \textcolor{keywordtype}{int} \hyperlink{toeplitz__rshp_8c_ac9c1b645a62e6a958eac0bdf7ad622c8}{fctid\_vect2nfftblock}(\textcolor{keywordtype}{int} i, \textcolor{keywordtype}{int} v1\_size, \textcolor{keywordtype}{int} fft\_size, \textcolor{keywordtype}{
+      int} nfft, \textcolor{keywordtype}{int} lambda)
+00155 \{
+00156 
+00157   \textcolor{keywordtype}{int} I,J, i\_out;
+00158   \textcolor{keywordtype}{int} distcorrmin= lambda-1;
+00159 
+00160   \textcolor{keywordflow}{if} (i==-1)
+00161     \textcolor{keywordflow}{return} (-1);
+00162 
+00163   I = (i)%(fft\_size);
+00164   J = (i)/(fft\_size);
+00165 
+00166   i\_out = (I-distcorrmin) + J*(fft\_size-2*distcorrmin) ;
+00167 
+00168   \textcolor{keywordflow}{if} (i\_out<0 || i\_out>=v1\_size)
+00169     i\_out = -1;
+00170 
+00171 
+00172   \textcolor{keywordflow}{return} i\_out;
+00173 \}
+00174 
+00175 
+\hypertarget{toeplitz__rshp_8c_source_l00176}{}\hyperlink{toeplitz__rshp_8c_a466af9471a3e62e38234b3a861f18621}{00176} \textcolor{keywordtype}{int} \hyperlink{toeplitz__rshp_8c_a466af9471a3e62e38234b3a861f18621}{is\_needconcat}(\textcolor{keywordtype}{int} *nocol, \textcolor{keywordtype}{int} nbcol)
+00177 \{
+00178   \textcolor{keywordtype}{int} i;
+00179   \textcolor{keywordtype}{int} ip=nocol[0];
+00180   \textcolor{keywordflow}{for}(i=1;i<nbcol;i++) \{
+00181     \textcolor{keywordflow}{if} (nocol[i]!=(ip+i)) 
+00182       \textcolor{keywordflow}{return} 1;
+00183   \}
+00184 
+00185 
+00186   \textcolor{keywordflow}{return} 0;
+00187 \}
+00188 
+00189 
+\hypertarget{toeplitz__rshp_8c_source_l00190}{}\hyperlink{toeplitz__rshp_8c_a535af30fa6acfde1c5369820fe8a20d7}{00190} \textcolor{keywordtype}{int} \hyperlink{toeplitz__rshp_8c_a535af30fa6acfde1c5369820fe8a20d7}{fctid\_vect2nfftblock\_inv}(\textcolor{keywordtype}{int} i, \textcolor{keywordtype}{int} v1\_size, \textcolor{keywordtype}{int} 
+      fft\_size, \textcolor{keywordtype}{int} nfft, \textcolor{keywordtype}{int} lambda)
+00191 \{
+00192 
+00193   \textcolor{keywordtype}{int} I,J, i\_out;
+00194   \textcolor{keywordtype}{int} distcorrmin= lambda-1;
+00195 
+00196   \textcolor{keywordflow}{if} (i<0 || i>=v1\_size)
+00197     \textcolor{keywordflow}{return} (-2);
+00198 
+00199   I = (i)%(fft\_size-2*distcorrmin);
+00200   J = (i)/(fft\_size-2*distcorrmin);
+00201 
+00202   i\_out = (I+distcorrmin) + J*(fft\_size) ;
+00203 
+00204   \textcolor{keywordflow}{return} i\_out;
+00205 \}
+00206 
+00207 
+\hypertarget{toeplitz__rshp_8c_source_l00208}{}\hyperlink{toeplitz__rshp_8c_a2f7b2601a9a5e73c83546978b6a1a35a}{00208} \textcolor{keywordtype}{int} \hyperlink{toeplitz__rshp_8c_a2f7b2601a9a5e73c83546978b6a1a35a}{define\_rshp\_size}(\textcolor{keywordtype}{int} flag\_format\_rshp, \textcolor{keywordtype}{int} fft\_size, \textcolor{keywordtype}{int} 
+      nfft, \textcolor{keywordtype}{int} v1\_size, \textcolor{keywordtype}{int} vedge\_size, \textcolor{keywordtype}{int} *nrshp, \textcolor{keywordtype}{int} *mrshp, \textcolor{keywordtype}{int} *lrshp)
+00209 \{
+00210 
+00211   \textcolor{keywordflow}{if} (flag\_format\_rshp==2) \{
+00212     *nrshp=fft\_size;
+00213     *mrshp=nfft;
+00214     *lrshp=(*nrshp)*(*mrshp);
+00215   \}
+00216   \textcolor{keywordflow}{else} \textcolor{keywordflow}{if} (flag\_format\_rshp==1) \{
+00217     *nrshp=v1\_size;
+00218     *mrshp=1;
+00219     *lrshp=(*nrshp)*(*mrshp);
+00220   \}
+00221   \textcolor{keywordflow}{else} \textcolor{keywordflow}{if} (flag\_format\_rshp==0) \{ \textcolor{comment}{//this case appear only if
+       flag\_shortcut\_nbcol\_eq\_1==0}
+00222     *nrshp=vedge\_size;
+00223     *mrshp=1;
+00224     *lrshp=vedge\_size;
+00225   \}
+00226   \textcolor{keywordflow}{else} \{\textcolor{comment}{//error not a good flag\_format\_rshp}
+00227   \}
+00228 
+00229   \textcolor{keywordflow}{return} 0;
+00230 \}
+00231 
+00232 
+\hypertarget{toeplitz__rshp_8c_source_l00233}{}\hyperlink{toeplitz__rshp_8c_a4e4d58a32816e9e5ffb6dd8d95b943b6}{00233} \textcolor{keywordtype}{int} \hyperlink{toeplitz__rshp_8c_a4e4d58a32816e9e5ffb6dd8d95b943b6}{build\_nocol\_inv}(\textcolor{keywordtype}{int} *nocol, \textcolor{keywordtype}{int} nbcol, \textcolor{keywordtype}{int} m)  \textcolor{comment}{//ncol\_inv to
+       define as parameters}
+00234 \{
+00235  \textcolor{keywordtype}{int} i;
+00236  \textcolor{keywordtype}{int} *nocol\_inv;
+00237   nocol\_inv = (\textcolor{keywordtype}{int} *) calloc(m, \textcolor{keyword}{sizeof}(\textcolor{keywordtype}{double}));
+00238 
+00239   \textcolor{keywordflow}{for}(i=0;i<m;i++)
+00240     nocol\_inv[i]=-1;
+00241   \textcolor{keywordflow}{for}(i=0;i<nbcol;i++)
+00242     nocol\_inv[nocol[i]]=i;
+00243 
+00244 
+00245   \textcolor{keywordflow}{return} 0;
+00246 \}
+00247 
+00248 
+\hypertarget{toeplitz__rshp_8c_source_l00249}{}\hyperlink{toeplitz__rshp_8c_a0a6fdc2b8a9d18173c70ac3f62d3dabd}{00249} \textcolor{keywordtype}{int} \hyperlink{toeplitz__rshp_8c_a0a6fdc2b8a9d18173c70ac3f62d3dabd}{build\_reshape}(\textcolor{keywordtype}{double} *Vin, \textcolor{keywordtype}{int} *nocol, \textcolor{keywordtype}{int} nbcol, \textcolor{keywordtype}{int} lconc, \textcolor{keywordtype}{
+      int} n, \textcolor{keywordtype}{int} m, \textcolor{keywordtype}{int} id0, \textcolor{keywordtype}{int} l, \textcolor{keywordtype}{int} lambda, \textcolor{keywordtype}{int} nfft, \textcolor{keywordtype}{double} *Vrshp, \textcolor{keywordtype}{int} nrshp, \textcolor{keywordtype}{int}
+       mrshp, \textcolor{keywordtype}{int} lrshp, \textcolor{keywordtype}{int} flag\_format\_rshp)
+00250 \{
+00251 
+00252   \textcolor{keywordtype}{int} i;
+00253   \textcolor{keywordtype}{int} rfirst=id0%n;
+00254   \textcolor{keywordtype}{int} i\_out1, i\_out2, i\_out3;
+00255   \textcolor{keywordtype}{int} distcorrmin=lambda-1;
+00256 
+00257   \textcolor{keywordtype}{int} v1\_size;
+00258   \textcolor{keywordtype}{int} fft\_size;
+00259 
+00260   \textcolor{keywordtype}{int} idf = id0+l-1;
+00261   \textcolor{keywordtype}{int} lconc0;
+00262 
+00263   FILE *file;
+00264   file = stdout;
+00265 
+00266   v1\_size=lconc+(distcorrmin)*(nbcol-1);
+00267   fft\_size = ceil(1.0*v1\_size/nfft)+2*distcorrmin;
+00268 
+00269  \textcolor{comment}{//used transformation}
+00270 \textcolor{keywordflow}{if} (\hyperlink{toeplitz_8c_ab848ce91ba14d3dc5c87d0b42f3a1c0d}{VERBOSE}) \{
+00271   fprintf(file, \textcolor{stringliteral}{"fctid\_concatcol: \(\backslash\)t %d\(\backslash\)n"}, (\hyperlink{toeplitz__rshp_8c_a466af9471a3e62e38234b3a861f18621}{is\_needconcat}(nocol, 
+      nbcol)==1));
+00272   fprintf(file, \textcolor{stringliteral}{"fctid\_mat2vect: \(\backslash\)t %d\(\backslash\)n"}, (nbcol>1)); 
+00273   fprintf(file, \textcolor{stringliteral}{"fctid\_vect2nfftblock \(\backslash\)t %d\(\backslash\)n"}, (nfft>1));
+00274 \}
+00275 
+00276 
+00277   \textcolor{keywordflow}{for}(i=0;i<lrshp;i++) \{
+00278 
+00279   \textcolor{keywordflow}{if} (nfft>1)
+00280     i\_out1 = \hyperlink{toeplitz__rshp_8c_ac9c1b645a62e6a958eac0bdf7ad622c8}{fctid\_vect2nfftblock}( i, v1\_size, fft\_size, 
+      nfft, lambda);
+00281   \textcolor{keywordflow}{else}
+00282     i\_out1 = i;
+00283 
+00284   \textcolor{keywordflow}{if} (nbcol>1)
+00285     i\_out2 = \hyperlink{toeplitz__rshp_8c_ab939dbb745b7f484b6ea199bb97b8047}{fctid\_mat2vect}(i\_out1 , rfirst, n, lambda);
+00286   \textcolor{keywordflow}{else}
+00287     i\_out2 = i\_out1;
+00288 
+00289   \textcolor{keywordflow}{if} (\hyperlink{toeplitz__rshp_8c_a466af9471a3e62e38234b3a861f18621}{is\_needconcat}(nocol, nbcol)==1)
+00290     i\_out3 = \hyperlink{toeplitz__rshp_8c_a60fd6d5e5ef75b619c6709bfc6c285cf}{fctid\_concatcol}(i\_out2, id0, n, m, l, lconc, lambda
+      , nocol, nbcol);
+00291   \textcolor{keywordflow}{else}
+00292     i\_out3 = i\_out2;
+00293 
+00294 
+00295   \textcolor{keywordflow}{if} (i\_out3==-1)
+00296     Vrshp[i]=0;
+00297   \textcolor{keywordflow}{else}
+00298     Vrshp[i]=Vin[i\_out3];
+00299 
+00300   \}\textcolor{comment}{//end for}
+00301 
+00302 
+00303   \textcolor{keywordflow}{return} 0;
+00304 \}
+00305 
+00306 
+\hypertarget{toeplitz__rshp_8c_source_l00307}{}\hyperlink{toeplitz__rshp_8c_aa006c198e58701067495afeace933382}{00307} \textcolor{keywordtype}{int} \hyperlink{toeplitz__rshp_8c_aa006c198e58701067495afeace933382}{extract\_result}(\textcolor{keywordtype}{double} *Vout, \textcolor{keywordtype}{int} *nocol, \textcolor{keywordtype}{int} nbcol, \textcolor{keywordtype}{int} lconc
+      , \textcolor{keywordtype}{int} n, \textcolor{keywordtype}{int} m, \textcolor{keywordtype}{int} id0, \textcolor{keywordtype}{int} l, \textcolor{keywordtype}{int} lambda, \textcolor{keywordtype}{int} nfft, \textcolor{keywordtype}{double} *Vrshp, \textcolor{keywordtype}{int} nrshp, \textcolor{keywordtype}{
+      int} mrshp, \textcolor{keywordtype}{int} lrshp, \textcolor{keywordtype}{int} flag\_format\_rshp)
+00308 \{  
+00309 
+00310   \textcolor{keywordtype}{int} i;
+00311   \textcolor{keywordtype}{int} rfirst=id0%n;
+00312   \textcolor{keywordtype}{int} i\_out1, i\_out2, i\_out3;
+00313   \textcolor{keywordtype}{int} i\_in1;
+00314   \textcolor{keywordtype}{int} distcorrmin=lambda-1;
+00315 
+00316   \textcolor{keywordtype}{int} v1\_size;
+00317   \textcolor{keywordtype}{int} fft\_size;
+00318 
+00319   FILE *file;
+00320   file = stdout;
+00321 
+00322   v1\_size=lconc+(distcorrmin)*(nbcol-1);
+00323   fft\_size = ceil(1.0*v1\_size/nfft)+2*distcorrmin;
+00324 
+00325  \textcolor{comment}{//used transformation}
+00326 \textcolor{keywordflow}{if} (\hyperlink{toeplitz_8c_ab848ce91ba14d3dc5c87d0b42f3a1c0d}{VERBOSE}) \{
+00327   fprintf(file, \textcolor{stringliteral}{"fctid\_concatcol: \(\backslash\)t %d\(\backslash\)n"}, (\hyperlink{toeplitz__rshp_8c_a466af9471a3e62e38234b3a861f18621}{is\_needconcat}(nocol, 
+      nbcol)==1));
+00328   fprintf(file, \textcolor{stringliteral}{"fctid\_mat2vect: \(\backslash\)t %d\(\backslash\)n"}, (nbcol>1));
+00329   fprintf(file, \textcolor{stringliteral}{"fctid\_vect2nfftblock \(\backslash\)t %d\(\backslash\)n"}, (nfft>1));
+00330 \}
+00331 
+00332   \textcolor{keywordtype}{int} lcol;
+00333   \textcolor{keywordtype}{int} j,k;
+00334 
+00335   \textcolor{keywordflow}{for}(i=0;i<lconc;i++) \{ 
+00336 
+00337   \textcolor{keywordflow}{if} (\hyperlink{toeplitz__rshp_8c_a466af9471a3e62e38234b3a861f18621}{is\_needconcat}(nocol, nbcol)==1)
+00338     i\_in1=\hyperlink{toeplitz__rshp_8c_a60fd6d5e5ef75b619c6709bfc6c285cf}{fctid\_concatcol}(i, id0, n, m, l, lconc, lambda, nocol,
+       nbcol);
+00339   \textcolor{keywordflow}{else}
+00340     i\_in1 = i;
+00341 
+00342   \textcolor{keywordflow}{if} (nbcol>1)
+00343     i\_out2 = \hyperlink{toeplitz__rshp_8c_ae78ae0f7f2d99a5784932da5623faec1}{fctid\_mat2vect\_inv}(i , rfirst, n, lambda);
+00344   \textcolor{keywordflow}{else}
+00345     i\_out2 = i\_out1;
+00346 
+00347   \textcolor{keywordflow}{if} (nfft>1)
+00348     i\_out3 = \hyperlink{toeplitz__rshp_8c_a535af30fa6acfde1c5369820fe8a20d7}{fctid\_vect2nfftblock\_inv}(i\_out2, v1\_size, 
+      fft\_size, nfft, lambda);
+00349   \textcolor{keywordflow}{else}
+00350     i\_out3 = i\_out2;
+00351 
+00352   \textcolor{keywordflow}{if} (i\_out3==-1)
+00353     Vout[i]=-1;
+00354   \textcolor{keywordflow}{else} \textcolor{keywordflow}{if} (i\_out3==-2)
+00355     Vout[i]=-2;
+00356   \textcolor{keywordflow}{else}
+00357       Vout[i\_in1] = Vrshp[i\_out3];
+00358   \}
+00359 
+00360 
+00361   \textcolor{keywordflow}{return} 0;
+00362 \}
+00363 
+\end{DoxyCode}

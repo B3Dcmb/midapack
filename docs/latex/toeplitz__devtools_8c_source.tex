@@ -1,0 +1,92 @@
+\hypertarget{toeplitz__devtools_8c}{\section{toeplitz\-\_\-devtools.\-c}
+\label{toeplitz__devtools_8c}\index{toeplitz\-\_\-devtools.\-c@{toeplitz\-\_\-devtools.\-c}}
+}
+
+\begin{DoxyCode}
+00001 
+00043 \textcolor{preprocessor}{#include <stdlib.h>}
+00044 \textcolor{preprocessor}{#include <stdio.h>}
+00045 \textcolor{preprocessor}{#include <math.h>}
+00046 \textcolor{preprocessor}{#include "\hyperlink{toeplitz_8h}{toeplitz.h}"}
+00047 \textcolor{preprocessor}{#include <cblas.h>}
+00048 \textcolor{preprocessor}{#include <time.h>}
+00049 
+00050 \textcolor{comment}{//}
+00051 \textcolor{comment}{//dev tools for cblas and print - fd@apc}
+00052 
+\hypertarget{toeplitz__devtools_8c_source_l00053}{}\hyperlink{toeplitz__devtools_8c_a71116d783c96f008961a7649d3700cf8}{00053} \textcolor{keywordtype}{int} \hyperlink{toeplitz__devtools_8c_a71116d783c96f008961a7649d3700cf8}{stmm\_cblas}(\textcolor{keywordtype}{int} n\_loc, \textcolor{keywordtype}{int} m\_loc, \textcolor{keywordtype}{double} *T2\_loc, \textcolor{keywordtype}{double} *V, \textcolor{keywordtype}{
+      double} *TV2) \{
+00054 
+00055   cblas\_dgemm (CblasColMajor, CblasNoTrans,CblasNoTrans, n\_loc, m\_loc, n\_loc, 1
+      , T2\_loc, n\_loc, (V), n\_loc, 1, TV2, n\_loc);
+00056 
+00057   \textcolor{keywordflow}{return} 0;
+00058 \}
+00059 
+00060 
+00061 
+00062 \textcolor{comment}{// Build full Toeplitz matrix needed for cblas computation}
+\hypertarget{toeplitz__devtools_8c_source_l00063}{}\hyperlink{toeplitz__devtools_8c_abbd7fe6341c689dad56b05bd5093b0d4}{00063} \textcolor{keywordtype}{int} \hyperlink{toeplitz__devtools_8c_abbd7fe6341c689dad56b05bd5093b0d4}{build\_full\_Toeplitz}(\textcolor{keywordtype}{int} n\_loc, \textcolor{keywordtype}{double} *T\_loc, \textcolor{keywordtype}{int} 
+      lambda\_loc, \textcolor{keywordtype}{double} *T2\_loc) \{
+00064 
+00065   \textcolor{keywordtype}{int} i,j;
+00066 
+00067       \textcolor{keywordflow}{for} (j=0;j<n\_loc;j++) \{  \textcolor{comment}{//reset all the matrix to zeros}
+00068         \textcolor{keywordflow}{for}(i=0;i<n\_loc;i++) \{
+00069           T2\_loc[j*n\_loc+i] = 0;
+00070       \}\}
+00071 
+00072       \textcolor{keywordflow}{for} (j=0;j<n\_loc;j++)\{ \textcolor{comment}{// Full Toeplitz matrix needed for cblas
+       computation}
+00073         \textcolor{keywordflow}{for} (i=0;i<lambda\_loc;i++)\{
+00074           \textcolor{keywordflow}{if} (j-i>=0)
+00075             T2\_loc[j*n\_loc+j-i] = T\_loc[i];
+00076           \textcolor{keywordflow}{if} (j+i<n\_loc)
+00077             T2\_loc[j*n\_loc+j+i] = T\_loc[i]; \}\}
+00078 
+00079 
+00080   \textcolor{keywordflow}{return} 0;
+00081 \}
+00082 
+00083 
+00084 
+\hypertarget{toeplitz__devtools_8c_source_l00085}{}\hyperlink{toeplitz__devtools_8c_a217227b5c1d2a02676a40b022d8069c0}{00085} \textcolor{keywordtype}{int} \hyperlink{toeplitz__devtools_8c_a217227b5c1d2a02676a40b022d8069c0}{print\_full\_Toeplitz}(\textcolor{keywordtype}{int} n\_loc, \textcolor{keywordtype}{double} *T2\_loc) \{
+00086 
+00087   \textcolor{keywordtype}{int} i,j;
+00088 
+00089   FILE *file;
+00090   file = stdout;
+00091 
+00092     \textcolor{keywordflow}{for}(i=0;i<n\_loc;i++) \{
+00093     \textcolor{keywordflow}{for}(j=0;j<n\_loc;j++) \{
+00094       fprintf(file, \textcolor{stringliteral}{"%.1f\(\backslash\)t"}, T2\_loc[i+j*n\_loc]);
+00095     \}
+00096       fprintf(file, \textcolor{stringliteral}{"\(\backslash\)n"});
+00097     \}
+00098 
+00099 
+00100   \textcolor{keywordflow}{return} 0;
+00101 \}
+00102 
+00103 
+00104 
+\hypertarget{toeplitz__devtools_8c_source_l00105}{}\hyperlink{toeplitz__devtools_8c_a74fdfdd84a1c878470423c304dcebe90}{00105} \textcolor{keywordtype}{int} \hyperlink{toeplitz__devtools_8c_a74fdfdd84a1c878470423c304dcebe90}{print\_full\_matrix}(\textcolor{keywordtype}{int} n\_loc, \textcolor{keywordtype}{int} m\_loc, \textcolor{keywordtype}{double} *\hyperlink{structMat}{Mat}) \{
+00106 
+00107   \textcolor{keywordtype}{int} i,j;
+00108 
+00109   FILE *file;
+00110   file = stdout;
+00111 
+00112     \textcolor{keywordflow}{for}(i=0;i<n\_loc;i++) \{
+00113     \textcolor{keywordflow}{for}(j=0;j<m\_loc;j++) \{
+00114       fprintf(file, \textcolor{stringliteral}{"%.1f\(\backslash\)t"}, Mat[i+j*n\_loc]);
+00115     \}
+00116       fprintf(file, \textcolor{stringliteral}{"\(\backslash\)n"});
+00117     \}
+00118 
+00119 
+00120   \textcolor{keywordflow}{return} 0;
+00121 \}
+00122 
+00123 
+\end{DoxyCode}
