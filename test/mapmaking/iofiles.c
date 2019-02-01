@@ -99,6 +99,47 @@ int ioReadfile_pol( int block_size, int part_id, unsigned int *point_data, doubl
         return 0;
 }
 
+int ioReadTOAST_data( int block_size, int part_id, unsigned int *point_data, double *signal, double *wghts)
+{
+        int i;
+
+        char p_vectorFile[256];
+        char *p_vectorFileNameBasis = "pixels_";
+
+        char s_vectorFile[256];
+//        char *s_vectorFileNameBasis = "signal_";
+        char *s_vectorFileNameBasis = "pure_signal_";
+
+        char wght_vectorFile[256];
+        char *wght_vectorFileNameBasis = "weights_";
+
+        FILE *fp;
+
+        sprintf(p_vectorFile, "%s%s%01d.dat", WORKDIR, p_vectorFileNameBasis, part_id);
+        sprintf(s_vectorFile, "%s%s%01d.dat", WORKDIR, s_vectorFileNameBasis, part_id);
+        sprintf(wght_vectorFile, "%s%s%01d.dat", WORKDIR, wght_vectorFileNameBasis, part_id);
+
+        if (IOVERBOSE>1) {
+          printf(" Pixels file name: %s\n", p_vectorFile);
+          printf("   Signal file name: %s\n", s_vectorFile);
+          printf(" Pointing weights file name: %s\n", wght_vectorFile);
+	}
+
+        fp=fopen(p_vectorFile, "rb");
+        fread(point_data, sizeof(unsigned int), 3*block_size, fp);
+        fclose(fp);
+
+        fp=fopen(s_vectorFile, "rb");
+        fread(signal, sizeof(double), block_size, fp);
+        fclose(fp);
+
+        fp=fopen(wght_vectorFile, "rb");
+        fread(wghts, sizeof(double), 3*block_size, fp);
+        fclose(fp);
+
+        return 0;
+}
+
 int ioReadfilePure( int block_size, int part_id, unsigned int *point_data, double *signal)
 {
         int i;
@@ -151,17 +192,17 @@ int ioReadrandom( int block_size, int part_id, unsigned int *point_data, double 
 
 
 
-int ioReadTpltzfile( int lambda, double num, double *Tblock)
+int ioReadTpltzfile( int lambda, double *Tblock)
 {
 
         int i;
 
         char N_vectorFile[256];
-        char *N_vectorFileNameBasis = "inv_tt_x";
+        char *N_vectorFileNameBasis = "inv_tt_x3";
 
         FILE *fp;
 
-        sprintf(N_vectorFile, "%s%s%1.2f.bin", WORKDIR, N_vectorFileNameBasis, num);
+        sprintf(N_vectorFile, "%s%s.bin", WORKDIR, N_vectorFileNameBasis);
 
         printf(" Block Toeplitz values file name: %s\n", N_vectorFile);
 
@@ -177,18 +218,18 @@ int ioReadTpltzfile( int lambda, double num, double *Tblock)
 
 int ioReadTpltzrandom( int lambda, double *Tblock)
 {
-         int i;
-	double lambdareduce=10;
-
-    srand (lambda); //init seed
-
-  //input matrix definition of T
-    for(i=1;i<lambdareduce;i++) {
-      Tblock[i]= -1.0/((double) i);
-    }
-    for(i=lambdareduce;i<lambda;i++) {
-      Tblock[i]= rand()/((double) 100*RAND_MAX);
-    }
+  //        int i;
+	// double lambdareduce=10;
+  //
+  //   srand (lambda); //init seed
+  //
+  // //input matrix definition of T
+  //   for(i=1;i<lambdareduce;i++) {
+  //     Tblock[i]= -1.0/((double) i);
+  //   }
+  //   for(i=lambdareduce;i<lambda;i++) {
+  //     Tblock[i]= rand()/((double) 100*RAND_MAX);
+    // }
     // for(i=1;i<lambda;i++)
     //   Tblock[i]= rand()/((double)RAND_MAX);
 

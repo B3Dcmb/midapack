@@ -2,9 +2,9 @@
 // mapmaking code example using the Midapack library - release 1.2b, Nov 2012
 // The routine reads data from binary files and writes the results in distributed binary files
 
-/** @file   test_pcg_polar.c
+/** @file   toast_pipeline.c
     @author Hamza El Bouhargani
-    @date   October 2018 */
+    @date   January 2019 */
 
 
 #include <stdlib.h>
@@ -23,7 +23,7 @@ void usage(){
 }
 
 //cluster Adamis:
-extern const char *WORKDIR="/global/cscratch1/sd/elbouha/data_clean_nside128/";
+extern const char *WORKDIR="/global/cscratch1/sd/elbouha/data_TOAST/test0/";
 //double FKNEE=1.00;
 //extern const char *WORKDIR="/data/dauvergn/Test_mapmaking/fred_pack_data/";
 double FKNEE=0.25;
@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
   int 		*indices;
   double 	*values;
   int 		pointing_commflag ;	//option for the communication scheme for the pointing matrix
-  double	*b, *Ag, *Ad, *pol_ang; 	 	//temporal domain vectors
+  double	*b, *Ag, *Ad, *wghts; 	 	//temporal domain vectors
   double	*x, *g, *d, *Ax_b;	//pixel domain vectors
   double        alpha, beta, gamma, resold, resnew;
   double 	localreduce;
@@ -62,15 +62,15 @@ int main(int argc, char *argv[])
   pointing_commflag=2; //2==BUTTERFLY - 1==RING
 
 //global data caracteristics
-  int Nb_t_Intervals = 128;//1352;//128;//2;//256;//8;           //total number of stationnary intervals
-  int t_Interval_length = 1749900;//17899900;//1431992;//139992; //1431992;//2863984;//1431992;//pow(2,25);//pow(2,25);          //length for each stationnary interval
-  int t_Interval_length_true = 1749900;//17899900;//1431992;//139992;//1431992;//2863984;//1431992;//pow(2,20);
+  int Nb_t_Intervals = 1;//1352;//128;//2;//256;//8;           //total number of stationnary intervals
+  int t_Interval_length = 470400;//1749900;//17899900;//1431992;//139992; //1431992;//2863984;//1431992;//pow(2,25);//pow(2,25);          //length for each stationnary interval
+  int t_Interval_length_true = 470400;//1749900;//17899900;//1431992;//139992;//1431992;//2863984;//1431992;//pow(2,20);
   int LambdaBlock = pow(2,0);//pow(2,14)+1;  //lambda length for each stationnary interval
   double fknee=FKNEE; //0.25;
   Nnz=3;
 
 // PCG parameters
-  tol=pow(10,-6);
+  tol=pow(10,-5);
   K=500;
 
 //Number of loop we need to read the all t_Interval_length
@@ -101,7 +101,7 @@ int main(int argc, char *argv[])
   indices  = (int *) malloc(Nnz*m * sizeof(int));     //for pointing matrix indices
   values  = (double *) malloc(Nnz*m * sizeof(double));//for pointing matrix values
   b   = (double *) malloc(m*sizeof(double));    //full raw data vector for the signal
-  pol_ang = (double *) malloc(m * sizeof(double));
+  wghts = (double *) malloc(Nnz*m * sizeof(double));
 
   //Read data from files:
 //note: work only if the number of processes is a multiple of the number of stationary intervals
@@ -110,7 +110,7 @@ int main(int argc, char *argv[])
   int part_id;      // stationnaly period id number
   int *point_data;  // scann strategy input data for the pointing matrix
   double *signal;   // signal input data
-  double *polar; // linear polarization angles
+  double *weights; // weights of the pointing matrix
 
 
 
@@ -137,10 +137,10 @@ if (rank==0) {
 
   point_data  = (int *) malloc(Nnz*t_Interval_length_true*t_Interval_loop_loc * sizeof(int));
   signal      = (double *) malloc(t_Interval_length_true*t_Interval_loop_loc  * sizeof(double));
-  polar = (double *) malloc(t_Interval_length_true*t_Interval_loop_loc * sizeof(double));
+  weights = (double *) malloc(Nnz*t_Interval_length_true*t_Interval_loop_loc * sizeof(double));
 
   for (i=0; i < t_Interval_loop_loc; ++i) {
-    ioReadfile_pol(t_Interval_length, part_id, point_data+t_Interval_length_true*Nnz*i, signal+t_Interval_length_true*i, polar+t_Interval_length_true*i);
+    ioReadTOAST_data(t_Interval_length, part_id, point_data+t_Interval_length_true*Nnz*i, signal+t_Interval_length_true*i, weights+t_Interval_length_true*Nnz*i);
   }
 //just keep the relevant part of the stationary interval for the local process
   int nb_proc_shared_one_subinterval = max(1, size/(Nb_t_Intervals*t_Interval_loop) );
@@ -154,21 +154,21 @@ if (rank==0) {
   printf("[rank %d] number_in_subinterval=%d\n", rank, number_in_subinterval );
 
 
-  for (i=0; i<(Nnz*m); i++)
+  for (i=0; i<(Nnz*m); i++){
     indices[i]=point_data[i+Nnz*number_in_subinterval*t_Interval_length_subinterval_loc];
-
+    wghts[i] = weights[i+ Nnz*number_in_subinterval*t_Interval_length_subinterval_loc];
+  }
   for(i=0; i<(m); i++){
     b[i] = signal[i+number_in_subinterval*t_Interval_length_subinterval_loc];
-    pol_ang[i] = polar[i+ number_in_subinterval*t_Interval_length_subinterval_loc];
   }
-  for(i=0; i<(Nnz*m);i+=3){
-    values[i+1] = cos(2*pol_ang[(int)i/3]);
-    values[i+2] = sin(2*pol_ang[(int)i/3]);
-  }
+  // for(i=0; i<(Nnz*m);i+=3){
+  //   values[i+1] = cos(2*wghts[(int)i/3]);
+  //   values[i+2] = sin(2*wghts[(int)i/3]);
+  // }
 
   free(point_data);
   free(signal);
-  free(polar);
+  free(weights);
 
 
 }
@@ -209,10 +209,10 @@ else { //for the case we dont need to share
   for (k=0; k < Nb_t_Intervals_loc; ++k) {
     point_data = indices + t_Interval_length*Nnz*k;
     signal = b + t_Interval_length*k;
-    polar = pol_ang + t_Interval_length*k;
+    weights = wghts + t_Interval_length*Nnz*k;
     part_id = Nb_t_Intervals_loc*rank + k;
   for (i=0; i < t_Interval_loop; ++i) {
-    ioReadfile_pol(t_Interval_length, part_id, point_data+t_Interval_length_true*Nnz*i, signal+t_Interval_length_true*i, polar+t_Interval_length_true*i);
+    ioReadTOAST_data(t_Interval_length, part_id, point_data+t_Interval_length_true*Nnz*i, signal+t_Interval_length_true*i, weights+t_Interval_length_true*Nnz*i);
   }
 
 //  ioReadfile(t_Interval_length, part_id, point_data, signal);
@@ -222,12 +222,12 @@ else { //for the case we dont need to share
   // srand(time(NULL));
 
 
-  for (i=0; i<(Nnz*m); i+=3){
-    // alpha = 2 * M_PI * rand()/((double)RAND_MAX);
-    // printf("%d : pol_ang = %f, cos = %f, sin = %f\n",i/3, pol_ang[(int)i/3], cos(2*pol_ang[(int)i/3]), sin(2*pol_ang[(int)i/3]));
-    values[i+1] = cos(2*pol_ang[(int)i/3]);//cos(alpha);//1 + rand()/((double)RAND_MAX);//cos(pol_ang[(int)i/3]);
-    values[i+2] = sin(2*pol_ang[(int)i/3]);//sin(alpha);//1 + rand()/((double)RAND_MAX);//sin(pol_ang[(int)i/3]);
-  }
+  // for (i=0; i<(Nnz*m); i+=3){
+  //   // alpha = 2 * M_PI * rand()/((double)RAND_MAX);
+  //   // printf("%d : wghts = %f, cos = %f, sin = %f\n",i/3, wghts[(int)i/3], cos(2*wghts[(int)i/3]), sin(2*wghts[(int)i/3]));
+  //   values[i+1] = cos(2*wghts[(int)i/3]);//cos(alpha);//1 + rand()/((double)RAND_MAX);//cos(wghts[(int)i/3]);
+  //   values[i+2] = sin(2*wghts[(int)i/3]);//sin(alpha);//1 + rand()/((double)RAND_MAX);//sin(wghts[(int)i/3]);
+  // }
 
 }//end if
 
@@ -235,7 +235,7 @@ else { //for the case we dont need to share
 
 
 //Pointing matrix init
-  MatInit( &A, m, Nnz, indices, values, pointing_commflag, MPI_COMM_WORLD);
+  MatInit( &A, m, Nnz, indices, wghts, pointing_commflag, MPI_COMM_WORLD);
   // printf("A.lcount = %d\n", A.lcount);
 
 // PCG begining vector input definition for the pixel domain map (MatInit gives A.lcount)
@@ -290,15 +290,15 @@ else { //for the case we dont need to share
 
 //For one identical block
   // ioReadTpltzfile( Tsize, fknee, T);
-  MPI_Barrier(MPI_COMM_WORLD);
-
-  if (rank==0)
-    ioReadTpltzfile( Tsize, T);
-
-  MPI_Bcast(T, Tsize,  MPI_DOUBLE, 0, MPI_COMM_WORLD);
-
-  MPI_Barrier(MPI_COMM_WORLD);
-  // ioReadTpltzrandom( Tsize, T);
+  // MPI_Barrier(MPI_COMM_WORLD);
+  //
+  // if (rank==0)
+  //   ioReadTpltzfile( Tsize, T);
+  //
+  // MPI_Bcast(T, Tsize,  MPI_DOUBLE, 0, MPI_COMM_WORLD);
+  //
+  // MPI_Barrier(MPI_COMM_WORLD);
+  ioReadTpltzrandom( Tsize, T);
   // for(i=0;i<50;i++)
   //   printf("Tpltz[%d] = %f\n",i,T[i]);
 //  createT(T, Tsize);

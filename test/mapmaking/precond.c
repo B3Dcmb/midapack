@@ -16,14 +16,27 @@
 #include <string.h>
 #include "midapack.h"
 
-int precondblockjacobilike(Mat A, Tpltz Nm1, Mat *BJ, int *lhits)
+extern int dgecon_(const char *norm, const int *n, double *a, const int *lda, const double *anorm, double *rcond, double *work, int *iwork, int *info, int len);
+extern int dgetrf_(const int *m, const int *n, double *a, const int *lda, int *lpiv, int *info);
+extern double dlange_(const char *norm, const int *m, const int *n, const double *a, const int *lda, double *work, const int norm_len);
+
+int precondblockjacobilike(Mat A, Tpltz Nm1, Mat *BJ, int *lhits, double *cond)
 {
   int           i, j, k ;                       // some indexes
   int           m, n, rank, size;
   int *indices_new;
   double *vpixBlock, *vpixBlock_loc;
   double det, invdet;
-  int pointing_commflag = 1;
+  int pointing_commflag = 2;
+
+  int info, nb, lda;
+  double anorm, rcond;
+
+  int iw[3];
+  double w[18];
+  double x[9];
+  nb = 3;
+  lda = 3;
 
   m = A.m;
   n = A.lcount;
@@ -48,10 +61,10 @@ int precondblockjacobilike(Mat A, Tpltz Nm1, Mat *BJ, int *lhits)
   // }
 
   //Compute local Atdiag(N^1)A
-    getlocalW(&A, Nm1, vpixBlock);
+  getlocalW(&A, Nm1, vpixBlock);
 
   //communicate with the other processes to have the global reduce
-    for(i=0;i<n*(A.nnz);i+=(A.nnz)*(A.nnz)){
+  for(i=0;i<n*(A.nnz);i+=(A.nnz)*(A.nnz)){
     for(j=0;j<(A.nnz);j++){
       vpixBlock_loc[(i/(A.nnz))+j] = vpixBlock[i+j];
     }
@@ -91,14 +104,32 @@ int precondblockjacobilike(Mat A, Tpltz Nm1, Mat *BJ, int *lhits)
     for(j=0;j<3;j++){
       for(k=0;k<3;k++){
         block[j][k] = vpixBlock[i+(j*3)+k];
+        x[k+3*j] = block[j][k];
       }
     }
+
+    //Compute the reciprocal of the condition number of the block
+
+    /* Computes the norm of x */
+    anorm = dlange_("1", &nb, &nb, x, &lda, w, 1);
+
+    /* Modifies x in place with a LU decomposition */
+    dgetrf_(&nb, &nb, x, &lda, iw, &info);
+    if (info != 0) fprintf(stderr, "failure with error %d\n", info);
+
+    /* Computes the reciprocal norm */
+    dgecon_("1", &nb, x, &lda, &anorm, &rcond, w, iw, &info, 1);
+    if (info != 0) fprintf(stderr, "failure with error %d\n", info);
+
+    cond[(int)i/9] = rcond;
+    if (rcond ==0) cond[(int)i/9] = 0.0001;
+
     //Compute det
     det = block[0][0] * (block[1][1] * block[2][2] - block[2][1] * block[1][2]) -
              block[0][1] * (block[1][0] * block[2][2] - block[1][2] * block[2][0]) +
              block[0][2] * (block[1][0] * block[2][1] - block[1][1] * block[2][0]);
 
-    if(fabs(det) > 1e-7){
+    if(rcond > 1e-3){
     invdet = 1 / det;
 
     //Compute the inverse coeffs
@@ -113,9 +144,10 @@ int precondblockjacobilike(Mat A, Tpltz Nm1, Mat *BJ, int *lhits)
     vpixBlock[i+8] = (block[0][0] * block[1][1] - block[1][0] * block[0][1]) * invdet;
   }
   else{// Cancel the resolution of pixels corresponding to singular blocks
-    vpixBlock[i] = 0.;
-    vpixBlock[i+4] = 0.;
-    vpixBlock[i+8] = 0.;
+    // printf("POOR CONDITIONING ! \n");
+    vpixBlock[i] = 1;
+    vpixBlock[i+4] = 1;
+    vpixBlock[i+8] = 1;
     vpixBlock[i+1] = 0.;
     vpixBlock[i+2] = 0.;
     vpixBlock[i+3] = 0.;
@@ -572,7 +604,7 @@ int get_pixshare_pond(Mat A, double *pixpond )
     pixpond[i] = 1.;
 
 //communicate with the others processes to have the global reduce
-  commScheme(&A, pixpond, 0);
+  commScheme(&A, pixpond, 2);
 
 // compute the inverse vector
   for(i=0; i<n; i++)

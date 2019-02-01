@@ -78,7 +78,7 @@ int PCG_GLS_true(Mat A, Tpltz Nm1, double *x, int *lhits, double *cond, double*b
 
   // precondjacobilike( A, Nm1, lhits, cond, c);
  // precondjacobilike_avg( A, Nm1, c);
-  precondblockjacobilike(A, Nm1, &BJ, lhits);
+  precondblockjacobilike(A, Nm1, &BJ, lhits, cond);
 //return 0;
 
   //if we want to use the true norm to compute the residual
@@ -101,7 +101,7 @@ int PCG_GLS_true(Mat A, Tpltz Nm1, double *x, int *lhits, double *cond, double*b
   //   printf("b-_g:_g[%d] = %f\n",i,_g[i]);
   // }
 
-  stbmmProd(Nm1, _g);		// _g = Nm1 (Ax-b)
+  stbmmProd(Nm1, _g);		// _g = Nm1 (b-Ax)
   // for(i=0; i<50; i++){//
   //     printf("Nm1*_g: _g[%d] = %f\n",i,_g[i]);
   // }
