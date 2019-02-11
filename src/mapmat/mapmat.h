@@ -6,6 +6,9 @@
     @author Pierre Cargemel
     @date November 2011 */
 
+/** Update by Hamza El Bouhargani
+    @date February 2019 */
+
 
 
 
@@ -35,8 +38,10 @@ typedef struct {
   int		flag;			// flag for communication scheme (NONE, RING, BUTTERFLY ...)
   int		m;			// number local rows
   int		nnz;                    // number non-zero per rows
+  int   ngap;   // number of local gap samples
   int		*indices;		// column indices tab; size = m * nnz; can be a global or local numbering
   double	*values;		// non-zero values tab; size = m * nnz
+  int  *ts_flags;   // Time samples flags: flag = 0 for gap_sample, else flag = 1; size = m+ngap
   //--------local shaping---------------
   int		lcount;
   int		*lindices;		// local indices tab (monotony with global numbering); size = lcount
@@ -51,7 +56,7 @@ typedef struct {
 }Mat;
 
 
-int MatInit(Mat *A, int m, int nnz, int *indices, double *values, int flag
+int MatInit(Mat *A, int m, int nnz, int ngap, int *indices, double *values, int *ts_flags, int flag
 #ifdef W_MPI
 , MPI_Comm comm
 #endif
@@ -61,6 +66,8 @@ void MatSetIndices(Mat *A, int m, int nnz, int *indices);
 
 void MatSetValues(Mat *A, int m, int nnz, double *values);
 
+void MatSetTSFlags(Mat *A, int m, int ngap, int *ts_flags);
+
 void MatFree(Mat *A);
 
 int MatLocalShape(Mat *A, int sflag);
@@ -69,9 +76,9 @@ int MatLocalShape(Mat *A, int sflag);
 int MatComShape(Mat *A, int flag,  MPI_Comm comm);
 #endif
 
-int MatVecProd(Mat *A, double *x, double *y, int *Gap_samples, int lgap, int m, int pflag, int gap_flag);
+int MatVecProd(Mat *A, double *x, double *y, int pflag);
 
-int TrMatVecProd(Mat *A, double *y, double* x, int *Gap_samples, int lgap, int pflag);
+int TrMatVecProd(Mat *A, double *y, double* x, int pflag);
 
 
 #if W_MPI

@@ -28,8 +28,6 @@ int PCG_GLS_true(Mat *A, Tpltz Nm1, double *x, double*b, double tol, int K)
   double	solve_time;
   double	res, res0;
   double *tmp;
-  int *Gap_samples;
-  int lgap = 0;
 
 
   m=A->m;					//number of local time samples
@@ -62,7 +60,7 @@ int PCG_GLS_true(Mat *A, Tpltz Nm1, double *x, double*b, double tol, int K)
   st=MPI_Wtime();
   // precondjacobilike( A, Nm1, lhits, cond, c);
  // precondjacobilike_avg( A, Nm1, c);
-  precondblockjacobilike(A, Nm1, &BJ, &Gap_samples, &lgap);
+  precondblockjacobilike(A, Nm1, &BJ);
   n=A->lcount;
   // for(i=0;i<lgap;i++){
   //   printf("\nGap[%d] = %d",i,Gap_samples[i]);
@@ -100,7 +98,7 @@ int PCG_GLS_true(Mat *A, Tpltz Nm1, double *x, double*b, double tol, int K)
  printf("Init PCG   t=%lf \n", t-st);
   st=MPI_Wtime();
 
-  MatVecProd(A, x, _g, Gap_samples, lgap, m, 0, 1);		//
+  MatVecProd(A, x, _g, 0);		//
   // for(i=0; i<8; i++){//
   //     printf("MatVecProd: _g[%d] = %f\n",i,_g[i]);
   // }
@@ -114,12 +112,12 @@ int PCG_GLS_true(Mat *A, Tpltz Nm1, double *x, double*b, double tol, int K)
   // for(i=0; i<50; i++){//
   //     printf("Nm1*_g: _g[%d] = %f\n",i,_g[i]);
   // }
-  TrMatVecProd(A, _g, g, Gap_samples, lgap, 0);		//  g = At _g
+  TrMatVecProd(A, _g, g, 0);		//  g = At _g
   // for(i=0; i<9; i++){			//
   //     printf("At*_g: g[%d] = %f\n",i,g[i]);
   // }
 
-  MatVecProd(&BJ, g, Cg, Gap_samples, lgap, n, 0, 0);
+  MatVecProd(&BJ, g, Cg, 0);
   // for(j=0; j<n; j++)                    //
   //   Cg[j]=c[j]*g[j]; 			//  Cg = C g  with C = Id
   // for(i=0; i<9; i++){
@@ -177,7 +175,7 @@ int PCG_GLS_true(Mat *A, Tpltz Nm1, double *x, double*b, double tol, int K)
   for(k=1; k<K ; k++){
 
 
-    MatVecProd(A, h, Ah, Gap_samples, lgap, m, 0, 1);		// Ah = A h
+    MatVecProd(A, h, Ah, 0);		// Ah = A h
     // for(i=0; i<8; i++){//
     //     printf("MatVecProd: Ah[%d] = %f\n",i,Ah[i]);
     // }
@@ -185,7 +183,7 @@ int PCG_GLS_true(Mat *A, Tpltz Nm1, double *x, double*b, double tol, int K)
     // for(i=0; i<8; i++){//
     //     printf("Nm1Ah: Nm1Ah[%d] = %f\n",i,Nm1Ah[i]);
     // }
-    TrMatVecProd(A, Nm1Ah, AtNm1Ah, Gap_samples, lgap, 0); //  AtNm1Ah = At Nm1Ah
+    TrMatVecProd(A, Nm1Ah, AtNm1Ah, 0); //  AtNm1Ah = At Nm1Ah
     // for(i=0; i<9; i++){//
     //     printf("lhs: AtNm1Ah[%d] = %f\n",i,AtNm1Ah[i]);
     // }
@@ -215,7 +213,7 @@ int PCG_GLS_true(Mat *A, Tpltz Nm1, double *x, double*b, double tol, int K)
       g[j] = g[j] - ro * AtNm1Ah[j] ;
 
 
-    MatVecProd(&BJ, g, Cg, Gap_samples, lgap, n, 0, 0);
+    MatVecProd(&BJ, g, Cg, 0);
     // for(j=0; j<n; j++)                  //
     //   Cg[j]=c[j]*g[j];                       //  Cg = C g  with C = Id
 

@@ -20,7 +20,7 @@ extern int dgecon_(const char *norm, const int *n, double *a, const int *lda, co
 extern int dgetrf_(const int *m, const int *n, double *a, const int *lda, int *lpiv, int *info);
 extern double dlange_(const char *norm, const int *m, const int *n, const double *a, const int *lda, double *work, const int norm_len);
 
-int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ, int **Gap_samples, int *lgap)
+int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ)
 {
   int           i, j, k ;                       // some indexes
   int           m, m_cut, n, rank, size;
@@ -28,7 +28,6 @@ int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ, int **Gap_samples, int *l
   double *vpixBlock, *vpixBlock_loc, *values_cut, *tmp2;
   double det, invdet;
   int pointing_commflag = 2;
-
   int info, nb, lda;
   double anorm, rcond;
 
@@ -175,19 +174,8 @@ int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ, int **Gap_samples, int *l
         // Find all the time samples "pointing" to the bad pixel
         if(A->indices[j*(A->nnz)] == (int)uncut_pixel_index/(A->nnz)){
           //Add j (row local index) to Gap_samples
-          if(*lgap!=0){
-            tmp1 = (int *) realloc(*Gap_samples,(*lgap+1)*sizeof(int));
-            if(tmp1 != NULL){
-              *Gap_samples = tmp1;
-            }
-            (*Gap_samples)[*lgap] = j;
-            (*lgap)++;
-          }
-          else{
-            *Gap_samples = (int *) malloc(1*sizeof(int));
-            **Gap_samples = j;
-            (*lgap)++;
-          }
+          A->ngap += 1;
+          A->ts_flags[j] = 0;
         }
       }
       // Cut the indices and values of the pointing matrix
@@ -195,19 +183,22 @@ int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ, int **Gap_samples, int *l
         // Find all the time samples "pointing" to the bad pixel
         if(indices_cut[j*(A->nnz)] == (int)uncut_pixel_index/(A->nnz)){
           //Remove j, j+1, j+2 th elements from indices and values of A
-          for(k=j*(A->nnz);k<m_cut*(A->nnz)-(A->nnz);k++){
-            indices_cut[k] = indices_cut[k+3];
-            values_cut[k] = values_cut[k+3];
-          }
+          memmove(indices_cut+j*(A->nnz), indices_cut+j*(A->nnz)+3, (m_cut*(A->nnz)-(A->nnz)-j*(A->nnz))*sizeof(int));
+          memmove(values_cut+j*(A->nnz), values_cut+j*(A->nnz)+3, (m_cut*(A->nnz)-(A->nnz)-j*(A->nnz))*sizeof(double));
+          // for(k=j*(A->nnz);k<m_cut*(A->nnz)-(A->nnz);k++){
+          //   indices_cut[k] = indices_cut[k+3];
+          //   values_cut[k] = values_cut[k+3];
+          // }
           // Shrink effective size of indices_cut and values_cut
           m_cut -= 1;
           j -= 1;
         }
       }
       // Remove degenerate pixel from vpixBlock
-      for(k=i;k<n*(A->nnz)-(A->nnz)*(A->nnz);k++){
-        vpixBlock[k] = vpixBlock[k+(A->nnz)*(A->nnz)];
-      }
+      memmove(vpixBlock+i,vpixBlock+i+(A->nnz)*(A->nnz),(n*(A->nnz)-(A->nnz)*(A->nnz)-i)*sizeof(double));
+      // for(k=i;k<n*(A->nnz)-(A->nnz)*(A->nnz);k++){
+      //   vpixBlock[k] = vpixBlock[k+(A->nnz)*(A->nnz)];
+      // }
       // Shrink effective size of vpixBlock
       n -= (A->nnz);
       i -= (A->nnz)*(A->nnz);
@@ -240,7 +231,7 @@ int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ, int **Gap_samples, int *l
   // free  memory of original pointing matrix
   MatFree(A);
   // Definie new pointing matrix (marginalized over degenerate pixels and free from gap samples)
-  MatInit(A, m_cut, A->nnz, indices_cut, values_cut, pointing_commflag, MPI_COMM_WORLD);
+  MatInit(A, m_cut, A->nnz, A->ngap, indices_cut, values_cut, A->ts_flags, pointing_commflag, MPI_COMM_WORLD);
 
   //Define Block-Jacobi preconditioner indices
   for(i=0;i<n;i++){
@@ -250,7 +241,10 @@ int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ, int **Gap_samples, int *l
   }
 
   //Init Block-Jacobi preconditioner
-  MatInit(BJ, n, A->nnz, indices_new, vpixBlock, pointing_commflag, MPI_COMM_WORLD);
+  MatSetIndices(BJ, n, A->nnz, indices_new);
+  MatSetValues(BJ, n, A->nnz, vpixBlock);
+  BJ->ngap = 0;
+  MatLocalShape(BJ,3);
 
   return 0;
 

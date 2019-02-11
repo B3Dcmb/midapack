@@ -36,14 +36,14 @@ int main(int argc, char *argv[])
 
   int64_t	M;       //Global number of rows
   int 		N, Nnz;  //of columns, of non-zeros values per column for the pointing matrix A
-  int		m, n;  //local number of rows, of columns for the pointing matrix A
+  int		m, n, ngap;  //local number of rows, of columns for the pointing matrix A and of gamp samples
   int64_t	gif;			//global indice for the first local line
   int		i, j, k;
   int           K;	                //maximum number of iteration for the PCG
   double 	tol;			//residual tolerence for the PCG
   Mat	A;			        //pointing matrix structure
-  int 		*indices;
-  double 	*values;
+  int 		*indices, *ts_flags;
+  // double 	*values;
   int 		pointing_commflag ;	//option for the communication scheme for the pointing matrix
   double	*b, *Ag, *Ad, *wghts; 	 	//temporal domain vectors
   double	*x, *g, *d, *Ax_b;	//pixel domain vectors
@@ -99,9 +99,15 @@ int main(int argc, char *argv[])
 
 //input data memory allocation
   indices  = (int *) malloc(Nnz*m * sizeof(int));     //for pointing matrix indices
-  values  = (double *) malloc(Nnz*m * sizeof(double));//for pointing matrix values
   b   = (double *) malloc(m*sizeof(double));    //full raw data vector for the signal
-  wghts = (double *) malloc(Nnz*m * sizeof(double));
+  wghts = (double *) malloc(Nnz*m * sizeof(double)); //for poiting matrix weights
+  ts_flags = (int *) malloc(m * sizeof(int));
+
+  //Assume no gap samples initally
+  ngap = 0;
+  for(i=0;i<m;i++)
+    ts_flags[i] = 1;
+
 
   //Read data from files:
 //note: work only if the number of processes is a multiple of the number of stationary intervals
@@ -112,11 +118,6 @@ int main(int argc, char *argv[])
   double *signal;   // signal input data
   double *weights; // weights of the pointing matrix
 
-
-
-//Init the pointing matrix values to unity
-  for(i=0; i<(Nnz*m); i++)
-    values[i] = 1.;
   int number_in_interval;
 
 int flag_bigdata=1;
@@ -235,7 +236,7 @@ else { //for the case we dont need to share
 
 
 //Pointing matrix init
-  MatInit( &A, m, Nnz, indices, wghts, pointing_commflag, MPI_COMM_WORLD);
+  MatInit( &A, m, Nnz, ngap, indices, wghts, ts_flags, pointing_commflag, MPI_COMM_WORLD);
   // printf("A.lcount = %d\n", A.lcount);
 
 // PCG begining vector input definition for the pixel domain map (MatInit gives A.lcount)
