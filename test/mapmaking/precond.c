@@ -5,7 +5,7 @@
 /** @file   precond.c
     @author Frederic Dauvergne
     @date   November 2012
-    @Last_update October 2018 by Hamza El Bouhargani*/
+    @Last_update February 2019 by Hamza El Bouhargani*/
 
 
 #include <stdlib.h>
@@ -20,12 +20,12 @@ extern int dgecon_(const char *norm, const int *n, double *a, const int *lda, co
 extern int dgetrf_(const int *m, const int *n, double *a, const int *lda, int *lpiv, int *info);
 extern double dlange_(const char *norm, const int *m, const int *n, const double *a, const int *lda, double *work, const int norm_len);
 
-int precondblockjacobilike(Mat A, Tpltz Nm1, Mat *BJ, int *lhits, double *cond)
+int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ, int **Gap_samples, int *lgap)
 {
   int           i, j, k ;                       // some indexes
-  int           m, n, rank, size;
-  int *indices_new;
-  double *vpixBlock, *vpixBlock_loc;
+  int           m, m_cut, n, rank, size;
+  int *indices_new, *indices_cut, *tmp1;
+  double *vpixBlock, *vpixBlock_loc, *values_cut, *tmp2;
   double det, invdet;
   int pointing_commflag = 2;
 
@@ -38,67 +38,80 @@ int precondblockjacobilike(Mat A, Tpltz Nm1, Mat *BJ, int *lhits, double *cond)
   nb = 3;
   lda = 3;
 
-  m = A.m;
-  n = A.lcount;
-  MPI_Comm_rank(A.comm, &rank);                 //
-  MPI_Comm_size(A.comm, &size);
+  m = A->m;
+  m_cut = m;
+  n = A->lcount;
+  MPI_Comm_rank(A->comm, &rank);                 //
+  MPI_Comm_size(A->comm, &size);
 
-  indices_new = (int *) malloc((A.nnz)*n * sizeof(int));
+  indices_new = (int *) malloc((A->nnz)*n * sizeof(int));
   vpixBlock_loc = (double *) malloc(n * sizeof(double));
-  vpixBlock = (double *) malloc(n*(A.nnz) * sizeof(double));
+  vpixBlock = (double *) malloc(n*(A->nnz) * sizeof(double));
+
+  indices_cut = (int *) malloc((A->nnz)*m * sizeof(int));
+  values_cut = (double *) malloc(m*(A->nnz)* sizeof(double));
+  //Copy the pointing data content (NOT IN THE SAME MEMORY ADRESS)
+  for(i=0;i<m*(A->nnz);i++){
+    indices_cut[i]= A->indices[i];
+    values_cut[i]= A->values[i];
+  }
 
   // //Init vpixBlock
-  // for(i=0;i<n*(A.nnz);i++)
+  // for(i=0;i<n*(A->nnz);i++)
   //   vpixBlock[i] = 0.;
   //
   // //Compute local AtA blocks (local sum over same pix blocks)
-  // for(i=0;i<A.m;i++){
-  //   for(j=0;j<A.nnz;j++){
-  //     for(k=0;k<A.nnz;k++){
-  //       vpixBlock[(A.nnz)*A.indices[i*(A.nnz)+j]+k] += A.values[i*(A.nnz)+j]*A.values[i*(A.nnz)+k];
+  // for(i=0;i<A->m;i++){
+  //   for(j=0;j<A->nnz;j++){
+  //     for(k=0;k<A->nnz;k++){
+  //       vpixBlock[(A->nnz)*A->indices[i*(A->nnz)+j]+k] += A->values[i*(A->nnz)+j]*A->values[i*(A->nnz)+k];
   //     }
   //   }
   // }
-
   //Compute local Atdiag(N^1)A
-  getlocalW(&A, Nm1, vpixBlock);
+  getlocalW(A, Nm1, vpixBlock);
+
+  // free values array from memory which will be later replaced by values_cut
+  free(A->values);
 
   //communicate with the other processes to have the global reduce
-  for(i=0;i<n*(A.nnz);i+=(A.nnz)*(A.nnz)){
-    for(j=0;j<(A.nnz);j++){
-      vpixBlock_loc[(i/(A.nnz))+j] = vpixBlock[i+j];
+  //TODO : This should be done in a more efficient way
+  for(i=0;i<n*(A->nnz);i+=(A->nnz)*(A->nnz)){
+    for(j=0;j<(A->nnz);j++){
+      vpixBlock_loc[(i/(A->nnz))+j] = vpixBlock[i+j];
     }
   }
-  commScheme(&A, vpixBlock_loc, 2);
-  for(i=0;i<n*(A.nnz);i+=(A.nnz)*(A.nnz)){
-    for(j=0;j<(A.nnz);j++){
-      vpixBlock[i+j] = vpixBlock_loc[(i/(A.nnz))+j];
+  commScheme(A, vpixBlock_loc, 2);
+  for(i=0;i<n*(A->nnz);i+=(A->nnz)*(A->nnz)){
+    for(j=0;j<(A->nnz);j++){
+      vpixBlock[i+j] = vpixBlock_loc[(i/(A->nnz))+j];
     }
   }
 
-  for(i=3;i<n*(A.nnz);i+=(A.nnz)*(A.nnz)){
-    for(j=0;j<(A.nnz);j++)
-      vpixBlock_loc[(i-3)/(A.nnz)+j] = vpixBlock[i+j];
+  for(i=3;i<n*(A->nnz);i+=(A->nnz)*(A->nnz)){
+    for(j=0;j<(A->nnz);j++)
+      vpixBlock_loc[(i-3)/(A->nnz)+j] = vpixBlock[i+j];
   }
-  commScheme(&A, vpixBlock_loc, 2);
-  for(i=3;i<n*(A.nnz);i+=(A.nnz)*(A.nnz)){
-    for(j=0;j<(A.nnz);j++)
-      vpixBlock[i+j] = vpixBlock_loc[(i-3)/(A.nnz)+j];
+  commScheme(A, vpixBlock_loc, 2);
+  for(i=3;i<n*(A->nnz);i+=(A->nnz)*(A->nnz)){
+    for(j=0;j<(A->nnz);j++)
+      vpixBlock[i+j] = vpixBlock_loc[(i-3)/(A->nnz)+j];
   }
 
-  for(i=6;i<n*(A.nnz);i+=(A.nnz)*(A.nnz)){
-    for(j=0;j<(A.nnz);j++)
-      vpixBlock_loc[(i-6)/(A.nnz)+j] = vpixBlock[i+j];
+  for(i=6;i<n*(A->nnz);i+=(A->nnz)*(A->nnz)){
+    for(j=0;j<(A->nnz);j++)
+      vpixBlock_loc[(i-6)/(A->nnz)+j] = vpixBlock[i+j];
   }
-  commScheme(&A, vpixBlock_loc, 2);
-  for(i=6;i<n*(A.nnz);i+=(A.nnz)*(A.nnz)){
-    for(j=0;j<(A.nnz);j++)
-      vpixBlock[i+j] = vpixBlock_loc[(i-6)/(A.nnz)+j];
+  commScheme(A, vpixBlock_loc, 2);
+  for(i=6;i<n*(A->nnz);i+=(A->nnz)*(A->nnz)){
+    for(j=0;j<(A->nnz);j++)
+      vpixBlock[i+j] = vpixBlock_loc[(i-6)/(A->nnz)+j];
   }
 
   //Compute the inverse of the global AtA blocks (beware this part is only valid for nnz = 3)
-  for(i=0;i<n*(A.nnz);i+=(A.nnz)*(A.nnz)){
-    lhits[(int)i/9] = (int)vpixBlock[i];
+  int uncut_pixel_index = 0;
+  for(i=0;i<n*(A->nnz);i+=(A->nnz)*(A->nnz)){
+    // lhits[(int)i/9] = (int)vpixBlock[i];
     //init 3x3 block
     double block[3][3];
     for(j=0;j<3;j++){
@@ -115,16 +128,16 @@ int precondblockjacobilike(Mat A, Tpltz Nm1, Mat *BJ, int *lhits, double *cond)
 
     /* Modifies x in place with a LU decomposition */
     dgetrf_(&nb, &nb, x, &lda, iw, &info);
-    if (info != 0) fprintf(stderr, "failure with error %d\n", info);
+    // if (info != 0) fprintf(stderr, "failure with error %d\n", info);
 
     /* Computes the reciprocal norm */
     dgecon_("1", &nb, x, &lda, &anorm, &rcond, w, iw, &info, 1);
-    if (info != 0) fprintf(stderr, "failure with error %d\n", info);
+    // if (info != 0) fprintf(stderr, "failure with error %d\n", info);
 
-    cond[(int)i/9] = rcond;
-    if (rcond ==0) cond[(int)i/9] = 0.0001;
+    // cond[(int)i/9] = rcond;
 
     //Compute det
+    //TODO: This should take into account the fact that the blocks are symmetric
     det = block[0][0] * (block[1][1] * block[2][2] - block[2][1] * block[1][2]) -
              block[0][1] * (block[1][0] * block[2][2] - block[1][2] * block[2][0]) +
              block[0][2] * (block[1][0] * block[2][1] - block[1][1] * block[2][0]);
@@ -133,6 +146,7 @@ int precondblockjacobilike(Mat A, Tpltz Nm1, Mat *BJ, int *lhits, double *cond)
     invdet = 1 / det;
 
     //Compute the inverse coeffs
+    //TODO: This should take into account the fact that the blocks are symmetric
     vpixBlock[i] = (block[1][1] * block[2][2] - block[2][1] * block[1][2]) * invdet;
     vpixBlock[i+1] = (block[0][2] * block[2][1] - block[0][1] * block[2][2]) * invdet;
     vpixBlock[i+2] = (block[0][1] * block[1][2] - block[0][2] * block[1][1]) * invdet;
@@ -142,30 +156,101 @@ int precondblockjacobilike(Mat A, Tpltz Nm1, Mat *BJ, int *lhits, double *cond)
     vpixBlock[i+6] = (block[1][0] * block[2][1] - block[2][0] * block[1][1]) * invdet;
     vpixBlock[i+7] = (block[2][0] * block[0][1] - block[0][0] * block[2][1]) * invdet;
     vpixBlock[i+8] = (block[0][0] * block[1][1] - block[1][0] * block[0][1]) * invdet;
+    }
+    else{// Remove the degenerate pixels from the map-making
+      // printf("POOR CONDITIONING ! \n");
+      // vpixBlock[i] = 1;
+      // vpixBlock[i+4] = 1;
+      // vpixBlock[i+8] = 1;
+      // vpixBlock[i+1] = 0.;
+      // vpixBlock[i+2] = 0.;
+      // vpixBlock[i+3] = 0.;
+      // vpixBlock[i+5] = 0.;
+      // vpixBlock[i+6] = 0.;
+      // vpixBlock[i+7] = 0.;
+
+      // Remove poorly conditioned pixel from the map and flag the associated gap samples
+      // Flag gap Gap_samples
+      for(j=0;j<m;j++){
+        // Find all the time samples "pointing" to the bad pixel
+        if(A->indices[j*(A->nnz)] == (int)uncut_pixel_index/(A->nnz)){
+          //Add j (row local index) to Gap_samples
+          if(*lgap!=0){
+            tmp1 = (int *) realloc(*Gap_samples,(*lgap+1)*sizeof(int));
+            if(tmp1 != NULL){
+              *Gap_samples = tmp1;
+            }
+            (*Gap_samples)[*lgap] = j;
+            (*lgap)++;
+          }
+          else{
+            *Gap_samples = (int *) malloc(1*sizeof(int));
+            **Gap_samples = j;
+            (*lgap)++;
+          }
+        }
+      }
+      // Cut the indices and values of the pointing matrix
+      for(j=0;j<m_cut;j++){
+        // Find all the time samples "pointing" to the bad pixel
+        if(indices_cut[j*(A->nnz)] == (int)uncut_pixel_index/(A->nnz)){
+          //Remove j, j+1, j+2 th elements from indices and values of A
+          for(k=j*(A->nnz);k<m_cut*(A->nnz)-(A->nnz);k++){
+            indices_cut[k] = indices_cut[k+3];
+            values_cut[k] = values_cut[k+3];
+          }
+          // Shrink effective size of indices_cut and values_cut
+          m_cut -= 1;
+          j -= 1;
+        }
+      }
+      // Remove degenerate pixel from vpixBlock
+      for(k=i;k<n*(A->nnz)-(A->nnz)*(A->nnz);k++){
+        vpixBlock[k] = vpixBlock[k+(A->nnz)*(A->nnz)];
+      }
+      // Shrink effective size of vpixBlock
+      n -= (A->nnz);
+      i -= (A->nnz)*(A->nnz);
+    }
+    uncut_pixel_index+=(A->nnz)*(A->nnz);
   }
-  else{// Cancel the resolution of pixels corresponding to singular blocks
-    // printf("POOR CONDITIONING ! \n");
-    vpixBlock[i] = 1;
-    vpixBlock[i+4] = 1;
-    vpixBlock[i+8] = 1;
-    vpixBlock[i+1] = 0.;
-    vpixBlock[i+2] = 0.;
-    vpixBlock[i+3] = 0.;
-    vpixBlock[i+5] = 0.;
-    vpixBlock[i+6] = 0.;
-    vpixBlock[i+7] = 0.;
+  // free memory
+  free(A->indices);
+
+  // Reallocate memory of vpixBlock by shrinking its memory size to its effective size (no degenerate pixel)
+  tmp2 = (double *) realloc(vpixBlock, n*(A->nnz)*sizeof(double));
+  if(tmp2 != NULL){
+    vpixBlock = tmp2;
   }
+
+  // Reallocate memory of indices_cut and values_cut by shrinking their memory size to effective size
+  tmp1 = (int *) realloc(indices_cut, m_cut*(A->nnz)*sizeof(int));
+  if(tmp1 != NULL){
+    indices_cut = tmp1;
   }
+  tmp2 = (double *) realloc(values_cut, m_cut*(A->nnz)*sizeof(double));
+  if(tmp2 != NULL){
+    values_cut = tmp2;
+  }
+  // map local indices to global indices in indices_cut
+  for(i=0; i<m_cut*A->nnz;i++){
+    // get global indices in indices_cut
+    indices_cut[i] = A->lindices[indices_cut[i]];
+  }
+  // free  memory of original pointing matrix
+  MatFree(A);
+  // Definie new pointing matrix (marginalized over degenerate pixels and free from gap samples)
+  MatInit(A, m_cut, A->nnz, indices_cut, values_cut, pointing_commflag, MPI_COMM_WORLD);
 
   //Define Block-Jacobi preconditioner indices
   for(i=0;i<n;i++){
-    for(j=0;j<(A.nnz);j++){
-        indices_new[i*(A.nnz)+j] = A.lindices[(A.nnz)*((int)i/(A.nnz))+j];
+    for(j=0;j<(A->nnz);j++){
+        indices_new[i*(A->nnz)+j] = A->lindices[(A->nnz)*((int)i/(A->nnz))+j];
     }
   }
-  // Init Block-Jacobi preconditioner
-  MatInit(BJ, n, A.nnz, indices_new, vpixBlock, pointing_commflag, MPI_COMM_WORLD);
 
+  //Init Block-Jacobi preconditioner
+  MatInit(BJ, n, A->nnz, indices_new, vpixBlock, pointing_commflag, MPI_COMM_WORLD);
 
   return 0;
 
@@ -581,7 +666,7 @@ lues*/
 
 
 
-int get_pixshare_pond(Mat A, double *pixpond )
+int get_pixshare_pond(Mat *A, double *pixpond )
 {
 
   int           i, j, k ;                       // some indexes
@@ -591,11 +676,11 @@ int get_pixshare_pond(Mat A, double *pixpond )
 
 //  double        *eyesdble;
 
-  MPI_Comm_rank(A.comm, &rank);                 //
-  MPI_Comm_size(A.comm, &size);                 //
+  MPI_Comm_rank(A->comm, &rank);                 //
+  MPI_Comm_size(A->comm, &size);                 //
 
-  m=A.m;                                        //number of local time samples
-  n=A.lcount;                                   //number of local pixels
+  m=A->m;                                        //number of local time samples
+  n=A->lcount;                                   //number of local pixels
 
 //  eyesdble = (double *) malloc(n*sizeof(double));
 
@@ -604,7 +689,7 @@ int get_pixshare_pond(Mat A, double *pixpond )
     pixpond[i] = 1.;
 
 //communicate with the others processes to have the global reduce
-  commScheme(&A, pixpond, 2);
+  commScheme(A, pixpond, 2);
 
 // compute the inverse vector
   for(i=0; i<n; i++)

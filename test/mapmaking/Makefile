@@ -44,13 +44,12 @@ example_pcg: $(TOEPLITZ) $(MAPMAT)
 	make createToeplitz.o \
 	precond.o \
 	pcg_true.o \
-	pcg_like.o \
 	iofiles.o \
 	test_pcg \
 	test_pcg_pol \
 	toast_pipeline \
+	fake_pipeline \
 	test_pcg_rand \
-	test_com
 
 exemple_iofilepix:
 	make map2gif.o \
@@ -117,6 +116,10 @@ test_pcg_pol: createToeplitz.o precond.o test_pcg_polar.c iofiles.o pcg_true.o
 
 toast_pipeline: createToeplitz.o precond.o toast_pipeline.c iofiles.o pcg_true.o
 		$(CC) toast_pipeline.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(LIB) $(FFTW_LIB) -lm -o toast_pcg
+
+fake_pipeline: createToeplitz.o precond.o fake_pipeline.c iofiles.o pcg_true.o
+				$(CC) fake_pipeline.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(LIB) $(FFTW_LIB) -lm -o fake_pcg
+
 
 test_pcg_rand: createToeplitz.o precond.o test_pcg_rand.c iofiles.o pcg_true.o
 	$(CC) test_pcg_rand.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(LIB) $(FFTW_LIB) -lm -o pcg_rand

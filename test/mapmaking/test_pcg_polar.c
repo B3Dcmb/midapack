@@ -239,17 +239,17 @@ else { //for the case we dont need to share
   // printf("A.lcount = %d\n", A.lcount);
 
 // PCG begining vector input definition for the pixel domain map (MatInit gives A.lcount)
-  int *lhits;
-  double *cond;
+  // int *lhits;
+  // double *cond;
   x   = (double *) malloc(A.lcount*sizeof(double));
-  cond = (double *) malloc((int)(A.lcount/3)*sizeof(double));
-  lhits = (int *) malloc((int)(A.lcount/3) * sizeof(int));
+  // cond = (double *) malloc((int)(A.lcount/3)*sizeof(double));
+  // lhits = (int *) malloc((int)(A.lcount/3) * sizeof(int));
   for(j=0; j<A.lcount; j++){
     x[j] = 0.;
-    if(j%3 == 0){
-      lhits[(int)(j/3)] = 0;
-      cond[(int)(j/3)] = 0.;
-    }
+    // if(j%3 == 0){
+    //   lhits[(int)(j/3)] = 0;
+    //   cond[(int)(j/3)] = 0.;
+    // }
   }
 
 
@@ -343,7 +343,7 @@ else { //for the case we dont need to share
   st=MPI_Wtime();
 
 // Conjugate Gradient
-  PCG_GLS_true( A, Nm1, x, lhits, cond, b, tol, K);
+  PCG_GLS_true( A, Nm1, x, b, tol, K);
 
 
   MPI_Barrier(MPI_COMM_WORLD);
@@ -371,7 +371,7 @@ else { //for the case we dont need to share
     //     lhits[i] += 1;
     // }
   }
-  ioWritebinfile( mapsize, map_id, lstid, lhits, cond, x);
+  ioWritebinfile( mapsize, map_id, lstid, x);
 
 
 //Write some parameters in txt file:

@@ -6,7 +6,7 @@
 /** @file   pcg_true.c
     @author Frederic Dauvergne
     @date   November 2012
-    @Last_update October 2018 by Hamza El Bouhargani*/
+    @Last_update February 2019 by Hamza El Bouhargani*/
 
 
 #include <stdlib.h>
@@ -19,20 +19,23 @@
 
 
 
-int PCG_GLS_true(Mat A, Tpltz Nm1, double *x, int *lhits, double *cond, double*b, double tol, int K)
+int PCG_GLS_true(Mat *A, Tpltz Nm1, double *x, double*b, double tol, int K)
 {
-
   int 		i, j, k ;			// some indexes
   int		m, n, rank, size;
   double 	localreduce;			//reduce buffer
   double	st, t;				//timers
   double	solve_time;
   double	res, res0;
+  double *tmp;
+  int *Gap_samples;
+  int lgap = 0;
 
-  m=A.m;					//number of local time samples
-  n=A.lcount;					//number of local pixels
-  MPI_Comm_rank(A.comm, &rank);			//
-  MPI_Comm_size(A.comm, &size);			//
+
+  m=A->m;					//number of local time samples
+  n=A->lcount;					//number of local pixels
+  MPI_Comm_rank(A->comm, &rank);			//
+  MPI_Comm_size(A->comm, &size);			//
 
 
   double *_g, *ACg, *Ah, *Nm1Ah ;		// time domain vectors
@@ -41,6 +44,34 @@ int PCG_GLS_true(Mat A, Tpltz Nm1, double *x, int *lhits, double *cond, double*b
   double ro, gamma, coeff ;			// scalars
   double g2pix, g2pixp;
   double norm2b;
+
+/*
+  printf("n=%d, m=%d, A->nnz=%d \n", n, m, A->nnz );
+*/
+
+//Init CG descent
+  // double *c;
+  // c = (double *) malloc(n*sizeof(double));
+  Mat BJ;
+
+
+// for no preconditionner:
+ // for(j=0; j<n; j++)                    //
+ //   c[j]=1.;
+
+  st=MPI_Wtime();
+  // precondjacobilike( A, Nm1, lhits, cond, c);
+ // precondjacobilike_avg( A, Nm1, c);
+  precondblockjacobilike(A, Nm1, &BJ, &Gap_samples, &lgap);
+  n=A->lcount;
+  // for(i=0;i<lgap;i++){
+  //   printf("\nGap[%d] = %d",i,Gap_samples[i]);
+//return 0;
+  //cut the bad pixels
+  tmp = realloc(x, A->lcount*sizeof(double));
+  if(tmp !=NULL){
+    x = tmp;
+  }
 
   //map domain
   h = (double *) malloc(n*sizeof(double));      //descent direction
@@ -54,32 +85,10 @@ int PCG_GLS_true(Mat A, Tpltz Nm1, double *x, int *lhits, double *cond, double*b
   Cg = AtNm1Ah;
   Nm1Ah = Ah;
 
-
-/*
-  printf("n=%d, m=%d, A.nnz=%d \n", n, m, A.nnz );
-*/
-
-//Init CG descent
-  // double *c;
-  // c = (double *) malloc(n*sizeof(double));
-  Mat BJ;
-
   double *pixpond;
   pixpond = (double *) malloc(n*sizeof(double));
-
-
-// for no preconditionner:
- // for(j=0; j<n; j++)                    //
- //   c[j]=1.;
-
-  st=MPI_Wtime();
-//compute pixel share ponderation
-  get_pixshare_pond( A, pixpond);
-
-  // precondjacobilike( A, Nm1, lhits, cond, c);
- // precondjacobilike_avg( A, Nm1, c);
-  precondblockjacobilike(A, Nm1, &BJ, lhits, cond);
-//return 0;
+  //compute pixel share ponderation
+  get_pixshare_pond(A, pixpond);
 
   //if we want to use the true norm to compute the residual
   int TRUE_NORM=0;  //0: No ; 1: Yes
@@ -91,13 +100,13 @@ int PCG_GLS_true(Mat A, Tpltz Nm1, double *x, int *lhits, double *cond, double*b
  printf("Init PCG   t=%lf \n", t-st);
   st=MPI_Wtime();
 
-  MatVecProd(&A, x, _g, 0);		//
-  // for(i=0; i<50; i++){//
+  MatVecProd(A, x, _g, Gap_samples, lgap, m, 0, 1);		//
+  // for(i=0; i<8; i++){//
   //     printf("MatVecProd: _g[%d] = %f\n",i,_g[i]);
   // }
   for(i=0; i<m; i++)	//
     _g[i] = b[i] - _g[i];		//
-  // for(i=0; i<50; i++){
+  // for(i=0; i<8; i++){
   //   printf("b-_g:_g[%d] = %f\n",i,_g[i]);
   // }
 
@@ -105,15 +114,15 @@ int PCG_GLS_true(Mat A, Tpltz Nm1, double *x, int *lhits, double *cond, double*b
   // for(i=0; i<50; i++){//
   //     printf("Nm1*_g: _g[%d] = %f\n",i,_g[i]);
   // }
-  TrMatVecProd(&A, _g, g, 0);		//  g = At _g
-  // for(i=0; i<50; i++){			//
+  TrMatVecProd(A, _g, g, Gap_samples, lgap, 0);		//  g = At _g
+  // for(i=0; i<9; i++){			//
   //     printf("At*_g: g[%d] = %f\n",i,g[i]);
   // }
 
-  MatVecProd(&BJ, g, Cg, 0);
+  MatVecProd(&BJ, g, Cg, Gap_samples, lgap, n, 0, 0);
   // for(j=0; j<n; j++)                    //
   //   Cg[j]=c[j]*g[j]; 			//  Cg = C g  with C = Id
-  // for(i=0; i<50; i++){
+  // for(i=0; i<9; i++){
   //     printf("Cg[%d]=%f\n",i,Cg[i]);
   // }
   for(j=0; j<n; j++)   		        //  h = -Cg
@@ -168,16 +177,16 @@ int PCG_GLS_true(Mat A, Tpltz Nm1, double *x, int *lhits, double *cond, double*b
   for(k=1; k<K ; k++){
 
 
-    MatVecProd(&A, h, Ah, 0);		// Ah = A h
-    // for(i=0; i<10; i++){//
+    MatVecProd(A, h, Ah, Gap_samples, lgap, m, 0, 1);		// Ah = A h
+    // for(i=0; i<8; i++){//
     //     printf("MatVecProd: Ah[%d] = %f\n",i,Ah[i]);
     // }
     stbmmProd(Nm1, Nm1Ah);		// Nm1Ah = Nm1 Ah   (Nm1Ah == Ah)
-    // for(i=0; i<10; i++){//
+    // for(i=0; i<8; i++){//
     //     printf("Nm1Ah: Nm1Ah[%d] = %f\n",i,Nm1Ah[i]);
     // }
-    TrMatVecProd(&A, Nm1Ah, AtNm1Ah, 0); //  AtNm1Ah = At Nm1Ah
-    // for(i=0; i<10; i++){//
+    TrMatVecProd(A, Nm1Ah, AtNm1Ah, Gap_samples, lgap, 0); //  AtNm1Ah = At Nm1Ah
+    // for(i=0; i<9; i++){//
     //     printf("lhs: AtNm1Ah[%d] = %f\n",i,AtNm1Ah[i]);
     // }
     coeff=0.0;
@@ -206,7 +215,7 @@ int PCG_GLS_true(Mat A, Tpltz Nm1, double *x, int *lhits, double *cond, double*b
       g[j] = g[j] - ro * AtNm1Ah[j] ;
 
 
-    MatVecProd(&BJ, g, Cg, 0);
+    MatVecProd(&BJ, g, Cg, Gap_samples, lgap, n, 0, 0);
     // for(j=0; j<n; j++)                  //
     //   Cg[j]=c[j]*g[j];                       //  Cg = C g  with C = Id
 

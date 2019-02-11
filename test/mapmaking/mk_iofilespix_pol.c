@@ -42,10 +42,10 @@ int main(int argc, char *argv[])
   mapQ    = (double *) calloc(npix, sizeof(double));
   double *mapU;
   mapU    = (double *) calloc(npix, sizeof(double));
-  int *hits;
-  hits = (int *) calloc(npix, sizeof(int));
-  double *Cond;
-  Cond = (double *) calloc(npix, sizeof(double));
+  // int *hits;
+  // hits = (int *) calloc(npix, sizeof(int));
+  // double *Cond;
+  // Cond = (double *) calloc(npix, sizeof(double));
 
 
 //read output from binaries files:
@@ -53,8 +53,8 @@ int main(int argc, char *argv[])
   int map_id=0;
   double *x;
   int *lstid;
-  int *lhits;
-  double *cond;
+  // int *lhits;
+  // double *cond;
 
   int size0;
   ioReadtxtfile( &size0, &idp, &m, &Alcount, &Nb_t_Intervals, &t_Interval_length, &LambdaBlock, &Nb_t_Intervals_loc, 0);
@@ -72,19 +72,19 @@ int main(int argc, char *argv[])
   xsize=Alcount;
   x   = (double *) malloc(xsize*sizeof(double));
   lstid = (int *) malloc(xsize*sizeof(int));
-  lhits = (int *) malloc((int)(xsize/3)*sizeof(int));
-  cond = (double *) malloc((int)(xsize/3)*sizeof(double));
+  // lhits = (int *) malloc((int)(xsize/3)*sizeof(int));
+  // cond = (double *) malloc((int)(xsize/3)*sizeof(double));
 
-  ioReadbinfile( xsize, map_id, lstid, lhits, cond, x);
+  ioReadbinfile( xsize, map_id, lstid, x);
 
-  x2map_pol( mapI, mapQ, mapU, hits, Cond, npix, x, lstid, lhits, cond, xsize);
+  x2map_pol( mapI, mapQ, mapU, npix, x, lstid, xsize);
 
   free(x);
   free(lstid);
   }//end loop over processors
 
 //binarie one
-  ioWritePixbinfile_pol( npix, mapI, mapQ, mapU, hits, Cond);
+  ioWritePixbinfile_pol( npix, mapI, mapQ, mapU);
 
   return 0;
 }
@@ -118,7 +118,7 @@ int ioReadtxtfile( int *size0, int *idp, int *m, int *Alcount, int *Nb_t_Interva
 }
 
 
-int x2map_pol( double *mapI, double *mapQ, double *mapU, int *hits, double *Cond, int npix, double *x, int *lstid, int *lhits, double *cond, int xsize)
+int x2map_pol( double *mapI, double *mapQ, double *mapU, int npix, double *x, int *lstid, int xsize)
 {
 
   int i;
@@ -136,8 +136,8 @@ int x2map_pol( double *mapI, double *mapQ, double *mapU, int *hits, double *Cond
   for(i=0; i<xsize; i++){
     if(i%3 == 0){
       mapI[(int)(lstid[i]/3)]= x[i];
-      hits[(int)(lstid[i]/3)]= lhits[(int)(i/3)];
-      Cond[(int)(lstid[i]/3)]= cond[(int)(i/3)];
+      // hits[(int)(lstid[i]/3)]= lhits[(int)(i/3)];
+      // Cond[(int)(lstid[i]/3)]= cond[(int)(i/3)];
     }
     else if (i%3 == 1)
       mapQ[(int)(lstid[i]/3)]= x[i];
@@ -150,7 +150,7 @@ int x2map_pol( double *mapI, double *mapQ, double *mapU, int *hits, double *Cond
 }
 
 
-int ioWritePixbinfile_pol( int mapsize, double *mapI, double *mapQ, double *mapU, int *hits, double *Cond)
+int ioWritePixbinfile_pol( int mapsize, double *mapI, double *mapQ, double *mapU)
 {
 
 
@@ -160,18 +160,18 @@ int ioWritePixbinfile_pol( int mapsize, double *mapI, double *mapQ, double *mapU
         char *mapQ_vectorFileNameBasis = "mapoutAll_Q";
         char mapU_vectorFile[256];
         char *mapU_vectorFileNameBasis = "mapoutAll_U";
-        char hits_vectorFile[256];
-        char *hits_vectorFileNameBasis = "mapoutAll_hits";
-        char Cond_vectorFile[256];
-        char *Cond_vectorFileNameBasis = "mapoutAll_cond";
+        // char hits_vectorFile[256];
+        // char *hits_vectorFileNameBasis = "mapoutAll_hits";
+        // char Cond_vectorFile[256];
+        // char *Cond_vectorFileNameBasis = "mapoutAll_cond";
 
         FILE *fp;
 
         sprintf(mapI_vectorFile, "%s.dat", mapI_vectorFileNameBasis);
         sprintf(mapQ_vectorFile, "%s.dat", mapQ_vectorFileNameBasis);
         sprintf(mapU_vectorFile, "%s.dat", mapU_vectorFileNameBasis);
-        sprintf(hits_vectorFile, "%s.dat", hits_vectorFileNameBasis);
-        sprintf(Cond_vectorFile, "%s.dat", Cond_vectorFileNameBasis);
+        // sprintf(hits_vectorFile, "%s.dat", hits_vectorFileNameBasis);
+        // sprintf(Cond_vectorFile, "%s.dat", Cond_vectorFileNameBasis);
 
 
         fp=fopen(mapI_vectorFile, "wb");
@@ -186,13 +186,13 @@ int ioWritePixbinfile_pol( int mapsize, double *mapI, double *mapQ, double *mapU
         fwrite(mapU, sizeof(double), mapsize, fp);
         fclose(fp);
 
-        fp=fopen(hits_vectorFile, "wb");
-        fwrite(hits, sizeof(int), mapsize, fp);
-        fclose(fp);
-
-        fp=fopen(Cond_vectorFile, "wb");
-        fwrite(Cond, sizeof(double), mapsize, fp);
-        fclose(fp);
+        // fp=fopen(hits_vectorFile, "wb");
+        // fwrite(hits, sizeof(int), mapsize, fp);
+        // fclose(fp);
+        //
+        // fp=fopen(Cond_vectorFile, "wb");
+        // fwrite(Cond, sizeof(double), mapsize, fp);
+        // fclose(fp);
 
 
         return 0;

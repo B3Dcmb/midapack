@@ -1,4 +1,4 @@
-/** @file mapmat.h 
+/** @file mapmat.h
     @brief <b> Declarations of the matrix type and his associated routines.</b>
     @n these routines are developed to handle sparse matrices.
     Typically, in the CMB Data Analysis context, it is especially developed handle pointing or unpointing matrices.
@@ -69,9 +69,9 @@ int MatLocalShape(Mat *A, int sflag);
 int MatComShape(Mat *A, int flag,  MPI_Comm comm);
 #endif
 
-int MatVecProd(Mat *A, double *x, double *y, int pflag);
+int MatVecProd(Mat *A, double *x, double *y, int *Gap_samples, int lgap, int m, int pflag, int gap_flag);
 
-int TrMatVecProd(Mat *A, double *y, double* x, int pflag);
+int TrMatVecProd(Mat *A, double *y, double* x, int *Gap_samples, int lgap, int pflag);
 
 
 #if W_MPI
