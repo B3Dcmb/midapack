@@ -60,51 +60,55 @@ int PCG_GLS_true(Mat *A, Tpltz Nm1, double *x, double*b, double tol, int K)
   st=MPI_Wtime();
   // precondjacobilike( A, Nm1, lhits, cond, c);
  // precondjacobilike_avg( A, Nm1, c);
+ // Compute preconditioner and process degenerate pixels
   precondblockjacobilike(A, Nm1, &BJ);
-  n=A->lcount;
-  // for(i=0;i<lgap;i++){
-  //   printf("\nGap[%d] = %d",i,Gap_samples[i]);
-//return 0;
-  //cut the bad pixels
-  tmp = realloc(x, A->lcount*sizeof(double));
+// Redefine number of pixels in the map
+  n=A->lcount-(A->nnz)*(A->trash_pix);
+// Reallocate memory for well-conditioned map
+  tmp = realloc(x, n * sizeof(double));
   if(tmp !=NULL){
     x = tmp;
   }
 
+
   //map domain
-  h = (double *) malloc(n*sizeof(double));      //descent direction
-  g = (double *) malloc(n*sizeof(double));
-  AtNm1Ah = (double *) malloc(n*sizeof(double));
+  h = (double *) malloc(n * sizeof(double));      //descent direction
+  g = (double *) malloc(n * sizeof(double));
+  AtNm1Ah = (double *) malloc(n * sizeof(double));
 
   //time domain
-  Ah = (double *) malloc(m*sizeof(double));
+  Ah = (double *) malloc(m * sizeof(double));
 
   _g = Ah;
   Cg = AtNm1Ah;
   Nm1Ah = Ah;
 
   double *pixpond;
-  pixpond = (double *) malloc(n*sizeof(double));
+  pixpond = (double *) malloc(A->lcount * sizeof(double));
+
   //compute pixel share ponderation
   get_pixshare_pond(A, pixpond);
 
   //if we want to use the true norm to compute the residual
-  int TRUE_NORM=0;  //0: No ; 1: Yes
+  int TRUE_NORM=1;  //0: No ; 1: Yes
 
 
   t=MPI_Wtime();
 
    if(rank==0)
  printf("Init PCG   t=%lf \n", t-st);
+ fflush(stdout);
+
   st=MPI_Wtime();
 
   MatVecProd(A, x, _g, 0);		//
-  // for(i=0; i<8; i++){//
+  // for(i=0; i<50; i++){//
   //     printf("MatVecProd: _g[%d] = %f\n",i,_g[i]);
   // }
+
   for(i=0; i<m; i++)	//
     _g[i] = b[i] - _g[i];		//
-  // for(i=0; i<8; i++){
+  // for(i=0; i<50; i++){
   //   printf("b-_g:_g[%d] = %f\n",i,_g[i]);
   // }
 
@@ -112,17 +116,20 @@ int PCG_GLS_true(Mat *A, Tpltz Nm1, double *x, double*b, double tol, int K)
   // for(i=0; i<50; i++){//
   //     printf("Nm1*_g: _g[%d] = %f\n",i,_g[i]);
   // }
+
   TrMatVecProd(A, _g, g, 0);		//  g = At _g
-  // for(i=0; i<9; i++){			//
-  //     printf("At*_g: g[%d] = %f\n",i,g[i]);
+  // for(i=3360; i<3380; i++){			//
+  //     printf("At*_g: index = %d, g[%d] = %.18f\n", A->lindices[i], i, g[i]);
   // }
 
   MatVecProd(&BJ, g, Cg, 0);
   // for(j=0; j<n; j++)                    //
   //   Cg[j]=c[j]*g[j]; 			//  Cg = C g  with C = Id
-  // for(i=0; i<9; i++){
-  //     printf("Cg[%d]=%f\n",i,Cg[i]);
+  // for(i=3360; i<3380; i++){
+  //     printf("index = %d , Cg[%d]=%.18f\n", A->lindices[i], i, Cg[i]);
   // }
+
+
   for(j=0; j<n; j++)   		        //  h = -Cg
     h[j]=Cg[j];
 
@@ -130,7 +137,7 @@ int PCG_GLS_true(Mat *A, Tpltz Nm1, double *x, double*b, double tol, int K)
   g2pix=0.0;                               //g2 = "res"
   localreduce=0.0;
   for(i=0; i<n; i++)                    //  g2 = (Cg , g)
-    localreduce+= Cg[i] * g[i] * pixpond[i];
+    localreduce+= Cg[i] * g[i] * pixpond[i+(A->nnz)*(A->trash_pix)];
 
   MPI_Allreduce(&localreduce, &g2pix, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
@@ -142,7 +149,7 @@ int PCG_GLS_true(Mat *A, Tpltz Nm1, double *x, double*b, double tol, int K)
   res=0.0;                               //g2 = "res"
   localreduce=0.0;
   for(i=0; i<n; i++)                    //  g2 = (Cg , g)
-    localreduce+= g[i] * g[i] * pixpond[i];
+    localreduce+= g[i] * g[i] * pixpond[i+(A->nnz)*(A->trash_pix)];
 
   MPI_Allreduce(&localreduce, &res, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   }
@@ -170,6 +177,7 @@ int PCG_GLS_true(Mat *A, Tpltz Nm1, double *x, double*b, double tol, int K)
 
   st=MPI_Wtime();
 
+  fflush(stdout);
 
 // PCG Descent Loop
   for(k=1; k<K ; k++){
@@ -184,13 +192,13 @@ int PCG_GLS_true(Mat *A, Tpltz Nm1, double *x, double*b, double tol, int K)
     //     printf("Nm1Ah: Nm1Ah[%d] = %f\n",i,Nm1Ah[i]);
     // }
     TrMatVecProd(A, Nm1Ah, AtNm1Ah, 0); //  AtNm1Ah = At Nm1Ah
-    // for(i=0; i<9; i++){//
+    // for(i=n-1; i>n-9; i--){//
     //     printf("lhs: AtNm1Ah[%d] = %f\n",i,AtNm1Ah[i]);
     // }
     coeff=0.0;
     localreduce=0.0;
     for(i=0; i<n; i++)
-      localreduce+= h[i]*AtNm1Ah[i] * pixpond[i] ;
+      localreduce+= h[i]*AtNm1Ah[i] * pixpond[i+(A->nnz)*(A->trash_pix)] ;
     MPI_Allreduce(&localreduce, &coeff, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     // printf("Coeff = %f\n",coeff);
 /*
@@ -203,7 +211,7 @@ int PCG_GLS_true(Mat *A, Tpltz Nm1, double *x, double*b, double tol, int K)
     ro = g2pix;
 
     ro = ro/coeff;
-
+    // printf("ro = %f\n",ro);
 
     for(j=0; j<n; j++)			//  x = x + ro*h
       x[j] = x[j] + ro*h[j];		//
@@ -216,15 +224,18 @@ int PCG_GLS_true(Mat *A, Tpltz Nm1, double *x, double*b, double tol, int K)
     MatVecProd(&BJ, g, Cg, 0);
     // for(j=0; j<n; j++)                  //
     //   Cg[j]=c[j]*g[j];                       //  Cg = C g  with C = Id
+    // for(i=n-1; i>n-9; i--){//
+    //     printf("g[%d] = %.34f\n",i,g[i]);
+    //     printf("Cg[%d] = %.34f\n",i,Cg[i]);
+    // }
 
 
     g2pixp=g2pix;                               // g2p = "res"
     localreduce=0.0;
     for(i=0; i<n; i++)                    // g2 = (Cg , g)
-      localreduce+= Cg[i] * g[i] *pixpond[i];
+      localreduce+= Cg[i] * g[i] *pixpond[i+(A->nnz)*(A->trash_pix)];
 
     MPI_Allreduce(&localreduce, &g2pix, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-
 
    t=MPI_Wtime();                       //stop timer
    solve_time += (t-st);
@@ -233,7 +244,7 @@ int PCG_GLS_true(Mat *A, Tpltz Nm1, double *x, double*b, double tol, int K)
   if (TRUE_NORM==1) {
   localreduce=0.0;
   for(i=0; i<n; i++)                    // g2 = (Cg , g)
-    localreduce+= g[i] * g[i] *pixpond[i];
+    localreduce+= g[i] * g[i] *pixpond[i+(A->nnz)*(A->trash_pix)];
 
   MPI_Allreduce(&localreduce, &res, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   }
@@ -247,6 +258,7 @@ int PCG_GLS_true(Mat *A, Tpltz Nm1, double *x, double*b, double tol, int K)
    if(rank==0)                          //print iterate info
      printf("k=%d res_g2pix=%e res_g2pix_rel=%e res_rel=%e t=%lf \n", k, g2pix, sqrt(g2pix)/sqrt(g2pixB), sqrt(res)/sqrt(res0), t-st);
 //   if(g2pix<tol2rel){                         //
+fflush(stdout);
 
    if(res<tol2rel){
       if(rank ==0) {                     //

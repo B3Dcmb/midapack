@@ -85,24 +85,24 @@ xsize = 700
 
 pl.figure(1,figsize=(8, 8))
 sky_in[0][maskI] = np.nan
-hp.gnomview(sky_in[0], rot=[0, -30], xsize=xsize, sub=331, reso = 1,
+hp.gnomview(sky_in[0], rot=[0, -30], xsize=xsize, sub=331, reso = 1.3,
             title='Input Temperature', notext=True, cmap=cmap, nest=True)
-hp.gnomview(mapI, rot=[0, -30], xsize = xsize, sub = 332, reso = 1, title="Reconstructed Temperature map", notext=True, cmap=cmap, nest=True)
-hp.gnomview(sky_in[0] - mapI, rot=[0, -30], xsize=xsize, sub=333, reso = 1,
+hp.gnomview(mapI, rot=[0, -30], xsize = xsize, sub = 332, reso = 1.3, title="Reconstructed Temperature map", notext=True, cmap=cmap, nest=True)
+hp.gnomview(sky_in[0] - mapI, rot=[0, -30], xsize=xsize, sub=333, reso = 1.3,
             title='difference', notext=True, cmap = cmap, nest=True)
 # sky_in.Q = np.zeros_like(sky_in.I)
 sky_in[1][maskP] = np.nan
-hp.gnomview(sky_in[1], rot=[0, -30], xsize=xsize, sub=334, reso = 1,
+hp.gnomview(sky_in[1], rot=[0, -30], xsize=xsize, sub=334, reso = 1.3,
             title='Input Q', notext=True, cmap=cmap, nest=True)
-hp.gnomview(mapQ, rot=[0, -30], xsize = xsize, sub = 335, reso = 1, title="Reconstructed Q map", notext=True, cmap=cmap, nest=True)
-hp.gnomview(sky_in[1] - mapQ, rot=[0, -30], xsize=xsize, sub=336, reso = 1,
+hp.gnomview(mapQ, rot=[0, -30], xsize = xsize, sub = 335, reso = 1.3, title="Reconstructed Q map", notext=True, cmap=cmap, nest=True)
+hp.gnomview(sky_in[1] - mapQ, rot=[0, -30], xsize=xsize, sub=336, reso = 1.3,
             title='difference', notext=True, cmap = cmap, nest=True)
 # sky_in.U = np.zeros_like(sky_in.I)
 sky_in[2][maskP] = np.nan
-hp.gnomview(sky_in[2], rot=[0, -30], xsize=xsize,sub=337, reso = 1,
+hp.gnomview(sky_in[2], rot=[0, -30], xsize=xsize,sub=337, reso = 1.3,
             title='Input U', notext=True, cmap=cmap, nest=True)
-hp.gnomview(mapU, rot=[0, -30], xsize = xsize, sub = 338, reso = 1, title="Reconstructed U map", notext=True, cmap=cmap, nest=True)
-hp.gnomview(sky_in[2] - mapU, rot=[0, -30], xsize=xsize, sub=339, reso = 1,
+hp.gnomview(mapU, rot=[0, -30], xsize = xsize, sub = 338, reso = 1.3, title="Reconstructed U map", notext=True, cmap=cmap, nest=True)
+hp.gnomview(sky_in[2] - mapU, rot=[0, -30], xsize=xsize, sub=339, reso = 1.3,
             title='difference', notext=True, cmap = cmap, nest=True)
 
 pl.show()

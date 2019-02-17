@@ -1,7 +1,7 @@
 #!/bin/bash -l
 #SBATCH -q debug
 #SBATCH -N 1
-#SBATCH -t 00:30:00
+#SBATCH -t 00:05:00
 #SBATCH -J midapack_map
 #SBATCH -C haswell
 #SBATCH -L SCRATCH
@@ -9,11 +9,14 @@
 source $HOME/.bashrc.ext
 cd $SLURM_SUBMIT_DIR
 
-# export OMP_NUM_THREADS=1
+export OMP_PROC_BIND=true
+export OMP_PLACES=threads
+export OMP_NUM_THREADS=2
 
 # TRIAL=2
+# when the number of tasks is not a divisor of 64 use --cpu_bind = cores
 
-time srun -n 1 ./toast_pcg > run.log 2>error.log
+time srun -n 16 -c 4 ./toast_pcg > run.log 2>error.log
 # time srun -n 128 ./pcg_pol > run.log 2>error.log
 # time srun -n 32 -N 512 -c 1 ./test_com > run_32_${TRIAL}.log 2>error_32_${TRIAL}.log &
 # time srun -n 64 -N 512 -c 1 ./test_com > run_64_${TRIAL}.log 2>error_64_${TRIAL}.log &

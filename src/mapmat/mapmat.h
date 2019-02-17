@@ -38,10 +38,11 @@ typedef struct {
   int		flag;			// flag for communication scheme (NONE, RING, BUTTERFLY ...)
   int		m;			// number local rows
   int		nnz;                    // number non-zero per rows
-  int   ngap;   // number of local gap samples
+  int   trash_pix;   //flag for presence of trash pixel
   int		*indices;		// column indices tab; size = m * nnz; can be a global or local numbering
   double	*values;		// non-zero values tab; size = m * nnz
-  int  *ts_flags;   // Time samples flags: flag = 0 for gap_sample, else flag = 1; size = m+ngap
+  int *id0pix;    // index of the first time sample pointing to each pixel (no nnz repeat factor)
+  int *ll;      // linked list of time samples indexes linked by pixels
   //--------local shaping---------------
   int		lcount;
   int		*lindices;		// local indices tab (monotony with global numbering); size = lcount
@@ -56,7 +57,7 @@ typedef struct {
 }Mat;
 
 
-int MatInit(Mat *A, int m, int nnz, int ngap, int *indices, double *values, int *ts_flags, int flag
+int MatInit(Mat *A, int m, int nnz, int *indices, double *values, int flag
 #ifdef W_MPI
 , MPI_Comm comm
 #endif
@@ -65,8 +66,6 @@ int MatInit(Mat *A, int m, int nnz, int ngap, int *indices, double *values, int 
 void MatSetIndices(Mat *A, int m, int nnz, int *indices);
 
 void MatSetValues(Mat *A, int m, int nnz, double *values);
-
-void MatSetTSFlags(Mat *A, int m, int ngap, int *ts_flags);
 
 void MatFree(Mat *A);
 

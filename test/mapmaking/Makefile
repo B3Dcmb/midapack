@@ -26,6 +26,8 @@ CFITSIO_INC = -I/usr/common/software/cfitsio/3.370-reentrant/hsw/intel/include
 HEALPIX_LIB = -L$(HOME)/Healpix_3.31/lib -lchealpix -lhealpix
 CFITSIO_LIB = -L/usr/common/software/cfitsio/3.370-reentrant/hsw/intel/lib -lcfitsio
 # CFITSIO_LIB = -L/global/common/sw/cray/cnl6/ivybridge/cfitsio/3.410/intel/17.0.2.174/hgce4lk/lib -lcfitsio
+
+
 INTEL_DIR = /opt/intel/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64/
 INTEL_LIB = $(INTEL_DIR)libsvml.a $(INTEL_DIR)libirc.a $(INTEL_DIR)libimf.a $(INTEL_DIR)libifcore.a $(INTEL_DIR)libiomp5.a
 
@@ -48,7 +50,6 @@ example_pcg: $(TOEPLITZ) $(MAPMAT)
 	test_pcg \
 	test_pcg_pol \
 	toast_pipeline \
-	fake_pipeline \
 	test_pcg_rand \
 
 exemple_iofilepix:
@@ -116,10 +117,6 @@ test_pcg_pol: createToeplitz.o precond.o test_pcg_polar.c iofiles.o pcg_true.o
 
 toast_pipeline: createToeplitz.o precond.o toast_pipeline.c iofiles.o pcg_true.o
 		$(CC) toast_pipeline.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(LIB) $(FFTW_LIB) -lm -o toast_pcg
-
-fake_pipeline: createToeplitz.o precond.o fake_pipeline.c iofiles.o pcg_true.o
-				$(CC) fake_pipeline.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(LIB) $(FFTW_LIB) -lm -o fake_pcg
-
 
 test_pcg_rand: createToeplitz.o precond.o test_pcg_rand.c iofiles.o pcg_true.o
 	$(CC) test_pcg_rand.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(LIB) $(FFTW_LIB) -lm -o pcg_rand

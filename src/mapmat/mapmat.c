@@ -21,14 +21,11 @@
     indices and values tabs must be allocated and contain at least m*nnz elements.
     It represents column indices of the nonzero elements. Respectively values tab
     represents the non-zero values.
-    ts_flags tab must be allocated and contain at least (m+ngap) elements.
-    It represents the time_samples quality flags.
     After call MatInit, all precomputation are done and the matrix structure is ready to use.
-    That means you can start applying matrix operation. Assuming that the gap_samples are defined correctly.
+    That means you can start applying matrix operation.
     Another way to initialize a matrix structure is to apply step by step :
     - MatSetIndices
     - MatSetValues
-    - MatSetTSFlags
     - MatLocalShape
     - MatComShape
 
@@ -37,15 +34,13 @@
     @param A pointer to a Mat struct
     @param m number of local rows
     @param nnz number of non-zero per row
-    @param ngap number of local gap samples
     @param indices input tab (modified)
     @param values input tab
-    @param ts_flags input tab
     @param flag communication flag
     @param comm MPI communicator
     @ingroup matmap_group11
     @sa MatFree */
-int MatInit(Mat *A, int m, int nnz, int ngap, int *indices, double *values, int *ts_flags, int flag
+int MatInit(Mat *A, int m, int nnz, int *indices, double *values, int flag
 #ifdef W_MPI
 , MPI_Comm comm
 #endif
@@ -54,8 +49,6 @@ int MatInit(Mat *A, int m, int nnz, int ngap, int *indices, double *values, int 
   MatSetIndices(A, m, nnz, indices);
 
   MatSetValues(A, m, nnz, values);
-
-  MatSetTSFlags(A, m, ngap, ts_flags);
 
 
   err = MatLocalShape(A, 3);		// compute lindices (local columns) (method 3 = counting sort)
@@ -95,20 +88,6 @@ void MatSetValues(Mat *A, int m, int nnz, double *values){
   A->m    = m;				// set number of local rows
   A->nnz  = nnz;        		// set number of non-zero values per row
   A->values  = values;			// point to values
-}
-
-/** Set the time samples flags for each rows.
-    ts_flags tab must be allocated and contains at least m elements.
-    @param A pointer to a Mat struct
-    @param m number of local rows
-    @param ngap num of local gap samples
-    @param ts_flags input tab
-    @return void
-    @ingroup matmap_group11*/
-void MatSetTSFlags(Mat *A, int m, int ngap, int *ts_flags){
-  A->m  = m; //set number of local rows
-  A->ngap = ngap; //set number of local gap Gap_samples
-  A->ts_flags  = ts_flags;  //point to ts_flags
 }
 
 
@@ -654,22 +633,19 @@ int MatComShape(Mat *A, int flag, MPI_Comm comm){
     @ingroup matmap_group12a */
 int MatVecProd(Mat *A, double *x, double* y, int pflag){
   int i, j, e;
-  for(i=0; i<A->m+A->ngap; i++) 					//
+  for(i=0; i<A->m; i++) 					//
       y[i] = 0.0;
 
   e=0;
-  if(A->ngap !=0){
-  for(i=0; i<A->m*A->nnz; i+=A->nnz){
-    if(A->ts_flags[e]==0){
+  if(A->trash_pix){
+    for(i=0; i<A->m*A->nnz; i+=A->nnz){
+      if(A->indices[i]!=0){
+        for(j=0; j<A->nnz; j++){					//
+          y[e] += A->values[i+j] * x[A->indices[i+j]-(A->nnz)];
+        }
+      }
       e++;
-      i-=A->nnz;
-      continue;
     }
-    for(j=0; j<A->nnz; j++){					//
-      y[e] += A->values[i+j] * x[A->indices[i+j]];
-    }
-    e++;
-  }
   }
   else{
     for(i=0; i<A->m*A->nnz; i+=A->nnz){
@@ -765,22 +741,34 @@ int TrMatVecProd(Mat *A, double *y, double* x, int pflag){
   int i, j, k, e;
   int nSmax, nRmax;
   double *lvalues;
+  if(A->trash_pix){
+    for(i=0; i < A->lcount-A->nnz; i++)				//refresh vector
+      x[i]=0.0;						//
 
-  for(i=0; i < A->lcount; i++)				//refresh vector
-    x[i]=0.0;						//
+      e=0;
+      for(i=0; i< A->m*A->nnz; i+=A->nnz){
+        if(A->indices[i]!=0){
+          //local transform reduce
+          for(j=0; j< A->nnz; j++){
+            x[A->indices[i+j]-(A->nnz)] += A->values[i+j] * y[e];	//
+          }
+        }							//
+        e++;
+      }
+  }
+  else{
+    for(i=0; i < A->lcount; i++)				//refresh vector
+      x[i]=0.0;						//
 
-  e=0;
-  for(i=0; i< A->m*A->nnz; i+=A->nnz){			//local transform reduce
-    if(A->ts_flags[e]==0){
-      e++;
-      i-=A->nnz;
-      continue;
-    }
-    for(j=0; j< A->nnz; j++){
-       x[A->indices[i+j]] += A->values[i+j] * y[e];	//
-    }							//
-    e++;
-  }							//
+      e=0;
+      for(i=0; i< A->m*A->nnz; i+=A->nnz){//local transform reduce
+        for(j=0; j< A->nnz; j++){
+          x[A->indices[i+j]] += A->values[i+j] * y[e];	//
+        }						//
+        e++;
+      }
+  }
+
 
 #ifdef W_MPI
   greedyreduce(A, x);					//global reduce
@@ -940,8 +928,8 @@ int greedyreduce(Mat *A, double* x){
   int i, j, k;
   int nSmax, nRmax, nStot, nRtot;
   double *lvalues;
-  lvalues = (double *) malloc(A->lcount *sizeof(double));	//allocate and set to 0.0 local values
-  memcpy(lvalues, x, (A->lcount) *sizeof(double));		//copy local values into result values
+  lvalues = (double *) malloc((A->lcount-(A->nnz)*(A->trash_pix)) *sizeof(double));	//allocate and set to 0.0 local values
+  memcpy(lvalues, x, (A->lcount-(A->nnz)*(A->trash_pix)) *sizeof(double));		//copy local values into result values
   double *com_val;
   double *out_val;
   int ne=0;
@@ -956,9 +944,9 @@ int greedyreduce(Mat *A, double* x){
       com_val=(double *) malloc( A->com_count *sizeof(double));
       for(i=0; i < A->com_count; i++)
         com_val[i]=0.0;
-      m2m(lvalues, A->lindices, A->lcount, com_val, A->com_indices, A->com_count);
+      m2m(lvalues, A->lindices+(A->nnz)*(A->trash_pix), A->lcount-(A->nnz)*(A->trash_pix), com_val, A->com_indices, A->com_count);
       butterfly_reduce(A->R, A->nR, nRmax, A->S, A->nS, nSmax, com_val, A->steps, A->comm);
-      m2m(com_val, A->com_indices, A->com_count, x, A->lindices, A->lcount);
+      m2m(com_val, A->com_indices, A->com_count, x, A->lindices+(A->nnz)*(A->trash_pix), A->lcount-(A->nnz)*(A->trash_pix));
       free(com_val);
       break;
     //==========================Modification added by Sebastien Cayrols : 01/09/2015 , Berkeley
