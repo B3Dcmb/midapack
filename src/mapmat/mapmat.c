@@ -960,9 +960,9 @@ int greedyreduce(Mat *A, double* x){
       com_val=(double *) malloc( A->com_count *sizeof(double));
       for(i=0; i < A->com_count; i++)
         com_val[i]=0.0;
-      m2m(lvalues, A->lindices, A->lcount, com_val, A->com_indices, A->com_count);
+      m2m(lvalues, A->lindices+(A->nnz)*(A->trash_pix), A->lcount-(A->nnz)*(A->trash_pix), com_val, A->com_indices, A->com_count);
       butterfly_blocking_1instr_reduce(A->R, A->nR, nRmax, A->S, A->nS, nSmax, com_val, A->steps, A->comm);
-      m2m(com_val, A->com_indices, A->com_count, x, A->lindices, A->lcount);
+      m2m(com_val, A->com_indices, A->com_count, x, A->lindices+(A->nnz)*(A->trash_pix), A->lcount-(A->nnz)*(A->trash_pix));
       free(com_val);
       break;
     case BUTTERFLY_BLOCKING_2 :
@@ -975,9 +975,9 @@ int greedyreduce(Mat *A, double* x){
       com_val=(double *) malloc( A->com_count *sizeof(double));
       for(i=0; i < A->com_count; i++)
         com_val[i]=0.0;
-      m2m(lvalues, A->lindices, A->lcount, com_val, A->com_indices, A->com_count);
+      m2m(lvalues, A->lindices+(A->nnz)*(A->trash_pix), A->lcount-(A->nnz)*(A->trash_pix), com_val, A->com_indices, A->com_count);
       butterfly_blocking_1instr_reduce(A->R, A->nR, nRmax, A->S, A->nS, nSmax, com_val, A->steps, A->comm);
-      m2m(com_val, A->com_indices, A->com_count, x, A->lindices, A->lcount);
+      m2m(com_val, A->com_indices, A->com_count, x, A->lindices+(A->nnz)*(A->trash_pix), A->lcount-(A->nnz)*(A->trash_pix));
       free(com_val);
       break;
     case NOEMPTYSTEPRING :
@@ -1011,7 +1011,7 @@ int greedyreduce(Mat *A, double* x){
         com_val[i]=0.0;
         out_val[i]=0.0;
       }
-      s2m(com_val, lvalues, A->com_indices, A->lcount);
+      s2m(com_val, lvalues, A->com_indices, A->lcount-(A->nnz)*(A->trash_pix));
       /*for(i=0; i < A->com_count; i++){
          printf("%lf ", com_val[i]);
       } */
@@ -1019,7 +1019,7 @@ int greedyreduce(Mat *A, double* x){
       /*for(i=0; i < A->com_count; i++){
          printf("%lf ", out_val[i]);
       } */
-      m2s(out_val, x, A->com_indices, A->lcount);                                 //sum receive buffer into values
+      m2s(out_val, x, A->com_indices, A->lcount-(A->nnz)*(A->trash_pix));                                 //sum receive buffer into values
       free(com_val);
       free(out_val);
       break;
