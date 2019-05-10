@@ -19,16 +19,18 @@
 
 
 
-int PCG_GLS_true(Mat *A, Tpltz Nm1, double *x, double*b, double tol, int K)
+int PCG_GLS_true(Mat *A, Tpltz Nm1, double *x, double *b, double *cond, int *lhits, double tol, int K)
 {
   int 		i, j, k ;			// some indexes
   int		m, n, rank, size;
   double 	localreduce;			//reduce buffer
   double	st, t;				//timers
   double	solve_time;
-  double	res, res0;
+  double	res, res0, *res_rel;
   double *tmp;
+  FILE *fp;
 
+  res_rel = (double *) malloc(1*sizeof(double));
 
   m=A->m;					//number of local time samples
   n=A->lcount;					//number of local pixels
@@ -61,7 +63,7 @@ int PCG_GLS_true(Mat *A, Tpltz Nm1, double *x, double*b, double tol, int K)
   // precondjacobilike( A, Nm1, lhits, cond, c);
  // precondjacobilike_avg( A, Nm1, c);
  // Compute preconditioner and process degenerate pixels
-  precondblockjacobilike(A, Nm1, &BJ);
+  precondblockjacobilike(A, Nm1, &BJ, b, cond, lhits);
 // Redefine number of pixels in the map
   n=A->lcount-(A->nnz)*(A->trash_pix);
 // Reallocate memory for well-conditioned map
@@ -164,8 +166,11 @@ int PCG_GLS_true(Mat *A, Tpltz Nm1, double *x, double*b, double tol, int K)
   res0=res;
 //Test if already converged
    if(rank==0) {
+     *res_rel = sqrt(res)/sqrt(res0);
      printf("res=%e \n", res);
      printf("k=%d res_g2pix=%e res_g2pix_rel=%e res_rel=%e t=%lf\n", 0, g2pix , sqrt(g2pix)/sqrt(g2pixB), sqrt(res)/sqrt(res0), t-st);
+     fp=fopen("pcg_residuals.dat", "wb");
+     fwrite(res_rel, sizeof(double), 1, fp);
    }
 
 
@@ -255,8 +260,11 @@ int PCG_GLS_true(Mat *A, Tpltz Nm1, double *x, double*b, double tol, int K)
   }//end if
 
 
-   if(rank==0)                          //print iterate info
+   if(rank==0){                          //print iterate info
+     *res_rel = sqrt(res)/sqrt(res0);
      printf("k=%d res_g2pix=%e res_g2pix_rel=%e res_rel=%e t=%lf \n", k, g2pix, sqrt(g2pix)/sqrt(g2pixB), sqrt(res)/sqrt(res0), t-st);
+     fwrite(res_rel, sizeof(double), 1, fp);
+   }
 //   if(g2pix<tol2rel){                         //
 fflush(stdout);
 
@@ -265,6 +273,7 @@ fflush(stdout);
         printf("--> converged (%e < %e) \n", res, tol2rel);
         printf("--> i.e. \t (%e < %e) \n", sqrt(res/res0), tol);
         printf("--> solve time = %lf \n", solve_time);
+        fclose(fp);
       }
       break;
    }
@@ -287,8 +296,10 @@ fflush(stdout);
 
 
   if(k==K){				//check unconverged
-    if(rank==0)
+    if(rank==0){
       printf("--> unconverged, max iterate reached (%lf > %lf)\n", g2pix, tol2rel);
+      fclose(fp);
+    }
   }
 
       if(rank ==0)
@@ -299,6 +310,7 @@ fflush(stdout);
   free(Ah);
   free(g);
   free(AtNm1Ah);
+  free(res_rel);
 
 
   return 0;

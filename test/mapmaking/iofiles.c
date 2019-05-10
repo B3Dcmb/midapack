@@ -233,7 +233,7 @@ int ioReadTpltzrandom( int lambda, double *Tblock)
     // for(i=1;i<lambda;i++)
     //   Tblock[i]= rand()/((double)RAND_MAX);
 
-    Tblock[0] = 10;
+    Tblock[0] = 1;
 
 
         return 0;
@@ -241,24 +241,24 @@ int ioReadTpltzrandom( int lambda, double *Tblock)
 
 
 
-int ioWritebinfile( int mapsize, int mappart_id, int *lstid, double *map)
+int ioWritebinfile( int mapsize, int mappart_id, int *lstid, double *map, double *cond, int *lhits)
 {
         int i;
 
         char lstid_vectorFile[256];
-        // char lhits_vectorFile[256];
-        // char cond_vectorFile[256];
+        char lhits_vectorFile[256];
+        char cond_vectorFile[256];
         char x_vectorFile[256];
-        char *lstid_vectorFileNameBasis = "mapout_lstid_";
-        // char *lhits_vectorFileNameBasis = "mapout_lhits_";
-        // char *cond_vectorFileNameBasis = "mapout_lcond_";
-        char *x_vectorFileNameBasis = "mapout_";
+        char *lstid_vectorFileNameBasis = "/global/cscratch1/sd/elbouha/data_TOAST/output/mapout_lstid_";
+        char *lhits_vectorFileNameBasis = "/global/cscratch1/sd/elbouha/data_TOAST/output/mapout_lhits_";
+        char *cond_vectorFileNameBasis = "/global/cscratch1/sd/elbouha/data_TOAST/output/mapout_lcond_";
+        char *x_vectorFileNameBasis = "/global/cscratch1/sd/elbouha/data_TOAST/output/mapout_";
 
         FILE *fp;
 
         sprintf(lstid_vectorFile, "%s%01d.dat", lstid_vectorFileNameBasis, mappart_id);
-        // sprintf(lhits_vectorFile, "%s%01d.dat", lhits_vectorFileNameBasis, mappart_id);
-        // sprintf(cond_vectorFile, "%s%01d.dat", cond_vectorFileNameBasis, mappart_id);
+        sprintf(lhits_vectorFile, "%s%01d.dat", lhits_vectorFileNameBasis, mappart_id);
+        sprintf(cond_vectorFile, "%s%01d.dat", cond_vectorFileNameBasis, mappart_id);
         sprintf(x_vectorFile, "%s%01d.dat", x_vectorFileNameBasis, mappart_id);
 
 //        printf(" Map file name: %s\n", lstid_vectorFile);
@@ -269,13 +269,13 @@ int ioWritebinfile( int mapsize, int mappart_id, int *lstid, double *map)
         fwrite(lstid, sizeof(int), mapsize, fp);
         fclose(fp);
 
-        // fp=fopen(lhits_vectorFile, "wb");
-        // fwrite(lhits, sizeof(int), (int)(mapsize/3), fp);
-        // fclose(fp);
-        //
-        // fp=fopen(cond_vectorFile, "wb");
-        // fwrite(cond, sizeof(double), (int)(mapsize/3), fp);
-        // fclose(fp);
+        fp=fopen(lhits_vectorFile, "wb");
+        fwrite(lhits, sizeof(int), (int)(mapsize/3), fp);
+        fclose(fp);
+
+        fp=fopen(cond_vectorFile, "wb");
+        fwrite(cond, sizeof(double), (int)(mapsize/3), fp);
+        fclose(fp);
 
         fp=fopen(x_vectorFile, "wb");
         fwrite(map, sizeof(double), mapsize, fp);
@@ -288,30 +288,30 @@ int ioWritebinfile( int mapsize, int mappart_id, int *lstid, double *map)
 
 
 
-int ioReadbinfile( int mapsize, int mappart_id, int *lstid, double *map)
+int ioReadbinfile( int mapsize, int mappart_id, int *lstid, double *map, double *cond, int *lhits)
 {
 
         int i;
 
         char lstid_vectorFile[256];
-        // char lhits_vectorFile[256];
-        // char cond_vectorFile[256];
+        char lhits_vectorFile[256];
+        char cond_vectorFile[256];
         char x_vectorFile[256];
         char *lstid_vectorFileNameBasis = "mapout_lstid_";
-        // char *lhits_vectorFileNameBasis = "mapout_lhits_";
-        // char *cond_vectorFileNameBasis = "mapout_lcond_";
+        char *lhits_vectorFileNameBasis = "mapout_lhits_";
+        char *cond_vectorFileNameBasis = "mapout_lcond_";
         char *x_vectorFileNameBasis = "mapout_";
 
         FILE *fp;
 
         sprintf(lstid_vectorFile, "%s%01d.dat", lstid_vectorFileNameBasis, mappart_id);
-        // sprintf(lhits_vectorFile, "%s%01d.dat", lhits_vectorFileNameBasis, mappart_id);
-        // sprintf(cond_vectorFile, "%s%01d.dat", cond_vectorFileNameBasis, mappart_id);
+        sprintf(lhits_vectorFile, "%s%01d.dat", lhits_vectorFileNameBasis, mappart_id);
+        sprintf(cond_vectorFile, "%s%01d.dat", cond_vectorFileNameBasis, mappart_id);
         sprintf(x_vectorFile, "%s%01d.dat", x_vectorFileNameBasis, mappart_id);
 
         printf(" Map id file name: %s\n", lstid_vectorFile);
-        // printf(" Hits map file name: %s\n", lhits_vectorFile);
-        // printf(" Condition map file name: %s\n", cond_vectorFile);
+        printf(" Hits map file name: %s\n", lhits_vectorFile);
+        printf(" Condition map file name: %s\n", cond_vectorFile);
         printf(" Map file name: %s\n", x_vectorFile);
 
 
@@ -319,13 +319,13 @@ int ioReadbinfile( int mapsize, int mappart_id, int *lstid, double *map)
         fread(lstid, sizeof(int), mapsize, fp);
         fclose(fp);
 
-        // fp=fopen(lhits_vectorFile, "rb");
-        // fread(lhits, sizeof(int), (int)(mapsize/3), fp);
-        // fclose(fp);
-        //
-        // fp=fopen(cond_vectorFile, "rb");
-        // fread(cond, sizeof(double), (int)(mapsize/3), fp);
-        // fclose(fp);
+        fp=fopen(lhits_vectorFile, "rb");
+        fread(lhits, sizeof(int), (int)(mapsize/3), fp);
+        fclose(fp);
+
+        fp=fopen(cond_vectorFile, "rb");
+        fread(cond, sizeof(double), (int)(mapsize/3), fp);
+        fclose(fp);
 
         fp=fopen(x_vectorFile, "rb");
         fread(map, sizeof(double), mapsize, fp);

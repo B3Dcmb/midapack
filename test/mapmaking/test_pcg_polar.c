@@ -140,7 +140,7 @@ if (rank==0) {
   polar = (double *) malloc(t_Interval_length_true*t_Interval_loop_loc * sizeof(double));
 
   for (i=0; i < t_Interval_loop_loc; ++i) {
-    ioReadfile_pol(t_Interval_length, part_id, point_data+t_Interval_length_true*Nnz*i, signal+t_Interval_length_true*i, polar+t_Interval_length_true*i);
+    ioReadfile_pol(t_Interval_length_true, part_id, point_data+t_Interval_length_true*Nnz*i, signal+t_Interval_length_true*i, polar+t_Interval_length_true*i);
   }
 //just keep the relevant part of the stationary interval for the local process
   int nb_proc_shared_one_subinterval = max(1, size/(Nb_t_Intervals*t_Interval_loop) );
@@ -187,7 +187,7 @@ if (nb_proc_shared_one_interval>1) {
 
 //read the all stationary interval
   for (i=0; i < t_Interval_loop; ++i) {
-    ioReadfile(t_Interval_length, part_id, point_data+t_Interval_length_true*Nnz*i, signal+t_Interval_length_true*i);
+    ioReadfile(t_Interval_length_true, part_id, point_data+t_Interval_length_true*Nnz*i, signal+t_Interval_length_true*i);
   }
 //  ioReadfile(t_Interval_length, part_id, point_data, signal);
 
@@ -212,7 +212,7 @@ else { //for the case we dont need to share
     polar = pol_ang + t_Interval_length*k;
     part_id = Nb_t_Intervals_loc*rank + k;
   for (i=0; i < t_Interval_loop; ++i) {
-    ioReadfile_pol(t_Interval_length, part_id, point_data+t_Interval_length_true*Nnz*i, signal+t_Interval_length_true*i, polar+t_Interval_length_true*i);
+    ioReadfile_pol(t_Interval_length_true, part_id, point_data+t_Interval_length_true*Nnz*i, signal+t_Interval_length_true*i, polar+t_Interval_length_true*i);
   }
 
 //  ioReadfile(t_Interval_length, part_id, point_data, signal);

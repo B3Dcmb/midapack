@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
   pointing_commflag=2; //2==BUTTERFLY - 1==RING
 
 //global data caracteristics
-  int Nb_t_Intervals = 64;//8;//1352;//128;//2;//256;//8;           //total number of stationnary intervals
+  int Nb_t_Intervals = 1024;//8;//1352;//128;//2;//256;//8;           //total number of stationnary intervals
   int t_Interval_length = 330384000;//47436000;//2352000;//47436000;//470400;//1749900;//17899900;//1431992;//139992; //1431992;//2863984;//1431992;//pow(2,25);//pow(2,25);          //length for each stationnary interval
   int t_Interval_length_true = 330384;//47436000;//2352000;//1749900;//17899900;//1431992;//139992;//1431992;//2863984;//1431992;//pow(2,20);
   int LambdaBlock = pow(2,13);//pow(2,14)+1;  //lambda length for each stationnary interval
@@ -120,7 +120,7 @@ int main(int argc, char *argv[])
     if (rank==0) {
       printf("#######  ENTER BiG DATA MODE   ################\n");
     }
-      part_id = rank/nb_proc_shared_one_interval; //floor(rank/nb_proc_shared_one_interval);
+      part_id = (rank/nb_proc_shared_one_interval)%128; //floor(rank/nb_proc_shared_one_interval);
       number_in_interval = rank%nb_proc_shared_one_interval;
       printf("[rank %d] part_id=%d\n", rank, part_id );  //interval id number
       printf("[rank %d] number_in_interval=%d\n", rank, number_in_interval );
@@ -168,7 +168,7 @@ int main(int argc, char *argv[])
     //for the case we share the stationary intervals in severals processes with no big data flag
     //NB: this case is not up-to-date with the latest data format and should never happen
     if (nb_proc_shared_one_interval>1) {
-      part_id = rank/nb_proc_shared_one_interval; //floor(rank/nb_proc_shared_one_interval);
+      part_id = (rank/nb_proc_shared_one_interval)%128; //floor(rank/nb_proc_shared_one_interval);
       number_in_interval = rank%nb_proc_shared_one_interval;
       printf("[rank %d] part_id=%d\n", rank, part_id );  //interval id number
       printf("[rank %d] number_in_interval=%d\n", rank, number_in_interval );
@@ -199,7 +199,7 @@ int main(int argc, char *argv[])
         point_data = indices + t_Interval_length*Nnz*k;
         signal = b + t_Interval_length*k;
         weights = wghts + t_Interval_length*Nnz*k;
-        part_id = Nb_t_Intervals_loc*rank + k;
+        part_id = (Nb_t_Intervals_loc*rank + k)%128;
         for (i=0; i < t_Interval_loop; ++i) {
           ioReadTOAST_data(t_Interval_length_true, part_id, point_data+t_Interval_length_true*Nnz*i, signal+t_Interval_length_true*i, weights+t_Interval_length_true*Nnz*i);
         }

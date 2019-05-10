@@ -3,7 +3,7 @@ GCC = gcc
 MPICC = cc
 OPT =  -D W_MPI -D W_OPENMP -O3
 CC = $(MPICC) -qopenmp -g $(OPT)
-FFTW_INC = -I/opt/cray/pe/fftw/3.3.6.2/haswell/include
+FFTW_INC = -I/opt/cray/pe/fftw/3.3.6.3/haswell/include
 
 
 all : mapmat.o mapmatc.o
