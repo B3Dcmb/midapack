@@ -524,12 +524,12 @@ int getlocDiagN(Mat *A, Tpltz Nm1, double *vpixDiag)
 //extract from a Madmap routine
 int commScheme(Mat *A, double *vpixDiag, int pflag){
   int i, j, k;
-  int nSmax, nRmax;
-  double *lvalues;
+  int nSmax, nRmax, nStot, nRtot;
+  double *lvalues, *com_val, *out_val;
 
 #if W_MPI
-  lvalues = (double *) malloc(A->lcount *sizeof(double));    /*<allocate and set to 0.0 local values*/
-  memcpy(lvalues, vpixDiag, (A->lcount) *sizeof(double)); /*<copy local values into result values*/
+  lvalues = (double *) malloc((A->lcount-(A->nnz)*(A->trash_pix)) *sizeof(double));    /*<allocate and set to 0.0 local values*/
+  memcpy(lvalues, vpixDiag, (A->lcount-(A->nnz)*(A->trash_pix)) *sizeof(double)); /*<copy local values into result values*/
 
   nRmax=0;
   nSmax=0;
@@ -543,16 +543,52 @@ int commScheme(Mat *A, double *vpixDiag, int pflag){
       if(A->nS[k] > nSmax)
         nSmax = A->nS[k];
 
-    double *com_val;
     com_val=(double *) malloc( A->com_count *sizeof(double));
     for(i=0; i < A->com_count; i++){
       com_val[i]=0.0;
     }
 //already done    memcpy(vpixDiag, lvalues, (A->lcount) *sizeof(double)); /*<copy local values into result values*/
-    m2m(lvalues, A->lindices, A->lcount, com_val, A->com_indices, A->com_count);
+    m2m(lvalues, A->lindices+(A->nnz)*(A->trash_pix), A->lcount-(A->nnz)*(A->trash_pix), com_val, A->com_indices, A->com_count);
     butterfly_reduce(A->R, A->nR, nRmax, A->S, A->nS, nSmax, com_val, A->steps, A->comm);
-    m2m(com_val, A->com_indices, A->com_count, vpixDiag, A->lindices, A->lcount);
+    m2m(com_val, A->com_indices, A->com_count, vpixDiag, A->lindices+(A->nnz)*(A->trash_pix), A->lcount-(A->nnz)*(A->trash_pix));
     free(com_val);
+  }
+  else if(A->flag == BUTTERFLY_BLOCKING_1){
+    for(k=0; k< A->steps; k++)                                  //compute max communication buffer size
+      if(A->nR[k] > nRmax)
+        nRmax = A->nR[k];
+    for(k=0; k< A->steps; k++)
+      if(A->nS[k] > nSmax)
+        nSmax = A->nS[k];
+    com_val=(double *) malloc( A->com_count *sizeof(double));
+    for(i=0; i < A->com_count; i++)
+      com_val[i]=0.0;
+    m2m(lvalues, A->lindices+(A->nnz)*(A->trash_pix), A->lcount-(A->nnz)*(A->trash_pix), com_val, A->com_indices, A->com_count);
+    butterfly_blocking_1instr_reduce(A->R, A->nR, nRmax, A->S, A->nS, nSmax, com_val, A->steps, A->comm);
+    m2m(com_val, A->com_indices, A->com_count, vpixDiag, A->lindices+(A->nnz)*(A->trash_pix), A->lcount-(A->nnz)*(A->trash_pix));
+    free(com_val);
+  }
+  else if(A->flag == BUTTERFLY_BLOCKING_2){
+    for(k=0; k< A->steps; k++)                                  //compute max communication buffer size
+      if(A->nR[k] > nRmax)
+        nRmax = A->nR[k];
+    for(k=0; k< A->steps; k++)
+      if(A->nS[k] > nSmax)
+        nSmax = A->nS[k];
+    com_val=(double *) malloc( A->com_count *sizeof(double));
+    for(i=0; i < A->com_count; i++)
+      com_val[i]=0.0;
+    m2m(lvalues, A->lindices+(A->nnz)*(A->trash_pix), A->lcount-(A->nnz)*(A->trash_pix), com_val, A->com_indices, A->com_count);
+    butterfly_blocking_1instr_reduce(A->R, A->nR, nRmax, A->S, A->nS, nSmax, com_val, A->steps, A->comm);
+    m2m(com_val, A->com_indices, A->com_count, vpixDiag, A->lindices+(A->nnz)*(A->trash_pix), A->lcount-(A->nnz)*(A->trash_pix));
+    free(com_val);
+  }
+  else if(A->flag == NOEMPTYSTEPRING){
+    for(k=1; k< A->steps; k++)				//compute max communication buffer size
+      if(A->nR[k] > nRmax)
+        nRmax = A->nR[k];
+    nSmax = nRmax;
+    ring_noempty_step_reduce(A->R, A->nR, nRmax, A->S, A->nS, nSmax, lvalues, vpixDiag, A->steps, A->comm);
   }
   else if(A->flag == RING){
 //already done    memcpy(vpixDiag, lvalues, (A->lcount) *sizeof(double)); /*<copy local values into result values*/
@@ -576,7 +612,35 @@ int commScheme(Mat *A, double *vpixDiag, int pflag){
 
     ring_noempty_reduce(A->R, A->nR, ne, A->S, A->nS, ne, lvalues, vpixDiag, A->steps, A->comm);
   }
+  else if(A->flag == ALLREDUCE){
+    com_val=(double *) malloc( A->com_count *sizeof(double));
+    out_val=(double *) malloc( A->com_count *sizeof(double));
+    for(i=0; i < A->com_count; i++){
+      com_val[i]=0.0;
+      out_val[i]=0.0;
+    }
+    s2m(com_val, lvalues, A->com_indices, A->lcount-(A->nnz)*(A->trash_pix));
+    /*for(i=0; i < A->com_count; i++){
+       printf("%lf ", com_val[i]);
+    } */
+    MPI_Allreduce(com_val, out_val, A->com_count, MPI_DOUBLE, MPI_SUM, A->comm);	//maximum index
+    /*for(i=0; i < A->com_count; i++){
+       printf("%lf ", out_val[i]);
+    } */
+    m2s(out_val, vpixDiag, A->com_indices, A->lcount-(A->nnz)*(A->trash_pix));                                 //sum receive buffer into values
+    free(com_val);
+    free(out_val);
+  }
+  else if(A->flag == ALLTOALLV){
+    nRtot=nStot=0;
+    for(k=0; k< A->steps; k++){				//compute buffer sizes
+       nRtot += A->nR[k];                // to receive
+       nStot += A->nS[k];                // to send
+     }
+    alltoallv_reduce(A->R, A->nR, nRtot, A->S, A->nS, nStot, lvalues, vpixDiag, A->steps, A->comm);
+  }
   else{
+    printf("\n\n####### WARNING ! : Unvalid communication scheme #######\n\n");
     return 1;
   }
 #endif
@@ -680,7 +744,7 @@ int get_pixshare_pond(Mat *A, double *pixpond )
   MPI_Comm_size(A->comm, &size);                 //
 
   m=A->m;                                        //number of local time samples
-  n=A->lcount;                                   //number of local pixels
+  n=A->lcount-(A->nnz)*(A->trash_pix);                                   //number of local pixels
 
 //  eyesdble = (double *) malloc(n*sizeof(double));
 

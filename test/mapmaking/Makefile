@@ -119,7 +119,7 @@ test_pcg_pol: createToeplitz.o precond.o test_pcg_polar.c iofiles.o pcg_true.o
 		$(CC) test_pcg_polar.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(LIB) $(FFTW_LIB) -lm -o pcg_pol
 
 toast_pipeline: createToeplitz.o precond.o toast_pipeline.c iofiles.o pcg_true.o
-		$(CC) toast_pipeline.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(LIB) $(FFTW_LIB) -lm -o toast_pcg #-Wl,@/global/homes/e/elbouha/midapack/test/mapmaking/allinea-profiler.ld
+		$(CC) toast_pipeline.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(LIB) $(FFTW_LIB) -lm -o toast_pcg -Wl,@/global/homes/e/elbouha/midapack/test/mapmaking/allinea-profiler.ld
 
 toast_pipeline_1kdet: createToeplitz.o precond.o toast_pipeline_1kdet.c iofiles.o pcg_true.o
 		$(CC) toast_pipeline.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(LIB) $(FFTW_LIB) -lm -o toast_pcg_cyc #-Wl,@/global/homes/e/elbouha/midapack/test/mapmaking/allinea-profiler.ld

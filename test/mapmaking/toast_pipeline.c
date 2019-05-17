@@ -62,9 +62,9 @@ int main(int argc, char *argv[])
   pointing_commflag=2; //2==BUTTERFLY - 1==RING
 
 //global data caracteristics
-  int Nb_t_Intervals = 64;//8;//1352;//128;//2;//256;//8;           //total number of stationnary intervals
-  int t_Interval_length = 330384000;//47436000;//2352000;//47436000;//470400;//1749900;//17899900;//1431992;//139992; //1431992;//2863984;//1431992;//pow(2,25);//pow(2,25);          //length for each stationnary interval
-  int t_Interval_length_true = 330384;//47436000;//2352000;//1749900;//17899900;//1431992;//139992;//1431992;//2863984;//1431992;//pow(2,20);
+  int Nb_t_Intervals = 128;//8;//1352;//128;//2;//256;//8;           //total number of stationnary intervals
+  int t_Interval_length = 47640600;//330384000;//47436000;//2352000;//47436000;//470400;//1749900;//17899900;//1431992;//139992; //1431992;//2863984;//1431992;//pow(2,25);//pow(2,25);          //length for each stationnary interval
+  int t_Interval_length_true = 476406;//330384;//47436000;//2352000;//1749900;//17899900;//1431992;//139992;//1431992;//2863984;//1431992;//pow(2,20);
   int LambdaBlock = pow(2,13);//pow(2,14)+1;  //lambda length for each stationnary interval
   Nnz=3;
 
@@ -208,8 +208,8 @@ int main(int argc, char *argv[])
   }//End if
 
 //Pointing matrix init
-  MatInit( &A, m, Nnz, indices, wghts, pointing_commflag, MPI_COMM_WORLD);
   A.trash_pix =0;
+  MatInit( &A, m, Nnz, indices, wghts, pointing_commflag, MPI_COMM_WORLD);
 
   t=MPI_Wtime();
 

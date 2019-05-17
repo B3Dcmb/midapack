@@ -86,7 +86,7 @@ int PCG_GLS_true(Mat *A, Tpltz Nm1, double *x, double *b, double *cond, int *lhi
   Nm1Ah = Ah;
 
   double *pixpond;
-  pixpond = (double *) malloc(A->lcount * sizeof(double));
+  pixpond = (double *) malloc(n * sizeof(double));
 
   //compute pixel share ponderation
   get_pixshare_pond(A, pixpond);
@@ -120,7 +120,7 @@ int PCG_GLS_true(Mat *A, Tpltz Nm1, double *x, double *b, double *cond, int *lhi
   // }
 
   TrMatVecProd(A, _g, g, 0);		//  g = At _g
-  // for(i=3360; i<3380; i++){			//
+  // for(i=0; i<50; i++){			//
   //     printf("At*_g: index = %d, g[%d] = %.18f\n", A->lindices[i], i, g[i]);
   // }
 
@@ -139,7 +139,7 @@ int PCG_GLS_true(Mat *A, Tpltz Nm1, double *x, double *b, double *cond, int *lhi
   g2pix=0.0;                               //g2 = "res"
   localreduce=0.0;
   for(i=0; i<n; i++)                    //  g2 = (Cg , g)
-    localreduce+= Cg[i] * g[i] * pixpond[i+(A->nnz)*(A->trash_pix)];
+    localreduce+= Cg[i] * g[i] * pixpond[i];
 
   MPI_Allreduce(&localreduce, &g2pix, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
@@ -151,7 +151,7 @@ int PCG_GLS_true(Mat *A, Tpltz Nm1, double *x, double *b, double *cond, int *lhi
   res=0.0;                               //g2 = "res"
   localreduce=0.0;
   for(i=0; i<n; i++)                    //  g2 = (Cg , g)
-    localreduce+= g[i] * g[i] * pixpond[i+(A->nnz)*(A->trash_pix)];
+    localreduce+= g[i] * g[i] * pixpond[i];
 
   MPI_Allreduce(&localreduce, &res, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   }
@@ -203,7 +203,7 @@ int PCG_GLS_true(Mat *A, Tpltz Nm1, double *x, double *b, double *cond, int *lhi
     coeff=0.0;
     localreduce=0.0;
     for(i=0; i<n; i++)
-      localreduce+= h[i]*AtNm1Ah[i] * pixpond[i+(A->nnz)*(A->trash_pix)] ;
+      localreduce+= h[i]*AtNm1Ah[i] * pixpond[i] ;
     MPI_Allreduce(&localreduce, &coeff, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     // printf("Coeff = %f\n",coeff);
 /*
@@ -238,7 +238,7 @@ int PCG_GLS_true(Mat *A, Tpltz Nm1, double *x, double *b, double *cond, int *lhi
     g2pixp=g2pix;                               // g2p = "res"
     localreduce=0.0;
     for(i=0; i<n; i++)                    // g2 = (Cg , g)
-      localreduce+= Cg[i] * g[i] *pixpond[i+(A->nnz)*(A->trash_pix)];
+      localreduce+= Cg[i] * g[i] *pixpond[i];
 
     MPI_Allreduce(&localreduce, &g2pix, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
@@ -249,7 +249,7 @@ int PCG_GLS_true(Mat *A, Tpltz Nm1, double *x, double *b, double *cond, int *lhi
   if (TRUE_NORM==1) {
   localreduce=0.0;
   for(i=0; i<n; i++)                    // g2 = (Cg , g)
-    localreduce+= g[i] * g[i] *pixpond[i+(A->nnz)*(A->trash_pix)];
+    localreduce+= g[i] * g[i] *pixpond[i];
 
   MPI_Allreduce(&localreduce, &res, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   }

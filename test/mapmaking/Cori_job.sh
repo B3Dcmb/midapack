@@ -5,8 +5,8 @@
 #SBATCH -J midapack_map
 #SBATCH -C haswell
 #SBATCH -L SCRATCH
-#DW jobdw capacity=2TiB access_mode=striped type=scratch
-#DW stage_in source=/global/cscratch1/sd/elbouha/data_TOAST/test3_clean destination=$DW_JOB_STRIPED/test3_clean type=directory
+#DW jobdw capacity=3TiB access_mode=striped type=scratch
+#DW stage_in source=/global/cscratch1/sd/elbouha/data_TOAST/test4_clean destination=$DW_JOB_STRIPED/test4_clean type=directory
 
 source $HOME/.bashrc.ext
 cd $SLURM_SUBMIT_DIR
@@ -23,7 +23,7 @@ export OMP_NUM_THREADS=1
 # time srun -n 8192 -c 2 --cpu_bind=cores ./toast_pcg $DW_JOB_STRIPED/test3_clean/ > run_8192_2.log 2>error_8192_2.log
 # time srun -n 4096 -c 4 --cpu_bind=cores ./toast_pcg $DW_JOB_STRIPED/test3_clean/ > run_4096.log 2>error_4096.log
 # time srun -n 2048 -c 8 --cpu_bind=cores ./toast_pcg $DW_JOB_STRIPED/test3_clean/ > run_2048.log 2>error_2048.log
-time srun -n 1024 -c 2 --cpu_bind=cores ./toast_pcg $DW_JOB_STRIPED/test3_clean/ > run.log 2>error.log
+time srun -n 1024 -c 2 --cpu_bind=cores ./toast_pcg $DW_JOB_STRIPED/test4_clean/ > run.log 2>error.log
 # time srun -n 512 -c 32 --cpu_bind=cores ./toast_pcg $DW_JOB_STRIPED/test3_clean/ > run_512.log 2>error_512.log
 # time srun -n 256 -c 64 --cpu_bind=cores ./toast_pcg $DW_JOB_STRIPED/test3_clean/ > run_256.log 2>error_256.log
 # time srun -n 128 -c 64 --cpu_bind=cores ./toast_pcg $DW_JOB_STRIPED/test3_clean/ > run_128.log 2>error_128.log

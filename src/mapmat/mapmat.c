@@ -531,7 +531,7 @@ int MatComShape(Mat *A, int flag, MPI_Comm comm){
       A->R = (int** ) malloc(A->steps * sizeof(int* ));                 //allocate receiving maps tab
       A->nS = (int* ) malloc(A->steps * sizeof(int));                   //allocate sending map sizes tab
       A->nR = (int* ) malloc(A->steps * sizeof(int));                   //allocate receiving map size tab
-      butterfly_init(A->lindices, A->lcount, A->R, A->nR, A->S, A->nS, &(A->com_indices), &(A->com_count), A->steps, A->comm);
+      butterfly_init(A->lindices+(A->nnz)*(A->trash_pix), A->lcount-(A->nnz)*(A->trash_pix), A->R, A->nR, A->S, A->nS, &(A->com_indices), &(A->com_count), A->steps, A->comm);
       break;
     //==========================Modification added by Sebastien Cayrols : 01/09/2015 , Berkeley
     case BUTTERFLY_BLOCKING_1 :
@@ -540,7 +540,7 @@ int MatComShape(Mat *A, int flag, MPI_Comm comm){
       A->R = (int** ) malloc(A->steps * sizeof(int* ));                 //allocate receiving maps tab
       A->nS = (int* ) malloc(A->steps * sizeof(int));                   //allocate sending map sizes tab
       A->nR = (int* ) malloc(A->steps * sizeof(int));                   //allocate receiving map size tab
-      butterfly_init(A->lindices, A->lcount, A->R, A->nR, A->S, A->nS, &(A->com_indices), &(A->com_count), A->steps, A->comm);
+      butterfly_init(A->lindices+(A->nnz)*(A->trash_pix), A->lcount-(A->nnz)*(A->trash_pix), A->R, A->nR, A->S, A->nS, &(A->com_indices), &(A->com_count), A->steps, A->comm);
       break;
     case BUTTERFLY_BLOCKING_2 :
       A->steps = log_2(size);
@@ -548,7 +548,7 @@ int MatComShape(Mat *A, int flag, MPI_Comm comm){
       A->R = (int** ) malloc(A->steps * sizeof(int* ));                 //allocate receiving maps tab
       A->nS = (int* ) malloc(A->steps * sizeof(int));                   //allocate sending map sizes tab
       A->nR = (int* ) malloc(A->steps * sizeof(int));                   //allocate receiving map size tab
-      butterfly_init(A->lindices, A->lcount, A->R, A->nR, A->S, A->nS, &(A->com_indices), &(A->com_count), A->steps, A->comm);
+      butterfly_init(A->lindices+(A->nnz)*(A->trash_pix), A->lcount-(A->nnz)*(A->trash_pix), A->R, A->nR, A->S, A->nS, &(A->com_indices), &(A->com_count), A->steps, A->comm);
       break;
     case NOEMPTYSTEPRING :
       A->steps = size;
@@ -556,9 +556,9 @@ int MatComShape(Mat *A, int flag, MPI_Comm comm){
       A->R = (int** ) malloc(A->steps * sizeof(int* ));                 //allocate receiving maps tab
       A->nS = (int* ) malloc(A->steps * sizeof(int));                   //allocate sending map sizes tab
       A->nR = (int* ) malloc(A->steps * sizeof(int));                   //allocate receiving map size tab
-      ring_init(A->lindices, A->lcount, A->R, A->nR, A->S, A->nS, A->steps, A->comm);
-      A->com_count = A->lcount;
-      A->com_indices = A->lindices;
+      ring_init(A->lindices+(A->nnz)*(A->trash_pix), A->lcount-(A->nnz)*(A->trash_pix), A->R, A->nR, A->S, A->nS, A->steps, A->comm);
+      A->com_count = A->lcount-(A->nnz)*(A->trash_pix);
+      A->com_indices = A->lindices+(A->nnz)*(A->trash_pix);
       break;
     //==========================End modification
     case RING :
@@ -567,9 +567,9 @@ int MatComShape(Mat *A, int flag, MPI_Comm comm){
       A->R = (int** ) malloc(A->steps * sizeof(int* ));                 //allocate receiving maps tab
       A->nS = (int* ) malloc(A->steps * sizeof(int));                   //allocate sending map sizes tab
       A->nR = (int* ) malloc(A->steps * sizeof(int));                   //allocate receiving map size tab
-      ring_init(A->lindices, A->lcount, A->R, A->nR, A->S, A->nS, A->steps, A->comm);
-      A->com_count = A->lcount;
-      A->com_indices = A->lindices;
+      ring_init(A->lindices+(A->nnz)*(A->trash_pix), A->lcount-(A->nnz)*(A->trash_pix), A->R, A->nR, A->S, A->nS, A->steps, A->comm);
+      A->com_count = A->lcount-(A->nnz)*(A->trash_pix);
+      A->com_indices = A->lindices+(A->nnz)*(A->trash_pix);
       break;
     case NONBLOCKING :
       A->steps = size;
@@ -577,9 +577,9 @@ int MatComShape(Mat *A, int flag, MPI_Comm comm){
       A->R = (int** ) malloc(A->steps * sizeof(int* ));                 //allocate receiving maps tab
       A->nS = (int* ) malloc(A->steps * sizeof(int));                   //allocate sending map sizes tab
       A->nR = (int* ) malloc(A->steps * sizeof(int));                   //allocate receiving map size tab
-      ring_init(A->lindices, A->lcount, A->R, A->nR, A->S, A->nS, A->steps, A->comm);
-      A->com_count = A->lcount;
-      A->com_indices = A->lindices;
+      ring_init(A->lindices+(A->nnz)*(A->trash_pix), A->lcount-(A->nnz)*(A->trash_pix), A->R, A->nR, A->S, A->nS, A->steps, A->comm);
+      A->com_count = A->lcount-(A->nnz)*(A->trash_pix);
+      A->com_indices = A->lindices+(A->nnz)*(A->trash_pix);
       break;
     case NOEMPTY :
       A->steps = size;
@@ -587,9 +587,9 @@ int MatComShape(Mat *A, int flag, MPI_Comm comm){
       A->R = (int** ) malloc(A->steps * sizeof(int* ));                 //allocate receiving maps tab
       A->nS = (int* ) malloc(A->steps * sizeof(int));                   //allocate sending map sizes tab
       A->nR = (int* ) malloc(A->steps * sizeof(int));                   //allocate receiving map size tab
-      ring_init(A->lindices, A->lcount, A->R, A->nR, A->S, A->nS, A->steps, A->comm);
-      A->com_count = A->lcount;
-      A->com_indices = A->lindices;
+      ring_init(A->lindices+(A->nnz)*(A->trash_pix), A->lcount-(A->nnz)*(A->trash_pix), A->R, A->nR, A->S, A->nS, A->steps, A->comm);
+      A->com_count = A->lcount-(A->nnz)*(A->trash_pix);
+      A->com_indices = A->lindices+(A->nnz)*(A->trash_pix);
       break;
     case ALLTOALLV :
       A->steps = size;
@@ -597,26 +597,26 @@ int MatComShape(Mat *A, int flag, MPI_Comm comm){
       A->R = (int** ) malloc(A->steps * sizeof(int* ));                 //allocate receiving maps tab
       A->nS = (int* ) malloc(A->steps * sizeof(int));                   //allocate sending map sizes tab
       A->nR = (int* ) malloc(A->steps * sizeof(int));                   //allocate receiving map size tab
-      ring_init(A->lindices, A->lcount, A->R, A->nR, A->S, A->nS, A->steps, A->comm);
-      A->com_count = A->lcount;
-      A->com_indices = A->lindices;
+      ring_init(A->lindices+(A->nnz)*(A->trash_pix), A->lcount-(A->nnz)*(A->trash_pix), A->R, A->nR, A->S, A->nS, A->steps, A->comm);
+      A->com_count = A->lcount-(A->nnz)*(A->trash_pix);
+      A->com_indices = A->lindices+(A->nnz)*(A->trash_pix);
       break;
     case ALLREDUCE :
       MPI_Allreduce(&A->lindices[A->lcount-1], &max, 1, MPI_INT, MPI_MAX, A->comm);	//maximum index
-      MPI_Allreduce(&A->lindices[0], &min, 1, MPI_INT, MPI_MIN, A->comm);	//
+      MPI_Allreduce(&A->lindices[(A->nnz)*(A->trash_pix)], &min, 1, MPI_INT, MPI_MIN, A->comm);	//
       A->com_count=(max-min+1);
-      A->com_indices = (int *) malloc(A->lcount * sizeof(int)); //warning
-      i=0;
+      A->com_indices = (int *) malloc((A->lcount-(A->nnz)*(A->trash_pix)) * sizeof(int)); //warning
+      i=(A->nnz)*(A->trash_pix);
       j=0;
       while( j<A->com_count && i<A->lcount){ //same as subsetmap for a coutiguous set
         if(min+j < A->lindices[i]){
           j++;
         }
         else{
-          A->com_indices[i]=j;
+          A->com_indices[i-(A->nnz)*(A->trash_pix)]=j;
           i++;
           j++;
-       }
+        }
       }
       break;
   }
@@ -1023,11 +1023,11 @@ int greedyreduce(Mat *A, double* x){
       free(com_val);
       free(out_val);
       break;
-      case ALLTOALLV :
- 	 nRtot=nStot=0;
-	 for(k=0; k< A->steps; k++){				//compute buffer sizes
-	     nRtot += A->nR[k];                // to receive
-	     nStot += A->nS[k];                // to send
+    case ALLTOALLV :
+ 	    nRtot=nStot=0;
+	    for(k=0; k< A->steps; k++){				//compute buffer sizes
+	       nRtot += A->nR[k];                // to receive
+	       nStot += A->nS[k];                // to send
        }
 
       alltoallv_reduce(A->R, A->nR, nRtot, A->S, A->nS, nStot, lvalues, x, A->steps, A->comm);
