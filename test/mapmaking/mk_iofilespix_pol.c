@@ -75,16 +75,16 @@ int main(int argc, char *argv[])
   lhits = (int *) malloc((int)(xsize/3)*sizeof(int));
   cond = (double *) malloc((int)(xsize/3)*sizeof(double));
 
-  ioReadbinfile( xsize, map_id, lstid, lhits, cond, x);
+  ioReadbinfile( xsize, map_id, lstid, x, cond, lhits);
 
-  x2map_pol( mapI, mapQ, mapU, hits, Cond, npix, x, lstid, lhits, cond, xsize);
+  x2map_pol( mapI, mapQ, mapU, Cond, hits, npix, x, lstid, cond, lhits, xsize);
 
   free(x);
   free(lstid);
   }//end loop over processors
 
 //binarie one
-  ioWritePixbinfile_pol( npix, mapI, mapQ, mapU, hits, Cond);
+  ioWritePixbinfile_pol( npix, mapI, mapQ, mapU, Cond, hits);
 
   return 0;
 }
@@ -118,7 +118,7 @@ int ioReadtxtfile( int *size0, int *idp, int *m, int *Alcount, int *Nb_t_Interva
 }
 
 
-int x2map_pol( double *mapI, double *mapQ, double *mapU, int *hits, double *Cond, int npix, double *x, int *lstid, int *lhits, double *cond, int xsize)
+int x2map_pol( double *mapI, double *mapQ, double *mapU, double *Cond, int * hits, int npix, double *x, int *lstid, double *cond, int *lhits, int xsize)
 {
 
   int i;
@@ -150,7 +150,7 @@ int x2map_pol( double *mapI, double *mapQ, double *mapU, int *hits, double *Cond
 }
 
 
-int ioWritePixbinfile_pol( int mapsize, double *mapI, double *mapQ, double *mapU, int *hits, double *Cond)
+int ioWritePixbinfile_pol( int mapsize, double *mapI, double *mapQ, double *mapU, double *Cond, int *hits)
 {
 
 

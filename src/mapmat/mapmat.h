@@ -1,10 +1,13 @@
-/** @file mapmat.h 
+/** @file mapmat.h
     @brief <b> Declarations of the matrix type and his associated routines.</b>
     @n these routines are developed to handle sparse matrices.
     Typically, in the CMB Data Analysis context, it is especially developed handle pointing or unpointing matrices.
     Thus, the unpointing matrix @a A can be defined as a MIDAS_Mat. Operating with the pointing matrices can be done without redefining a new matrix.
     @author Pierre Cargemel
     @date November 2011 */
+
+/** Update by Hamza El Bouhargani
+    @date February 2019 */
 
 
 
@@ -35,8 +38,11 @@ typedef struct {
   int		flag;			// flag for communication scheme (NONE, RING, BUTTERFLY ...)
   int		m;			// number local rows
   int		nnz;                    // number non-zero per rows
+  int   trash_pix;   //flag for presence of trash pixel
   int		*indices;		// column indices tab; size = m * nnz; can be a global or local numbering
   double	*values;		// non-zero values tab; size = m * nnz
+  int *id0pix;    // index of the first time sample pointing to each pixel (no nnz repeat factor)
+  int *ll;      // linked list of time samples indexes linked by pixels
   //--------local shaping---------------
   int		lcount;
   int		*lindices;		// local indices tab (monotony with global numbering); size = lcount

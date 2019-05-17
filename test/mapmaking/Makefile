@@ -4,11 +4,11 @@ GCC = gcc
 # MPICC = /global/homes/e/elbouha/.conda/envs/hamzaenv/bin/mpicc
 MPICC = cc
 CC = $(MPICC) -qopenmp -g $(OPT)
-INC = -I/opt/cray/pe/fftw/3.3.6.2/haswell/include
+INC = -I/opt/cray/pe/fftw/3.3.6.3/haswell/include
 LIB = -L$(DIR)/lib -lmidapack
 # FFTW_LIB = -L/opt/cray/pe/fftw/3.3.6.2/haswell/lib -lfftw3 -lfftw3_threads
 #FFTW     = -D FFTW_MULTITHREADING
-FFTW_LIB = /opt/cray/pe/fftw/3.3.6.2/haswell/lib/libfftw3.a /opt/cray/pe/fftw/3.3.6.2/haswell/lib/libfftw3_threads.a
+FFTW_LIB = -L/opt/cray/pe/fftw/3.3.6.3/haswell/lib/libfftw3.a /opt/cray/pe/fftw/3.3.6.3/haswell/lib/libfftw3_threads.a
 
 SRC = ../../src/toeplitz/
 
@@ -26,6 +26,8 @@ CFITSIO_INC = -I/usr/common/software/cfitsio/3.370-reentrant/hsw/intel/include
 HEALPIX_LIB = -L$(HOME)/Healpix_3.31/lib -lchealpix -lhealpix
 CFITSIO_LIB = -L/usr/common/software/cfitsio/3.370-reentrant/hsw/intel/lib -lcfitsio
 # CFITSIO_LIB = -L/global/common/sw/cray/cnl6/ivybridge/cfitsio/3.410/intel/17.0.2.174/hgce4lk/lib -lcfitsio
+
+
 INTEL_DIR = /opt/intel/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64/
 INTEL_LIB = $(INTEL_DIR)libsvml.a $(INTEL_DIR)libirc.a $(INTEL_DIR)libimf.a $(INTEL_DIR)libifcore.a $(INTEL_DIR)libiomp5.a
 
@@ -44,11 +46,11 @@ example_pcg: $(TOEPLITZ) $(MAPMAT)
 	make createToeplitz.o \
 	precond.o \
 	pcg_true.o \
-	pcg_like.o \
 	iofiles.o \
 	test_pcg \
 	test_pcg_pol \
 	toast_pipeline \
+	toast_pipeline_1kdet \
 	test_pcg_rand \
 
 exemple_iofilepix:
@@ -95,8 +97,10 @@ map2gif.o : map2gif.f90
 
 mk_iofilespix : mk_iofilespix.c map2gif.o iofiles.o
 	$(CC) mk_iofilespix.c -o mk_iofilespix $(HEALPIX_INC) $(INC) $(LIB) map2gif.o iofiles.o -lm -lintlc -Wl,--start-group $(INTEL_LIB) $(HEALPIX_LIB) -lhpxgif -lgif $(CFITSIO_LIB) -Wl,--end-group
+
 mk_iofilespix_pol : mk_iofilespix_pol.c iofiles.o
 	$(CC) mk_iofilespix_pol.c -o mk_iofilespix_pol $(INC) $(LIB) iofiles.o -lm
+
 mk_iofilespix_diff : mk_iofilespix_diff.c map2gif.o iofiles.o
 	$(CC) mk_iofilespix_diff.c -o mk_iofilespix_diff $(HEALPIX_INC) $(INC) $(LIB) map2gif.o iofiles.o -lm -lintlc -Wl,--start-group $(INTEL_LIB) $(HEALPIX_LIB) -lhpxgif -lgif $(CFITSIO_LIB) -Wl,--end-group
 
@@ -115,7 +119,10 @@ test_pcg_pol: createToeplitz.o precond.o test_pcg_polar.c iofiles.o pcg_true.o
 		$(CC) test_pcg_polar.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(LIB) $(FFTW_LIB) -lm -o pcg_pol
 
 toast_pipeline: createToeplitz.o precond.o toast_pipeline.c iofiles.o pcg_true.o
-		$(CC) toast_pipeline.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(LIB) $(FFTW_LIB) -lm -o toast_pcg
+		$(CC) toast_pipeline.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(LIB) $(FFTW_LIB) -lm -o toast_pcg -Wl,@/global/homes/e/elbouha/midapack/test/mapmaking/allinea-profiler.ld
+
+toast_pipeline_1kdet: createToeplitz.o precond.o toast_pipeline_1kdet.c iofiles.o pcg_true.o
+		$(CC) toast_pipeline.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(LIB) $(FFTW_LIB) -lm -o toast_pcg_cyc #-Wl,@/global/homes/e/elbouha/midapack/test/mapmaking/allinea-profiler.ld
 
 test_pcg_rand: createToeplitz.o precond.o test_pcg_rand.c iofiles.o pcg_true.o
 	$(CC) test_pcg_rand.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(LIB) $(FFTW_LIB) -lm -o pcg_rand

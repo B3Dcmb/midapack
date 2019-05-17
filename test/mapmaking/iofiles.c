@@ -233,7 +233,7 @@ int ioReadTpltzrandom( int lambda, double *Tblock)
     // for(i=1;i<lambda;i++)
     //   Tblock[i]= rand()/((double)RAND_MAX);
 
-    Tblock[0] = 10;
+    Tblock[0] = 1;
 
 
         return 0;
@@ -241,7 +241,7 @@ int ioReadTpltzrandom( int lambda, double *Tblock)
 
 
 
-int ioWritebinfile( int mapsize, int mappart_id, int *lstid, int *lhits, double *cond, double *map)
+int ioWritebinfile( int mapsize, int mappart_id, int *lstid, double *map, double *cond, int *lhits)
 {
         int i;
 
@@ -249,10 +249,10 @@ int ioWritebinfile( int mapsize, int mappart_id, int *lstid, int *lhits, double 
         char lhits_vectorFile[256];
         char cond_vectorFile[256];
         char x_vectorFile[256];
-        char *lstid_vectorFileNameBasis = "mapout_lstid_";
-        char *lhits_vectorFileNameBasis = "mapout_lhits_";
-        char *cond_vectorFileNameBasis = "mapout_lcond_";
-        char *x_vectorFileNameBasis = "mapout_";
+        char *lstid_vectorFileNameBasis = "/global/cscratch1/sd/elbouha/data_TOAST/output/mapout_lstid_";
+        char *lhits_vectorFileNameBasis = "/global/cscratch1/sd/elbouha/data_TOAST/output/mapout_lhits_";
+        char *cond_vectorFileNameBasis = "/global/cscratch1/sd/elbouha/data_TOAST/output/mapout_lcond_";
+        char *x_vectorFileNameBasis = "/global/cscratch1/sd/elbouha/data_TOAST/output/mapout_";
 
         FILE *fp;
 
@@ -288,7 +288,7 @@ int ioWritebinfile( int mapsize, int mappart_id, int *lstid, int *lhits, double 
 
 
 
-int ioReadbinfile( int mapsize, int mappart_id, int *lstid, int *lhits, double *cond, double *map)
+int ioReadbinfile( int mapsize, int mappart_id, int *lstid, double *map, double *cond, int *lhits)
 {
 
         int i;

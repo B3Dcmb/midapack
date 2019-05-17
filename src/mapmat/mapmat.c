@@ -1,12 +1,12 @@
 /** @file   mapmat.c
-    @brief  Matrix routines implementation 
+    @brief  Matrix routines implementation
     @note  Copyright (c) 2010-2012 APC CNRS Université Paris Diderot. This program is free software; you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation; either version 3 of the License, or (at your option) any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more details. You should have received a copy of the GNU General Public License along with this program; if not, see http://www.gnu.org/licenses/lgpl.html
 
-    @note For more information about ANR MIDAS'09 project see http://www.apc.univ-paris7.fr/APC_CS/Recherche/Adamis/MIDAS09/index.html 
+    @note For more information about ANR MIDAS'09 project see http://www.apc.univ-paris7.fr/APC_CS/Recherche/Adamis/MIDAS09/index.html
     @note ACKNOWLEDGMENT: This work has been supported in part by the French National  Research Agency (ANR) through COSINUS program (project MIDAS no. ANR-09-COSI-009).
     @author Pierre Cargemel
     @date   November 2011*/
-#ifdef W_MPI 
+#ifdef W_MPI
  #include <mpi.h>
 #endif
 #include <stdio.h>
@@ -17,27 +17,27 @@
 
 /** Create a matrix specifying the number of local rows m,
     the number of non-zero elements per row nnz ,
-    indices tab, values tab, flag for communication and a communicator comm. 
+    indices tab, values tab, ts_flags tab, flag for communication and a communicator comm.
     indices and values tabs must be allocated and contain at least m*nnz elements.
     It represents column indices of the nonzero elements. Respectively values tab
     represents the non-zero values.
     After call MatInit, all precomputation are done and the matrix structure is ready to use.
-    That means you can start applying matrix operation. 
-    Another way to initialize a matrix structure is to apply step by step : 
+    That means you can start applying matrix operation.
+    Another way to initialize a matrix structure is to apply step by step :
     - MatSetIndices
     - MatSetValues
     - MatLocalShape
     - MatComShape
 
     @warning do not modify indices tab until you will use the matrix structure.
-    @warning [MPI COMM!] with Midapack sequential version, there is no communicator argument. 
+    @warning [MPI COMM!] with Midapack sequential version, there is no communicator argument.
     @param A pointer to a Mat struct
     @param m number of local rows
-    @param nnz number of non-zero per row 
-    @param indices input tab (modified)    
-    @param values input tab 
-    @param flag communication flag 
-    @param comm MPI communicator 
+    @param nnz number of non-zero per row
+    @param indices input tab (modified)
+    @param values input tab
+    @param flag communication flag
+    @param comm MPI communicator
     @ingroup matmap_group11
     @sa MatFree */
 int MatInit(Mat *A, int m, int nnz, int *indices, double *values, int flag
@@ -49,6 +49,7 @@ int MatInit(Mat *A, int m, int nnz, int *indices, double *values, int flag
   MatSetIndices(A, m, nnz, indices);
 
   MatSetValues(A, m, nnz, values);
+
 
   err = MatLocalShape(A, 3);		// compute lindices (local columns) (method 3 = counting sort)
 
@@ -63,14 +64,14 @@ int MatInit(Mat *A, int m, int nnz, int *indices, double *values, int flag
     indices tab must be allocated and contains at least m*nnz elements.
     @param A pointer to a Mat struct
     @param m number of local rows
-    @param nnz number of non-zero per row 
-    @param indices input tab     
-    @return void 
+    @param nnz number of non-zero per row
+    @param indices input tab
+    @return void
     @ingroup matmap_group11*/
 void MatSetIndices(Mat *A, int m, int nnz, int *indices){
   A->m    = m;				// set number of local rows
   A->nnz  = nnz;        		// set number of non-zero values per row
-  A->indices = indices;			// point to indices 
+  A->indices = indices;			// point to indices
 }
 
 
@@ -78,9 +79,9 @@ void MatSetIndices(Mat *A, int m, int nnz, int *indices){
     values tab must be allocated and contains at least m*nnz values.
     @param A pointer to a Mat struct
     @param m number of local rows
-    @param nnz number of non-zero per row 
-    @param values input tab    
-    @return void 
+    @param nnz number of non-zero per row
+    @param values input tab
+    @return void
     @ingroup matmap_group11*/
 void MatSetValues(Mat *A, int m, int nnz, double *values){
   int err;
@@ -88,6 +89,7 @@ void MatSetValues(Mat *A, int m, int nnz, double *values){
   A->nnz  = nnz;        		// set number of non-zero values per row
   A->values  = values;			// point to values
 }
+
 
 //===================Part added by Sebastien Cayrols to get amount of memory needed by communication algoritms
 void CommInfo(Mat *A){
@@ -207,9 +209,9 @@ void CommInfo(Mat *A){
       t[i]=A->nS[i];
 
     MPI_Reduce(t,amountSizeByStep,A->steps,MPI_DOUBLE,MPI_SUM,0,comm);
-    
+
     free(t);
-    
+
     if(rank==0){
       stepSum=minStep=maxStep=amountSizeByStep[0];
       printf("\n[MEMORY]Step n°%4d, message size : %e",0,amountSizeByStep[0]);
@@ -311,11 +313,11 @@ void MatReset(Mat *A){
 /** Free allocated tabs of a matrix structure including local indices tab and communication tabs.
     Do not free indices and values which user is responsible for.
     @param A pointer to a Mat struct
-    @return void 
+    @return void
     @sa MatInit MatLocalShape
     @ingroup matmap_group11 */
 void MatFree(Mat *A){
-  
+
   //get information about communication size
   CommInfo(A);
 
@@ -394,11 +396,12 @@ void MatFree(Mat *A){
 /** Load matrix from a file.
     This is MatSave dual routine which loads data into matrix reading a specified file (or several specified files).
     Number of files should equal number of processor.
-    File format should be ascii files (for examples look at files generated by MapMatSave routine). 
-    @todo Implement to read several file formats as basic ASCII, XML, HDF5... 
+    File format should be ascii files (for examples look at files generated by MapMatSave routine).
+    @warning Does not include gap samples flags functionality
+    @todo Implement to read several file formats as basic ASCII, XML, HDF5...
     @param mat pointer to the Mat
     @param filename basename of a file, actually data are loaded from  several files denotes by "basename + processor number"
-    @return error code 
+    @return error code
     @ingroup matmap_group11 */
 int MatLoad(Mat *mat, char *filename){
   int err;
@@ -407,7 +410,7 @@ int MatLoad(Mat *mat, char *filename){
   MPI_Comm_rank(mat->comm, &rank);
 #else
   rank=0;
-#endif 
+#endif
   FILE *in;
   char fn[100];
   int i=0;
@@ -428,7 +431,7 @@ int MatLoad(Mat *mat, char *filename){
     else{
       return 1;             //(nnz > 2) not implement
     }
-    i+=mat->nnz;  
+    i+=mat->nnz;
   }
   if(i!= mat->m * mat->nnz ){
     printf("WARNNING data size doesn't fit\n");
@@ -444,9 +447,10 @@ int MatLoad(Mat *mat, char *filename){
     It saves matrix data into files, and can be usefull to check that data are well stored.
     Obviously it performs IO, moreover with one file per processor.
     Therfore, just call this function in a development phase, with few data and few processors.
+    @warning Does not include gap samples flags functionality.
     @param A pointer to the Mat
     @param filename file basename, for instance passing "toto" should produce the output files named "toto_$(rank)"
-    @return error code 
+    @return error code
     @ingroup matmap_group11 */
 int MatSave(Mat *mat, char *filename){
   FILE *out;
@@ -456,7 +460,7 @@ int MatSave(Mat *mat, char *filename){
 #if W_MPI
   MPI_Comm_rank(mat->comm, &rank);
 #else
-  sprintf(fn,"%s_%d.dat", filename, rank);    
+  sprintf(fn,"%s_%d.dat", filename, rank);
 #endif
   out=fopen(fn,"w");
   if(out==NULL){
@@ -472,7 +476,7 @@ int MatSave(Mat *mat, char *filename){
   }
   fclose(out);
   return 0;
-} 
+}
 
 
 
@@ -482,22 +486,22 @@ int MatSave(Mat *mat, char *filename){
     - sort and merge indices tab,
     - allocate lindices of size lcount and copy the sorted indices
     - reindex indices according the local indices
-      
+
     @warning lindices is internally allocated ( to free it, use MatFree )
     @sa MatComShape MatFree MatSetIndices
-    @ingroup matmap_group11 */ 
+    @ingroup matmap_group11 */
 int MatLocalShape(Mat *A, int sflag){
   int *tmp_indices;
 
-  tmp_indices = (int *) malloc((int64_t) (A->m) * A->nnz * sizeof(int));	//allocate a tmp copy of indices tab to sort    
-  memcpy(tmp_indices, A->indices, (int64_t) (A->m) * A->nnz * sizeof(int));	//copy        
+  tmp_indices = (int *) malloc((int64_t) (A->m) * A->nnz * sizeof(int));	//allocate a tmp copy of indices tab to sort
+  memcpy(tmp_indices, A->indices, (int64_t) (A->m) * A->nnz * sizeof(int));	//copy
 
 //  A->lcount = omp_psort(tmp_indices, A->m * A->nnz, sflag);		//sequential sort tmp_indices
   A->lcount = ssort(tmp_indices, A->m * A->nnz, sflag);		//sequential sort tmp_indices
 
-  A->lindices = (int *) malloc( A->lcount * sizeof(int));      
+  A->lindices = (int *) malloc( A->lcount * sizeof(int));
   memcpy(A->lindices, tmp_indices, A->lcount * sizeof(int));	//copy tmp_indices into lindices and free
-  free(tmp_indices);     
+  free(tmp_indices);
 
   sindex(A->lindices, A->lcount, A->indices, A->nnz * A->m);
   return 0;
@@ -508,11 +512,11 @@ int MatLocalShape(Mat *A, int sflag){
 
 
 #if W_MPI
-/** Transform the matrix data structure, identifying columns shared by several processors 
+/** Transform the matrix data structure, identifying columns shared by several processors
     @warning [MPI ONLY!] this function does not exist in Midapack sequential version
     @sa MatLocalShape MatInit TrMatVecProd
-    @ingroup matmap_group11 */ 
-int MatComShape(Mat *A, int flag, MPI_Comm comm){  
+    @ingroup matmap_group11 */
+int MatComShape(Mat *A, int flag, MPI_Comm comm){
   int size;
   int i, min, max, j;
   A->comm = comm;			// set communivcator
@@ -527,7 +531,7 @@ int MatComShape(Mat *A, int flag, MPI_Comm comm){
       A->R = (int** ) malloc(A->steps * sizeof(int* ));                 //allocate receiving maps tab
       A->nS = (int* ) malloc(A->steps * sizeof(int));                   //allocate sending map sizes tab
       A->nR = (int* ) malloc(A->steps * sizeof(int));                   //allocate receiving map size tab
-      butterfly_init(A->lindices, A->lcount, A->R, A->nR, A->S, A->nS, &(A->com_indices), &(A->com_count), A->steps, A->comm);
+      butterfly_init(A->lindices+(A->nnz)*(A->trash_pix), A->lcount-(A->nnz)*(A->trash_pix), A->R, A->nR, A->S, A->nS, &(A->com_indices), &(A->com_count), A->steps, A->comm);
       break;
     //==========================Modification added by Sebastien Cayrols : 01/09/2015 , Berkeley
     case BUTTERFLY_BLOCKING_1 :
@@ -536,7 +540,7 @@ int MatComShape(Mat *A, int flag, MPI_Comm comm){
       A->R = (int** ) malloc(A->steps * sizeof(int* ));                 //allocate receiving maps tab
       A->nS = (int* ) malloc(A->steps * sizeof(int));                   //allocate sending map sizes tab
       A->nR = (int* ) malloc(A->steps * sizeof(int));                   //allocate receiving map size tab
-      butterfly_init(A->lindices, A->lcount, A->R, A->nR, A->S, A->nS, &(A->com_indices), &(A->com_count), A->steps, A->comm);
+      butterfly_init(A->lindices+(A->nnz)*(A->trash_pix), A->lcount-(A->nnz)*(A->trash_pix), A->R, A->nR, A->S, A->nS, &(A->com_indices), &(A->com_count), A->steps, A->comm);
       break;
     case BUTTERFLY_BLOCKING_2 :
       A->steps = log_2(size);
@@ -544,7 +548,7 @@ int MatComShape(Mat *A, int flag, MPI_Comm comm){
       A->R = (int** ) malloc(A->steps * sizeof(int* ));                 //allocate receiving maps tab
       A->nS = (int* ) malloc(A->steps * sizeof(int));                   //allocate sending map sizes tab
       A->nR = (int* ) malloc(A->steps * sizeof(int));                   //allocate receiving map size tab
-      butterfly_init(A->lindices, A->lcount, A->R, A->nR, A->S, A->nS, &(A->com_indices), &(A->com_count), A->steps, A->comm);
+      butterfly_init(A->lindices+(A->nnz)*(A->trash_pix), A->lcount-(A->nnz)*(A->trash_pix), A->R, A->nR, A->S, A->nS, &(A->com_indices), &(A->com_count), A->steps, A->comm);
       break;
     case NOEMPTYSTEPRING :
       A->steps = size;
@@ -552,9 +556,9 @@ int MatComShape(Mat *A, int flag, MPI_Comm comm){
       A->R = (int** ) malloc(A->steps * sizeof(int* ));                 //allocate receiving maps tab
       A->nS = (int* ) malloc(A->steps * sizeof(int));                   //allocate sending map sizes tab
       A->nR = (int* ) malloc(A->steps * sizeof(int));                   //allocate receiving map size tab
-      ring_init(A->lindices, A->lcount, A->R, A->nR, A->S, A->nS, A->steps, A->comm);
-      A->com_count = A->lcount;
-      A->com_indices = A->lindices;
+      ring_init(A->lindices+(A->nnz)*(A->trash_pix), A->lcount-(A->nnz)*(A->trash_pix), A->R, A->nR, A->S, A->nS, A->steps, A->comm);
+      A->com_count = A->lcount-(A->nnz)*(A->trash_pix);
+      A->com_indices = A->lindices+(A->nnz)*(A->trash_pix);
       break;
     //==========================End modification
     case RING :
@@ -563,9 +567,9 @@ int MatComShape(Mat *A, int flag, MPI_Comm comm){
       A->R = (int** ) malloc(A->steps * sizeof(int* ));                 //allocate receiving maps tab
       A->nS = (int* ) malloc(A->steps * sizeof(int));                   //allocate sending map sizes tab
       A->nR = (int* ) malloc(A->steps * sizeof(int));                   //allocate receiving map size tab
-      ring_init(A->lindices, A->lcount, A->R, A->nR, A->S, A->nS, A->steps, A->comm);
-      A->com_count = A->lcount;
-      A->com_indices = A->lindices;
+      ring_init(A->lindices+(A->nnz)*(A->trash_pix), A->lcount-(A->nnz)*(A->trash_pix), A->R, A->nR, A->S, A->nS, A->steps, A->comm);
+      A->com_count = A->lcount-(A->nnz)*(A->trash_pix);
+      A->com_indices = A->lindices+(A->nnz)*(A->trash_pix);
       break;
     case NONBLOCKING :
       A->steps = size;
@@ -573,9 +577,9 @@ int MatComShape(Mat *A, int flag, MPI_Comm comm){
       A->R = (int** ) malloc(A->steps * sizeof(int* ));                 //allocate receiving maps tab
       A->nS = (int* ) malloc(A->steps * sizeof(int));                   //allocate sending map sizes tab
       A->nR = (int* ) malloc(A->steps * sizeof(int));                   //allocate receiving map size tab
-      ring_init(A->lindices, A->lcount, A->R, A->nR, A->S, A->nS, A->steps, A->comm);
-      A->com_count = A->lcount;
-      A->com_indices = A->lindices;
+      ring_init(A->lindices+(A->nnz)*(A->trash_pix), A->lcount-(A->nnz)*(A->trash_pix), A->R, A->nR, A->S, A->nS, A->steps, A->comm);
+      A->com_count = A->lcount-(A->nnz)*(A->trash_pix);
+      A->com_indices = A->lindices+(A->nnz)*(A->trash_pix);
       break;
     case NOEMPTY :
       A->steps = size;
@@ -583,9 +587,9 @@ int MatComShape(Mat *A, int flag, MPI_Comm comm){
       A->R = (int** ) malloc(A->steps * sizeof(int* ));                 //allocate receiving maps tab
       A->nS = (int* ) malloc(A->steps * sizeof(int));                   //allocate sending map sizes tab
       A->nR = (int* ) malloc(A->steps * sizeof(int));                   //allocate receiving map size tab
-      ring_init(A->lindices, A->lcount, A->R, A->nR, A->S, A->nS, A->steps, A->comm);
-      A->com_count = A->lcount;
-      A->com_indices = A->lindices;
+      ring_init(A->lindices+(A->nnz)*(A->trash_pix), A->lcount-(A->nnz)*(A->trash_pix), A->R, A->nR, A->S, A->nS, A->steps, A->comm);
+      A->com_count = A->lcount-(A->nnz)*(A->trash_pix);
+      A->com_indices = A->lindices+(A->nnz)*(A->trash_pix);
       break;
     case ALLTOALLV :
       A->steps = size;
@@ -593,26 +597,26 @@ int MatComShape(Mat *A, int flag, MPI_Comm comm){
       A->R = (int** ) malloc(A->steps * sizeof(int* ));                 //allocate receiving maps tab
       A->nS = (int* ) malloc(A->steps * sizeof(int));                   //allocate sending map sizes tab
       A->nR = (int* ) malloc(A->steps * sizeof(int));                   //allocate receiving map size tab
-      ring_init(A->lindices, A->lcount, A->R, A->nR, A->S, A->nS, A->steps, A->comm);
-      A->com_count = A->lcount;
-      A->com_indices = A->lindices;
+      ring_init(A->lindices+(A->nnz)*(A->trash_pix), A->lcount-(A->nnz)*(A->trash_pix), A->R, A->nR, A->S, A->nS, A->steps, A->comm);
+      A->com_count = A->lcount-(A->nnz)*(A->trash_pix);
+      A->com_indices = A->lindices+(A->nnz)*(A->trash_pix);
       break;
     case ALLREDUCE :
       MPI_Allreduce(&A->lindices[A->lcount-1], &max, 1, MPI_INT, MPI_MAX, A->comm);	//maximum index
-      MPI_Allreduce(&A->lindices[0], &min, 1, MPI_INT, MPI_MIN, A->comm);	//
+      MPI_Allreduce(&A->lindices[(A->nnz)*(A->trash_pix)], &min, 1, MPI_INT, MPI_MIN, A->comm);	//
       A->com_count=(max-min+1);
-      A->com_indices = (int *) malloc(A->lcount * sizeof(int)); //warning 
-      i=0;
+      A->com_indices = (int *) malloc((A->lcount-(A->nnz)*(A->trash_pix)) * sizeof(int)); //warning
+      i=(A->nnz)*(A->trash_pix);
       j=0;
       while( j<A->com_count && i<A->lcount){ //same as subsetmap for a coutiguous set
         if(min+j < A->lindices[i]){
-          j++;  
+          j++;
         }
         else{
-          A->com_indices[i]=j;
+          A->com_indices[i-(A->nnz)*(A->trash_pix)]=j;
           i++;
           j++;
-       }
+        }
       }
       break;
   }
@@ -621,7 +625,7 @@ int MatComShape(Mat *A, int flag, MPI_Comm comm){
 #endif
 
 
-/** Perform matrix-vector multiplication, \f$y \leftarrow A x\f$. 
+/** Perform matrix-vector multiplication, \f$y \leftarrow A x\f$.
     @param A pointer to a Mat
     @param x input vector (overlapped)
     @param y output vector (distributed)
@@ -629,40 +633,52 @@ int MatComShape(Mat *A, int flag, MPI_Comm comm){
     @ingroup matmap_group12a */
 int MatVecProd(Mat *A, double *x, double* y, int pflag){
   int i, j, e;
-  for(i=0; i<A->m; i++) 					//              
+  for(i=0; i<A->m; i++) 					//
       y[i] = 0.0;
 
   e=0;
-  for(i=0; i<A->m*A->nnz; i+=A->nnz){					//              
-    for(j=0; j<A->nnz; j++){					// 
-      y[e] += A->values[i+j] * x[A->indices[i+j]];   
+  if(A->trash_pix){
+    for(i=0; i<A->m*A->nnz; i+=A->nnz){
+      if(A->indices[i]!=0){
+        for(j=0; j<A->nnz; j++){					//
+          y[e] += A->values[i+j] * x[A->indices[i+j]-(A->nnz)];
+        }
+      }
+      e++;
     }
-    e++;
+  }
+  else{
+    for(i=0; i<A->m*A->nnz; i+=A->nnz){
+      for(j=0; j<A->nnz; j++){					//
+        y[e] += A->values[i+j] * x[A->indices[i+j]];
+      }
+      e++;
+    }
   }
   return 0;
 };
 
 
 #ifdef W_MPI
-/** Perform transposed matrix-vector multiplication, \f$x \leftarrow A^t y\f$. 
+/** Perform transposed matrix-vector multiplication, \f$x \leftarrow A^t y\f$.
     This naive version does not require a precomputed communication structure.
-    But communication volumes may be significant. 
+    But communication volumes may be significant.
     Consequently in most of the cases is not optimized.
     @warning [MPI ONLY!] this function does not exist in Midapack sequential version
     @sa TrMatVecProd MatLocalShape
-    @param mat pointer 
+    @param mat pointer
     @param y local input vector (distributed)
     @param x local output vector (overlapped)
     @ingroup matmap_group11
-    @ingroup matmap_group12b */ 
+    @ingroup matmap_group12b */
 int TrMatVecProd_Naive(Mat *A, double *y, double* x, int pflag){
   int i, j, e, rank, size;
   int *rbuf, rbufcount;
   double *rbufvalues, *lvalues;
   int p, rp, sp, tag;
   MPI_Request s_request, r_request;
-  MPI_Status status; 
-   
+  MPI_Status status;
+
   MPI_Comm_rank(A->comm, &rank);				//get rank and size of the communicator
   MPI_Comm_size(A->comm, &size);				//
   lvalues = (double *) malloc( A->lcount *sizeof(double));	//allocate and set local values to 0.0
@@ -670,27 +686,27 @@ int TrMatVecProd_Naive(Mat *A, double *y, double* x, int pflag){
     lvalues[i]=0.0;						//
 
   e=0;
-  for(i=0; i<A->m; i++){					//local transform reduces              
+  for(i=0; i<A->m; i++){					//local transform reduces
     for(j=0; j<A->nnz; j++){					//
-      lvalues[A->indices[i*A->nnz+j]] += (A->values[i*A->nnz+j]) * y[i];   
+      lvalues[A->indices[i*A->nnz+j]] += (A->values[i*A->nnz+j]) * y[i];
     }
-  } 
+  }
 
   memcpy(x, lvalues, (A->lcount)*sizeof(double)); 			//copy local values into the result*/
   MPI_Allreduce(&(A->lcount), &(rbufcount), 1, MPI_INT, MPI_MAX, A->comm);	//find the max communication buffer sizes, and allocate
 
-  rbuf = (int *)    malloc(rbufcount * sizeof(int));                     
-  rbufvalues  = (double *) malloc(rbufcount * sizeof(double)); 
+  rbuf = (int *)    malloc(rbufcount * sizeof(int));
+  rbufvalues  = (double *) malloc(rbufcount * sizeof(double));
 
   tag=0;
   for (p=1; p < size; p++){	//loop : collective global reduce in ring-like fashion
     rp = (size + rank - p)%size;
     sp = (rank + p)%size;
     MPI_Send(&(A->lcount), 1, MPI_INT, sp, 0, A->comm);				//exchange sizes
-    MPI_Recv(&rbufcount, 1, MPI_INT, rp, 0, A->comm, &status);            
+    MPI_Recv(&rbufcount, 1, MPI_INT, rp, 0, A->comm, &status);
     tag++;
-    MPI_Irecv(rbuf, rbufcount, MPI_INT, rp, tag, A->comm, &r_request);		//exchange local indices   
-    MPI_Isend(A->lindices, A->lcount, MPI_INT, sp, tag, A->comm, &s_request); 
+    MPI_Irecv(rbuf, rbufcount, MPI_INT, rp, tag, A->comm, &r_request);		//exchange local indices
+    MPI_Isend(A->lindices, A->lcount, MPI_INT, sp, tag, A->comm, &s_request);
     MPI_Wait(&r_request, &status);
     MPI_Wait(&s_request, &status);
     tag++;
@@ -704,38 +720,55 @@ int TrMatVecProd_Naive(Mat *A, double *y, double* x, int pflag){
   free(lvalues);
   return 0;
 }
-#endif  
+#endif
 
 
-/** Perform a transposed matrix-vector multiplication, \f$x \leftarrow A^t y\f$ 
+/** Perform a transposed matrix-vector multiplication, \f$x \leftarrow A^t y\f$
     using a precomputed communication scheme. Before calling this routine,
-    the communication structure should have been set, calling MatInit or MatComShape. 
+    the communication structure should have been set, calling MatInit or MatComShape.
     The routine can be divided in two steps :
     - a local matrix vector multiplication
     - a collective-reduce. it consits in a sum reduce over all processes.
 
     The collective reduce is performed using algorithm previously defined : ring, butterfly ...
     @sa MatVecProd MatComShape TrMatVecProd_Naive MatInit
-    @param A a pointer to a Mat 
+    @param A a pointer to a Mat
     @param y local input vector (distributed)
     @param x local output vector (overlapped)
-    @ingroup matmap_group11 */ 
+    @ingroup matmap_group11 */
 int TrMatVecProd(Mat *A, double *y, double* x, int pflag){
   double *sbuf, *rbuf;
   int i, j, k, e;
   int nSmax, nRmax;
   double *lvalues;
+  if(A->trash_pix){
+    for(i=0; i < A->lcount-A->nnz; i++)				//refresh vector
+      x[i]=0.0;						//
 
-  for(i=0; i < A->lcount; i++)				//refresh vector
-    x[i]=0.0;						//
+      e=0;
+      for(i=0; i< A->m*A->nnz; i+=A->nnz){
+        if(A->indices[i]!=0){
+          //local transform reduce
+          for(j=0; j< A->nnz; j++){
+            x[A->indices[i+j]-(A->nnz)] += A->values[i+j] * y[e];	//
+          }
+        }							//
+        e++;
+      }
+  }
+  else{
+    for(i=0; i < A->lcount; i++)				//refresh vector
+      x[i]=0.0;						//
 
-  e=0;
-  for(i=0; i< A->m*A->nnz; i+=A->nnz){			//local transform reduce          
-    for(j=0; j< A->nnz; j++){
-       x[A->indices[i+j]] += A->values[i+j] * y[e];	//
-    }							//
-    e++;						//
-  }							//
+      e=0;
+      for(i=0; i< A->m*A->nnz; i+=A->nnz){//local transform reduce
+        for(j=0; j< A->nnz; j++){
+          x[A->indices[i+j]] += A->values[i+j] * y[e];	//
+        }						//
+        e++;
+      }
+  }
+
 
 #ifdef W_MPI
   greedyreduce(A, x);					//global reduce
@@ -767,25 +800,25 @@ int MatInfo(Mat *mat, int verbose, char *filename){
   int master=0;
   MPI_Comm_rank(mat->comm, &rank);
   MPI_Comm_size(mat->comm, &size);
-  
+
 
   if(rank==master){			//master process saves data into filename_info.txt
-    sprintf(fn,"%s_%s", filename, "info.txt");    
+    sprintf(fn,"%s_%s", filename, "info.txt");
     out=fopen(fn,"w");
     if(out==NULL){
       printf("cannot open file %s\n", fn);
       return 1;
     }
     printf("open file %s ...", fn);
-    fprintf(out, "flag %d\n", mat->flag);	//print matirx main description : flag (communication scheme), 
+    fprintf(out, "flag %d\n", mat->flag);	//print matirx main description : flag (communication scheme),
     fprintf(out, "rows %d\n ", mat->m);	//rows per process,
     fprintf(out, "nnz %d\n", mat->nnz);	//nnz (number of non zero per row).
     fprintf(out, "\n");	//separator
   }
 
-  /*n = (int* ) calloc(mat->lcount,sizeof(int));		//allocate     
+  /*n = (int* ) calloc(mat->lcount,sizeof(int));		//allocate
   //printf("before gather %d\n", rank);
-  MPI_Gather(&(mat->lcount), 1, MPI_INT, n, 1, MPI_INT, master, mat->comm);		//gather nbnonempty cols 
+  MPI_Gather(&(mat->lcount), 1, MPI_INT, n, 1, MPI_INT, master, mat->comm);		//gather nbnonempty cols
   //printf("after gather %d\n", rank);
 
   if(rank==master){			//master process saves data into filename_info.txt
@@ -840,7 +873,7 @@ int MatInfo(Mat *mat, int verbose, char *filename){
 
     if(rank==master){			//master process saves data into filename_info.txt
     fprintf(out, "send/receive matrix\n");	//separator
-      for(i=0; i<size; i++){ 		//print collective description : 
+      for(i=0; i<size; i++){ 		//print collective description :
         if(mat->flag==BUTTERFLY){		//send-receive matrix
           for(j=0; j<size; j++){ 		//print send/receive matrix
             if(j>i){
@@ -869,34 +902,34 @@ int MatInfo(Mat *mat, int verbose, char *filename){
             else if(i>j){
               fprintf(out,"%d ", sr[(i+1)*(mat->steps)-i+j]);
             }
-            else{ 
+            else{
               fprintf(out,"%d ", 0);
-            } 
-          } 
+            }
+          }
           fprintf(out, "\n");
         }
       }
     }
-    free(sr);  
+    free(sr);
   }*/
-   
+
   if(rank==master){			//master process saves data into filename_info.txt
     fclose(out);
     printf("close %s\n", fn);
   }
-  return 0; 
+  return 0;
 }
 #endif
 
 
 
-#if W_MPI 							
+#if W_MPI
 int greedyreduce(Mat *A, double* x){
   int i, j, k;
   int nSmax, nRmax, nStot, nRtot;
   double *lvalues;
-  lvalues = (double *) malloc(A->lcount *sizeof(double));	//allocate and set to 0.0 local values
-  memcpy(lvalues, x, (A->lcount) *sizeof(double));		//copy local values into result values
+  lvalues = (double *) malloc((A->lcount-(A->nnz)*(A->trash_pix)) *sizeof(double));	//allocate and set to 0.0 local values
+  memcpy(lvalues, x, (A->lcount-(A->nnz)*(A->trash_pix)) *sizeof(double));		//copy local values into result values
   double *com_val;
   double *out_val;
   int ne=0;
@@ -908,12 +941,12 @@ int greedyreduce(Mat *A, double* x){
       for(k=0; k< A->steps; k++)
         if(A->nS[k] > nSmax)
           nSmax = A->nS[k];
-      com_val=(double *) malloc( A->com_count *sizeof(double)); 
+      com_val=(double *) malloc( A->com_count *sizeof(double));
       for(i=0; i < A->com_count; i++)
         com_val[i]=0.0;
-      m2m(lvalues, A->lindices, A->lcount, com_val, A->com_indices, A->com_count);
+      m2m(lvalues, A->lindices+(A->nnz)*(A->trash_pix), A->lcount-(A->nnz)*(A->trash_pix), com_val, A->com_indices, A->com_count);
       butterfly_reduce(A->R, A->nR, nRmax, A->S, A->nS, nSmax, com_val, A->steps, A->comm);
-      m2m(com_val, A->com_indices, A->com_count, x, A->lindices, A->lcount);
+      m2m(com_val, A->com_indices, A->com_count, x, A->lindices+(A->nnz)*(A->trash_pix), A->lcount-(A->nnz)*(A->trash_pix));
       free(com_val);
       break;
     //==========================Modification added by Sebastien Cayrols : 01/09/2015 , Berkeley
@@ -924,12 +957,12 @@ int greedyreduce(Mat *A, double* x){
       for(k=0; k< A->steps; k++)
         if(A->nS[k] > nSmax)
           nSmax = A->nS[k];
-      com_val=(double *) malloc( A->com_count *sizeof(double)); 
+      com_val=(double *) malloc( A->com_count *sizeof(double));
       for(i=0; i < A->com_count; i++)
         com_val[i]=0.0;
-      m2m(lvalues, A->lindices, A->lcount, com_val, A->com_indices, A->com_count);
+      m2m(lvalues, A->lindices+(A->nnz)*(A->trash_pix), A->lcount-(A->nnz)*(A->trash_pix), com_val, A->com_indices, A->com_count);
       butterfly_blocking_1instr_reduce(A->R, A->nR, nRmax, A->S, A->nS, nSmax, com_val, A->steps, A->comm);
-      m2m(com_val, A->com_indices, A->com_count, x, A->lindices, A->lcount);
+      m2m(com_val, A->com_indices, A->com_count, x, A->lindices+(A->nnz)*(A->trash_pix), A->lcount-(A->nnz)*(A->trash_pix));
       free(com_val);
       break;
     case BUTTERFLY_BLOCKING_2 :
@@ -939,27 +972,27 @@ int greedyreduce(Mat *A, double* x){
       for(k=0; k< A->steps; k++)
         if(A->nS[k] > nSmax)
           nSmax = A->nS[k];
-      com_val=(double *) malloc( A->com_count *sizeof(double)); 
+      com_val=(double *) malloc( A->com_count *sizeof(double));
       for(i=0; i < A->com_count; i++)
         com_val[i]=0.0;
-      m2m(lvalues, A->lindices, A->lcount, com_val, A->com_indices, A->com_count);
+      m2m(lvalues, A->lindices+(A->nnz)*(A->trash_pix), A->lcount-(A->nnz)*(A->trash_pix), com_val, A->com_indices, A->com_count);
       butterfly_blocking_1instr_reduce(A->R, A->nR, nRmax, A->S, A->nS, nSmax, com_val, A->steps, A->comm);
-      m2m(com_val, A->com_indices, A->com_count, x, A->lindices, A->lcount);
+      m2m(com_val, A->com_indices, A->com_count, x, A->lindices+(A->nnz)*(A->trash_pix), A->lcount-(A->nnz)*(A->trash_pix));
       free(com_val);
       break;
     case NOEMPTYSTEPRING :
       for(k=1; k< A->steps; k++)				//compute max communication buffer size
         if(A->nR[k] > nRmax)
-          nRmax = A->nR[k]; 
-      nSmax = nRmax;  
+          nRmax = A->nR[k];
+      nSmax = nRmax;
       ring_noempty_step_reduce(A->R, A->nR, nRmax, A->S, A->nS, nSmax, lvalues, x, A->steps, A->comm);
       break;
     //==========================End modification
     case RING :
       for(k=1; k< A->steps; k++)				//compute max communication buffer size
         if(A->nR[k] > nRmax)
-          nRmax = A->nR[k]; 
-      nSmax = nRmax;  
+          nRmax = A->nR[k];
+      nSmax = nRmax;
       ring_reduce(A->R, A->nR, nRmax, A->S, A->nS, nSmax, lvalues, x, A->steps, A->comm);
       break;
     case NONBLOCKING :
@@ -968,33 +1001,33 @@ int greedyreduce(Mat *A, double* x){
     case NOEMPTY :
       for(k=1; k< A->steps; k++)
         if(A->nR[k]!=0)
-          ne++;  
+          ne++;
       ring_noempty_reduce(A->R, A->nR, ne, A->S, A->nS, ne, lvalues, x, A->steps, A->comm);
       break;
     case ALLREDUCE :
-      com_val=(double *) malloc( A->com_count *sizeof(double)); 
-      out_val=(double *) malloc( A->com_count *sizeof(double)); 
+      com_val=(double *) malloc( A->com_count *sizeof(double));
+      out_val=(double *) malloc( A->com_count *sizeof(double));
       for(i=0; i < A->com_count; i++){
         com_val[i]=0.0;
         out_val[i]=0.0;
       }
-      s2m(com_val, lvalues, A->com_indices, A->lcount);
+      s2m(com_val, lvalues, A->com_indices, A->lcount-(A->nnz)*(A->trash_pix));
       /*for(i=0; i < A->com_count; i++){
          printf("%lf ", com_val[i]);
-      } */     
+      } */
       MPI_Allreduce(com_val, out_val, A->com_count, MPI_DOUBLE, MPI_SUM, A->comm);	//maximum index
       /*for(i=0; i < A->com_count; i++){
          printf("%lf ", out_val[i]);
-      } */     
-      m2s(out_val, x, A->com_indices, A->lcount);                                 //sum receive buffer into values
+      } */
+      m2s(out_val, x, A->com_indices, A->lcount-(A->nnz)*(A->trash_pix));                                 //sum receive buffer into values
       free(com_val);
       free(out_val);
       break;
-      case ALLTOALLV :
- 	 nRtot=nStot=0;
-	 for(k=0; k< A->steps; k++){				//compute buffer sizes
-	     nRtot += A->nR[k];                // to receive
-	     nStot += A->nS[k];                // to send
+    case ALLTOALLV :
+ 	    nRtot=nStot=0;
+	    for(k=0; k< A->steps; k++){				//compute buffer sizes
+	       nRtot += A->nR[k];                // to receive
+	       nStot += A->nS[k];                // to send
        }
 
       alltoallv_reduce(A->R, A->nR, nRtot, A->S, A->nS, nStot, lvalues, x, A->steps, A->comm);
@@ -1004,5 +1037,3 @@ int greedyreduce(Mat *A, double* x){
   return 0;
 }
 #endif
-
-
