@@ -63,9 +63,9 @@ int main(int argc, char *argv[])
 
 //global data caracteristics
   int Nb_t_Intervals = 128;//8;//1352;//128;//2;//256;//8;           //total number of stationnary intervals
-  int t_Interval_length = 47640600;//330384000;//47436000;//2352000;//47436000;//470400;//1749900;//17899900;//1431992;//139992; //1431992;//2863984;//1431992;//pow(2,25);//pow(2,25);          //length for each stationnary interval
+  int t_Interval_length = 476406000;//330384000;//47436000;//2352000;//47436000;//470400;//1749900;//17899900;//1431992;//139992; //1431992;//2863984;//1431992;//pow(2,25);//pow(2,25);          //length for each stationnary interval
   int t_Interval_length_true = 476406;//330384;//47436000;//2352000;//1749900;//17899900;//1431992;//139992;//1431992;//2863984;//1431992;//pow(2,20);
-  int LambdaBlock = pow(2,13);//pow(2,14)+1;  //lambda length for each stationnary interval
+  int LambdaBlock = pow(2,0);//pow(2,14)+1;  //lambda length for each stationnary interval
   Nnz=3;
 
 //PCG parameters
@@ -133,8 +133,14 @@ int main(int argc, char *argv[])
       signal      = (double *) malloc(t_Interval_length_true*t_Interval_loop_loc  * sizeof(double));
       weights = (double *) malloc(Nnz*t_Interval_length_true*t_Interval_loop_loc * sizeof(double));
 
+      int jump=0;
+      if(t_Interval_loop_loc==1){
+        jump = t_Interval_length_true*floor(number_in_interval/t_Interval_loop);
+      }
+      else
+        jump = t_Interval_length_true*t_Interval_loop_loc*number_in_interval;
       for (i=0; i < t_Interval_loop_loc; ++i) {
-        ioReadTOAST_data(t_Interval_length_true, part_id, point_data+t_Interval_length_true*Nnz*i, signal+t_Interval_length_true*i, weights+t_Interval_length_true*Nnz*i);
+        ioReadTOAST_data(jump, i, t_Interval_length_true, part_id, point_data+t_Interval_length_true*Nnz*i, signal+t_Interval_length_true*i, weights+t_Interval_length_true*Nnz*i);
       }
       //just keep the relevant part of the stationary interval for the local process
       int nb_proc_shared_one_subinterval = max(1, size/(Nb_t_Intervals*t_Interval_loop) );
@@ -200,8 +206,9 @@ int main(int argc, char *argv[])
         signal = b + t_Interval_length*k;
         weights = wghts + t_Interval_length*Nnz*k;
         part_id = Nb_t_Intervals_loc*rank + k;
+        int jump=0;
         for (i=0; i < t_Interval_loop; ++i) {
-          ioReadTOAST_data(t_Interval_length_true, part_id, point_data+t_Interval_length_true*Nnz*i, signal+t_Interval_length_true*i, weights+t_Interval_length_true*Nnz*i);
+          ioReadTOAST_data(jump, i, t_Interval_length_true, part_id, point_data+t_Interval_length_true*Nnz*i, signal+t_Interval_length_true*i, weights+t_Interval_length_true*Nnz*i);
         }
       }//end of the loop over the intervals
     }//end if
@@ -305,16 +312,20 @@ int main(int argc, char *argv[])
 
 //For one identical block
   // ioReadTpltzfile( Tsize, fknee, T);
-  MPI_Barrier(MPI_COMM_WORLD);
+  if(Tsize>1){
+    MPI_Barrier(MPI_COMM_WORLD);
 
-  if (rank==0){
-    ioReadTpltzfile( Tsize, T);
-    printf("\n correlation = [%f, %f,...,%f]",T[0],T[1],T[Tsize-1]);
+    if (rank==0){
+      ioReadTpltzfile( Tsize, T);
+      printf("Tsize = %d",Tsize);
+      printf("\n correlation = [%f,...,%f]",T[0],T[Tsize-1]);
+    }
+    MPI_Bcast(T, Tsize,  MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+    MPI_Barrier(MPI_COMM_WORLD);
   }
-  MPI_Bcast(T, Tsize,  MPI_DOUBLE, 0, MPI_COMM_WORLD);
-
-  MPI_Barrier(MPI_COMM_WORLD);
-  // ioReadTpltzrandom( Tsize, T);
+  else
+    ioReadTpltzrandom( Tsize, T);
   // for(i=0;i<50;i++)
   //   printf("Tpltz[%d] = %f\n",i,T[i]);
 //  createT(T, Tsize);

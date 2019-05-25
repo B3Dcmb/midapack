@@ -58,7 +58,7 @@ int ioReadfile( int block_size, int part_id, unsigned int *point_data, double *s
         return 0;
 }
 
-int ioReadfile_pol( int block_size, int part_id, unsigned int *point_data, double *signal, double *pol_ang)
+int ioReadfile_pol( int jump, int loop, int block_size, int part_id, unsigned int *point_data, double *signal, double *pol_ang)
 {
         int i;
 
@@ -85,21 +85,24 @@ int ioReadfile_pol( int block_size, int part_id, unsigned int *point_data, doubl
 	}
 
         fp=fopen(p_vectorFile, "rb");
+        fseek(fp, 3*(jump+loop*block_size) * sizeof(unsigned int), SEEK_SET);
         fread(point_data, sizeof(unsigned int), 3*block_size, fp);
         fclose(fp);
 
         fp=fopen(s_vectorFile, "rb");
+        fseek(fp, (jump+loop*block_size) * sizeof(double), SEEK_SET);
         fread(signal, sizeof(double), block_size, fp);
         fclose(fp);
 
         fp=fopen(pol_vectorFile, "rb");
+        fseek(fp, (jump+loop*block_size) * sizeof(double), SEEK_SET);
         fread(pol_ang, sizeof(double), block_size, fp);
         fclose(fp);
 
         return 0;
 }
 
-int ioReadTOAST_data( int block_size, int part_id, unsigned int *point_data, double *signal, double *wghts)
+int ioReadTOAST_data( int jump, int loop, int block_size, int part_id, unsigned int *point_data, double *signal, double *wghts)
 {
         int i;
 
@@ -126,14 +129,17 @@ int ioReadTOAST_data( int block_size, int part_id, unsigned int *point_data, dou
 	}
 
         fp=fopen(p_vectorFile, "rb");
+        fseek(fp, 3*(jump+loop*block_size) * sizeof(unsigned int), SEEK_SET);
         fread(point_data, sizeof(unsigned int), 3*block_size, fp);
         fclose(fp);
 
         fp=fopen(s_vectorFile, "rb");
+        fseek(fp, (jump+loop*block_size) * sizeof(double), SEEK_SET);
         fread(signal, sizeof(double), block_size, fp);
         fclose(fp);
 
         fp=fopen(wght_vectorFile, "rb");
+        fseek(fp, 3*(jump+loop*block_size) * sizeof(double), SEEK_SET);
         fread(wghts, sizeof(double), 3*block_size, fp);
         fclose(fp);
 

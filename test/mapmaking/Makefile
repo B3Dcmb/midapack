@@ -51,6 +51,7 @@ example_pcg: $(TOEPLITZ) $(MAPMAT)
 	test_pcg_pol \
 	toast_pipeline \
 	toast_pipeline_1kdet \
+	s4cmb_pipeline \
 	test_pcg_rand \
 
 exemple_iofilepix:
@@ -122,7 +123,10 @@ toast_pipeline: createToeplitz.o precond.o toast_pipeline.c iofiles.o pcg_true.o
 		$(CC) toast_pipeline.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(LIB) $(FFTW_LIB) -lm -o toast_pcg -Wl,@/global/homes/e/elbouha/midapack/test/mapmaking/allinea-profiler.ld
 
 toast_pipeline_1kdet: createToeplitz.o precond.o toast_pipeline_1kdet.c iofiles.o pcg_true.o
-		$(CC) toast_pipeline.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(LIB) $(FFTW_LIB) -lm -o toast_pcg_cyc #-Wl,@/global/homes/e/elbouha/midapack/test/mapmaking/allinea-profiler.ld
+		$(CC) toast_pipeline_1kdet.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(LIB) $(FFTW_LIB) -lm -o toast_pcg_cyc -Wl,@/global/homes/e/elbouha/midapack/test/mapmaking/allinea-profiler.ld
+
+s4cmb_pipeline: createToeplitz.o precond.o s4cmb_pipeline.c iofiles.o pcg_true.o
+		$(CC) s4cmb_pipeline.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(LIB) $(FFTW_LIB) -lm -o s4cmb_pcg -Wl,@/global/homes/e/elbouha/midapack/test/mapmaking/allinea-profiler.ld
 
 test_pcg_rand: createToeplitz.o precond.o test_pcg_rand.c iofiles.o pcg_true.o
 	$(CC) test_pcg_rand.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(LIB) $(FFTW_LIB) -lm -o pcg_rand

@@ -2,7 +2,7 @@
 // mapmaking code example using the Midapack library - release 1.2b, Nov 2012
 // The routine reads data from binary files and writes the results in distributed binary files
 
-/** @file   toast_pipeline_1kdet.c
+/** @file   s4cmb_pipeline.c
     @author Hamza El Bouhargani
     @date   May 2019 */
 
@@ -42,9 +42,9 @@ int main(int argc, char *argv[])
   double 	tol;			//residual tolerence for the PCG
   Mat	A;			        //pointing matrix structure
   int 		*indices, *id0pix, *ll;
-  // double 	*values;
+  double 	*values;
   int 		pointing_commflag ;	//option for the communication scheme for the pointing matrix
-  double	*b, *Ag, *Ad, *wghts; 	 	//temporal domain vectors
+  double	*b, *Ag, *Ad, *pol_ang; 	 	//temporal domain vectors
   double	*x, *g, *d, *Ax_b;	//pixel domain vectors
   double        alpha, beta, gamma, resold, resnew;
   double 	localreduce;
@@ -62,10 +62,10 @@ int main(int argc, char *argv[])
   pointing_commflag=2; //2==BUTTERFLY - 1==RING
 
 //global data caracteristics
-  int Nb_t_Intervals = 1024;//8;//1352;//128;//2;//256;//8;           //total number of stationnary intervals
-  int t_Interval_length = 476406000;//330384000;//47436000;//2352000;//47436000;//470400;//1749900;//17899900;//1431992;//139992; //1431992;//2863984;//1431992;//pow(2,25);//pow(2,25);          //length for each stationnary interval
-  int t_Interval_length_true = 476406;//330384;//47436000;//2352000;//1749900;//17899900;//1431992;//139992;//1431992;//2863984;//1431992;//pow(2,20);
-  int LambdaBlock = pow(2,13);//pow(2,14)+1;  //lambda length for each stationnary interval
+  int Nb_t_Intervals = 128;//8;//1352;//128;//2;//256;//8;           //total number of stationnary intervals
+  int t_Interval_length = 1749900;//330384000;//47436000;//2352000;//47436000;//470400;//1749900;//17899900;//1431992;//139992; //1431992;//2863984;//1431992;//pow(2,25);//pow(2,25);          //length for each stationnary interval
+  int t_Interval_length_true = 17499;//330384;//47436000;//2352000;//1749900;//17899900;//1431992;//139992;//1431992;//2863984;//1431992;//pow(2,20);
+  int LambdaBlock = pow(2,0);//pow(2,14)+1;  //lambda length for each stationnary interval
   Nnz=3;
 
 //PCG parameters
@@ -97,9 +97,9 @@ int main(int argc, char *argv[])
 
 //input data memory allocation
   indices  = (int *) malloc(Nnz*m * sizeof(int));     //for pointing matrix indices
+  values  = (double *) malloc(Nnz*m * sizeof(double));//for pointing matrix values
   b   = (double *) malloc(m * sizeof(double));    //full raw data vector for the signal
-  wghts = (double *) malloc(Nnz*m * sizeof(double)); //for poiting matrix weights
-
+  pol_ang = (double *) malloc(m * sizeof(double));
 
 //Read data from files:
 //note: work only if the number of processes is a multiple of the number of stationary intervals
@@ -108,7 +108,11 @@ int main(int argc, char *argv[])
   int part_id;      // stationnaly period id number
   int *point_data;  // scann strategy input data for the pointing matrix
   double *signal;   // signal input data
-  double *weights; // weights of the pointing matrix
+  double *polar; // linear polarization angles
+
+//Init the pointing matrix values to unity
+  for(i=0; i<(Nnz*m); i++)
+    values[i] = 1.;
 
   int number_in_interval;
 
@@ -120,7 +124,7 @@ int main(int argc, char *argv[])
     if (rank==0) {
       printf("#######  ENTER BiG DATA MODE   ################\n");
     }
-      part_id = (rank/nb_proc_shared_one_interval)%128; //floor(rank/nb_proc_shared_one_interval);
+      part_id = rank/nb_proc_shared_one_interval; //floor(rank/nb_proc_shared_one_interval);
       number_in_interval = rank%nb_proc_shared_one_interval;
       printf("[rank %d] part_id=%d\n", rank, part_id );  //interval id number
       printf("[rank %d] number_in_interval=%d\n", rank, number_in_interval );
@@ -131,10 +135,15 @@ int main(int argc, char *argv[])
 
       point_data  = (int *) malloc(Nnz*t_Interval_length_true*t_Interval_loop_loc * sizeof(int));
       signal      = (double *) malloc(t_Interval_length_true*t_Interval_loop_loc  * sizeof(double));
-      weights = (double *) malloc(Nnz*t_Interval_length_true*t_Interval_loop_loc * sizeof(double));
-
+      polar = (double *) malloc(t_Interval_length_true*t_Interval_loop_loc * sizeof(double));
+      int jump=0;
+      if(t_Interval_loop_loc==1){
+        jump = t_Interval_length_true*floor(number_in_interval/t_Interval_loop);
+      }
+      else
+        jump = t_Interval_length_true*t_Interval_loop_loc*number_in_interval;
       for (i=0; i < t_Interval_loop_loc; ++i) {
-        ioReadTOAST_data(t_Interval_length_true, part_id, point_data+t_Interval_length_true*Nnz*i, signal+t_Interval_length_true*i, weights+t_Interval_length_true*Nnz*i);
+        ioReadfile_pol(jump, i, t_Interval_length_true, part_id, point_data+t_Interval_length_true*Nnz*i, signal+t_Interval_length_true*i, polar+t_Interval_length_true*i);
       }
       //just keep the relevant part of the stationary interval for the local process
       int nb_proc_shared_one_subinterval = max(1, size/(Nb_t_Intervals*t_Interval_loop) );
@@ -151,15 +160,19 @@ int main(int argc, char *argv[])
 
       for (i=0; i<(Nnz*m); i++){
         indices[i]=point_data[i+Nnz*number_in_subinterval*t_Interval_length_subinterval_loc];
-        wghts[i] = weights[i+ Nnz*number_in_subinterval*t_Interval_length_subinterval_loc];
       }
       for(i=0; i<m; i++){
         b[i] = signal[i+number_in_subinterval*t_Interval_length_subinterval_loc];
+        pol_ang[i] = polar[i+ number_in_subinterval*t_Interval_length_subinterval_loc];
+      }
+      for(i=0; i<(Nnz*m);i+=3){
+        values[i+1] = cos(2*pol_ang[(int)i/3]);
+        values[i+2] = sin(2*pol_ang[(int)i/3]);
       }
 
       free(point_data);
       free(signal);
-      free(weights);
+      free(polar);
 
 
   }
@@ -168,7 +181,7 @@ int main(int argc, char *argv[])
     //for the case we share the stationary intervals in severals processes with no big data flag
     //NB: this case is not up-to-date with the latest data format and should never happen
     if (nb_proc_shared_one_interval>1) {
-      part_id = (rank/nb_proc_shared_one_interval)%128; //floor(rank/nb_proc_shared_one_interval);
+      part_id = rank/nb_proc_shared_one_interval; //floor(rank/nb_proc_shared_one_interval);
       number_in_interval = rank%nb_proc_shared_one_interval;
       printf("[rank %d] part_id=%d\n", rank, part_id );  //interval id number
       printf("[rank %d] number_in_interval=%d\n", rank, number_in_interval );
@@ -198,19 +211,23 @@ int main(int argc, char *argv[])
       for (k=0; k < Nb_t_Intervals_loc; ++k) {
         point_data = indices + t_Interval_length*Nnz*k;
         signal = b + t_Interval_length*k;
-        weights = wghts + t_Interval_length*Nnz*k;
-        part_id = (Nb_t_Intervals_loc*rank + k)%128;
+        polar = pol_ang + t_Interval_length*k;
+        part_id = Nb_t_Intervals_loc*rank + k;
+        int jump=0;
         for (i=0; i < t_Interval_loop; ++i) {
-          ioReadTOAST_data(t_Interval_length_true, part_id, point_data+t_Interval_length_true*Nnz*i, signal+t_Interval_length_true*i, weights+t_Interval_length_true*Nnz*i);
+          ioReadfile_pol(jump, i, t_Interval_length_true, part_id, point_data+t_Interval_length_true*Nnz*i, signal+t_Interval_length_true*i, polar+t_Interval_length_true*i);
         }
       }//end of the loop over the intervals
+      for (i=0; i<(Nnz*m); i+=3){
+        values[i+1] = cos(2*pol_ang[(int)i/3]);//cos(alpha);//1 + rand()/((double)RAND_MAX);//cos(pol_ang[(int)i/3]);
+        values[i+2] = sin(2*pol_ang[(int)i/3]);//sin(alpha);//1 + rand()/((double)RAND_MAX);//sin(pol_ang[(int)i/3]);
+      }
     }//end if
   }//End if
 
 //Pointing matrix init
   A.trash_pix =0;
-  MatInit( &A, m, Nnz, indices, wghts, pointing_commflag, MPI_COMM_WORLD);
-
+  MatInit( &A, m, Nnz, indices, values, pointing_commflag, MPI_COMM_WORLD);
 
   t=MPI_Wtime();
 
@@ -416,7 +433,7 @@ int main(int argc, char *argv[])
   MatFree(&A);                                                //free memory
 
   free(indices);
-  free(wghts);
+  free(values);
 
   free(b);
   free(x);

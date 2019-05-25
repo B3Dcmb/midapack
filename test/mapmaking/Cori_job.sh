@@ -19,12 +19,12 @@ export OMP_NUM_THREADS=1
 # when the number of tasks is not a divisor of 64 use --cpu_bind = cores
 
 # time srun -n 1 -c 2 --cpu_bind=cores ./toast_pcg > run.log 2>error.log
-# time srun -n 16384 -c 1 --cpu_bind=cores ./toast_pcg $DW_JOB_STRIPED/test3_clean/ > run_16384.log 2>error_16384.log
-# time srun -n 8192 -c 2 --cpu_bind=cores ./toast_pcg $DW_JOB_STRIPED/test3_clean/ > run_8192_2.log 2>error_8192_2.log
-# time srun -n 4096 -c 4 --cpu_bind=cores ./toast_pcg $DW_JOB_STRIPED/test3_clean/ > run_4096.log 2>error_4096.log
-# time srun -n 2048 -c 8 --cpu_bind=cores ./toast_pcg $DW_JOB_STRIPED/test3_clean/ > run_2048.log 2>error_2048.log
+# time srun -n 16384 -c 2 --cpu_bind=cores ./toast_pcg_cyc $DW_JOB_STRIPED/test4_clean/ > run_16384.log 2>error_16384.log
+# time srun -n 8192 -c 4 --cpu_bind=cores ./toast_pcg_cyc $DW_JOB_STRIPED/test4_clean/ > run_8192.log 2>error_8192.log
+# time srun -n 4096 -c 8 --cpu_bind=cores ./toast_pcg_cyc $DW_JOB_STRIPED/test4_clean/ > run_4096.log 2>error_4096.log
+# time srun -n 2048 -c 16 --cpu_bind=cores ./toast_pcg_cyc $DW_JOB_STRIPED/test4_clean/ > run_2048.log 2>error_2048.log
 time srun -n 1024 -c 2 --cpu_bind=cores ./toast_pcg $DW_JOB_STRIPED/test4_clean/ > run.log 2>error.log
-# time srun -n 512 -c 32 --cpu_bind=cores ./toast_pcg $DW_JOB_STRIPED/test3_clean/ > run_512.log 2>error_512.log
+# time srun -n 512 -c 64 --cpu_bind=cores ./toast_pcg_cyc $DW_JOB_STRIPED/test4_clean/ > run_512.log 2>error_512.log
 # time srun -n 256 -c 64 --cpu_bind=cores ./toast_pcg $DW_JOB_STRIPED/test3_clean/ > run_256.log 2>error_256.log
 # time srun -n 128 -c 64 --cpu_bind=cores ./toast_pcg $DW_JOB_STRIPED/test3_clean/ > run_128.log 2>error_128.log
 
