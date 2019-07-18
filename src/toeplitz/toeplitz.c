@@ -9,21 +9,21 @@
 **
 ***************************************************************************
 @note Copyright (c) 2010-2012 APC CNRS Université Paris Diderot
-@note 
+@note
 @note This program is free software; you can redistribute it and/or modify it under the terms
-@note of the GNU Lesser General Public License as published by the Free Software Foundation; 
+@note of the GNU Lesser General Public License as published by the Free Software Foundation;
 @note either version 3 of the License, or (at your option) any later version. This program is
-@note distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even 
+@note distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
 @note the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
 @note Lesser General Public License for more details.
-@note 
+@note
 @note You should have received a copy of the GNU Lesser General Public License along with this
 @note program; if not, see http://www.gnu.org/licenses/lgpl.html
 @note
 @note For more information about ANR MIDAS'09 project see :
 @note http://www.apc.univ-paris7.fr/APC_CS/Recherche/Adamis/MIDAS09/index.html
 @note
-@note ACKNOWLEDGMENT: This work has been supported in part by the French National Research 
+@note ACKNOWLEDGMENT: This work has been supported in part by the French National Research
 @note Agency (ANR) through COSINUS program (project MIDAS no. ANR-09-COSI-009).
 ***************************************************************************
 ** Log: toeplitz*.c
@@ -86,26 +86,26 @@ int PRINT_RANK = -1;
 
 /// Prints error message corresponding to an error number.
 /** @ingroup group22
-   \param error_number error number 
-   \param file file name 
+   \param error_number error number
+   \param file file name
    \param line line number
 */
 int print_error_message(int error_number, char const *file, int line)
 {
   char *str_mess;
   str_mess = (char *) malloc(100 * sizeof(char));
-  if(error_number == 1)    
+  if(error_number == 1)
     sprintf (str_mess, "Error on line %d of %s. Toeplitz band width > vector size\n", line, file);
-  if(error_number == 2)    
+  if(error_number == 2)
     sprintf (str_mess, "Error on line %d of %s. Bad allocation.\n", line, file);
-  if(error_number == 3)    
+  if(error_number == 3)
     sprintf (str_mess, "Error on line %d of %s. Error at fftw multithread initialization.\n", line, file);
   if(error_number == 7)
     sprintf (str_mess, "Error on line %d of %s.\n", line, file);
   fprintf(stderr, "%s", str_mess);
   printf("%s", str_mess);
   return error_number;
-  
+
 }
 
 
@@ -225,7 +225,7 @@ int define_nfft(int n_thread, int flag_nfft, int fixed_nfft)
     nfft = NFFT_DEFAULT;
   else if (flag_nfft==1)
     nfft = fixed_nfft;
-  else if (flag_nfft==2) 
+  else if (flag_nfft==2)
     nfft = n_thread;
   else {
     printf("Error. Wrong value for flag_nfft. Set to auto mode.\n");
@@ -241,7 +241,7 @@ int define_nfft(int n_thread, int flag_nfft, int fixed_nfft)
 /// Sets a block size and initializes all fftw arrays and plans needed for the computation.
 /** @ingroup group11
     Initializes the fftw arrays and plans is necessary before any computation of the Toeplitz
-    matrix matrix product. Use tpltz_cleanup afterwards. \sa tpltz_cleanup 
+    matrix matrix product. Use tpltz_cleanup afterwards. \sa tpltz_cleanup
     \param n row size of the matrix used for later product
     \param lambda Toeplitz band width
     \param nfft maximum number of FFTs you want to compute at the same time
@@ -259,7 +259,7 @@ int tpltz_init(int n, int lambda, int *nfft, int *blocksize, fftw_complex **T_ff
   int n_thread;
   double t1, t2;
 
-  //Set the VERBOSE global variable  
+  //Set the VERBOSE global variable
   VERBOSE = flag_stgy.flag_verbose;
 
 
@@ -272,12 +272,12 @@ int tpltz_init(int n, int lambda, int *nfft, int *blocksize, fftw_complex **T_ff
 
 
 //#pragma omp parallel
-//{  n_thread = omp_get_num_threads(); } 
+//{  n_thread = omp_get_num_threads(); }
 
 //  if ((NB_OMPTHREADS <= n_thread) && (NB_OMPTHREADS != 0))
 //    omp_set_num_threads(NB_OMPTHREADS);
 
-  n_thread = omp_get_max_threads(); 
+  n_thread = omp_get_max_threads();
 
 
   //initialize nfft
@@ -305,7 +305,7 @@ int tpltz_init(int n, int lambda, int *nfft, int *blocksize, fftw_complex **T_ff
 //  if (PRINT_RANK==0 && VERBOSE>0)
 //    printf("time circ_init_fftw=%f\n", t2-t1);
 
-  //initialize fftw array and plan for V  
+  //initialize fftw array and plan for V
 // t1=MPI_Wtime();
   rhs_init_fftw(nfft, (*blocksize), V_fft, V_rfft, plan_f, plan_b, fftw_flag);
 //  t2=  MPI_Wtime();
@@ -327,7 +327,7 @@ int tpltz_init(int n, int lambda, int *nfft, int *blocksize, fftw_complex **T_ff
 /// Initialize omp threads for fftw plans.
 /** @ingroup group21
     Initialize omp threads for fftw plans. The number of threads used for ffts (define
-    by the variable n_thread) is read from OMP_NUM_THREAD environment variable. 
+    by the variable n_thread) is read from OMP_NUM_THREAD environment variable.
     fftw multithreaded option is controlled by fftw_MULTITHREADING macro.
 */
 int fftw_init_omp_threads(int fftw_n_thread)
@@ -405,14 +405,14 @@ int circ_init_fftw(double *T, int fft_size, int lambda, fftw_complex **T_fft)
   plan_f_T   = fftw_plan_dft_r2c_1d( fft_size, T_circ, *T_fft, circ_fftw_flag );
 
   //make T circulant
-#pragma omp parallel for 
-  for(i=0; i<fft_size+2;i++) 
+#pragma omp parallel for
+  for(i=0; i<fft_size+2;i++)
     T_circ[i] = 0.0;
 
   T_circ[0] = T[0];
   for(i=1;i<lambda;i++) {
-    T_circ[i] = T[i]; 
-    T_circ[fft_size-i] = T[i];    } 
+    T_circ[i] = T[i];
+    T_circ[fft_size-i] = T[i];    }
 
   fftw_execute(plan_f_T);
   fftw_destroy_plan(plan_f_T);
@@ -423,7 +423,7 @@ int circ_init_fftw(double *T, int fft_size, int lambda, fftw_complex **T_fft)
 
 //=========================================================================
 
-/// Cleans fftw workspace used in the Toeplitz matrix matrix product's computation. 
+/// Cleans fftw workspace used in the Toeplitz matrix matrix product's computation.
 /** @ingroup group11
     Destroy fftw plans, free memory and reset fftw workspace. \sa tpltz_init
     \param T_fft complex array used for FFTs
@@ -442,18 +442,20 @@ int tpltz_cleanup(fftw_complex **T_fft, fftw_complex **V_fft, double **V_rfft,ff
   fftw_cleanup_threads();
 #endif
   fftw_cleanup();
+
+  return 0;
 }
 
 
 //=========================================================================
 
-/// Copies (and potentially reshapes) a selected block of the input matrix to a specified position of the output matrix. 
+/// Copies (and potentially reshapes) a selected block of the input matrix to a specified position of the output matrix.
 /** @ingroup group22
     Copy a matrix block of a size nblockrow x nblockcol from the input matrix Vin
     (size ninrow x nincol) starting with the element (inrow, incol) to the output
     matrix Vout (size notrow x noutcol) starting with the element (outrow, outcol) after
     multiplying by norm. If the output matrix is larger than the block the extra elements
-    are either left as they were on the input or zeroed if zero_flag is set to 1. If the 
+    are either left as they were on the input or zeroed if zero_flag is set to 1. If the
     block to be copied is larger than either the input or the output matrix an error occurs.
 */
 int copy_block(int ninrow, int nincol, double *Vin, int noutrow, int noutcol, double *Vout, int inrow, int incol, int nblockrow, int nblockcol, int outrow, int outcol, double norm, int set_zero_flag)
@@ -463,13 +465,13 @@ int copy_block(int ninrow, int nincol, double *Vin, int noutrow, int noutcol, do
   //do some size checks first
   if( (nblockcol > nincol) || (nblockrow > ninrow) || (nblockcol > noutcol) || (nblockrow > noutrow)) {
     printf("Error in routine copy_block. Bad size setup.\n");
-    return print_error_message(7, __FILE__, __LINE__);  
+    return print_error_message(7, __FILE__, __LINE__);
   }
 
   if(set_zero_flag) {
 #pragma omp parallel for //private(i) num_threads(NB_OMPTHREADS_CPBLOCK)
     for(i=0;i<noutrow*noutcol;i++)  //could use maybe memset but how about threading
-      Vout[i] = 0.0;  
+      Vout[i] = 0.0;
   }
 
   offsetIn = ninrow*incol+inrow;
@@ -494,12 +496,12 @@ int copy_block(int ninrow, int nincol, double *Vin, int noutrow, int noutcol, do
     forward - plan_f_V; and backward - plan_b_CV.
     C_fft is a Fourier (complex representation of the circulant matrix) of length fft_size/2+1;
     V_rfft is a matrix with ncol columns and fft_size rows; V_fft is a workspace of fft_size/2+1
-    complex numbers as required by the backward FFT (plan_b_CV); CV is the output matrix of the 
+    complex numbers as required by the backward FFT (plan_b_CV); CV is the output matrix of the
     same size as the input V_rfft one. The FFTs transform ncol vectors simultanously.
-    \param fft_size row dimension 
+    \param fft_size row dimension
     \param nfft number of simultaneous FFTs
     \param C_fft complex array used for FFTs
-    \param ncol column dimension 
+    \param ncol column dimension
     \param V_rfft real array used for FFTs
     \param[out] CV product of the circulant matrix C_fft by the matrix V_rfft
     \param V_fft complex array used for FFTs
@@ -535,12 +537,12 @@ int scmm_direct(int fft_size, int nfft, fftw_complex *C_fft, int ncol, double *V
 int icol;
 double t1, t2;
   t1=MPI_Wtime();
-#pragma omp parallel for private(i, idx) 
+#pragma omp parallel for private(i, idx)
   for(icol=0;icol<ncol;icol++) {
   for(idx=0;idx<sizeT;idx++) {
     i=icol*idx;
     V_fft[i][0] = C_fft[idx][0]*V_fft[i][0]-C_fft[idx][1]*V_fft[i][1];
-    V_fft[i][1] = C_fft[idx][0]*V_fft[i][1]+C_fft[idx][1]*V_fft[i][0];    
+    V_fft[i][1] = C_fft[idx][0]*V_fft[i][1]+C_fft[idx][1]*V_fft[i][0];
   }}
   t2=  MPI_Wtime();
 */
@@ -549,7 +551,7 @@ double t1, t2;
 
 
   //perform  backward FFts
-  fftw_execute(plan_b_CV); //input in V_fft; output in V_rfft 
+  fftw_execute(plan_b_CV); //input in V_fft; output in V_rfft
 
   return 0;
 }
@@ -569,7 +571,7 @@ double t1, t2;
     a vector C_fft (length blocksize). blocksize also defines the size of the FFTs, which will
     be performed and therefore this is the value which has to be used while creating the fftw
     plans and allocating the workspaces. The latter are given as: nfft*(blocksize/2+1) for
-    V_fft and nfft*blocksize for V_rfft. The fftw plans should correspond to doing the 
+    V_fft and nfft*blocksize for V_rfft. The fftw plans should correspond to doing the
     transforms of nfft vectors simultaneously. Typically, the parameters of this routine are
     fixed by a preceding call to Toeplitz_init().
     The parameters are :
@@ -601,19 +603,19 @@ int scmm_basic(double **V, int blocksize, int m, fftw_complex *C_fft, double **C
 
 
 //bug fixed conflit between num_threads and nfft
-//#pragma omp parallel for schedule(dynamic,1) num_threads(8) //num_threads(nfft) 
+//#pragma omp parallel for schedule(dynamic,1) num_threads(8) //num_threads(nfft)
   for(k=0;k<nloop;k++) {   //this is the main loop over the set of columns
     if (k==nloop-1)   //last loop ncol may be smaller than nfft
-      ncol = m-(nloop-1)*nfft;  
+      ncol = m-(nloop-1)*nfft;
 
-  //init fftw matrices. 
+  //init fftw matrices.
   //extracts a block of ncol full-length columns from the data matrix and embeds in a bigger
-  //matrix padding each column with lambda zeros. Note that all columns will be zero padded 
+  //matrix padding each column with lambda zeros. Note that all columns will be zero padded
   //thanks to the "memset" call above
 
   copy_block(blocksize, m, (*V), blocksize, ncol, V_rfft, 0, k*nfft, blocksize, ncol, 0, 0, 1.0, 0);
   //note: all nfft vectors are transformed below ALWAYS in a single go (if ncol < nfft) the extra
-  //useless work is done. 
+  //useless work is done.
 
   scmm_direct(blocksize, nfft, C_fft, ncol, V_rfft, CV, V_fft, plan_f_V, plan_b_CV);
   //note: the parameter CV is not really used
@@ -631,7 +633,7 @@ int scmm_basic(double **V, int blocksize, int m, fftw_complex *C_fft, double **C
 //=========================================================================
 
 /// Performs the stand alone product of a Toeplitz matrix by a matrix using the sliding window algorithm.  (an INTERNAL routine)
-/** @ingroup group21 
+/** @ingroup group21
     The product is performed block-by-block with a defined block size or a computed
     optimized block size that reflects a trade off between cost of a single FFT of a length
     block_size and a number of blocks needed to perform the mutiplicaton. The latter determines
@@ -642,8 +644,8 @@ int scmm_basic(double **V, int blocksize, int m, fftw_complex *C_fft, double **C
     The parameters are:
     \param V \b [input] data matrix (with the convention V(i,j)=V[i+j*n]) ;
              \b [out] result of the product TV
-    \param n number of rows of V 
-    \param m number of columns of V 
+    \param n number of rows of V
+    \param m number of columns of V
     \param T Toeplitz matrix data composed of the non-zero entries of his first row
     \param T_fft complex array used for FFTs
     \param blocksize block size used in the sliding window algorithm
@@ -659,16 +661,16 @@ int scmm_basic(double **V, int blocksize, int m, fftw_complex *C_fft, double **C
 int stmm_core(double **V, int n, int m, double *T, fftw_complex *T_fft, int blocksize, int lambda, fftw_complex *V_fft, double *V_rfft, int nfft, fftw_plan plan_f, fftw_plan plan_b, int flag_offset, int flag_nofft)
 {
 
-  double t1,t2;
+  // double t1,t2;
 
-  t1=  MPI_Wtime();
+  // t1=  MPI_Wtime();
 
   //cheating:
 //  flag_offset = 1;
 
-  //routine variable 
+  //routine variable
   int status;
-  int i,j,k,p;  //loop index 
+  int i,j,k,p;  //loop index
   int currentsize;
   int distcorrmin= lambda-1;
 
@@ -680,12 +682,12 @@ int stmm_core(double **V, int n, int m, double *T, fftw_complex *T_fft, int bloc
   else
     nbloc = ceil( (1.0*n)/blocksize_eff);  //we need n because of reshaping
 
-  if(PRINT_RANK==0 && VERBOSE>0)
-    printf("nbloc=%d, n=%d, m=%d, blocksize=%d, blocksize_eff=%d\n", nbloc, n, m, blocksize, blocksize_eff);
+  // if(PRINT_RANK==0 && VERBOSE>0)
+  //   printf("nbloc=%d, n=%d, m=%d, blocksize=%d, blocksize_eff=%d\n", nbloc, n, m, blocksize, blocksize_eff);
 
   double *V_bloc, *TV_bloc;
   V_bloc  = (double *) calloc(blocksize*m, sizeof(double));
-  TV_bloc = (double *) calloc(blocksize*m, sizeof(double));      
+  TV_bloc = (double *) calloc(blocksize*m, sizeof(double));
   if((V_bloc==0)||(TV_bloc==0))
     return print_error_message(2, __FILE__, __LINE__);
 
@@ -693,18 +695,18 @@ int stmm_core(double **V, int n, int m, double *T, fftw_complex *T_fft, int bloc
   if (flag_offset==1)
     offset=distcorrmin;
 
-  int iV = 0;  //"-distcorrmin+offset";  //first index in V 
-  int iTV = offset;  //first index in TV 
+  int iV = 0;  //"-distcorrmin+offset";  //first index in V
+  int iTV = offset;  //first index in TV
 
   //"k=0";
   //first subblock separately as it requires some padding. prepare the block of the data vector
   //with the overlaps on both sides
-  currentsize = min( blocksize-distcorrmin+offset, n-iV); 
+  currentsize = min( blocksize-distcorrmin+offset, n-iV);
   //note: if flag_offset=0, pad first distcorrmin elements with zeros (for the first subblock only)
   // and if flag_offset=1 there is no padding with zeros.
   copy_block( n, m, *V, blocksize, m, V_bloc, 0, 0, currentsize, m, distcorrmin-offset, 0, 1.0, 0);
 
-  //do block computation 
+  //do block computation
   if (flag_nofft==1)
     status = stmm_simple_basic(&V_bloc, blocksize, m, T, lambda, &TV_bloc);
   else
@@ -719,7 +721,7 @@ int stmm_core(double **V, int n, int m, double *T, fftw_complex *T_fft, int bloc
   iV = blocksize_eff-distcorrmin+offset;
 
   if(nbloc > 1) {
-    currentsize  = min( blocksize, n-iV);  //not to overshoot          
+    currentsize  = min( blocksize, n-iV);  //not to overshoot
 
     int flag_reset = (currentsize!=blocksize);  //with flag_reset=1, always "memset" the block.
     copy_block( n, m, *V, blocksize, m, V_bloc, iV, 0, currentsize, m, 0, 0, 1.0, flag_reset);
@@ -731,10 +733,10 @@ int stmm_core(double **V, int n, int m, double *T, fftw_complex *T_fft, int bloc
 
 
   iTV += blocksize_eff;
-  //now continue with all the other subblocks    
+  //now continue with all the other subblocks
   for(k=1;k<nbloc;k++) {
 
-    //do bloc computation 
+    //do bloc computation
   if (flag_nofft==1)
     status = stmm_simple_basic(&V_bloc, blocksize, m, T, lambda, &TV_bloc);
   else
@@ -744,30 +746,30 @@ int stmm_core(double **V, int n, int m, double *T, fftw_complex *T_fft, int bloc
 
 
     iV += blocksize_eff;
-    //copy first the next subblock to process 
+    //copy first the next subblock to process
     if(k != nbloc-1) {
-      currentsize = min(blocksize, n-iV);  //not to overshoot          
+      currentsize = min(blocksize, n-iV);  //not to overshoot
 
       int flag_resetk = (currentsize!=blocksize);  //with flag_reset=1, always "memset" the block.
       copy_block( n, m, *V, blocksize, m, V_bloc, iV, 0, currentsize, m, 0, 0, 1.0, flag_resetk);
     }
 
-    //and then store the output in V 
-    currentsize  = min( blocksize_eff, n-iTV);  //not to overshoot               
+    //and then store the output in V
+    currentsize  = min( blocksize_eff, n-iTV);  //not to overshoot
     copy_block( blocksize, m, TV_bloc, n, m, *V, distcorrmin, 0, currentsize, m, iTV, 0, 1.0, 0);
     iTV += blocksize_eff;
 
-  }//end bloc computation 
+  }//end bloc computation
 
 
   free(V_bloc);
   free(TV_bloc);
 
 
-  t2=  MPI_Wtime();
+  // t2=  MPI_Wtime();
 
-  if (PRINT_RANK==0 && VERBOSE>0)
-    printf("time stmm_core=%f\n", t2-t1);
+  // if (PRINT_RANK==0 && VERBOSE>0)
+  //   printf("time stmm_core=%f\n", t2-t1);
 
   return status;
 }
@@ -776,22 +778,22 @@ int stmm_core(double **V, int n, int m, double *T, fftw_complex *T_fft, int bloc
 //=========================================================================
 
 /// Performs the product of a Toeplitz matrix by a general matrix using the sliding window algorithm with optimize reshaping. (an INTERNAL routine)
-/** @ingroup group21 
+/** @ingroup group21
     The input matrix is formatted into an optimized matrix depending on the block size
     and the number of simultaneous ffts (defined with the variable nfft). The obtained number
     of columns represent the number of vectors FFTs of which are computed simulatenously.
     The multiplication is then performed block-by-block with the chosen block size using the
     core routine.
-    The parameters are : 
+    The parameters are :
     \param V \b [input] data matrix (with the convention V(i,j)=V[i+j*n]) ;
              \b [out] result of the product TV
-    \param n number of rows of V 
-    \param m number of columns of V 
-    \param id0 first index of V 
-    \param l length of V 
+    \param n number of rows of V
+    \param m number of columns of V
+    \param id0 first index of V
+    \param l length of V
     \param T Toeplitz matrix data composed of the non-zero entries of his first row
     \param T_fft complex array used for FFTs
-    \param lambda Toeplitz band width 
+    \param lambda Toeplitz band width
     \param V_fft complex array used for FFTs
     \param V_rfft real array used for FFTs
     \param plan_f fftw plan forward (r2c)
@@ -803,8 +805,8 @@ int stmm_core(double **V, int n, int m, double *T, fftw_complex *T_fft, int bloc
 int stmm_main(double **V, int n, int m, int id0, int l, double *T, fftw_complex *T_fft, int lambda, fftw_complex *V_fft, double *V_rfft, fftw_plan plan_f, fftw_plan plan_b, int blocksize, int nfft, Flag flag_stgy)
 {
 
-  //routine variable 
-  int i,j,k,p;  //loop index 
+  //routine variable
+  int i,j,k,p;  //loop index
   int distcorrmin= lambda-1;
   int flag_prod_strategy_nofft=0;  //0: ffts   1: no ffts
   int flag_shortcut_m_eff_eq_1=1;//1;//1;
@@ -826,7 +828,7 @@ int stmm_main(double **V, int n, int m, int id0, int l, double *T, fftw_complex 
 
 
 //shortcut for m==1 if flag_shortcut_m_eff_eq_1==1  && nfft==1 ??
-  if (m_eff==1 && flag_shortcut_m_eff_eq_1==1 && nfft==1 || flag_no_rshp==1 && id0==0 && l==n*m) { 
+  if (m_eff==1 && flag_shortcut_m_eff_eq_1==1 && nfft==1 || flag_no_rshp==1 && id0==0 && l==n*m) {
 
     int flag_offset=0;
 
@@ -847,7 +849,7 @@ int stmm_main(double **V, int n, int m, int id0, int l, double *T, fftw_complex 
 //define splitting for the product computation
   nfullcol = max(0, (l-(n-id0%n)%n-(id0+l)%n)/n );  //check how many full columns input data we have
 
-  if (flag_nfullcol_in_middle==1) 
+  if (flag_nfullcol_in_middle==1)
     nloop_middle = ceil(1.0*(nfullcol)/nfft);
   else
     nloop_middle = (nfullcol)/nfft;
@@ -866,7 +868,7 @@ int stmm_main(double **V, int n, int m, int id0, int l, double *T, fftw_complex 
 
 
 //compute the middle if needed
-  if (nloop_middle>0) {           
+  if (nloop_middle>0) {
     double *Vmiddle;
     int offset_middle = (n-id0%n)%n;
     Vmiddle = (*V)+offset_middle;
@@ -893,16 +895,16 @@ int stmm_main(double **V, int n, int m, int id0, int l, double *T, fftw_complex 
   nocol = (int *) calloc(nbcol, sizeof(double));
 
   //define the columns for the edge computation
-  if (m_v1edge==1)  
+  if (m_v1edge==1)
     nocol[0]=0;
-  for(i=(m_v1edge);i<nbcol;i++) 
+  for(i=(m_v1edge);i<nbcol;i++)
     nocol[i]=m_middle+i;
-  
+
   if(PRINT_RANK==0 && VERBOSE>2)
     printf("nbcol=%d , m_v1edge=%d , m_v2edge=%d\n", nbcol, m_v1edge, m_v2edge);
 
 //shorcut for nbcol==1
-  if (nbcol==1 && nfft==1 && flag_shortcut_nbcol_eq_1==1) {  
+  if (nbcol==1 && nfft==1 && flag_shortcut_nbcol_eq_1==1) {
             //this is the case where no reshaping is needed. This is equivalent to flag_format_rshp==0
     double *Vedge;
     int offset_edge = n*nocol[0];//work because all the previous columns are obligatory full
@@ -961,107 +963,107 @@ int stmm_main(double **V, int n, int m, int id0, int l, double *T, fftw_complex 
 
 //=========================================================================
 #ifdef W_MPI
-/// Performs the product of a Toeplitz matrix by a general matrix using MPI. We assume that the matrix has already been scattered.  (a USER routine)  
-/** @ingroup group12 
+/// Performs the product of a Toeplitz matrix by a general matrix using MPI. We assume that the matrix has already been scattered.  (a USER routine)
+/** @ingroup group12
     The multiplication is performed using FFT applied to circulant matrix in order to
     diagonalized it.
     The parameters are :
     \param V \b [input] distributed data matrix (with the convention V(i,j)=V[i+j*n]);
              \b [out] result of the product TV
-    \param n number of rows of V 
-    \param m number of columns of V 
-    \param id0 first index of scattered V 
-    \param l length of the scattered V 
-    \param T Toeplitz matrix. 
-    \param lambda Toeplitz band width. 
-    \param flag_stgy flag strategy for the product computation 
-    \param comm communicator (usually MPI_COMM_WORLD) 
-*/ 
-int mpi_stmm(double **V, int n, int m, int id0, int l, double *T, int lambda, Flag flag_stgy, MPI_Comm comm) 
+    \param n number of rows of V
+    \param m number of columns of V
+    \param id0 first index of scattered V
+    \param l length of the scattered V
+    \param T Toeplitz matrix.
+    \param lambda Toeplitz band width.
+    \param flag_stgy flag strategy for the product computation
+    \param comm communicator (usually MPI_COMM_WORLD)
+*/
+int mpi_stmm(double **V, int n, int m, int id0, int l, double *T, int lambda, Flag flag_stgy, MPI_Comm comm)
 {
 
-  //mpi variables 
-  int rank;   //rank process 
-  int size;   //number of processes 
-  MPI_Status status; 
-  MPI_Comm_rank(comm, &rank);     
-  MPI_Comm_size(comm, &size);     
+  //mpi variables
+  int rank;   //rank process
+  int size;   //number of processes
+  MPI_Status status;
+  MPI_Comm_rank(comm, &rank);
+  MPI_Comm_size(comm, &size);
 
- 
-  //routine variables 
-  int i,j,k; // some index 
-  int idf = id0+l;  // first index of scattered V for rank "rank + 1"; 
-  int cfirst = id0/n;   // first column index 
-  int clast  = idf/n; // last column index 
-  int clast_r = (idf-1)/n; 
-  int m_eff  = clast_r - cfirst + 1 ; 
+
+  //routine variables
+  int i,j,k; // some index
+  int idf = id0+l;  // first index of scattered V for rank "rank + 1";
+  int cfirst = id0/n;   // first column index
+  int clast  = idf/n; // last column index
+  int clast_r = (idf-1)/n;
+  int m_eff  = clast_r - cfirst + 1 ;
   double *V1, *Lambda;
 
-  // Mpi communication conditions 
-  // Mpi comm is needed when columns are truncated 
-  int right = rank + 1; 
-  int left  = rank - 1; 
-  int v1_size = l + 2*lambda; // size including comm 
-  if (rank==0 || cfirst*n==id0){ // no left comm 
-    v1_size -= lambda; 
-    left = MPI_PROC_NULL;}  
-  if (rank==(size-1) || clast*n==idf){ // no right comm 
-    v1_size -= lambda; 
-    right = MPI_PROC_NULL;} 
+  // Mpi communication conditions
+  // Mpi comm is needed when columns are truncated
+  int right = rank + 1;
+  int left  = rank - 1;
+  int v1_size = l + 2*lambda; // size including comm
+  if (rank==0 || cfirst*n==id0){ // no left comm
+    v1_size -= lambda;
+    left = MPI_PROC_NULL;}
+  if (rank==(size-1) || clast*n==idf){ // no right comm
+    v1_size -= lambda;
+    right = MPI_PROC_NULL;}
 
-  // init data to send 
-  Lambda=(double *) malloc(2*lambda * sizeof(double)); 
-  if (Lambda==0) 
-    return print_error_message (2, __FILE__, __LINE__); 
- 
-  for(i=0;i<lambda;i++)    { 
-    Lambda[i]=(*V)[i]; 
-    Lambda[i+lambda]=(*V)[i+l-lambda];    } 
+  // init data to send
+  Lambda=(double *) malloc(2*lambda * sizeof(double));
+  if (Lambda==0)
+    return print_error_message (2, __FILE__, __LINE__);
+
+  for(i=0;i<lambda;i++)    {
+    Lambda[i]=(*V)[i];
+    Lambda[i+lambda]=(*V)[i+l-lambda];    }
 
   if(PRINT_RANK==0 && VERBOSE>2)
-    printf("[rank %d] Left comm with %d | Right comm with %d\n", rank, left, right); 
+    printf("[rank %d] Left comm with %d | Right comm with %d\n", rank, left, right);
 
-  //send and receive data 
-  MPI_Sendrecv_replace(Lambda, lambda, MPI_DOUBLE, left, MPI_USER_TAG, right, MPI_USER_TAG, comm, &status);  //1st comm 
-  MPI_Sendrecv_replace((Lambda+lambda), lambda, MPI_DOUBLE, right, MPI_USER_TAG, left, MPI_USER_TAG, comm, &status);  //2nd comm 
-  
- 
+  //send and receive data
+  MPI_Sendrecv_replace(Lambda, lambda, MPI_DOUBLE, left, MPI_USER_TAG, right, MPI_USER_TAG, comm, &status);  //1st comm
+  MPI_Sendrecv_replace((Lambda+lambda), lambda, MPI_DOUBLE, right, MPI_USER_TAG, left, MPI_USER_TAG, comm, &status);  //2nd comm
+
+
   if (l<lambda)  //After sendrecv to avoid problems of communication for others processors
-    return print_error_message (1, __FILE__, __LINE__); 
+    return print_error_message (1, __FILE__, __LINE__);
 
-  //copy received data  
+  //copy received data
   if(left==MPI_PROC_NULL && right==MPI_PROC_NULL)  // 0--0 : nothing to do
     V1 = *V;
   else if(left==MPI_PROC_NULL) { // 0--1 : realloc
     *V = realloc(*V, v1_size * sizeof(double));
-    if(*V == NULL) 
-      return print_error_message (2, __FILE__, __LINE__); 
+    if(*V == NULL)
+      return print_error_message (2, __FILE__, __LINE__);
     V1 = *V;  }
   else  // 1--1 or 1--0 : new allocation
-    V1  = (double *) malloc(v1_size * sizeof(double)); 
-  
-  if (left!=MPI_PROC_NULL){ 
-    for(i=0;i<lambda;i++) 
-      V1[i] = Lambda[i+lambda]; 
-    id0 -= lambda;} 
-  if (right!=MPI_PROC_NULL){ 
-    for(i=0;i<lambda;i++) 
-      V1[i+v1_size-lambda] = Lambda[i];      } 
-  
-  // Copy input matrix V 
-  int offset = 0; 
-  if (left!=MPI_PROC_NULL){ 
+    V1  = (double *) malloc(v1_size * sizeof(double));
+
+  if (left!=MPI_PROC_NULL){
+    for(i=0;i<lambda;i++)
+      V1[i] = Lambda[i+lambda];
+    id0 -= lambda;}
+  if (right!=MPI_PROC_NULL){
+    for(i=0;i<lambda;i++)
+      V1[i+v1_size-lambda] = Lambda[i];      }
+
+  // Copy input matrix V
+  int offset = 0;
+  if (left!=MPI_PROC_NULL){
     offset = lambda;
-#pragma omp parallel for  
-    for(i=offset;i<l+offset;i++) 
+#pragma omp parallel for
+    for(i=offset;i<l+offset;i++)
       V1[i] = (*V)[i-offset]; }
-  
-  fftw_complex *V_fft, *T_fft; 
-  double *V_rfft; 
-  fftw_plan plan_f, plan_b; 
+
+  fftw_complex *V_fft, *T_fft;
+  double *V_rfft;
+  fftw_plan plan_f, plan_b;
 
 
-  //Compute matrix product 
+  //Compute matrix product
   int nfft,  blocksize;
 
   tpltz_init(v1_size, lambda , &nfft, &blocksize, &T_fft, T, &V_fft, &V_rfft, &plan_f, &plan_b, flag_stgy);
@@ -1072,8 +1074,8 @@ int mpi_stmm(double **V, int n, int m, int id0, int l, double *T, int lambda, Fl
   stmm_main(&V1, n, m, id0, v1_size, T, T_fft, lambda, V_fft, V_rfft, plan_f, plan_b, blocksize, nfft, flag_stgy);
 
 
-  tpltz_cleanup(&T_fft, &V_fft, &V_rfft,&plan_f, &plan_b ); 
-  
+  tpltz_cleanup(&T_fft, &V_fft, &V_rfft,&plan_f, &plan_b );
+
   // Copy output matrix TV
   offset = 0;
   if (left!=MPI_PROC_NULL)
@@ -1086,16 +1088,14 @@ int mpi_stmm(double **V, int n, int m, int id0, int l, double *T, int lambda, Fl
       return print_error_message (2, __FILE__, __LINE__);
     *V = V1;     }
   else { // 1--0 or 1--1
-#pragma omp parallel for 
+#pragma omp parallel for
     for(i=offset;i<l+offset;i++)
       (*V)[i-offset] = V1[i];    }
 
   if(left!=MPI_PROC_NULL)
     free(V1);
-  
-  return 0; 
-} 
+
+  return 0;
+}
 
 #endif
-
-

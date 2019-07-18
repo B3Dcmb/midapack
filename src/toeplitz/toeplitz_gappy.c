@@ -1,29 +1,29 @@
 /*
-@file toeplitz_gappy.c version 1.1b, July 2012  
+@file toeplitz_gappy.c version 1.1b, July 2012
 @brief Gappy routines used to compute the Toeplitz product when gaps are defined
 @author  Frederic Dauvergne
-**  
+**
 ** Project:  Midapack library, ANR MIDAS'09 - Toeplitz Algebra module
 ** Purpose:  Provide Toeplitz algebra tools suitable for Cosmic Microwave Background (CMB)
 **           data analysis.
 **
 ***************************************************************************
 @note Copyright (c) 2010-2012 APC CNRS Université Paris Diderot
-@note 
+@note
 @note This program is free software; you can redistribute it and/or modify it under the terms
-@note of the GNU Lesser General Public License as published by the Free Software Foundation; 
+@note of the GNU Lesser General Public License as published by the Free Software Foundation;
 @note either version 3 of the License, or (at your option) any later version. This program is
-@note distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even 
+@note distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
 @note the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
 @note Lesser General Public License for more details.
-@note 
+@note
 @note You should have received a copy of the GNU Lesser General Public License along with this
 @note program; if not, see http://www.gnu.org/licenses/lgpl.html
 @note
 @note For more information about ANR MIDAS'09 project see :
 @note http://www.apc.univ-paris7.fr/APC_CS/Recherche/Adamis/MIDAS09/index.html
 @note
-@note ACKNOWLEDGMENT: This work has been supported in part by the French National Research 
+@note ACKNOWLEDGMENT: This work has been supported in part by the French National Research
 @note Agency (ANR) through COSINUS program (project MIDAS no. ANR-09-COSI-009).
 ***************************************************************************
 ** Log: toeplitz*.c
@@ -37,7 +37,7 @@
 ** - OMP improvment for optimal cpu time.
 ** - bug fixed for OMP in the stmm_basic routine.
 ** - distcorrmin is used to communicate only lambda-1 datas when it is needed.
-** - new reshaping routines using transformation functions in stmm. Thus, only one copy 
+** - new reshaping routines using transformation functions in stmm. Thus, only one copy
 **   at most is needed.
 ** - tpltz_init improvement using define_nfft and define_blocksize routines.
 ** - add Block struture to define each Toeplitz block.
@@ -51,7 +51,7 @@
 #include "toeplitz.h"
 
 //r1.1 - Frederic Dauvergne (APC)
-//this is the gappy routines used when gaps are defined 
+//this is the gappy routines used when gaps are defined
 
 
 //====================================================================
@@ -60,30 +60,30 @@
 /** @ingroup group12
     We first rebuild the Toeplitz block matrix structure to reduce the computation cost and
     skip the computations of the values on the defined gaps. then, each process performs the
-    multiplication sequentially for each of the gappy block and based on the sliding window 
-    algorithm. Prior to that MPI calls are used to exchange data between neighboring process. 
+    multiplication sequentially for each of the gappy block and based on the sliding window
+    algorithm. Prior to that MPI calls are used to exchange data between neighboring process.
     The parameters are :
     \param V \b [input] distributed data matrix (with the convention V(i,j)=V[i+j*n]) ;
              \b [out] result of the product TV
     \param nrow number of rows of the global data matrix V
-    \param m number of columns for the data matrix V in the global rowwise order 
-    \param m_rowwise number of columns for the data matrix V in the rowwise order per processor 
-    \param tpltzblocks list of the toeplitz blocks struture with its own parameters 
+    \param m number of columns for the data matrix V in the global rowwise order
+    \param m_rowwise number of columns for the data matrix V in the rowwise order per processor
+    \param tpltzblocks list of the toeplitz blocks struture with its own parameters
     (idv, n, T_block, lambda) :
     - idv is the global row index defining for each Toeplitz block as stored in the vector T ;
     - n size of each Toeplitz block
     - T_block location of each Toeplitz matrix data composed of the non-zero entries of the first
     row ;
-    - lambda size of each Toeplitz block data T_block. The bandwith size is then equal to lambda*2-1 
+    - lambda size of each Toeplitz block data T_block. The bandwith size is then equal to lambda*2-1
     \param nb_blocks_all number of all Toeplitz block on the diagonal of the full Toeplitz matrix
-    \param nb_blocks_local number of Toeplitz blocks as stored in T 
+    \param nb_blocks_local number of Toeplitz blocks as stored in T
     \param idp global index of the first element of the local part of V
     \param local_V_size a number of all elements in local V
     \param id0gap index of the first element of each defined gap
     \param lgap length of each defined gaps
     \param ngap number of defined gaps
     \param flag_stgy flag strategy for the product computation
-    \param comm MPI communicator 
+    \param comm MPI communicator
 */
 int mpi_gstbmm(double **V, int nrow, int m, int m_rowwise, Block *tpltzblocks, int nb_blocks_local, int nb_blocks_all, int id0p, int local_V_size, int64_t *id0gap, int *lgap, int ngap,Flag flag_stgy, MPI_Comm comm)
 {
@@ -111,7 +111,7 @@ int mpi_gstbmm(double **V, int nrow, int m, int m_rowwise, Block *tpltzblocks, i
 //allocation for the gappy structure of the diagonal block Toeplitz matrix
   int nb_blocks_gappy;
 
-  int nb_blockgappy_max; 
+  int nb_blockgappy_max;
   int Tgappysize_max;
 
   Block *tpltzblocks_gappy;
@@ -120,7 +120,7 @@ int mpi_gstbmm(double **V, int nrow, int m, int m_rowwise, Block *tpltzblocks, i
   int Tsize=0;
   int lambdamax=0;
 
-if (VERBOSE) 
+if (VERBOSE)
   fprintf(file, "[%d] flag_skip_build_gappy_blocks=%d\n", rank, flag_skip_build_gappy_blocks);
 
   if (flag_skip_build_gappy_blocks==1) {  //no build gappy blocks strategy, just put zeros at gaps location
@@ -159,7 +159,7 @@ if (VERBOSE)
 if (VERBOSE) {
     fprintf(file, "[%d] nb_blocks_gappy=%d\n", rank, nb_blocks_gappy);
     for(i=0;i<nb_blocks_gappy;i++)
-      fprintf(file, "[%d] idvgappy[%d]=%d ; ngappy[%d]=%d\n", rank, i, tpltzblocks_gappy[i].idv, i, tpltzblocks_gappy[i].n );
+      fprintf(file, "[%d] idvgappy[%d]=%ld ; ngappy[%d]=%d\n", rank, i, tpltzblocks_gappy[i].idv, i, tpltzblocks_gappy[i].n );
 }
 //ps: we could reallocate the gappy variables to their real size. Not sure it's worth it.
 
@@ -179,9 +179,9 @@ if (VERBOSE) {
 
 
 //====================================================================
-/// Set the data to zeros at the gaps location. 
+/// Set the data to zeros at the gaps location.
 /** @ingroup group11
-    The datas located on a gap are set to zeros. The gaps are defined in the time space, 
+    The datas located on a gap are set to zeros. The gaps are defined in the time space,
     meaning their indexes are defined in the row dimension.
 */
 
@@ -209,23 +209,23 @@ int reset_gaps(double **V, int id0, int local_V_size, int m, int nrow, int m_row
 /// Build the gappy Toeplitz block structure to optimise the product computation at gaps location.
 /** @ingroup group21
     Considering the significant gaps, the blocks to which they belong are cut and split between
-    the gap's edges to reduce the total row size of the flotting blocks. It take into 
+    the gap's edges to reduce the total row size of the flotting blocks. It take into
     consideration the minimum correlation length and a parameter that allows us to control the
     minimum gap size allowed to split the blocks. In some cases, the gap can be partially
     reduce to fit the minimum block size needed for computation or just for performance
     criteria. This is based on the fact that the gaps are previously set to zeros before calling
-    this routine. 
+    this routine.
     \param nrow number of rows of the global data matrix V
-    \param m number of columns for the data matrix V in the global rowwise order 
-    \param tpltzblocks list of the toeplitz blocks struture with its own parameters 
+    \param m number of columns for the data matrix V in the global rowwise order
+    \param tpltzblocks list of the toeplitz blocks struture with its own parameters
     (idv, n, T_block, lambda).
-    \param nb_blocks_local number of Toeplitz blocks as stored in T 
+    \param nb_blocks_local number of Toeplitz blocks as stored in T
     \param nb_blocks_all number of all Toeplitz block on the diagonal of the full Toeplitz matrix
     \param id0gap index of the first element of each defined gap
     \param lgap length of each defined gaps
     \param ngap number of defined gaps
-    \param tpltzblocks_gappy list of the gappy toeplitz blocks struture with its own parameters 
-    \param nb_blocks_gappy_final real number of obtained gappy Toeplitz blocks 
+    \param tpltzblocks_gappy list of the gappy toeplitz blocks struture with its own parameters
+    \param nb_blocks_gappy_final real number of obtained gappy Toeplitz blocks
     \param flag_param_distmin_fixed flag to defined the minimum gap value allowed to split a Toeplitz block
 */
 int build_gappy_blocks(int nrow, int m, Block *tpltzblocks, int nb_blocks_local, int nb_blocks_all, int64_t *id0gap, int *lgap, int ngap, Block *tpltzblocks_gappy, int *nb_blocks_gappy_final, int flag_param_distmin_fixed)
@@ -255,7 +255,7 @@ int build_gappy_blocks(int nrow, int m, Block *tpltzblocks, int nb_blocks_local,
 
 
   int nb_blockgappy_max = nb_blocks_local+ngap;
-  int Tgappysize_max; 
+  int Tgappysize_max;
 
   int ngappy_tmp;
   int lgap_tmp;
@@ -269,7 +269,7 @@ int build_gappy_blocks(int nrow, int m, Block *tpltzblocks, int nb_blocks_local,
 
   for (k=0;k<ngap;k++) {
 
-  //find block for the gap begining 
+  //find block for the gap begining
   for( igapfirstblock = -1; igapfirstblock == -1; ) {
     idtmp = id0gap[k];
 
@@ -284,9 +284,9 @@ int build_gappy_blocks(int nrow, int m, Block *tpltzblocks, int nb_blocks_local,
       igapfirstblock = ib;  //first block after the id0gap
       flag_igapfirstinside = 0;
     }
-    else { //ib=nbloc 
+    else { //ib=nbloc
       igapfirstblock = -2;  //no block defined
-      flag_igapfirstinside = 0; 
+      flag_igapfirstinside = 0;
     }}
 
   //find block for the end of the gap - reverse way
@@ -306,7 +306,7 @@ int build_gappy_blocks(int nrow, int m, Block *tpltzblocks, int nb_blocks_local,
     }
     else { //ib=-1
       igaplastblock = -2;  //no block defined.
-      flag_igaplastinside = 0; 
+      flag_igaplastinside = 0;
     }}
 
 
@@ -321,7 +321,7 @@ int build_gappy_blocks(int nrow, int m, Block *tpltzblocks, int nb_blocks_local,
 
   idvtmp_firstblock = max( tpltzblocks[igapfirstblock].idv, id0gap[k_prev]+lgap[k_prev]);
 
-//test if the gap is ok for block reduce/split 
+//test if the gap is ok for block reduce/split
   if (igapfirstblock!=igaplastblock) {
 
     flag_gapok = 1;  //reduce the gap in each block. no pb if we add max() inside the ifs.
@@ -333,12 +333,12 @@ int build_gappy_blocks(int nrow, int m, Block *tpltzblocks, int nb_blocks_local,
   else if (igapfirstblock==igaplastblock){
 
   int ngappyleft_tmp = id0gap[k]-idvtmp_firstblock;
-  int leftadd = max(0, tpltzblocks[igapfirstblock].lambda - ngappyleft_tmp); 
+  int leftadd = max(0, tpltzblocks[igapfirstblock].lambda - ngappyleft_tmp);
   int ngappyright_tmp = tpltzblocks[igaplastblock].idv + tpltzblocks[igaplastblock].n - (id0gap[k]+lgap[k]);
   int rightadd = max(0,tpltzblocks[igapfirstblock].lambda - ngappyright_tmp);
-  int restgap = lgap[k] - (leftadd+rightadd);  
+  int restgap = lgap[k] - (leftadd+rightadd);
 
-//  flag_gapok = (restgap>=0); 
+//  flag_gapok = (restgap>=0);
   flag_gapok = (restgap >= max(0, param_distmin));
 
   }
@@ -401,7 +401,7 @@ int build_gappy_blocks(int nrow, int m, Block *tpltzblocks, int nb_blocks_local,
 
   igaplastblock_prev = igaplastblock;
   k_prev = k;
- 
+
   }//end if (flag_gapok)
   }//end if (lgap[k]>param_distmin)
   }//end gap loop
@@ -424,5 +424,3 @@ int build_gappy_blocks(int nrow, int m, Block *tpltzblocks, int nb_blocks_local,
 
   return 0;
 }
-
-

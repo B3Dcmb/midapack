@@ -12,6 +12,6 @@ int ring_noempty_step_reduce(int **R, int *nR, int nRmax, int **S, int *nS, int 
 
 int ring_nonblocking_reduce(int **R, int *nR, int **S, int *nS, double *val, double *res_val, int steps, MPI_Comm comm);
 
-int ring_noniempty_reduce(int **R, int *nR, int nneR, int **S, int *nS, int nneS, double *val, double *res_val, int steps, MPI_Comm comm);
+int ring_noempty_reduce(int **R, int *nR, int nneR, int **S, int *nS, int nneS, double *val, double *res_val, int steps, MPI_Comm comm);
 
 int alltoallv_reduce(int **R, int *nR, int nRtot, int **S, int *nS, int nStot, double *val, double *res_val, int steps, MPI_Comm comm);

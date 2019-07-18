@@ -52,8 +52,8 @@ int i;
     tpltzblocks[i].T_block = (T);
   }
 
-  for(i=0; i<nb_blocks_loc; i++)
-    printf("tpltzblocks[%d].idv=%ld\n", i, tpltzblocks[i].idv);
+  // for(i=0; i<nb_blocks_loc; i++)
+  //   printf("tpltzblocks[%d].idv=%ld\n", i, tpltzblocks[i].idv);
 
   return 0;
 }

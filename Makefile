@@ -4,12 +4,10 @@ DIR = /global/homes/e/elbouha/midapack
 DIRTAR = export_tar
 LIBNAME = libmidapack
 
-
-
-all : 
+all :
 	@echo "starts compiling ........"
 	make mapmat
-	make toeplitz 
+	make toeplitz
 	make lib
 
 example :
@@ -20,7 +18,7 @@ test :
 	make mapmat_test
 	make toeplitz_test
 
-toeplitz: ./src/toeplitz/ 
+toeplitz: ./src/toeplitz/
 	make -C ./src/toeplitz/
 
 toeplitz_test: ./test/toeplitz/ ./src/toeplitz/
@@ -29,8 +27,7 @@ toeplitz_test: ./test/toeplitz/ ./src/toeplitz/
 toeplitz_example: ./lib
 	make example -C test/toeplitz/
 
-
-mapmat: ./src/mapmat/ 
+mapmat: ./src/mapmat/
 	make -C ./src/mapmat/
 
 mapmat_test: ./test/mapmat/ ./src/mapmat/
@@ -47,13 +44,17 @@ lib: ./src/mapmat/ ./src/toeplitz
            src/toeplitz/toeplitz_nofft.o src/toeplitz/toeplitz_gappy.o src/toeplitz/toeplitz_params.o \
            src/toeplitz/toeplitz_rshp.o src/toeplitz/toeplitz_utils.o src/toeplitz/toeplitz_wizard.o
 	ranlib ./lib/$(LIBNAME).a
-
+	cc -shared src/mapmat/mapmat.o src/mapmat/mapmatc.o src/mapmat/bitop.o src/mapmat/als.o src/mapmat/alm.o \
+           src/mapmat/csort.o src/mapmat/cindex.o src/mapmat/ring.o src/mapmat/butterfly.o \
+           src/toeplitz/toeplitz.o src/toeplitz/toeplitz_seq.o src/toeplitz/toeplitz_block.o \
+           src/toeplitz/toeplitz_nofft.o src/toeplitz/toeplitz_gappy.o src/toeplitz/toeplitz_params.o \
+           src/toeplitz/toeplitz_rshp.o src/toeplitz/toeplitz_utils.o src/toeplitz/toeplitz_wizard.o \
+					 -L/opt/cray/pe/fftw/3.3.6.3/haswell/lib -lfftw3 -lfftw3_threads -L/opt/intel/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64 -liomp5 -o ./lib/$(LIBNAME).so
 
 seq :
 	make mapmat
-	make toeplitz 
+	make toeplitz
 	make lib
-
 
 clean:
 	make clean -C ./src/toeplitz
@@ -73,6 +74,3 @@ tar :
 
 release :
 	./mkrelease
-
-
-

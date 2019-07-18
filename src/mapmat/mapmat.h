@@ -9,7 +9,14 @@
 /** Update by Hamza El Bouhargani
     @date February 2019 */
 
-
+#include <mpi.h>
+#include "butterfly.h"
+#include "alm.h"
+#include "als.h"
+#include "bitop.h"
+#include "cindex.h"
+#include "csort.h"
+#include "ring.h"
 
 
 

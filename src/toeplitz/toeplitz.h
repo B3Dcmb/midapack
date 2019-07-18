@@ -333,5 +333,28 @@ int get_overlapping_blocks_params(int nbloc, Block *tpltzblocks, int local_V_siz
 //Wizard routines
 int stbmmProd( Tpltz Nm1, double *V);
 
+//Toeplitz rshp routines
+int fctid_mat2vect(int i, int id0, int n, int lambda);
+
+int fctid_mat2vect_inv(int i, int id0, int n, int lambda);
+
+int fctid_concatcol(int i, int id0, int n, int m, int l, int lconc, int lambda, int *nocol, int nbcol);
+
+int fctid_concatcol_inv(int i, int id0, int n, int m, int l, int lconc, int lambda, int *nocol_inv, int nbcol);
+
+int fctid_vect2nfftblock(int i, int v1_size, int fft_size, int nfft, int lambda);
+
+int is_needconcat(int *nocol, int nbcol);
+
+int fctid_vect2nfftblock_inv(int i, int v1_size, int fft_size, int nfft, int lambda);
+
+int define_rshp_size(int flag_format_rshp, int fft_size, int nfft, int v1_size, int vedge_size, int *nrshp, int *mrshp, int *lrshp);
+
+int build_nocol_inv(int *nocol, int nbcol, int m);
+
+int build_reshape(double *Vin, int *nocol, int nbcol, int lconc, int n, int m, int id0, int l, int lambda, int nfft, double *Vrshp, int nrshp, int mrshp, int lrshp, int flag_format_rshp);
+
+int extract_result(double *Vout, int *nocol, int nbcol, int lconc, int n, int m, int id0, int l, int lambda, int nfft, double *Vrshp, int nrshp, int mrshp, int lrshp, int flag_format_rshp);
+
 //=========================================================================
 #endif 	    /* !TOEPLITZ_H_ */

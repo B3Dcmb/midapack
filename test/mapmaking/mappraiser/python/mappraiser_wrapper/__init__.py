@@ -13,8 +13,10 @@ from mpi4py import MPI
 
 SIGNAL_TYPE = np.float64
 PIXEL_TYPE = np.int32
-WEIGHT_TYPE = np.float32
-INVCOV_TYPE = np.float64
+WEIGHT_TYPE = np.float64
+INVTT_TYPE = np.float64
+TIMESTAMP_TYPE = np.float64
+PSD_TYPE = np.float64
 
 try:
     _mappraiser = ct.CDLL("libmappraiser.so")
@@ -44,22 +46,26 @@ def encode_comm(comm):
 _mappraiser.MLmap.restype = None
 _mappraiser.MLmap.argtypes =[
     MPI_Comm, #comm
-    ct.int, #Nb_t_Intervals
-    ct.int, #t_Interval_length
-    ct.int, #Nnz
+    ct.c_char_p, #ref
+    npc.ndpointer(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"), #data_size_proc
+    ct.c_int, #nb_blocks_loc
+    npc.ndpointer(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"), #local_blocks_sizes
+    ct.c_int, #Nnz
     npc.ndpointer(dtype=PIXEL_TYPE, ndim=1, flags="C_CONTIGUOUS"),
     npc.ndpointer(dtype=WEIGHT_TYPE, ndim=1, flags="C_CONTIGUOUS"),
     npc.ndpointer(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"),
-    ct.int, #lambda
-    npc.ndpointer(dtype=INVCOV_TYPE, ndim=1, flags="C_CONTIGUOUS"),
+    npc.ndpointer(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"),
+    ct.c_int, #lambda
+    npc.ndpointer(dtype=INVTT_TYPE, ndim=1, flags="C_CONTIGUOUS"),
 ]
 
-def MLmap(comm, nintervals, interval_length, pixels, pixweights, signal, Lambda, invcov0):
+def MLmap(comm, ref, data_size_proc, nb_blocks_loc, local_blocks_sizes, Nnz, pixels, pixweights, signal, noise, Lambda, invtt):
     """
     Compute the MLMV solution of the GLS estimator, assuming uniform detector weighting and a single PSD
     For all stationary intervals. (These assumptions will be removed in future updates)
     """
     if not available:
         raise RuntimeError("No libmappraiser available, cannot reconstruct the map")
-    _mappraiser.MLmap(comm, nintervals, interval_length, pixels, pixweights, signal, Lambda, invcov0)
+    ref = ref.encode('ascii')
+    _mappraiser.MLmap(encode_comm(comm), ref, data_size_proc, nb_blocks_loc, local_blocks_sizes, Nnz, pixels, pixweights, signal, noise, Lambda, invtt)
     return

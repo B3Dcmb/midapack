@@ -408,7 +408,7 @@ if (nb_blocks_rank == 1) {
 #endif
 
   if(PRINT_RANK==0 && VERBOSE>2)
-    fprintf(file, "[%d] generic block...\n");
+    fprintf(file, "[%d] generic block...\n", rank);
 
   vblock_size=nnew[id];
   id0block=0;
@@ -454,7 +454,7 @@ if (nb_blocks_rank == 1) {
 // Last case : Last block of the process
   else if(iblock==idv0+nb_blocks_rank-1 && iblock!= idv0) {
   if(PRINT_RANK==0 && VERBOSE>2)
-    fprintf(file, "[%d] last block...\n");
+    fprintf(file, "[%d] last block...\n", rank);
 
   vblock_size=vnrank_size;
   id0block=0;

@@ -1,19 +1,23 @@
 /** @file   cindex.c
     @brief  Indexing subroutines implemetation
     @note  Copyright (c) 2010-2012 APC CNRS Université Paris Diderot. This program is free software; you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation; either version 3 of the License, or (at your option) any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more details. You should have received a copy of the GNU General Public License along with this program; if not, see http://www.gnu.org/licenses/lgpl.html
-    @note For more information about ANR MIDAS'09 project see http://www.apc.univ-paris7.fr/APC_CS/Recherche/Adamis/MIDAS09/index.html 
+    @note For more information about ANR MIDAS'09 project see http://www.apc.univ-paris7.fr/APC_CS/Recherche/Adamis/MIDAS09/index.html
     @note ACKNOWLEDGMENT: This work has been supported in part by the French National  Research Agency (ANR) through COSINUS program (project MIDAS no. ANR-09-COSI-009).
     @author Pierre Cargemel
     @date   May 2012*/
 
 
 #include <stdlib.h>
-/** Sequential reindexing  
+
+/* Prototype binary search function */
+int dichotomy(int nT, int *T, int e);
+
+/** Sequential reindexing
     @param T monotony array
     @param nT number of index
     @param A tab to reindex
     @param nA number of element to reindex
-    @return array of indices 
+    @return array of indices
     @ingroup matmap_group22*/
 int sindex(int *T, int nT, int *A, int nA){
   int i, tmp;
@@ -22,16 +26,18 @@ int sindex(int *T, int nT, int *A, int nA){
     tmp = A[i];
     A[i] =dichotomy(nT, T, tmp);
   }
+  return 0;
 }
 
 
 #ifdef W_OPENMP
-/** Multithread (OpenMP) reindexing 
+#include <omp.h>
+/** Multithread (OpenMP) reindexing
     @param T monotony array
     @param nT number of index
     @param A tab to reindex
     @param nA inumber of element to reindex
-    @return array of indices 
+    @return array of indices
     @ingroup matmap_group22*/
 int omp_pindex(int *T, int nT, int *A, int nA){
 //  printf("\nomp_pindex");
@@ -45,10 +51,10 @@ int omp_pindex(int *T, int nT, int *A, int nA){
     nths = omp_get_num_threads();
     tid = omp_get_thread_num();
 //    printf("\ntid %d nths %d", tid, nths);
-  }//---join--- 
+  }//---join---
 
   q = nA/nths;
-  r = nA%nths; 
+  r = nA%nths;
 
   count = (int *) malloc(nths *sizeof(int));
   disp = (int *) malloc(nths *sizeof(int));
@@ -61,20 +67,20 @@ int omp_pindex(int *T, int nT, int *A, int nA){
       count[i] = q;
     }
   }
-  
+
   disp[0] = 0;
   for(i=0; i<nths-1; i++){
     disp[i+1] = disp[i] + count[i];
   }
-  
+
   #pragma omp parallel private(tid) shared(T, nT, A, disp, count)
   {//---fork---1st step, sort on local chunk
     tid = omp_get_thread_num();
     sindex(T, nT, A+disp[tid], count[tid]);
   }//---join---
   free(count);
-  free(disp); 
-  return 0; 
+  free(disp);
+  return 0;
 }
 #endif
 
@@ -82,9 +88,9 @@ int omp_pindex(int *T, int nT, int *A, int nA){
 
 /** dichotmic search of an integer in a monotony array
     @param number elemnent array of values
-    @param monotony array 
+    @param monotony array
     @param element to search
-    @return index of searched element*/ 
+    @return index of searched element*/
 int dichotomy(int nT, int *T, int e){
   int min, max, pivot;
   min=0;
@@ -101,4 +107,3 @@ int dichotomy(int nT, int *T, int e){
   }
   return pivot;
 }
-

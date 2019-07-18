@@ -108,9 +108,9 @@ void CommInfo(Mat *A){
   MPI_Comm comm = MPI_COMM_WORLD;
   MPI_Comm_rank(comm,&rank);
   MPI_Comm_size(comm,&size);
-  s = malloc(4*sizeof(double));
-  r = malloc(4*3*sizeof(double));
-  amountSizeByStep = malloc(A->steps*sizeof(double));
+  s = (double *) malloc(4*sizeof(double));
+  r = (double *) malloc(4*3*sizeof(double));
+  amountSizeByStep = (double *) malloc(A->steps*sizeof(double));
   switch(A->flag){
     case NONE :
       break;
@@ -203,7 +203,7 @@ void CommInfo(Mat *A){
   if(A->flag != ALLREDUCE && A->flag != ALLTOALLV ){
     double *t=NULL;
 
-    t=malloc(A->steps*sizeof(double));
+    t=(double *) malloc(A->steps*sizeof(double));
     // Copy int array into double array
     for(i=0;i<A->steps;i++)
       t[i]=A->nS[i];

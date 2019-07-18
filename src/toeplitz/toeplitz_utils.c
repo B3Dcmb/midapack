@@ -47,6 +47,7 @@
 */
 
 #include "toeplitz.h"
+#include <time.h>
 extern int PRINT_RANK;
 
 //set of utilitaries routines - fd@apc

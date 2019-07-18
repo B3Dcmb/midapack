@@ -15,14 +15,16 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
+#include "fitsio.h"
 #include "midapack.h"
+#include "mappraiser.h"
 
-int partition(int64_t *gif, int *m, int64_t M, int rank, int size);
+int x2map_pol( double *mapI, double *mapQ, double *mapU, double *Cond, int * hits, int npix, double *x, int *lstid, double *cond, int *lhits, int xsize);
 
-void MLmap(MPI_Comm comm, int Nb_t_Intervals, int t_Interval_length, int Nnz, void *pix, void *pixweights, void *signal, int lambda, void *invcov0)
+void MLmap(MPI_Comm comm, char *ref, void *data_size_proc, int nb_blocks_loc, void *local_blocks_sizes, int Nnz, void *pix, void *pixweights, void *signal, void *noise, int lambda, double *invtt)
 {
   int64_t	M;       //Global number of rows
-  int		m;  //local number of rows of the pointing matrix A
+  int		m, Nb_t_Intervals;  //local number of rows of the pointing matrix A, nbr of stationary intervals
   int64_t	gif;			//global indice for the first local line
   int		i, j, k;
   int          K;	  //maximum number of iteration for the PCG
@@ -33,41 +35,53 @@ void MLmap(MPI_Comm comm, int Nb_t_Intervals, int t_Interval_length, int Nnz, vo
   double	*x;	//pixel domain vectors
   double	st, t;		 	//timer, start time
   int 		rank, size;
+  MPI_Status status;
 
-  printf("\n############# MAPPRAISER : MidAPack PaRAllel Iterative Sky EstimatoR vDev, May 2019 ################\n");
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &size);
-  printf("rank = %d, size = %d",rank,size);
+  if(rank==0){
+    printf("\n############# MAPPRAISER : MidAPack PaRAllel Iterative Sky EstimatoR vDev, May 2019 ################\n");
+    printf("rank = %d, size = %d\n",rank,size);
+  }
   fflush(stdout);
 
 //communication scheme for the pointing matrix  (to move in .h)
-  pointing_commflag=1; //2==BUTTERFLY - 1==RING
+  pointing_commflag=6; //2==BUTTERFLY - 1==RING
 
 //PCG parameters
   tol=pow(10,-6);
   K=500;
 
 //total length of the time domaine signal
-  M = (int64_t) Nb_t_Intervals*t_Interval_length;
+  // M = (int64_t) Nb_t_Intervals*t_Interval_length;
+  M = 0;
+  for(i=0;i<size;i++){
+    M += ((int *)data_size_proc)[i];
+  }
   if(rank==0){
     printf("[rank %d] M=%ld\n", rank, M);
   }
   fflush(stdout);
 
 //compute distribution indexes over the processes
-  partition(&gif, &m, M, rank, size);
+//   partition(&gif, &m, M, rank, size);
+  m = ((int *)data_size_proc)[rank];
+  gif = 0;
+  for(i=0;i<rank;i++)
+    gif += ((int *)data_size_proc)[i];
 
 //Print information on data distribution
-  int Nb_t_Intervals_loc = ceil( Nb_t_Intervals*1.0/size );
-  int nb_proc_shared_one_interval = max(1, size/Nb_t_Intervals );
-  if(rank==0)
-    printf("[rank %d] nb_proc_shared_one_interval=%d\n", rank, nb_proc_shared_one_interval );
-  int t_Interval_length_loc = t_Interval_length/nb_proc_shared_one_interval;
+  int Nb_t_Intervals_loc = nb_blocks_loc;
+  MPI_Allreduce(&nb_blocks_loc, &Nb_t_Intervals, 1, MPI_INT, MPI_SUM, comm);
+  int nb_proc_shared_one_interval = 1; //max(1, size/Nb_t_Intervals );
   if(rank==0){
-    printf("[rank %d] size=%d \t m=%d \t Nb_t_Intervals=%d \t t_Interval_length=%d\n", rank, size, m, Nb_t_Intervals, t_Interval_length );
-    printf("[rank %d] Nb_t_Intervals_loc=%d \t t_Interval_length_loc=%d\n", rank, Nb_t_Intervals_loc , t_Interval_length_loc);
+    printf("[rank %d] nb_proc_shared_one_interval=%d\n", rank, nb_proc_shared_one_interval );
+    // int t_Interval_length_loc = t_Interval_length/nb_proc_shared_one_interval;
+    printf("[rank %d] size=%d \t m=%d \t Nb_t_Intervals=%d \n", rank, size, m, Nb_t_Intervals);
+    printf("[rank %d] Nb_t_Intervals_loc=%d \n", rank, Nb_t_Intervals_loc );
+    fflush(stdout);
   }
-  fflush(stdout);
+
 
 //Pointing matrix init
   st=MPI_Wtime();
@@ -76,8 +90,8 @@ void MLmap(MPI_Comm comm, int Nb_t_Intervals, int t_Interval_length, int Nnz, vo
   t=MPI_Wtime();
   if (rank==0) {
     printf("[rank %d] Initializing pointing matrix time=%lf \n", rank, t-st);
+    fflush(stdout);
   }
-  fflush(stdout);
   // printf("A.lcount = %d\n", A.lcount);
 
 //Build pixel-to-time domain mapping
@@ -106,8 +120,8 @@ void MLmap(MPI_Comm comm, int Nb_t_Intervals, int t_Interval_length, int Nnz, vo
   t=MPI_Wtime();
   if (rank==0) {
     printf("[rank %d] Total pixel-to-time domain mapping time=%lf \n", rank, t-st);
+    fflush(stdout);
   }
-  fflush(stdout);
 
 //PCG beginning vector input definition for the pixel domain map (MatInit gives A.lcount)
   int *lhits;
@@ -126,8 +140,8 @@ void MLmap(MPI_Comm comm, int Nb_t_Intervals, int t_Interval_length, int Nnz, vo
 //Create piecewise Toeplitz matrix
 //specifics parameters:
   int nb_blocks_tot = Nb_t_Intervals;
-  int n_block_avg = M/nb_blocks_tot;  //should be equal to t_Intervals_length in the current config
-                                      //because we dont have flotting blocks
+  // int n_block_avg = M/nb_blocks_tot;  //should be equal to t_Intervals_length in the current config
+  //                                     //because we dont have flotting blocks
   int lambda_block_avg = lambda;
 
 //flags for Toeplitz product strategy
@@ -148,33 +162,34 @@ void MLmap(MPI_Comm comm, int Nb_t_Intervals, int t_Interval_length, int Nnz, vo
   int64_t id0 = gif;
   int local_V_size = m;
 
-  int nb_blocks_loc;
-  nb_blocks_loc = ceil( local_V_size*1.0/n_block_avg );
+  // int nb_blocks_loc;
+  // nb_blocks_loc = ceil( local_V_size*1.0/n_block_avg );
 
-  double nb_blocks_loc_part =  (local_V_size*1.0)/(n_block_avg) ;
+  // double nb_blocks_loc_part =  (local_V_size*1.0)/(n_block_avg) ;
 
-// check special cases to have exact number of local blocks
-  if ((id0/n_block_avg + nb_blocks_loc) * n_block_avg < (id0+local_V_size))
-    nb_blocks_loc=nb_blocks_loc+1;
+// // check special cases to have exact number of local blocks
+//   if ((id0/n_block_avg + nb_blocks_loc) * n_block_avg < (id0+local_V_size))
+//     nb_blocks_loc=nb_blocks_loc+1;
 
   if (rank==0 | rank==1) {
     printf("M=%ld, m=%d \n", M, m);
     printf("gif = %ld \n", gif);
   }
 
-  int nb_proc_shared_a_block = ceil( size*1.0/nb_blocks_tot );
-  int nb_comm = (nb_proc_shared_a_block)-1 ;
+  // int nb_proc_shared_a_block = ceil( size*1.0/nb_blocks_tot );
+  // int nb_comm = (nb_proc_shared_a_block)-1 ;
 
 //Block definition
   tpltzblocks = (Block *) malloc(nb_blocks_loc * sizeof(Block));
-  defineBlocks_avg(tpltzblocks, invcov0, nb_blocks_loc, n_block_avg, lambda_block_avg, id0 );
+  defineBlocks_avg(tpltzblocks, invtt, nb_blocks_loc, local_blocks_sizes, lambda_block_avg, id0 );
   defineTpltz_avg( &Nm1, nrow, 1, mcol, tpltzblocks, nb_blocks_loc, nb_blocks_tot, id0, local_V_size, flag_stgy, comm);
 
 //print Toeplitz parameters for information
   if (rank==0 | rank==1) {
-    printf("[rank %d] size=%d, nrow=%ld, local_V_size=%ld, id0=%ld \n", rank, size, nrow, local_V_size, id0);
-    printf("[rank %d] nb_blocks_tot=%d, nb_blocks_loc=%d, n_block_avg=%d, lambda_block_avg=%d \n", rank, nb_blocks_tot, nb_blocks_loc, n_block_avg, lambda_block_avg);
-    printf("[rank %d] nb_proc_shared_a_block=%d, nb_comm=%d \n", rank, nb_proc_shared_a_block, nb_comm);
+    printf("[rank %d] size=%d, nrow=%ld, local_V_size=%d, id0=%ld \n", rank, size, nrow, local_V_size, id0);
+    printf("[rank %d] nb_blocks_tot=%d, nb_blocks_loc=%d, lambda_block_avg=%d \n", rank, nb_blocks_tot, nb_blocks_loc, lambda_block_avg);
+    // printf("[rank %d] nb_proc_shared_a_block=%d, nb_comm=%d \n", rank, nb_proc_shared_a_block, nb_comm);
+    printf("[rank %d] diagNm1 = %f\n", rank, Nm1.tpltzblocks[50].T_block[0]);
   }
 
   MPI_Barrier(comm);
@@ -184,7 +199,7 @@ void MLmap(MPI_Comm comm, int Nb_t_Intervals, int t_Interval_length, int Nnz, vo
 
   st=MPI_Wtime();
 // Conjugate Gradient
-  PCG_GLS_true( &A, Nm1, x, signal, cond, lhits, tol, K);
+  PCG_GLS_true( &A, Nm1, x, signal, noise, cond, lhits, tol, K);
   MPI_Barrier(comm);
   t=MPI_Wtime();
    if(rank==0)
@@ -206,59 +221,177 @@ void MLmap(MPI_Comm comm, int Nb_t_Intervals, int t_Interval_length, int Nnz, vo
   for(i=0; i< mapsize; i++){
     lstid[i] = A.lindices[i+(A.nnz)*(A.trash_pix)];
   }
-  ioWritebinfile( mapsize, map_id, lstid, x, cond, lhits);
+  // ioWritebinfile( mapsize, map_id, lstid, x, cond, lhits);
 
 //Write some parameters in txt file:
   //output file:
-  FILE* file;
-  char filenametxt [1024];
-  sprintf(filenametxt,"/global/cscratch1/sd/elbouha/data_TOAST/output/mapout%01d.txt", map_id);
-  file = fopen(filenametxt, "w");
-  fprintf(file, "%d\n", size );
-  fprintf(file, "%ld\n", gif );
-  fprintf(file, "%d\n", m );
-  fprintf(file, "%d\n", mapsize );
-  fprintf(file, "%d\n", Nb_t_Intervals );
-  fprintf(file, "%d\n", t_Interval_length );
-  fprintf(file, "%d\n", LambdaBlock );
-  fprintf(file, "%d\n", Nb_t_Intervals_loc );
-  fprintf(file, "%d\n", rank );
-  fprintf(file, "size idp m A.lcount Nb_t_Intervals t_Interval_length LambdaBlock Nb_t_Intervals_loc rank\n" );
-  fclose(file);
+  // FILE* file;
+  // char filenametxt [1024];
+  // sprintf(filenametxt,"/global/cscratch1/sd/elbouha/data_TOAST/output/mapout%01d.txt", map_id);
+  // file = fopen(filenametxt, "w");
+  // fprintf(file, "%d\n", size );
+  // fprintf(file, "%ld\n", gif );
+  // fprintf(file, "%d\n", m );
+  // fprintf(file, "%d\n", mapsize );
+  // fprintf(file, "%d\n", Nb_t_Intervals );
+  // // fprintf(file, "%d\n", t_Interval_length );
+  // fprintf(file, "%d\n", lambda );
+  // fprintf(file, "%d\n", Nb_t_Intervals_loc );
+  // fprintf(file, "%d\n", rank );
+  // fprintf(file, "size idp m A.lcount Nb_t_Intervals LambdaBlock Nb_t_Intervals_loc rank\n" );
+  // fclose(file);
+
+  if (rank!=0){
+    MPI_Send(&mapsize, 1, MPI_INT, 0, 0, comm);
+    MPI_Send(lstid, mapsize, MPI_INT, 0, 1, comm);
+    MPI_Send(x, mapsize, MPI_DOUBLE, 0, 2, comm);
+    MPI_Send(cond, mapsize/Nnz, MPI_DOUBLE, 0, 3, comm);
+    MPI_Send(lhits, mapsize/Nnz, MPI_INT, 0, 4, comm);
+  }
+
+  if (rank==0){
+    int nside=512;
+    int npix = 12*pow(nside,2);
+    int oldsize;
+
+    double *mapI;
+    mapI    = (double *) calloc(npix, sizeof(double));
+    double *mapQ;
+    mapQ    = (double *) calloc(npix, sizeof(double));
+    double *mapU;
+    mapU    = (double *) calloc(npix, sizeof(double));
+    int *hits;
+    hits = (int *) calloc(npix, sizeof(int));
+    double *Cond;
+    Cond = (double *) calloc(npix, sizeof(double));
+
+    for (i=0;i<size;i++){
+      if (i!=0){
+        oldsize = mapsize;
+        MPI_Recv(&mapsize, 1, MPI_INT, i, 0, comm, &status);
+        if (oldsize!=mapsize){
+          lstid = (int *) realloc(lstid, mapsize*sizeof(int));
+          x = (double *) realloc(x, mapsize*sizeof(double));
+          cond = (double *) realloc(cond, mapsize*sizeof(double));
+          lhits = (int *) realloc(lhits, mapsize*sizeof(int));
+        }
+        MPI_Recv(lstid, mapsize, MPI_INT, i, 1, comm, &status);
+        MPI_Recv(x, mapsize, MPI_DOUBLE, i, 2, comm, &status);
+        MPI_Recv(cond, mapsize/Nnz, MPI_DOUBLE, i, 3, comm, &status);
+        MPI_Recv(lhits, mapsize/Nnz, MPI_INT, i, 4, comm, &status);
+      }
+      x2map_pol(mapI, mapQ, mapU, Cond, hits, npix, x, lstid, cond, lhits, mapsize);
+    }
+    printf("Checking output directory ... old files will be overwritten\n");
+    char Imap_name[256];
+    char Qmap_name[256];
+    char Umap_name[256];
+    char Condmap_name[256];
+    char Hitsmap_name[256];
+    char nest = 1;
+    char *cordsys = "C";
+    int ret,w=1;
+
+    sprintf(Imap_name,"/global/cscratch1/sd/elbouha/data_TOAST/output/mapI_%s.fits",ref);
+    sprintf(Qmap_name,"/global/cscratch1/sd/elbouha/data_TOAST/output/mapQ_%s.fits",ref);
+    sprintf(Umap_name,"/global/cscratch1/sd/elbouha/data_TOAST/output/mapU_%s.fits",ref);
+    sprintf(Condmap_name,"/global/cscratch1/sd/elbouha/data_TOAST/output/Cond_%s.fits",ref);
+    sprintf(Hitsmap_name,"/global/cscratch1/sd/elbouha/data_TOAST/output/Hits_%s.fits",ref);
+
+
+    if( access( Imap_name, F_OK ) != -1 ) {
+      ret = remove(Imap_name);
+      if(ret != 0){
+        printf("Error: unable to delete the file %s\n",Imap_name);
+        w = 0;
+      }
+    }
+
+    if( access( Qmap_name, F_OK ) != -1 ) {
+      ret = remove(Qmap_name);
+      if(ret != 0){
+        printf("Error: unable to delete the file %s\n",Qmap_name);
+        w = 0;
+      }
+    }
+
+    if( access( Umap_name, F_OK ) != -1 ) {
+      ret = remove(Umap_name);
+      if(ret != 0){
+        printf("Error: unable to delete the file %s\n",Umap_name);
+        w = 0;
+      }
+    }
+
+    if( access( Condmap_name, F_OK ) != -1 ) {
+      ret = remove(Condmap_name);
+      if(ret != 0){
+        printf("Error: unable to delete the file %s\n",Condmap_name);
+        w = 0;
+      }
+    }
+
+    if( access( Hitsmap_name, F_OK ) != -1 ) {
+      ret = remove(Hitsmap_name);
+      if(ret != 0){
+        printf("Error: unable to delete the file %s\n",Hitsmap_name);
+        w = 0;
+      }
+    }
+
+    if(w==1){
+      printf("Writing HEALPix maps FITS files ...\n");
+      write_map(mapI, TDOUBLE, nside, Imap_name, nest, cordsys);
+      write_map(mapQ, TDOUBLE, nside, Qmap_name, nest, cordsys);
+      write_map(mapU, TDOUBLE, nside, Umap_name, nest, cordsys);
+      write_map(Cond, TDOUBLE, nside, Condmap_name, nest, cordsys);
+      write_map(hits, TINT, nside, Hitsmap_name, nest, cordsys);
+    }
+    else{
+      printf("IO Error: Could not overwrite old files, map results will not be stored ;(\n");
+    }
+
+  }
 
   t=MPI_Wtime();
   if (rank==0) {
     printf("[rank %d] Write output files time=%lf \n", rank, t-st);
+    fflush(stdout);
   }
   st=MPI_Wtime();
 
-  MatFree(&A);                                                //free memory
+  MatFree(&A);
+  A.indices = NULL;
+  A.values = NULL;                                                //free memory
   free(x);
   free(cond);
   free(lhits);
   free(tpltzblocks);
-  free(id0pix);
-  free(ll);
   MPI_Barrier(comm);
   t=MPI_Wtime();
   if (rank==0) {
     printf("[rank %d] Free memory time=%lf \n", rank, t-st);
+    fflush(stdout);
   }
-  MPI_Finalize();
-  return 0;
+  // MPI_Finalize();
  }
 
-int partition(int64_t *gif, int *m, int64_t M, int rank, int size){
-  int64_t r, k;
-  k = M / size;
-  r = M - k*size;
-  if( rank < r){
-    *gif = (k+1) * rank;
-    *m = k+1;
-  }
-  else{
-    *gif = r*(k+1) + k*(rank-r);
-    *m = k;
+int x2map_pol( double *mapI, double *mapQ, double *mapU, double *Cond, int * hits, int npix, double *x, int *lstid, double *cond, int *lhits, int xsize)
+{
+
+  int i;
+
+  for(i=0; i<xsize; i++){
+    if(i%3 == 0){
+      mapI[(int)(lstid[i]/3)]= x[i];
+      hits[(int)(lstid[i]/3)]= lhits[(int)(i/3)];
+      Cond[(int)(lstid[i]/3)]= cond[(int)(i/3)];
     }
+    else if (i%3 == 1)
+      mapQ[(int)(lstid[i]/3)]= x[i];
+    else
+      mapU[(int)(lstid[i]/3)]= x[i];
+  }
+
   return 0;
 }

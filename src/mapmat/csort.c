@@ -1,18 +1,19 @@
-/** @file csort.c 
+/** @file csort.c
     @brief subroutines for sequential or parallel sort and/or merge sets of integer.
     @note  Copyright (c) 2010-2012 APC CNRS Université Paris Diderot. This program is free software; you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License as published by the Free Software Foundation; either version 3 of the License, or (at your option) any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more details. You should have received a copy of the GNU General Public License along with this program; if not, see http://www.gnu.org/licenses/lgpl.html
-    @note For more information about ANR MIDAS'09 project see http://www.apc.univ-paris7.fr/APC_CS/Recherche/Adamis/MIDAS09/index.html 
+    @note For more information about ANR MIDAS'09 project see http://www.apc.univ-paris7.fr/APC_CS/Recherche/Adamis/MIDAS09/index.html
     @note ACKNOWLEDGMENT: This work has been supported in part by the French National  Research Agency (ANR) through COSINUS program (project MIDAS no. ANR-09-COSI-009).
     @author Pierre Cargemel
     @date April 2012 */
 #include <stdlib.h>
 #include <string.h>
+#include "mapmat.h"
 //int per page size
 #define PAGE 1024
 
 /** Insertion sort :
     complexity is n square; ascending order
-    @param indices array of integer 
+    @param indices array of integer
     @param count  number of elements in indices array
     @return void*/
 void insertion_sort(int *indices, int count){
@@ -25,7 +26,7 @@ void insertion_sort(int *indices, int count){
       indices[j+1] = indices[j];
       indices[j]=tmp;
       j--;
-    } 
+    }
   }
 }
 
@@ -33,7 +34,7 @@ void insertion_sort(int *indices, int count){
     complexity n square (Average is n log(n)).
     Sort in ascending order indices between left index and right index.
     Notice that this algorithm uses recursive calls, and can lead to stack overflow.
-    @param indices array of integer 
+    @param indices array of integer
     @param first element number
     @param last element number
     @return void*/
@@ -65,13 +66,13 @@ void quick_sort(int *indices, int left, int right){
   }
 }
 
-/** Bubble sort : 
+/** Bubble sort :
     complexity n square
-    @param indices array of integer 
+    @param indices array of integer
     @param count  number of elements in indices array
     @return void **/
 void bubble_sort(int *indices, int count){
-  int i, j, tmp; 
+  int i, j, tmp;
   for (i=(count-1); i>0; i--){
     for (j = 1; j <= i; j++){
       if (indices[j-1] > indices[j]){
@@ -83,13 +84,13 @@ void bubble_sort(int *indices, int count){
   }
 }
 
-/** Counting sort : 
+/** Counting sort :
     sort indices in strictly ascending order (monotony).
-    If the array initially ows reundants elements, they will be merged. 
+    If the array initially ows reundants elements, they will be merged.
     Thus the returned number of sorted elements is less than the initial number of elements.
-    Assuming elements belong to [min, max], complexity is n+(max-min+1). 
-    Due to allocation, memory overhead is (max-min+1)sizeof(element) 
-    @param indices array of integer 
+    Assuming elements belong to [min, max], complexity is n+(max-min+1).
+    Due to allocation, memory overhead is (max-min+1)sizeof(element)
+    @param indices array of integer
     @param count  number of elements in indices array
     @return number of sorted elements*/
 int counting_sort(int *indices, int count){
@@ -105,7 +106,7 @@ int counting_sort(int *indices, int count){
     else{
      if(indices[i]<min)
        min=indices[i];
-    } 
+    }
   }
   buf = (int *) calloc(max-min+1, sizeof(int));
   for(i=0; i<count ; i++){
@@ -123,7 +124,7 @@ int counting_sort(int *indices, int count){
 }
 
 /** Shell sort
-    @param indices array of integer 
+    @param indices array of integer
     @param count  number of elements in indices array
     @return void*/
 void shell_sort(int *a,int n){
@@ -146,16 +147,16 @@ void shell_sort(int *a,int n){
 
 /** Sort and merge redundant elements of a set of indices using a specified method.
     The indices tab, initially an arbitrary set of integers, becomes a monotony set.
-    Available methods : 
+    Available methods :
     - quick sort
     - bubble sort
     - insertion sort
     - counting sort
     - shell sort
 
-    @param indices tab (modified) 
+    @param indices tab (modified)
     @param count number of indices
-    @param flag method 
+    @param flag method
     @return number of sorted elements
     @ingroup matmap_group22*/
 int ssort(int *indices, int count, int flag){
@@ -184,16 +185,17 @@ int ssort(int *indices, int count, int flag){
   for(i=0; i<count-1; i++){
     ptr_i++;
     if(*ptr_i != *ptr_o){
-      ptr_o++;  
+      ptr_o++;
       n++;
       *ptr_o = *ptr_i;
     }
-  } 
+  }
   return n;
 }
 
 //optimized version is faster than the other implementation but there is a bug !!!
 #ifdef W_OPENMP
+#include <omp.h>
 int omp_psort_opt(int *A, int nA, int flag){
   int i;
   int *count, *disp;
@@ -207,10 +209,10 @@ int omp_psort_opt(int *A, int nA, int flag){
   #pragma omp parallel shared(nths)
   {//---fork---just to get the number of threads
     nths = omp_get_num_threads();
-  }//---join--- 
+  }//---join---
 
-  p = nA/PAGE; //number of full pages  
-  q = p/nths;   //full pages per thread 
+  p = nA/PAGE; //number of full pages
+  q = p/nths;   //full pages per thread
   l = p%nths;   //full pages left
   r = nA%PAGE;   //number of elements the last page not full
 
@@ -224,12 +226,12 @@ int omp_psort_opt(int *A, int nA, int flag){
     if(i==l)
       count[i] += r;
   }
-  
+
   disp[0] = 0;
   for(i=0; i<nths-1; i++){
     disp[i+1] = disp[i] + count[i];
   }
-  
+
   #pragma omp parallel private(tid, n, k, d, buf) shared(nths, A, nA, disp, count)
   {//---fork---1st step, sort on local chunk
     tid = omp_get_thread_num();
@@ -237,17 +239,17 @@ int omp_psort_opt(int *A, int nA, int flag){
     buf = (int *) malloc(nA*sizeof(int));
     //buf = (int *) malloc(count[tid]*sizeof(int));
     memcpy(buf, A+disp[tid], count[tid]*sizeof(int));
-    
+
     n = ssort(buf, count[tid], flag);
     count[tid]=n;
 
     memcpy(A+disp[tid], buf, n*sizeof(int));
 
     nths = omp_get_num_threads();
-    
+
 
     k = nths;
-    d = 1;  
+    d = 1;
     while(k>1){
       #pragma omp barrier
       if(tid%(2*d)==0 && tid+d<nths){
@@ -277,7 +279,7 @@ int omp_psort_opt(int *A, int nA, int flag){
     - each thread sorts, in parallel, a subpart of the set using a specified method.
     - subsets obtained are merged successively in a binary tree manner.
 
-    Available methods for the fully parallel step : 
+    Available methods for the fully parallel step :
     - quick sort
     - bubble sort
     - insertion sort
@@ -300,10 +302,10 @@ int omp_psort(int *A, int nA, int flag){
   #pragma omp parallel private(tid) shared(nths)
   {//---fork---just to get the number of threads
     nths = omp_get_num_threads();
-  }//---join--- 
+  }//---join---
 
   q = nA/nths;
-  r = nA%nths; 
+  r = nA%nths;
 
   count = (int *) malloc(nths *sizeof(int));
   disp = (int *) malloc(nths *sizeof(int));
@@ -316,19 +318,19 @@ int omp_psort(int *A, int nA, int flag){
       count[i] = q;
     }
   }
-  
+
   disp[0] = 0;
   for(i=0; i<nths-1; i++){
     disp[i+1] = disp[i] + count[i];
   }
-  
+
   #pragma omp parallel private(tid, n) shared(A, disp, count)
   {//---fork---1st step, sort on local chunk
     tid = omp_get_thread_num();
     n = ssort(A+disp[tid], count[tid], flag);
     count[tid]=n;
   }//---join---
- 
+
     buf = (int *) malloc(nA*sizeof(int));
 
   #pragma omp parallel private(tid, n, k, d) shared(nths, nA, A, disp, count, buf)
@@ -339,7 +341,7 @@ int omp_psort(int *A, int nA, int flag){
     d = 1;
     while(k>1){
       if(tid%(2*d)==0 && tid+d<nths){
-//        printf("\nd %d, thread %d, count+ %d, disp %d",d , tid, count[tid], disp[tid]); 
+//        printf("\nd %d, thread %d, count+ %d, disp %d",d , tid, count[tid], disp[tid]);
         n = card_or(A+disp[tid], count[tid] , A+disp[tid+d], count[tid+d]);
         set_or(A+disp[tid], count[tid] , A+disp[tid+d], count[tid+d], buf+disp[tid]);
         count[tid]=n;

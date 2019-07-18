@@ -59,13 +59,13 @@ int main(int argc, char *argv[])
   fflush(stdout);
 
 //communication scheme for the pointing matrix  (to move in .h)
-  pointing_commflag=2; //2==BUTTERFLY - 1==RING
+  pointing_commflag=6; //2==BUTTERFLY - 1==RING
 
 //global data caracteristics
   int Nb_t_Intervals = 128;//8;//1352;//128;//2;//256;//8;           //total number of stationnary intervals
   int t_Interval_length = 1749900;//330384000;//47436000;//2352000;//47436000;//470400;//1749900;//17899900;//1431992;//139992; //1431992;//2863984;//1431992;//pow(2,25);//pow(2,25);          //length for each stationnary interval
   int t_Interval_length_true = 17499;//330384;//47436000;//2352000;//1749900;//17899900;//1431992;//139992;//1431992;//2863984;//1431992;//pow(2,20);
-  int LambdaBlock = pow(2,0);//pow(2,14)+1;  //lambda length for each stationnary interval
+  int LambdaBlock = pow(2,11);//pow(2,14)+1;  //lambda length for each stationnary interval
   Nnz=3;
 
 //PCG parameters
@@ -323,20 +323,16 @@ int main(int argc, char *argv[])
 
 //For one identical block
   // ioReadTpltzfile( Tsize, fknee, T);
-  if(Tsize>1){
-    MPI_Barrier(MPI_COMM_WORLD);
+  MPI_Barrier(MPI_COMM_WORLD);
 
-    if (rank==0){
-      ioReadTpltzfile( Tsize, T);
-      printf("Tsize = %d",Tsize);
-      printf("\n correlation = [%f,...,%f]",T[0],T[Tsize-1]);
-    }
-    MPI_Bcast(T, Tsize,  MPI_DOUBLE, 0, MPI_COMM_WORLD);
-
-    MPI_Barrier(MPI_COMM_WORLD);
+  if (rank==0){
+    ioReadTpltzfile( Tsize, T);
+    printf("Tsize = %d",Tsize);
+    printf("\n correlation = [%f,...,%f]",T[0],T[Tsize-1]);
   }
-  else
-    ioReadTpltzrandom( Tsize, T);
+  MPI_Bcast(T, Tsize,  MPI_DOUBLE, 0, MPI_COMM_WORLD);
+
+  MPI_Barrier(MPI_COMM_WORLD);
   // for(i=0;i<50;i++)
   //   printf("Tpltz[%d] = %f\n",i,T[i]);
 //  createT(T, Tsize);

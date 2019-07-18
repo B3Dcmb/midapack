@@ -27,7 +27,7 @@ int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ, double *b, double *cond, 
   int *indices_new, *tmp1;
   double *vpixBlock, *vpixBlock_loc, *hits_proc, *tmp2, *tmp3;
   double det, invdet;
-  int pointing_commflag = 2;
+  // int pointing_commflag = 2;
   int info, nb, lda;
   double anorm, rcond;
 
@@ -76,6 +76,7 @@ int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ, double *b, double *cond, 
 
 
 
+
   //communicate with the other processes to have the global reduce
   //TODO : This should be done in a more efficient way
   for(i=0;i<n*(A->nnz);i+=(A->nnz)*(A->nnz)){
@@ -112,6 +113,7 @@ int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ, double *b, double *cond, 
 
   //Compute the inverse of the global AtA blocks (beware this part is only valid for nnz = 3)
   int uncut_pixel_index = 0;
+
   for(i=0;i<n*(A->nnz);i+=(A->nnz)*(A->nnz)){
     // lhits[(int)i/((A->nnz)*(A->nnz))] = (int)vpixBlock[i];
     //init 3x3 block
@@ -164,6 +166,7 @@ int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ, double *b, double *cond, 
       // Remove the poorly conditioned pixel from the map, point the associated gap samples to trash pixel
       // Set flag of trash pixel in pointing matrix to 1
       A->trash_pix = 1;
+
       // Search for the corresponding gap samples
       // j = A->id0pix[(int)uncut_pixel_index/((A->nnz)*(A->nnz))]; // first index of time sample pointing to degenerate pixel
       // // Point the first gap sample to trash pixel
@@ -210,10 +213,12 @@ int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ, double *b, double *cond, 
     }
     uncut_pixel_index += (A->nnz)*(A->nnz);
   }
+
   // free memory
   free(A->id0pix);
   free(A->ll);
   // Reallocate memory for preconditioner blocks and redefine pointing matrix in case of the presence of degenerate pixels
+
   if(A->trash_pix){
     // Reallocate memory of vpixBlock by shrinking its memory size to its effective size (no degenerate pixel)
     tmp2 = (double *) realloc(vpixBlock, n*(A->nnz)*sizeof(double));
@@ -225,6 +230,7 @@ int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ, double *b, double *cond, 
       cond = tmp3;
     }
   }
+
   // map local indices to global indices in indices_cut
   for(i=0; i<m*A->nnz;i++){
     // switch to global indices
@@ -234,9 +240,11 @@ int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ, double *b, double *cond, 
   // free  memory of original pointing matrix and synchronize
   MatFree(A);
   // Define new pointing matrix (marginalized over degenerate pixels and free from gap samples)
-  MatInit(A, m, A->nnz, A->indices, A->values, pointing_commflag, MPI_COMM_WORLD);
+  MatInit(A, m, A->nnz, A->indices, A->values, A->flag, MPI_COMM_WORLD);
 
   //Define Block-Jacobi preconditioner indices
+  fflush(stdout);
+
   for(i=0;i<n;i++){
     for(j=0;j<(A->nnz);j++){
         indices_new[i*(A->nnz)+j] = A->lindices[(A->nnz)*(A->trash_pix)+(A->nnz)*((int)i/(A->nnz))+j];
@@ -374,7 +382,7 @@ int getlocalW(Mat *A, Tpltz Nm1, double *vpixBlock, int *lhits)
     }
 
 //temporary buffer for one diag value of Nm1
-  int diagNm1;
+  double diagNm1;
 //loop on the blocks
   for(k=idv0; k<(idv0+Nm1.nb_blocks_loc); k++) {
   if (nnew[idv0]>0) {  //if nnew==0, this is a wrong defined block
