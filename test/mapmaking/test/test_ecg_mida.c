@@ -43,7 +43,7 @@ double Opmmpreconditioner(Mat A, Mat BJ,  double *X, double *Y, int ncol);
 double Opmmmatrix(Mat A, Tpltz Nm1, double *X, double *Y, int ncol);
 
 
-extern const char *WORKDIR="/global/cscratch1/sd/elbouha/data_clean_nside128/";
+extern const char *WORKDIR="/global/cscratch1/sd/elbouha/data_TOAST/test4_clean/";
 double FKNEE=1.0;//0.25;
 
 /******************************************************************************/
@@ -167,7 +167,7 @@ int main(int argc, char** argv) {
   int 		*indices, *id0pix, *ll;
   double 	*values;
   int 		pointing_commflag ;	//option for the communication scheme for the pointing matrix
-  double	*b, *Ag, *Ad, *pol_ang; 	 	//temporal domain vectors
+  double	*b, *Ag, *Ad, *pol_ang, *wghts; 	 	//temporal domain vectors
   double	*x, *g, *d, *Ax_b, *tmp;	//pixel domain vectors
   double        alpha, beta, gamma, resold, resnew;
   double 	localreduce;
@@ -175,7 +175,7 @@ int main(int argc, char** argv) {
   int 		output, timer, info;
 
 //communication scheme for the pointing matrix  (to move in .h)
-  pointing_commflag=2; //2==BUTTERFLY - 1==RING
+  pointing_commflag=6; //2==BUTTERFLY - 1==RING
 
 //global data caracteristics
   int Nb_t_Intervals = 128;           //total number of stationnary intervals
@@ -211,142 +211,130 @@ int main(int argc, char** argv) {
     //printf("[rank %d] Nb_t_Intervals_loc=%d \t t_Interval_length_loc=%d\n", rank, Nb_t_Intervals_loc , t_Interval_length_loc);
 
   //input data memory allocation
-    indices  = (int *) malloc(Nnz*m * sizeof(int));     //for pointing matrix indices
-    values  = (double *) malloc(Nnz*m * sizeof(double));//for pointing matrix values
-    b   = (double *) malloc(m*sizeof(double));    //full raw data vector for the signal
-    pol_ang = (double *) malloc(m * sizeof(double));
-
-    //Read data from files:
-  //note: work only if the number of processes is a multiple of the number of stationary intervals
-
-  //Definition for the input data
-    int part_id;      // stationnaly period id number
-    int *point_data;  // scann strategy input data for the pointing matrix
-    double *signal;   // signal input data
-    double *polar; // linear polarization angles
-
-  //Init the pointing matrix values to unity
-    for(i=0; i<(Nnz*m); i++)
-      values[i] = 1.;
-
-    int number_in_interval;
-
-    int flag_bigdata=1;
-    st=MPI_Wtime();
+  indices  = (int *) malloc(Nnz*m * sizeof(int));     //for pointing matrix indices
+  b   = (double *) malloc(m * sizeof(double));    //full raw data vector for the signal
+  wghts = (double *) malloc(Nnz*m * sizeof(double)); //for poiting matrix weights
 
 
-    if (flag_bigdata==1 && nb_proc_shared_one_interval>1) {
+//Read data from files:
+//note: work only if the number of processes is a multiple of the number of stationary intervals
 
-      if (rank==0) {
-        printf("#######  ENTER BiG DATA MODE   ################\n");
+//Definition for the input data
+  int part_id;      // stationnaly period id number
+  int *point_data;  // scann strategy input data for the pointing matrix
+  double *signal;   // signal input data
+  double *weights; // weights of the pointing matrix
+
+  int number_in_interval;
+
+  int flag_bigdata=1;
+  st=MPI_Wtime();
+
+  if (flag_bigdata==1 && nb_proc_shared_one_interval>1) {
+
+    if (rank==0) {
+      printf("#######  ENTER BiG DATA MODE   ################\n");
+    }
+      part_id = rank/nb_proc_shared_one_interval; //floor(rank/nb_proc_shared_one_interval);
+      number_in_interval = rank%nb_proc_shared_one_interval;
+      printf("[rank %d] part_id=%d\n", rank, part_id );  //interval id number
+      printf("[rank %d] number_in_interval=%d\n", rank, number_in_interval );
+
+      int t_Interval_loop_loc = ceil( t_Interval_loop*1.0/nb_proc_shared_one_interval);
+      printf("[rank %d] t_Interval_loop_loc=%d\n", rank, t_Interval_loop_loc );
+      printf("[rank %d] m=%d \t t_Interval_length_true*t_Interval_loop_loc=%d\n", rank, m, t_Interval_length_true*t_Interval_loop_loc );
+
+      point_data  = (int *) malloc(Nnz*t_Interval_length_true*t_Interval_loop_loc * sizeof(int));
+      signal      = (double *) malloc(t_Interval_length_true*t_Interval_loop_loc  * sizeof(double));
+      weights = (double *) malloc(Nnz*t_Interval_length_true*t_Interval_loop_loc * sizeof(double));
+
+      int jump=0;
+      if(t_Interval_loop_loc==1){
+        jump = t_Interval_length_true*floor(number_in_interval/t_Interval_loop);
       }
-        part_id = rank/nb_proc_shared_one_interval; //floor(rank/nb_proc_shared_one_interval);
-        number_in_interval = rank%nb_proc_shared_one_interval;
-        printf("[rank %d] part_id=%d\n", rank, part_id );  //interval id number
-        printf("[rank %d] number_in_interval=%d\n", rank, number_in_interval );
+      else
+        jump = t_Interval_length_true*t_Interval_loop_loc*number_in_interval;
+      for (i=0; i < t_Interval_loop_loc; ++i) {
+        ioReadTOAST_data(jump, i, t_Interval_length_true, part_id, point_data+t_Interval_length_true*Nnz*i, signal+t_Interval_length_true*i, weights+t_Interval_length_true*Nnz*i);
+      }
+      //just keep the relevant part of the stationary interval for the local process
+      int nb_proc_shared_one_subinterval = max(1, size/(Nb_t_Intervals*t_Interval_loop) );
+      //same as ceil( (size*1.0)/Nb_t_Intervals );
+      int number_in_subinterval = rank%nb_proc_shared_one_subinterval;
 
-        int t_Interval_loop_loc = ceil( t_Interval_loop*1.0/nb_proc_shared_one_interval);
-        printf("[rank %d] t_Interval_loop_loc=%d\n", rank, t_Interval_loop_loc );
-        printf("[rank %d] m=%d \t t_Interval_length_true*t_Interval_loop_loc=%d\n", rank, m, t_Interval_length_true*t_Interval_loop_loc );
+      int t_Interval_length_subinterval_loc = t_Interval_length_true/nb_proc_shared_one_subinterval;
+      //note: we must have this to be exactly an integer.
 
-        point_data  = (int *) malloc(Nnz*t_Interval_length_true*t_Interval_loop_loc * sizeof(int));
-        signal      = (double *) malloc(t_Interval_length_true*t_Interval_loop_loc  * sizeof(double));
-        polar = (double *) malloc(t_Interval_length_true*t_Interval_loop_loc * sizeof(double));
-        int jump=0;
-        if(t_Interval_loop_loc==1){
-          jump = t_Interval_length_true*floor(number_in_interval/t_Interval_loop);
-        }
-        else
-          jump = t_Interval_length_true*t_Interval_loop_loc*number_in_interval;
-        for (i=0; i < t_Interval_loop_loc; ++i) {
-          ioReadfile_pol(jump, i, t_Interval_length_true, part_id, point_data+t_Interval_length_true*Nnz*i, signal+t_Interval_length_true*i, polar+t_Interval_length_true*i);
-        }
-        //just keep the relevant part of the stationary interval for the local process
-        int nb_proc_shared_one_subinterval = max(1, size/(Nb_t_Intervals*t_Interval_loop) );
-        //same as ceil( (size*1.0)/Nb_t_Intervals );
-        int number_in_subinterval = rank%nb_proc_shared_one_subinterval;
-
-        int t_Interval_length_subinterval_loc = t_Interval_length_true/nb_proc_shared_one_subinterval;
-        //note: we must have this to be exactly an integer.
-
-        printf("[rank %d] nb_proc_shared_one_subinterval=%d\n", rank, nb_proc_shared_one_subinterval );
-        printf("[rank %d] number_in_subinterval=%d\n", rank, number_in_subinterval );
-        fflush(stdout);
+      printf("[rank %d] nb_proc_shared_one_subinterval=%d\n", rank, nb_proc_shared_one_subinterval );
+      printf("[rank %d] number_in_subinterval=%d\n", rank, number_in_subinterval );
+      fflush(stdout);
 
 
-        for (i=0; i<(Nnz*m); i++){
-          indices[i]=point_data[i+Nnz*number_in_subinterval*t_Interval_length_subinterval_loc];
-        }
-        for(i=0; i<m; i++){
-          b[i] = signal[i+number_in_subinterval*t_Interval_length_subinterval_loc];
-          pol_ang[i] = polar[i+ number_in_subinterval*t_Interval_length_subinterval_loc];
-        }
-        for(i=0; i<(Nnz*m);i+=3){
-          values[i+1] = cos(2*pol_ang[(int)i/3]);
-          values[i+2] = sin(2*pol_ang[(int)i/3]);
-        }
+      for (i=0; i<(Nnz*m); i++){
+        indices[i]=point_data[i+Nnz*number_in_subinterval*t_Interval_length_subinterval_loc];
+        wghts[i] = weights[i+ Nnz*number_in_subinterval*t_Interval_length_subinterval_loc];
+      }
+      for(i=0; i<m; i++){
+        b[i] = signal[i+number_in_subinterval*t_Interval_length_subinterval_loc];
+      }
 
-        free(point_data);
-        free(signal);
-        free(polar);
+      free(point_data);
+      free(signal);
+      free(weights);
 
+
+  }
+  else {
+
+    //for the case we share the stationary intervals in severals processes with no big data flag
+    //NB: this case is not up-to-date with the latest data format and should never happen
+    if (nb_proc_shared_one_interval>1) {
+      part_id = rank/nb_proc_shared_one_interval; //floor(rank/nb_proc_shared_one_interval);
+      number_in_interval = rank%nb_proc_shared_one_interval;
+      printf("[rank %d] part_id=%d\n", rank, part_id );  //interval id number
+      printf("[rank %d] number_in_interval=%d\n", rank, number_in_interval );
+
+      point_data = (int *) malloc(Nnz*t_Interval_length * sizeof(int));
+      signal     = (double *) malloc(t_Interval_length * sizeof(double));
+
+      //read the all stationary interval
+      for (i=0; i < t_Interval_loop; ++i) {
+        ioReadfile(t_Interval_length, part_id, point_data+t_Interval_length_true*Nnz*i, signal+t_Interval_length_true*i);
+      }
+      //just keep the relevant part of the stationary interval for the local process
+      for (i=0; i<(Nnz*m); i++)
+      indices[i]=point_data[i+number_in_interval*t_Interval_length_loc];
+
+      for(i=0; i<(m); i++)
+      b[i] = signal[i+number_in_interval*t_Interval_length_loc];
+
+      free(point_data);
+      free(signal);
 
     }
-    else {
+    else { //for the case we dont need to share
+      //Read the relevants raw inputs data from files distributed by stationary period
+      //note: Work only for no sharing stationnary interval. 1 proc for 1 or more stationary intervals
 
-      //for the case we share the stationary intervals in severals processes with no big data flag
-      //NB: this case is not up-to-date with the latest data format and should never happen
-      if (nb_proc_shared_one_interval>1) {
-        part_id = rank/nb_proc_shared_one_interval; //floor(rank/nb_proc_shared_one_interval);
-        number_in_interval = rank%nb_proc_shared_one_interval;
-        printf("[rank %d] part_id=%d\n", rank, part_id );  //interval id number
-        printf("[rank %d] number_in_interval=%d\n", rank, number_in_interval );
-
-        point_data = (int *) malloc(Nnz*t_Interval_length * sizeof(int));
-        signal     = (double *) malloc(t_Interval_length * sizeof(double));
-
-        //read the all stationary interval
+      for (k=0; k < Nb_t_Intervals_loc; ++k) {
+        point_data = indices + t_Interval_length*Nnz*k;
+        signal = b + t_Interval_length*k;
+        weights = wghts + t_Interval_length*Nnz*k;
+        part_id = Nb_t_Intervals_loc*rank + k;
+        int jump=0;
         for (i=0; i < t_Interval_loop; ++i) {
-          ioReadfile(t_Interval_length, part_id, point_data+t_Interval_length_true*Nnz*i, signal+t_Interval_length_true*i);
+          ioReadTOAST_data(jump, i, t_Interval_length_true, part_id, point_data+t_Interval_length_true*Nnz*i, signal+t_Interval_length_true*i, weights+t_Interval_length_true*Nnz*i);
         }
-        //just keep the relevant part of the stationary interval for the local process
-        for (i=0; i<(Nnz*m); i++)
-        indices[i]=point_data[i+number_in_interval*t_Interval_length_loc];
-
-        for(i=0; i<(m); i++)
-        b[i] = signal[i+number_in_interval*t_Interval_length_loc];
-
-        free(point_data);
-        free(signal);
-
-      }
-      else { //for the case we dont need to share
-        //Read the relevants raw inputs data from files distributed by stationary period
-        //note: Work only for no sharing stationnary interval. 1 proc for 1 or more stationary intervals
-
-        for (k=0; k < Nb_t_Intervals_loc; ++k) {
-          point_data = indices + t_Interval_length*Nnz*k;
-          signal = b + t_Interval_length*k;
-          polar = pol_ang + t_Interval_length*k;
-          part_id = Nb_t_Intervals_loc*rank + k;
-          int jump=0;
-          for (i=0; i < t_Interval_loop; ++i) {
-            ioReadfile_pol(jump, i, t_Interval_length_true, part_id, point_data+t_Interval_length_true*Nnz*i, signal+t_Interval_length_true*i, polar+t_Interval_length_true*i);
-          }
-        }//end of the loop over the intervals
-        for (i=0; i<(Nnz*m); i+=3){
-          values[i+1] = cos(2*pol_ang[(int)i/3]);//cos(alpha);//1 + rand()/((double)RAND_MAX);//cos(pol_ang[(int)i/3]);
-          values[i+2] = sin(2*pol_ang[(int)i/3]);//sin(alpha);//1 + rand()/((double)RAND_MAX);//sin(pol_ang[(int)i/3]);
-        }
-      }//end if
-    }//End if
+      }//end of the loop over the intervals
+    }//end if
+  }//End if
 
   /*======== Construct the operator ========*/
 
   Mat	A;			        //pointing matrix structure
 //Pointing matrix init
   A.trash_pix =0;
-  MatInit( &A, m, Nnz, indices, values, pointing_commflag, MPI_COMM_WORLD);
+  MatInit( &A, m, Nnz, indices, wghts, pointing_commflag, MPI_COMM_WORLD);
 
   t=MPI_Wtime();
 

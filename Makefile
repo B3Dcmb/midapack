@@ -44,12 +44,12 @@ lib: ./src/mapmat/ ./src/toeplitz
            src/toeplitz/toeplitz_nofft.o src/toeplitz/toeplitz_gappy.o src/toeplitz/toeplitz_params.o \
            src/toeplitz/toeplitz_rshp.o src/toeplitz/toeplitz_utils.o src/toeplitz/toeplitz_wizard.o
 	ranlib ./lib/$(LIBNAME).a
-	cc -shared src/mapmat/mapmat.o src/mapmat/mapmatc.o src/mapmat/bitop.o src/mapmat/als.o src/mapmat/alm.o \
+	cc -qopenmp -shared src/mapmat/mapmat.o src/mapmat/mapmatc.o src/mapmat/bitop.o src/mapmat/als.o src/mapmat/alm.o \
            src/mapmat/csort.o src/mapmat/cindex.o src/mapmat/ring.o src/mapmat/butterfly.o \
            src/toeplitz/toeplitz.o src/toeplitz/toeplitz_seq.o src/toeplitz/toeplitz_block.o \
            src/toeplitz/toeplitz_nofft.o src/toeplitz/toeplitz_gappy.o src/toeplitz/toeplitz_params.o \
            src/toeplitz/toeplitz_rshp.o src/toeplitz/toeplitz_utils.o src/toeplitz/toeplitz_wizard.o \
-					 -L/opt/cray/pe/fftw/3.3.6.3/haswell/lib -lfftw3 -lfftw3_threads -L/opt/intel/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64 -liomp5 -o ./lib/$(LIBNAME).so
+					 -o ./lib/$(LIBNAME).so
 
 seq :
 	make mapmat

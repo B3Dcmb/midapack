@@ -20,7 +20,7 @@
 
 
 
-int PCG_GLS_true(Mat *A, Tpltz Nm1, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K)
+int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K)
 {
   int 		i, j, k ;			// some indexes
   int		m, n, rank, size;
@@ -170,7 +170,9 @@ int PCG_GLS_true(Mat *A, Tpltz Nm1, double *x, double *b, double *noise, double 
      *res_rel = sqrt(res)/sqrt(res0);
      printf("res=%e \n", res);
      printf("k=%d res_g2pix=%e res_g2pix_rel=%e res_rel=%e t=%lf\n", 0, g2pix , sqrt(g2pix)/sqrt(g2pixB), sqrt(res)/sqrt(res0), t-st);
-     fp=fopen("pcg_residuals.dat", "wb");
+     char filename[256];
+     sprintf(filename,"%s/pcg_residuals_%s.dat",outpath, ref);
+     fp=fopen(filename, "wb");
      fwrite(res_rel, sizeof(double), 1, fp);
    }
 

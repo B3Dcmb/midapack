@@ -121,6 +121,7 @@ class OpMappraiser(Operator):
     """
     Operator which passes data to libmappraiser for map-making.
     Args:
+        params (dictionary): parameters to mappraiser
         detweights (dictionary): individual noise weights to use for each
             detector.
         pixels (str): the name of the cache object (<pixels>_<detector>)
@@ -164,6 +165,7 @@ class OpMappraiser(Operator):
 
     def __init__(
         self,
+        params={},
         detweights=None,
         pixels="pixels",
         pixels_nested=True,
@@ -211,6 +213,7 @@ class OpMappraiser(Operator):
             self._purge_weights = purge_weights
             self._purge_flags = purge_flags
         self._apply_flags = apply_flags
+        self._params = params
         if dets is not None:
             self._dets = set(dets)
         else:
@@ -242,7 +245,7 @@ class OpMappraiser(Operator):
         """
         return mappraiser is not None and mappraiser.available
 
-    def exec(self, data, ref, comm=None):
+    def exec(self, data, comm=None):
         """
         Copy data to Mappraiser-compatible buffers and make a map.
         Args:
@@ -274,7 +277,7 @@ class OpMappraiser(Operator):
             nside,
         ) = self._prepare(data, comm)
 
-        Lambda = 2**14
+        Lambda = self._params["Lambda"]
         # print("Check Conserve memory = {}\n".format(self._conserve_memory))
 
         data_size_proc, nobsloc, local_blocks_sizes, signal_type, noise_type, pixels_dtype, weight_dtype = self._stage_data(
@@ -294,7 +297,7 @@ class OpMappraiser(Operator):
         # if comm.rank == 0:
         #    data.obs[0]['tod'].cache.report()
         # invtt=np.ones(Lambda,dtype=mappraiser.INVTT_TYPE)
-        self._MLmap(comm, ref, data_size_proc, nobsloc*ndet, local_blocks_sizes, nnz, Lambda)
+        self._MLmap(comm, data_size_proc, nobsloc*ndet, local_blocks_sizes, nnz, Lambda)
 
         self._unstage_data(
             comm,
@@ -315,7 +318,7 @@ class OpMappraiser(Operator):
 
         return
 
-    def _MLmap(self, comm, ref, data_size_proc, nb_blocks_loc, local_blocks_sizes, nnz, Lambda):
+    def _MLmap(self, comm, data_size_proc, nb_blocks_loc, local_blocks_sizes, nnz, Lambda):
         """ Compute the ML map
         """
         auto_timer = timing.auto_timer(type(self).__name__)
@@ -332,7 +335,7 @@ class OpMappraiser(Operator):
         os.environ["OMP_NUM_THREADS"] = "1"
         mappraiser.MLmap(
             comm,
-            ref,
+            self._params,
             data_size_proc,
             nb_blocks_loc,
             local_blocks_sizes,
@@ -455,7 +458,7 @@ class OpMappraiser(Operator):
         """
         #New version under dev (extracting psds from directly from sim and building invtt)
         # parameters
-        sampling_freq = 100.
+        sampling_freq = self._params["samplerate"]
         f_defl = sampling_freq/(np.pi*Lambda)
         df = f_defl/2
         block_size = 2**(int(math.log(sampling_freq*1./df,2))+1)
@@ -526,7 +529,7 @@ class OpMappraiser(Operator):
             nnz = nnz_full
             nnz_stride = 1
 
-        nside = 512
+        nside = self._params["nside"]
         # if "nside_map" not in self.params:
         #     raise RuntimeError(
         #         'OpMadam: "nside_map" must be set in the parameter dictionary'

@@ -72,7 +72,6 @@ int PCG_GLS_true(Mat *A, Tpltz Nm1, double *x, double *b, double *cond, int *lhi
     x = tmp;
   }
 
-
   //map domain
   h = (double *) malloc(n * sizeof(double));      //descent direction
   g = (double *) malloc(n * sizeof(double));

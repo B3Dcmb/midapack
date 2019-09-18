@@ -29,7 +29,7 @@ int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ, double *b, double *cond, 
   double *vpixBlock, *vpixBlock_loc, *hits_proc, *tmp2,*tmp3;
   // float *vpixBlock, *tmp2;
   double det, invdet;
-  int pointing_commflag = 6;
+  // int pointing_commflag = 6;
   int info, nb, lda;
   double anorm, rcond;
 
@@ -236,7 +236,7 @@ int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ, double *b, double *cond, 
   // free  memory of original pointing matrix and synchronize
   MatFree(A);
   // Define new pointing matrix (marginalized over degenerate pixels and free from gap samples)
-  MatInit(A, m, A->nnz, A->indices, A->values, pointing_commflag, MPI_COMM_WORLD);
+  MatInit(A, m, A->nnz, A->indices, A->values, A->flag, MPI_COMM_WORLD);
 
   //Define Block-Jacobi preconditioner indices
   for(i=0;i<n;i++){

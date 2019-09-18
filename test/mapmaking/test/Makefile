@@ -25,7 +25,7 @@ MKL_DIR=/opt/intel/mkl
 MKL_INC              = $(MKL_DIR)/include
 MKL_LIB              = $(MKL_DIR)/lib/intel64
 INCpreAlps       += $(addprefix -I,$(MKL_INC))
-LIBpreAlps            += -L$(MKL_LIB) -Wl,-rpath,$(MKL_LIB) -lmkl_core -lmkl_sequential -lmkl_intel_lp64 -lpthread -ldl
+LIBpreAlps            += -L$(MKL_LIB) -lmkl_rt
 
 # FFTW_LIB = -L/opt/cray/pe/fftw/3.3.6.2/haswell/lib -lfftw3 -lfftw3_threads
 #FFTW     = -D FFTW_MULTITHREADING

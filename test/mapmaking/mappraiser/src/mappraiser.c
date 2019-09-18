@@ -1,7 +1,6 @@
 // MAPPRAISER vdev
 // Massively parallel iterative map-making code using the Midapack library v1.2b, Nov 2012
-// The routine processes expanded pointing, signal and noise data arrays and produces local maps in binary files
-// N.B: Future updates will produce the global map directly
+// The routine processes expanded pointing, signal and noise data arrays and produces maps in fits files
 
 /** @file   mappraiser.c
     @author Hamza El Bouhargani
@@ -21,17 +20,17 @@
 
 int x2map_pol( double *mapI, double *mapQ, double *mapU, double *Cond, int * hits, int npix, double *x, int *lstid, double *cond, int *lhits, int xsize);
 
-void MLmap(MPI_Comm comm, char *ref, void *data_size_proc, int nb_blocks_loc, void *local_blocks_sizes, int Nnz, void *pix, void *pixweights, void *signal, void *noise, int lambda, double *invtt)
+void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_commflag, double tol, int maxiter, int enlFac, int ortho_alg, int bs_red, int nside, void *data_size_proc, int nb_blocks_loc, void *local_blocks_sizes, int Nnz, void *pix, void *pixweights, void *signal, double *noise, int lambda, double *invtt)
 {
   int64_t	M;       //Global number of rows
   int		m, Nb_t_Intervals;  //local number of rows of the pointing matrix A, nbr of stationary intervals
   int64_t	gif;			//global indice for the first local line
   int		i, j, k;
-  int          K;	  //maximum number of iteration for the PCG
-  double 	tol;			//residual tolerence for the PCG
+  // int          K;	  //maximum number of iteration for the PCG
+  // double 	tol;			//residual tolerence for the PCG
   Mat	A;			        //pointing matrix structure
   int 		*id0pix, *ll;
-  int 		pointing_commflag;	//option for the communication scheme for the pointing matrix
+  // int 		pointing_commflag;	//option for the communication scheme for the pointing matrix
   double	*x;	//pixel domain vectors
   double	st, t;		 	//timer, start time
   int 		rank, size;
@@ -46,14 +45,13 @@ void MLmap(MPI_Comm comm, char *ref, void *data_size_proc, int nb_blocks_loc, vo
   fflush(stdout);
 
 //communication scheme for the pointing matrix  (to move in .h)
-  pointing_commflag=6; //2==BUTTERFLY - 1==RING
+  // pointing_commflag=6; //2==BUTTERFLY - 1==RING - 6==MPI_Allreduce
 
 //PCG parameters
-  tol=pow(10,-6);
-  K=500;
+  // tol=pow(10,-6);
+  // K=500;
 
 //total length of the time domaine signal
-  // M = (int64_t) Nb_t_Intervals*t_Interval_length;
   M = 0;
   for(i=0;i<size;i++){
     M += ((int *)data_size_proc)[i];
@@ -64,7 +62,6 @@ void MLmap(MPI_Comm comm, char *ref, void *data_size_proc, int nb_blocks_loc, vo
   fflush(stdout);
 
 //compute distribution indexes over the processes
-//   partition(&gif, &m, M, rank, size);
   m = ((int *)data_size_proc)[rank];
   gif = 0;
   for(i=0;i<rank;i++)
@@ -189,7 +186,6 @@ void MLmap(MPI_Comm comm, char *ref, void *data_size_proc, int nb_blocks_loc, vo
     printf("[rank %d] size=%d, nrow=%ld, local_V_size=%d, id0=%ld \n", rank, size, nrow, local_V_size, id0);
     printf("[rank %d] nb_blocks_tot=%d, nb_blocks_loc=%d, lambda_block_avg=%d \n", rank, nb_blocks_tot, nb_blocks_loc, lambda_block_avg);
     // printf("[rank %d] nb_proc_shared_a_block=%d, nb_comm=%d \n", rank, nb_proc_shared_a_block, nb_comm);
-    printf("[rank %d] diagNm1 = %f\n", rank, Nm1.tpltzblocks[50].T_block[0]);
   }
 
   MPI_Barrier(comm);
@@ -197,9 +193,19 @@ void MLmap(MPI_Comm comm, char *ref, void *data_size_proc, int nb_blocks_loc, vo
  printf("##### Start PCG ####################\n");
  fflush(stdout);
 
+  //Hard coded parameters (To be removed)
+  // int solver = 1;
+  // int maxIter = 250;
+  // int enlFac = 16;
+  // int ortho_alg = 1;
+  // int bs_red = 0;
+
   st=MPI_Wtime();
 // Conjugate Gradient
-  PCG_GLS_true( &A, Nm1, x, signal, noise, cond, lhits, tol, K);
+  if(solver==0)
+    PCG_GLS_true(outpath, ref, &A, Nm1, x, signal, noise, cond, lhits, tol, maxiter);
+  else
+    ECG_GLS(outpath, ref, &A, Nm1, x, signal, noise, cond, lhits, tol, maxiter, enlFac, ortho_alg, bs_red);
   MPI_Barrier(comm);
   t=MPI_Wtime();
    if(rank==0)
@@ -209,37 +215,16 @@ void MLmap(MPI_Comm comm, char *ref, void *data_size_proc, int nb_blocks_loc, vo
   }
   fflush(stdout);
 
-//write output to binaries files:
-//This part will be updated later to create directly one global map in a fits file readable by healpy
+//write output to fits files:
   st=MPI_Wtime();
   int mapsize = A.lcount-(A.nnz)*(A.trash_pix);
   int map_id = rank;
 
   int *lstid;
-  // int *lhits;
   lstid = (int *) calloc(mapsize, sizeof(int));
   for(i=0; i< mapsize; i++){
     lstid[i] = A.lindices[i+(A.nnz)*(A.trash_pix)];
   }
-  // ioWritebinfile( mapsize, map_id, lstid, x, cond, lhits);
-
-//Write some parameters in txt file:
-  //output file:
-  // FILE* file;
-  // char filenametxt [1024];
-  // sprintf(filenametxt,"/global/cscratch1/sd/elbouha/data_TOAST/output/mapout%01d.txt", map_id);
-  // file = fopen(filenametxt, "w");
-  // fprintf(file, "%d\n", size );
-  // fprintf(file, "%ld\n", gif );
-  // fprintf(file, "%d\n", m );
-  // fprintf(file, "%d\n", mapsize );
-  // fprintf(file, "%d\n", Nb_t_Intervals );
-  // // fprintf(file, "%d\n", t_Interval_length );
-  // fprintf(file, "%d\n", lambda );
-  // fprintf(file, "%d\n", Nb_t_Intervals_loc );
-  // fprintf(file, "%d\n", rank );
-  // fprintf(file, "size idp m A.lcount Nb_t_Intervals LambdaBlock Nb_t_Intervals_loc rank\n" );
-  // fclose(file);
 
   if (rank!=0){
     MPI_Send(&mapsize, 1, MPI_INT, 0, 0, comm);
@@ -292,11 +277,16 @@ void MLmap(MPI_Comm comm, char *ref, void *data_size_proc, int nb_blocks_loc, vo
     char *cordsys = "C";
     int ret,w=1;
 
-    sprintf(Imap_name,"/global/cscratch1/sd/elbouha/data_TOAST/output/mapI_%s.fits",ref);
-    sprintf(Qmap_name,"/global/cscratch1/sd/elbouha/data_TOAST/output/mapQ_%s.fits",ref);
-    sprintf(Umap_name,"/global/cscratch1/sd/elbouha/data_TOAST/output/mapU_%s.fits",ref);
-    sprintf(Condmap_name,"/global/cscratch1/sd/elbouha/data_TOAST/output/Cond_%s.fits",ref);
-    sprintf(Hitsmap_name,"/global/cscratch1/sd/elbouha/data_TOAST/output/Hits_%s.fits",ref);
+    // sprintf(Imap_name,"/global/cscratch1/sd/elbouha/data_TOAST/output/mapI_%s.fits",outpath);
+    // sprintf(Qmap_name,"/global/cscratch1/sd/elbouha/data_TOAST/output/mapQ_%s.fits",outpath);
+    // sprintf(Umap_name,"/global/cscratch1/sd/elbouha/data_TOAST/output/mapU_%s.fits",outpath);
+    // sprintf(Condmap_name,"/global/cscratch1/sd/elbouha/data_TOAST/output/Cond_%s.fits",outpath);
+    // sprintf(Hitsmap_name,"/global/cscratch1/sd/elbouha/data_TOAST/output/Hits_%s.fits",outpath);
+    sprintf(Imap_name,"%s/mapI_%s.fits", outpath, ref);
+    sprintf(Qmap_name,"%s/mapQ_%s.fits", outpath, ref);
+    sprintf(Umap_name,"%s/mapU_%s.fits", outpath, ref);
+    sprintf(Condmap_name,"%s/Cond_%s.fits", outpath, ref);
+    sprintf(Hitsmap_name,"%s/Hits_%s.fits", outpath, ref);
 
 
     if( access( Imap_name, F_OK ) != -1 ) {

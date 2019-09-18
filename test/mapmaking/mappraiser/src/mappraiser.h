@@ -58,4 +58,7 @@ int commScheme(Mat *A, double *vpixDiag, int pflag);
 int get_pixshare_pond(Mat *A, double *pixpond);
 
 //PCG routine
-int PCG_GLS_true(Mat *A, Tpltz Nm1, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K);
+int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K);
+
+//ECG routine
+int ECG_GLS(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int maxIter, int enlFac, int ortho_alg, int bs_red);
