@@ -25,10 +25,6 @@ MKL_LIB              = $(MKL_DIR)/lib/intel64
 INCpreAlps       += $(addprefix -I,$(MKL_INC))
 LIBpreAlps            += -L$(MKL_LIB) -lmkl_rt
 
-# FFTW_LIB = -L/opt/cray/pe/fftw/3.3.6.3/haswell/lib -lfftw3 -lfftw3_threads
-# FFTW_INC = -I/opt/cray/pe/fftw/3.3.6.3/haswell/include
-# FFTW_LIB = -L/opt/cray/pe/fftw/3.3.6.3/haswell/lib/libfftw3.a /opt/cray/pe/fftw/3.3.6.3/haswell/lib/libfftw3_threads.a
-
 SRC = $(DIR)/src/toeplitz/
 
 MAPMAT = $(DIR)/src/mapmat/
@@ -53,6 +49,7 @@ map: ./src/
 
 library:
 	cc -shared ./src/createToeplitz.o ./src/precond.o ./src/pcg_true.o ./src/ecg.o ./src/iofiles.o ./src/mappraiser.o $(LIB) $(CFITSIO_LIB) $(LIBpreAlps) -o ./lib/libmappraiser.so
+
 ##############   u t i l s   #############
 
 clean:

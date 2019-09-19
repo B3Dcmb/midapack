@@ -190,7 +190,7 @@ class OpMappraiser(Operator):
     ):
         # We call the parent class constructor, which currently does nothing
         super().__init__()
-        # madam uses time-based distribution
+        # MAPPRAISER uses time-based distribution
         self._name = name
         self._noise_name = noise_name
         self._flag_name = flag_name
@@ -218,7 +218,6 @@ class OpMappraiser(Operator):
             self._dets = set(dets)
         else:
             self._dets = None
-        # self._cached = False
         self._noisekey = noise
         self._intervals = intervals
         self._cache = Cache()
@@ -234,9 +233,6 @@ class OpMappraiser(Operator):
 
     def __del__(self):
         self._cache.clear()
-        # if self._cached:
-        #     madam.clear_caches()
-        #     self._cached = False
 
     @property
     def available(self):
@@ -278,7 +274,6 @@ class OpMappraiser(Operator):
         ) = self._prepare(data, comm)
 
         Lambda = self._params["Lambda"]
-        # print("Check Conserve memory = {}\n".format(self._conserve_memory))
 
         data_size_proc, nobsloc, local_blocks_sizes, signal_type, noise_type, pixels_dtype, weight_dtype = self._stage_data(
             data,
@@ -294,9 +289,6 @@ class OpMappraiser(Operator):
             nside,
         )
 
-        # if comm.rank == 0:
-        #    data.obs[0]['tod'].cache.report()
-        # invtt=np.ones(Lambda,dtype=mappraiser.INVTT_TYPE)
         self._MLmap(comm, data_size_proc, nobsloc*ndet, local_blocks_sizes, nnz, Lambda)
 
         self._unstage_data(
@@ -313,9 +305,6 @@ class OpMappraiser(Operator):
             weight_dtype,
         )
 
-        # if comm.rank == 0:
-        #    data.obs[0]['tod'].cache.report()
-
         return
 
     def _MLmap(self, comm, data_size_proc, nb_blocks_loc, local_blocks_sizes, nnz, Lambda):
@@ -324,13 +313,7 @@ class OpMappraiser(Operator):
         auto_timer = timing.auto_timer(type(self).__name__)
         if self._verbose:
             memreport(comm, "just before calling libmappraiser.MLmap")
-        # (detweights, npsd, psdstarts, psdfreqs, psdvals) = psdinfo
-        # print("size of signal = {}\n".format(len(self._mappraiser_signal)), flush=True)
-        # print("nnz = {}\n".format(nnz))
-        # print("size of pixels = {}\n".format(len(self._mappraiser_pixels)), flush=True)
-        # print("size of pixweights = {}\n".format(len(self._mappraiser_pixweights)), flush=True)
-        # print("size of list invtt = {}\n".format(len(self._mappraiser_invtt)), flush = True)
-        # print("size of invtt = {}\n".format(len(self._mappraiser_invtt[0])), flush = True)
+
         # Compute the Maximum Likelihood map
         os.environ["OMP_NUM_THREADS"] = "1"
         mappraiser.MLmap(
@@ -385,16 +368,7 @@ class OpMappraiser(Operator):
     def _get_period_ranges(self, data, detectors):
         """ Collect the ranges of every observation.
         """
-        # # Discard intervals that are too short to fit a baseline
-        # if "basis_order" in self.params:
-        #     norder = int(self.params["basis_order"]) + 1
-        # else:
-        #     norder = 1
-        # norder = 1
-
         psdfreqs = None
-        # period_lengths = []
-        # obs_period_ranges = []
 
         for obs in data.obs:
             tod = obs["tod"]
@@ -411,52 +385,12 @@ class OpMappraiser(Operator):
                                 "All PSDs passed to Mappraiser must have"
                                 " the same frequency binning."
                             )
-        #     # Collect the valid intervals for this observation
-        #     period_ranges = []
-        #     if self._intervals in obs:
-        #         intervals = obs[self._intervals]
-        #     else:
-        #         intervals = None
-        #     local_intervals = tod.local_intervals(intervals)
-        #
-        #     for ival in local_intervals:
-        #         local_start = ival.first
-        #         local_stop = ival.last + 1
-        #         if local_stop - local_start < norder:
-        #             continue
-        #         period_lengths.append(local_stop - local_start)
-        #         period_ranges.append((local_start, local_stop))
-        #     obs_period_ranges.append(period_ranges)
-        #
-        # # Update the number of samples based on the valid intervals
-        #
-        # nsamp_tot_full = comm.allreduce(nsamp, op=MPI.SUM)
-        # nperiod = len(period_lengths)
-        # period_lengths = np.array(period_lengths, dtype=np.int64)
-        # nsamp = np.sum(period_lengths, dtype=np.int64)
-        # nsamp_tot = comm.allreduce(nsamp, op=MPI.SUM)
-        # if nsamp_tot == 0:
-        #     raise RuntimeError(
-        #         "No samples in valid intervals: nsamp_tot_full = {}, "
-        #         "nsamp_tot = {}".format(nsamp_tot_full, nsamp_tot)
-        #     )
-        # if comm.rank == 0:
-        #     print(
-        #         "OpMappraiser: {:.2f} % of samples are included in valid "
-        #         "intervals.".format(nsamp_tot * 100.0 / nsamp_tot_full), flush = True
-        #     )
-
-        # # Mappraiser expects starting indices, not period lengths
-        # periods = np.zeros(nperiod, dtype=np.int64)
-        # for i, n in enumerate(period_lengths[:-1]):
-        #     periods[i + 1] = periods[i] + n
 
         return psdfreqs
 
     def _psd2invtt(self, psdfreqs, psd, Lambda):
         """ Generate the first row of the Toeplitz blocks from the psds
         """
-        #New version under dev (extracting psds from directly from sim and building invtt)
         # parameters
         sampling_freq = self._params["samplerate"]
         f_defl = sampling_freq/(np.pi*Lambda)
@@ -529,22 +463,15 @@ class OpMappraiser(Operator):
             nnz = nnz_full
             nnz_stride = 1
 
-        nside = self._params["nside"]
-        # if "nside_map" not in self.params:
-        #     raise RuntimeError(
-        #         'OpMadam: "nside_map" must be set in the parameter dictionary'
-        #     )
-        # nside = int(self.params["nside_map"])
+        if "nside" not in self._params:
+            raise RuntimeError(
+                'OpMappraiser: "nside" must be set in the parameter dictionary'
+            )
+        nside = int(self._params["nside"])
 
-        # if comm.rank == 0 and (
-        #     "path_output" in self.params
-        #     and not os.path.isdir(self.params["path_output"])
-        # ):
-        #     os.makedirs(self.params["path_output"])
 
         # Inspect the valid intervals across all observations to
         # determine the number of samples per detector
-
         psdfreqs = self._get_period_ranges(data, dets)
 
         return (
@@ -561,6 +488,8 @@ class OpMappraiser(Operator):
     def _stage_time(self, data, detectors, nsamp, psdfreqs, Lambda):
         """ Stage the timestamps and use them to build PSD inputs.
         """
+        # N.B: timestamps are not currently used in MAPPRAISER, however, this may
+        # change in the future, when we start fitting for temporal templates
         auto_timer = timing.auto_timer(type(self).__name__)
         # self._mappraiser_timestamps = self._cache.create(
         #     "timestamps", mappraiser.TIMESTAMP_TYPE, (nsamp,)
@@ -621,7 +550,6 @@ class OpMappraiser(Operator):
         local_blocks_sizes = []
         for iobs, obs in enumerate(data.obs):
             tod = obs["tod"]
-            # period_ranges = obs_period_ranges[iobs]
 
             for idet, det in enumerate(detectors):
                 # Get the signal.
@@ -666,7 +594,6 @@ class OpMappraiser(Operator):
         global_offset = 0
         for iobs, obs in enumerate(data.obs):
             tod = obs["tod"]
-            # period_ranges = obs_period_ranges[iobs]
 
             for idet, det in enumerate(detectors):
                 # Get the signal.
@@ -705,13 +632,12 @@ class OpMappraiser(Operator):
         global_offset = 0
         for iobs, obs in enumerate(data.obs):
             tod = obs["tod"]
-            # period_ranges = obs_period_ranges[iobs]
 
             commonflags = None
             for idet, det in enumerate(detectors):
                 # Optionally get the flags, otherwise they are
                 # assumed to have been applied to the pixel numbers.
-                # Mappraiser doesn't use flags for now but might be useful for
+                # N.B: MAPPRAISER doesn't use flags for now but might be useful for
                 # future updates.
 
                 if self._apply_flags:
@@ -756,8 +682,8 @@ class OpMappraiser(Operator):
                 if self._apply_flags:
                     del flags
 
-            # Always purge the pixels but restore them from the Madam
-            # buffers when purge_pixels=False
+            # Always purge the pixels but restore them from the Mappraiser
+            # buffers when purge_pixels = False
             for idet, det in enumerate(detectors):
                 pixelsname = "{}_{}".format(self._pixels, det)
                 tod.cache.clear(pattern=pixelsname)
@@ -792,7 +718,7 @@ class OpMappraiser(Operator):
         global_offset = 0
         for iobs, obs in enumerate(data.obs):
             tod = obs["tod"]
-            # period_ranges = obs_period_ranges[iobs]
+
             for idet, det in enumerate(detectors):
                 # get the pixels and weights for the valid intervals
                 # from the cache
@@ -810,10 +736,10 @@ class OpMappraiser(Operator):
                 ]
                 offset += nn
                 del weights
-            # Purge the weights but restore them from the Madam
+            # Purge the weights but restore them from the Mappraiser
             # buffers when purge_weights=False.
             # Handle special case when Madam only stores a subset of
-            # the weights.
+            # the weights. (not the case for Mappraiser but keeping it for now)
             if not self._purge_weights and (nnz != nnz_full):
                 pass
             else:
@@ -862,30 +788,24 @@ class OpMappraiser(Operator):
         else:
             nodecomm = MPI.COMM_SELF
             nread = 1
-        # print("nread = {}\n".format(nread))
+
         for iread in range(nread):
             nodecomm.Barrier()
             if nodecomm.rank % nread != iread:
                 continue
-            # print("[iread = {}] Staging invtt ...\n".format(iread), flush=True)
             invtt_list = self._stage_time(data, detectors, nsamp, psdfreqs, Lambda)
             self._mappraiser_invtt = np.array([np.array(invtt_i, dtype= mappraiser.INVTT_TYPE) for invtt_i in invtt_list])
             del invtt_list
-            # print("[iread = {}] Concatenating invtt\n".format(iread), flush=True)
             self._mappraiser_invtt = np.concatenate(self._mappraiser_invtt)
-            # print("[iread = {}] Staging signal\n".format(iread), flush=True)
             signal_dtype, local_blocks_sizes = self._stage_signal(
                 data, detectors, nsamp, ndet
             )
-            # print("[iread = {}] Staging noise\n".format(iread),flush=True)
             noise_dtype = self._stage_noise(
                 data, detectors, nsamp, ndet
             )
-            # print("[iread = {}] Staging pixels\n".format(iread), flush=True)
             pixels_dtype = self._stage_pixels(
                 data, detectors, nsamp, ndet, nnz, nside
             )
-            # print("[iread = {}] Staging pixweights\n".format(iread), flush=True)
             weight_dtype = self._stage_pixweights(
                 data,
                 detectors,
@@ -909,36 +829,6 @@ class OpMappraiser(Operator):
         detweights = np.zeros(ndet, dtype=np.float64)
         for idet, det in enumerate(detectors):
             detweights[idet] = detw[det]
-
-        # if len(psds) > 0:
-        #     npsdbin = len(psdfreqs)
-        #
-        #     npsd = np.zeros(ndet, dtype=np.int64)
-        #     psdstarts = []
-        #     psdvals = []
-        #     for idet, det in enumerate(detectors):
-        #         if det not in psds:
-        #             raise RuntimeError("Every detector must have at least " "one PSD")
-        #         psdlist = psds[det]
-        #         npsd[idet] = len(psdlist)
-        #         for psdstart, psd in psdlist:
-        #             psdstarts.append(psdstart)
-        #             psdvals.append(psd)
-        #     npsdtot = np.sum(npsd)
-        #     psdstarts = np.array(psdstarts, dtype=np.float64)
-        #     psdvals = np.hstack(psdvals).astype(mappraiser.PSD_TYPE)
-        #     npsdval = psdvals.size
-        # else:
-        #     print("white \n")
-        #     npsd = np.ones(ndet, dtype=np.int64)
-        #     npsdtot = np.sum(npsd)
-        #     psdstarts = np.zeros(npsdtot)
-        #     npsdbin = 10
-        #     fsample = 10.0
-        #     psdfreqs = np.arange(npsdbin) * fsample / npsdbin
-        #     npsdval = npsdbin * npsdtot
-        #     psdvals = np.ones(npsdval)
-        # psdinfo = (detweights, npsd, psdstarts, psdfreqs, psdvals)
 
         # Get global array of data sizes of the full communicator
         data_size_proc = np.array(comm.allgather(len(self._mappraiser_signal)), dtype=np.int32)
@@ -1011,7 +901,7 @@ class OpMappraiser(Operator):
             self._cache.destroy("pixels")
 
             # if not self._purge_weights and nnz == nnz_full:
-            #     # restore the weights from the Madam buffers
+            #     # restore the weights from the Mappraiser buffers
             #     global_offset = 0
             #     for obs, period_ranges in zip(data.obs, obs_period_ranges):
             #         tod = obs["tod"]

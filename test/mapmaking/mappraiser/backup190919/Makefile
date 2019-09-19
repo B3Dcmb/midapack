@@ -1,0 +1,60 @@
+DIR = /global/homes/e/elbouha/midapack
+TOEPLITZ = $(DIR)/src/toeplitz/
+MPICC = cc
+CC = $(MPICC) -qopenmp -g -Wall -fPIC $(OPT)
+INC = -I$(DIR)/include
+LIB = -L$(DIR)/lib -lmidapack
+
+CPLM_CORE     = utils/cplm_core
+CPLMDIR      = utils/cplm_light
+CPLM_V0_DIR  = utils/cplm_v0
+preAlpsDIR = /global/homes/e/elbouha/preAlps
+
+LIBpreAlps = -L/global/homes/e/elbouha/preAlps/lib/ -lpreAlps_release -lcplm_light -lcplm_v0 -lcplm_core
+INCpreAlps = -I$(preAlpsDIR) -I../ -I../include -I$(preAlpsDIR)/$(CPLM_CORE) -I$(preAlpsDIR)/$(CPLMDIR) -I$(preAlpsDIR)/$(CPLM_V0_DIR) -I$(preAlpsDIR)/utils -I$(preAlpsDIR)/src/preconditioners -I$(preAlpsDIR)/src/solvers
+
+METIS_DIR=/global/common/cori/software/metis/5.1.0
+METIS_INC            = $(METIS_DIR)/include
+METIS_LIB            = $(METIS_DIR)/lib
+INCpreAlps += $(addprefix -I,$(METIS_INC))
+LIBpreAlps += -L$(METIS_LIB) -lmetis
+
+MKL_DIR=/opt/intel/mkl
+MKL_INC              = $(MKL_DIR)/include
+MKL_LIB              = $(MKL_DIR)/lib/intel64
+INCpreAlps       += $(addprefix -I,$(MKL_INC))
+LIBpreAlps            += -L$(MKL_LIB) -lmkl_rt
+
+# FFTW_LIB = -L/opt/cray/pe/fftw/3.3.6.3/haswell/lib -lfftw3 -lfftw3_threads
+# FFTW_INC = -I/opt/cray/pe/fftw/3.3.6.3/haswell/include
+# FFTW_LIB = -L/opt/cray/pe/fftw/3.3.6.3/haswell/lib/libfftw3.a /opt/cray/pe/fftw/3.3.6.3/haswell/lib/libfftw3_threads.a
+
+SRC = $(DIR)/src/toeplitz/
+
+MAPMAT = $(DIR)/src/mapmat/
+F90 = ftn
+OPT =  -D W_MPI -D W_OPENMP -O3
+
+#supplementary libraries
+HEALPIX_INC = -I$(HOME)/Healpix_3.50/include
+CFITSIO_INC = -I/usr/common/software/cfitsio/3.47/include
+
+HEALPIX_LIB = -L$(HOME)/Healpix_3.50/lib -lchealpix -lhealpix
+CFITSIO_LIB = -L/usr/common/software/cfitsio/3.47/lib -lcfitsio
+
+##############   t e s t s   ############
+
+all:
+	make map
+	make library
+
+map: ./src/
+	make -C ./src/
+
+library:
+	cc -shared ./src/createToeplitz.o ./src/precond.o ./src/pcg_true.o ./src/ecg.o ./src/iofiles.o ./src/mappraiser.o $(LIB) $(CFITSIO_LIB) $(LIBpreAlps) -o ./lib/libmappraiser.so
+##############   u t i l s   #############
+
+clean:
+	make clean -C ./src/
+	rm -f lib/*midapack.so

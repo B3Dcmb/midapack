@@ -1,0 +1,16 @@
+#!/bin/bash -l
+#SBATCH -N 1
+#SBATCH -C haswell
+#SBATCH -q premium
+#SBATCH -J map-python
+#SBATCH -t 02:00:00
+#SBATCH -L SCRATCH
+
+source $HOME/.bashrc.ext
+cd $SLURM_SUBMIT_DIR
+
+#Run the application:
+# srun python ./pb1_fitsmap.py
+#srun python ./test_tod.py
+time srun -n 1 python2.7-mpi ./diskdata_test_lmappraiser.py
+#time srun -n 12 -c 5 --cpu_bind=cores python2.7-mpi ./test_mpi.py

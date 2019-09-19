@@ -1,3 +1,8 @@
+
+# /****************************************************************************/
+# /*   CAUTION : THIS TEST VERSION IS DEPRECATED DO NOT ATTEMPT TO RUN IT     */
+# /****************************************************************************/
+
 # This is a test code for the MAPPRAISER python wrapper using data from TOAST
 # stored on the disk. This is a beta version of the test: dependent on the data format,
 # a specific data distribution configuration (however general enough for our purposes),

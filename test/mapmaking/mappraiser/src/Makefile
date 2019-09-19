@@ -77,8 +77,6 @@ mappraiser.o: $(SRC) $(MAPMAT)
 # s4cmb_pipeline: createToeplitz.o precond.o s4cmb_pipeline.c iofiles.o pcg_true.o
 # 	$(CC) s4cmb_pipeline.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(LIB) $(FFTW_LIB) -lm -o s4cmb_pcg -Wl,@/global/homes/e/elbouha/midapack/test/mapmaking/allinea-profiler.ld
 
-# lib: $(LIB) ./src
-# 	cc -shared createToeplitz.o precond.o pcg_true.o iofiles.o mappraiser.o $(LIB) -o ./lib/libmappraiser.so
 ##############   u t i l s   #############
 
 clean:
