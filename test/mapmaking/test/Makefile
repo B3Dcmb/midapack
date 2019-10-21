@@ -3,8 +3,9 @@ TOEPLITZ = $(DIR)/src/toeplitz/
 GCC = gcc
 # MPICC = /global/homes/e/elbouha/.conda/envs/hamzaenv/bin/mpicc
 MPICC = cc
-CC = $(MPICC) -qopenmp -g -fPIC $(OPT)
-INC = -I/opt/cray/pe/fftw/3.3.6.3/haswell/include
+CC = $(MPICC) -qopenmp -g -Wall -fPIC $(OPT)
+INC = -I$(DIR)/include
+#-I/opt/cray/pe/fftw/3.3.6.3/haswell/include
 LIB = -L$(DIR)/lib -lmidapack
 
 CPLM_CORE     = utils/cplm_core
@@ -29,7 +30,7 @@ LIBpreAlps            += -L$(MKL_LIB) -lmkl_rt
 
 # FFTW_LIB = -L/opt/cray/pe/fftw/3.3.6.2/haswell/lib -lfftw3 -lfftw3_threads
 #FFTW     = -D FFTW_MULTITHREADING
-FFTW_LIB = -L/opt/cray/pe/fftw/3.3.6.3/haswell/lib/libfftw3.a /opt/cray/pe/fftw/3.3.6.3/haswell/lib/libfftw3_threads.a
+# FFTW_LIB = -L/opt/cray/pe/fftw/3.3.6.3/haswell/lib/libfftw3.a /opt/cray/pe/fftw/3.3.6.3/haswell/lib/libfftw3_threads.a
 
 SRC = $(DIR)/src/toeplitz/
 
@@ -38,19 +39,14 @@ F90 = ftn
 OPT =  -D W_MPI -D W_OPENMP -O3
 
 #supplementary libraries
-# PTSCOTCH_INC = -I/home/cargemel/scotch_5.1.12/include/
-HEALPIX_INC = -I$(HOME)/Healpix_3.31/include
-CFITSIO_INC = -I/usr/common/software/cfitsio/3.370-reentrant/hsw/intel/include
-# CFITSIO_INC = -I/global/common/sw/cray/cnl6/ivybridge/cfitsio/3.410/intel/17.0.2.174/hgce4lk/include
+HEALPIX_INC = -I$(HOME)/Healpix_3.50/include
+CFITSIO_INC = -I/usr/common/software/cfitsio/3.47/include
 
-# PTSCOTCH_LIB = -L/home/cargemel/scotch_5.1.12/lib/ -lptscotch -lptscotcherr
-HEALPIX_LIB = -L$(HOME)/Healpix_3.31/lib -lchealpix -lhealpix
-CFITSIO_LIB = -L/usr/common/software/cfitsio/3.370-reentrant/hsw/intel/lib -lcfitsio
-# CFITSIO_LIB = -L/global/common/sw/cray/cnl6/ivybridge/cfitsio/3.410/intel/17.0.2.174/hgce4lk/lib -lcfitsio
+HEALPIX_LIB = -L$(HOME)/Healpix_3.50/lib -lchealpix -lhealpix
+CFITSIO_LIB = -L/usr/common/software/cfitsio/3.47/lib -lcfitsio
 
-
-INTEL_DIR = /opt/intel/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64/
-INTEL_LIB = $(INTEL_DIR)libsvml.a $(INTEL_DIR)libirc.a $(INTEL_DIR)libimf.a $(INTEL_DIR)libifcore.a $(INTEL_DIR)libiomp5.a
+# INTEL_DIR = /opt/intel/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64/
+# INTEL_LIB = $(INTEL_DIR)libsvml.a $(INTEL_DIR)libirc.a $(INTEL_DIR)libimf.a $(INTEL_DIR)libifcore.a $(INTEL_DIR)libiomp5.a
 
 ##############   t e s t s   ############
 
@@ -96,7 +92,7 @@ exemple_unpointing:
 #
 
 createToeplitz.o: $(SRC)
-	$(CC) -c createToeplitz.c $(INC) $(LIB) $(FFTW_LIB)
+	$(CC) -c createToeplitz.c $(INC) $(LIB)
 
 precond.o: $(SRC)
 	$(CC) -c precond.c $(INC) $(LIB)
@@ -136,25 +132,25 @@ mk_unpointing : mk_unpointing.c map2gif.o iofiles.o
 #	$(CC) sky_scan.c -o sky_scan $(INC) $(LIB) algo.o map2gif.o -lm -L/usr/lib/gcc/x86_64-linux-gnu/4.4/ -lgfortran $(HEALPIX_LIB) -lhpxgif -lgif $(CFITSIO_LIB)
 
 test_pcg: createToeplitz.o precond.o test_pcg.c iofiles.o pcg_true.o
-	$(CC) test_pcg.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(LIB) $(FFTW_LIB) -lm -o pcg
+	$(CC) test_pcg.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(LIB) -lm -o pcg
 
 test_pcg_pol: createToeplitz.o precond.o test_pcg_polar.c iofiles.o pcg_true.o
-		$(CC) test_pcg_polar.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(LIB) $(FFTW_LIB) -lm -o pcg_pol
+		$(CC) test_pcg_polar.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(LIB) -lm -o pcg_pol
 
 test_pcg_pol_ECG: createToeplitz.o precond.o test_ecg_mida.c iofiles.o pcg_true.o
-		$(CC) test_ecg_mida.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(INCpreAlps) $(LIB) $(LIBpreAlps) $(FFTW_LIB) -lm -o pcg_pol_ecg
+		$(CC) test_ecg_mida.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(INCpreAlps) $(LIB) $(LIBpreAlps) -lm -o pcg_pol_ecg
 
 
 toast_pipeline: createToeplitz.o precond.o toast_pipeline.c iofiles.o pcg_true.o
-		$(CC) toast_pipeline.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(LIB) $(FFTW_LIB) -lm -o toast_pcg
+		$(CC) toast_pipeline.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(LIB) -lm -o toast_pcg
 toast_pipeline_1kdet: createToeplitz.o precond.o toast_pipeline_1kdet.c iofiles.o pcg_true.o
-		$(CC) toast_pipeline_1kdet.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(LIB) $(FFTW_LIB) -lm -o toast_pcg_cyc
+		$(CC) toast_pipeline_1kdet.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(LIB) -lm -o toast_pcg_cyc
 
 s4cmb_pipeline: createToeplitz.o precond.o s4cmb_pipeline.c iofiles.o pcg_true.o
-		$(CC) s4cmb_pipeline.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(LIB) $(FFTW_LIB) -lm -o s4cmb_pcg
+		$(CC) s4cmb_pipeline.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(LIB) -lm -o s4cmb_pcg
 
 test_pcg_rand: createToeplitz.o precond.o test_pcg_rand.c iofiles.o pcg_true.o
-	$(CC) test_pcg_rand.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(LIB) $(FFTW_LIB) -lm -o pcg_rand
+	$(CC) test_pcg_rand.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(LIB) -lm -o pcg_rand
 
 ##############   u t i l s   #############
 

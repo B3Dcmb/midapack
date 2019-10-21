@@ -59,17 +59,17 @@ int main(int argc, char *argv[])
   fflush(stdout);
 
 //communication scheme for the pointing matrix  (to move in .h)
-  pointing_commflag=2; //2==BUTTERFLY - 1==RING
+  pointing_commflag=6; //2==BUTTERFLY - 1==RING
 
 //global data caracteristics
   int Nb_t_Intervals = 128;//8;//1352;//128;//2;//256;//8;           //total number of stationnary intervals
-  int t_Interval_length = 476406;//330384000;//47436000;//2352000;//47436000;//470400;//1749900;//17899900;//1431992;//139992; //1431992;//2863984;//1431992;//pow(2,25);//pow(2,25);          //length for each stationnary interval
+  int t_Interval_length = 47640600;//330384000;//47436000;//2352000;//47436000;//470400;//1749900;//17899900;//1431992;//139992; //1431992;//2863984;//1431992;//pow(2,25);//pow(2,25);          //length for each stationnary interval
   int t_Interval_length_true = 476406;//330384;//47436000;//2352000;//1749900;//17899900;//1431992;//139992;//1431992;//2863984;//1431992;//pow(2,20);
-  int LambdaBlock = pow(2,0);//pow(2,14)+1;  //lambda length for each stationnary interval
+  int LambdaBlock = pow(2,14);//pow(2,14)+1;  //lambda length for each stationnary interval
   Nnz=3;
 
 //PCG parameters
-  tol=pow(10,-6);
+  tol=pow(10,-8);
   K=500;
 
 //Number of loop we need to read the all t_Interval_length
