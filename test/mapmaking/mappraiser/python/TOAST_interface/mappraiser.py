@@ -4,118 +4,55 @@
 
 #@author: Hamza El Bouhargani
 #@date: May 2019
+#@latest_update: January 2020
 
+from toast.mpi import MPI, use_mpi
 
-from ctypes.util import find_library
 import os
+
+import healpy as hp
+import numpy as np
+
+from toast.cache import Cache
+from toast.op import Operator
+from toast.timing import function_timer, Timer
+from toast.utils import Logger, memreport
 
 from numpy.fft import fft, fftfreq, fftshift
 from scipy import interpolate
 import scipy.signal
 import math
 
-import ctypes as ct
-import healpy as hp
-import numpy as np
-import numpy.ctypeslib as npc
-from toast.cache import Cache
-from toast.mpi import MPI
-from toast.op import Operator
-import toast.timing as timing
 
-try:
-    import mappraiser_wrapper as mappraiser
-except:
-    mappraiser = None
+mappraiser = None
+if use_mpi:
+    try:
+        import mappraiser_wrapper as mappraiser
+    except ImportError:
+        mappraiser = None
 
-import gc
+def count_caches(data, comm, nodecomm, mappraisercache, msg=""):
+    """ Count the amount of memory in the TOD caches
+    """
+    my_todsize = 0
+    for obs in data.obs:
+        tod = obs["tod"]
+        my_todsize += tod.cache.report(silent=True)
+    my_cachesize = mappraisercache.report(silent=True)
+    node_todsize = nodecomm.allreduce(my_todsize, MPI.SUM)
+    node_cachesize = nodecomm.allreduce(my_cachesize, MPI.SUM)
+    if comm.rank == 0:
+        print(
+            "Node has {:.3f} GB allocated in TOAST TOD caches and "
+            "{:.3f} GB in Mappraiser caches ({:.3f} GB total) {}".format(
+                node_todsize / 2 ** 30,
+                node_cachesize / 2 ** 30,
+                (node_todsize + node_cachesize) / 2 ** 30,
+                msg,
+            )
+        )
+    return
 
-try:
-    import psutil
-
-    def memreport(comm=None, msg=""):
-        """ Gather and report the amount of allocated, free and swapped system memory
-        """
-        if psutil is None:
-            return
-        vmem = psutil.virtual_memory()._asdict()
-        gc.collect()
-        vmem2 = psutil.virtual_memory()._asdict()
-        memstr = "Memory usage {}\n".format(msg)
-        for key, value in vmem.items():
-            value2 = vmem2[key]
-            if comm is None:
-                vlist = [value]
-                vlist2 = [value2]
-            else:
-                vlist = comm.gather(value)
-                vlist2 = comm.gather(value2)
-            if comm is None or comm.rank == 0:
-                vlist = np.array(vlist, dtype=np.float64)
-                vlist2 = np.array(vlist2, dtype=np.float64)
-                if key != "percent":
-                    # From bytes to better units
-                    if np.amax(vlist) < 2 ** 20:
-                        vlist /= 2 ** 10
-                        vlist2 /= 2 ** 10
-                        unit = "kB"
-                    elif np.amax(vlist) < 2 ** 30:
-                        vlist /= 2 ** 20
-                        vlist2 /= 2 ** 20
-                        unit = "MB"
-                    else:
-                        vlist /= 2 ** 30
-                        vlist2 /= 2 ** 30
-                        unit = "GB"
-                else:
-                    unit = "% "
-                if comm is None or comm.size == 1:
-                    memstr += "{:>12} : {:8.3f} {}\n".format(key, vlist[0], unit)
-                    if np.abs(vlist2[0] - vlist[0]) / vlist[0] > 1e-3:
-                        memstr += "{:>12} : {:8.3f} {} (after GC)\n".format(
-                            key, vlist2[0], unit
-                        )
-                else:
-                    med1 = np.median(vlist)
-                    memstr += (
-                        "{:>12} : {:8.3f} {}  < {:8.3f} +- {:8.3f} {}  "
-                        "< {:8.3f} {}\n".format(
-                            key,
-                            np.amin(vlist),
-                            unit,
-                            med1,
-                            np.std(vlist),
-                            unit,
-                            np.amax(vlist),
-                            unit,
-                        )
-                    )
-                    med2 = np.median(vlist2)
-                    if np.abs(med2 - med1) / med1 > 1e-3:
-                        memstr += (
-                            "{:>12} : {:8.3f} {}  < {:8.3f} +- {:8.3f} {}  "
-                            "< {:8.3f} {} (after GC)\n".format(
-                                key,
-                                np.amin(vlist2),
-                                unit,
-                                med2,
-                                np.std(vlist2),
-                                unit,
-                                np.amax(vlist2),
-                                unit,
-                            )
-                        )
-        if comm is None or comm.rank == 0:
-            print(memstr, flush=True)
-        if comm is not None:
-            comm.Barrier()
-        return
-
-
-except:
-
-    def memreport(comm=None, msg=""):
-        return
 
 class OpMappraiser(Operator):
     """
@@ -188,9 +125,10 @@ class OpMappraiser(Operator):
         conserve_memory=False,
         translate_timestamps=True,
     ):
-        # We call the parent class constructor, which currently does nothing
+        # Call the parent class constructor
         super().__init__()
-        # MAPPRAISER uses time-based distribution
+
+        # mappraiser uses time-based distribution
         self._name = name
         self._noise_name = noise_name
         self._flag_name = flag_name
@@ -241,11 +179,16 @@ class OpMappraiser(Operator):
         """
         return mappraiser is not None and mappraiser.available
 
+    @function_timer
     def exec(self, data, comm=None):
         """
         Copy data to Mappraiser-compatible buffers and make a map.
+
         Args:
             data (toast.Data): The distributed data.
+
+        Returns:
+            None
         """
         if not self.available:
             raise RuntimeError("libmappraiser is not available")
@@ -256,11 +199,13 @@ class OpMappraiser(Operator):
                 "contain at least one observation"
             )
 
-        auto_timer = timing.auto_timer(type(self).__name__)
 
         if comm is None:
-            # Just use COMM_WORLD
+            # Use the word communicator from the distributed data.
             comm = data.comm.comm_world
+        self._data = data
+        self._comm = comm
+        self._rank = comm.rank
 
         (
             dets,
@@ -271,29 +216,22 @@ class OpMappraiser(Operator):
             nnz_stride,
             psdfreqs,
             nside,
-        ) = self._prepare(data, comm)
-
-        Lambda = self._params["Lambda"]
+        ) = self._prepare()
 
         data_size_proc, nobsloc, local_blocks_sizes, signal_type, noise_type, pixels_dtype, weight_dtype = self._stage_data(
-            data,
-            comm,
             nsamp,
             ndet,
             nnz,
             nnz_full,
             nnz_stride,
             psdfreqs,
-            Lambda,
             dets,
             nside,
         )
 
-        self._MLmap(comm, data_size_proc, nobsloc*ndet, local_blocks_sizes, nnz, Lambda)
+        self._MLmap(data_size_proc, nobsloc*ndet, local_blocks_sizes, nnz)
 
         self._unstage_data(
-            comm,
-            data,
             nsamp,
             nnz,
             nnz_full,
@@ -307,17 +245,17 @@ class OpMappraiser(Operator):
 
         return
 
-    def _MLmap(self, comm, data_size_proc, nb_blocks_loc, local_blocks_sizes, nnz, Lambda):
+    @function_timer
+    def _MLmap(self, data_size_proc, nb_blocks_loc, local_blocks_sizes, nnz):
         """ Compute the ML map
         """
-        auto_timer = timing.auto_timer(type(self).__name__)
         if self._verbose:
-            memreport(comm, "just before calling libmappraiser.MLmap")
+            memreport("just before calling libmappraiser.MLmap", self._comm)
 
         # Compute the Maximum Likelihood map
         os.environ["OMP_NUM_THREADS"] = "1"
         mappraiser.MLmap(
-            comm,
+            self._comm,
             self._params,
             data_size_proc,
             nb_blocks_loc,
@@ -327,21 +265,22 @@ class OpMappraiser(Operator):
             self._mappraiser_pixweights,
             self._mappraiser_signal,
             self._mappraiser_noise,
-            Lambda,
+            self._params["Lambda"],
             self._mappraiser_invtt,
             )
         os.environ["OMP_NUM_THREADS"] = "4"
 
         return
 
-    def _count_samples(self, data):
+    def _count_samples(self):
         """ Loop over the observations and count the number of samples.
+
         """
-        if len(data.obs) != 1:
+        if len(self._data.obs) != 1:
             nsamp = 0
-            tod0 = data.obs[0]["tod"]
+            tod0 = self._data.obs[0]["tod"]
             detectors0 = tod0.local_dets
-            for obs in data.obs:
+            for obs in self._data.obs:
                 tod = obs["tod"]
                 # For the moment, we require that all observations have
                 # the same set of detectors
@@ -361,16 +300,18 @@ class OpMappraiser(Operator):
                     )
                 nsamp += tod.local_samples[1]
         else:
-            tod = data.obs[0]["tod"]
+            tod = self._data.obs[0]["tod"]
             nsamp = tod.local_samples[1]
         return nsamp
 
-    def _get_period_ranges(self, data, detectors):
+    def _get_period_ranges(self, detectors):
         """ Collect the ranges of every observation.
+        (This routine taken as is from Madam has been truncated, for now it is
+        only extracting the frequency binning of the PSDs)
         """
         psdfreqs = None
 
-        for obs in data.obs:
+        for obs in self._data.obs:
             tod = obs["tod"]
             # Check that all noise objects have the same binning
             if self._noisekey in obs.keys():
@@ -388,16 +329,16 @@ class OpMappraiser(Operator):
 
         return psdfreqs
 
-    def _psd2invtt(self, psdfreqs, psd, Lambda):
-        """ Generate the first row of the Toeplitz blocks from the psds
+    def _psd2invtt(self, psdfreqs, psd):
+        """ Generate the first rows of the Toeplitz blocks from the PSDs
         """
         # parameters
         sampling_freq = self._params["samplerate"]
-        f_defl = sampling_freq/(np.pi*Lambda)
+        f_defl = sampling_freq/(np.pi*self._params["Lambda"])
         df = f_defl/2
         block_size = 2**(int(math.log(sampling_freq*1./df,2))+1)
 
-        # Extracting psd info
+        # Invert PSD
         psd_sim_m1 = np.reciprocal(psd)
 
         # Initialize full size inverse PSD in frequency domain
@@ -411,34 +352,38 @@ class OpMappraiser(Operator):
         psdm1[:int(block_size/2)] = psdfit[:int(block_size/2)]
         psdm1[int(block_size/2):] = np.flip(psdfit[1:],0)
 
-        # Compute noise autocorrelation and inverse noise autocorrelation functions
+        # Compute inverse noise autocorrelation functions
         inv_tt = np.real(np.fft.ifft(psdm1, n=block_size))
 
         # Define apodization window
-        window = scipy.signal.gaussian(2*Lambda, 1./2*Lambda)
+        window = scipy.signal.gaussian(2*self._params["Lambda"], 1./2*self._params["Lambda"])
         window = np.fft.ifftshift(window)
-        window = window[:Lambda]
-        window = np.pad(window,(0,int(block_size/2-(Lambda))),'constant')
+        window = window[:self._params["Lambda"]]
+        window = np.pad(window,(0,int(block_size/2-(self._params["Lambda"]))),'constant')
         symw = np.zeros(block_size)
         symw[:int(block_size/2)] = window
         symw[int(block_size/2):] = np.flip(window,0)
 
         inv_tt_w = np.multiply(symw, inv_tt, dtype = mappraiser.INVTT_TYPE)
 
-        return inv_tt_w[:Lambda]
+        return inv_tt_w[:self._params["Lambda"]]
 
-    def _prepare(self, data, comm):
+    @function_timer
+    def _prepare(self):
         """ Examine the data object.
-        """
-        auto_timer = timing.auto_timer(type(self).__name__)
 
-        nsamp = self._count_samples(data)
+        """
+        log = Logger.get()
+        timer = Timer()
+        timer.start()
+
+        nsamp = self._count_samples()
 
         # Determine the detectors and the pointing matrix non-zeros
         # from the first observation. Mappraiser will expect these to remain
         # unchanged across observations.
 
-        tod = data.obs[0]["tod"]
+        tod = self._data.obs[0]["tod"]
 
         if self._dets is None:
             dets = tod.local_dets
@@ -472,7 +417,13 @@ class OpMappraiser(Operator):
 
         # Inspect the valid intervals across all observations to
         # determine the number of samples per detector
-        psdfreqs = self._get_period_ranges(data, dets)
+        # N.B: Above comment is from OpMadam, for now
+        # it only gives frequency binning of the PSDs
+        psdfreqs = self._get_period_ranges(dets)
+
+        self._comm.Barrier()
+        if self._rank == 0 and self._verbose:
+            timer.report_clear("Collect dataset dimensions")
 
         return (
             dets,
@@ -484,13 +435,13 @@ class OpMappraiser(Operator):
             psdfreqs,
             nside,
         )
-
-    def _stage_time(self, data, detectors, nsamp, psdfreqs, Lambda):
+    @function_timer
+    def _stage_time(self, detectors, nsamp, psdfreqs):
         """ Stage the timestamps and use them to build PSD inputs.
+        N.B: timestamps are not currently used in MAPPRAISER, however, this may
+        change in the future. At this stage, the routine builds the time-domain
+        Toeplitz blocks inputs (first rows).
         """
-        # N.B: timestamps are not currently used in MAPPRAISER, however, this may
-        # change in the future, when we start fitting for temporal templates
-        auto_timer = timing.auto_timer(type(self).__name__)
         # self._mappraiser_timestamps = self._cache.create(
         #     "timestamps", mappraiser.TIMESTAMP_TYPE, (nsamp,)
         # )
@@ -499,7 +450,7 @@ class OpMappraiser(Operator):
         # time_offset = 0
         # psds = {}
         invtt_list = []
-        for iobs, obs in enumerate(data.obs):
+        for iobs, obs in enumerate(self._data.obs):
             tod = obs["tod"]
             # period_ranges = obs_period_ranges[iobs]
 
@@ -527,7 +478,7 @@ class OpMappraiser(Operator):
                 if nse is not None:
                     for det in detectors:
                         psd = nse.psd(det) * noise_scale ** 2
-                        invtt = self._psd2invtt(psdfreqs, psd, Lambda)
+                        invtt = self._psd2invtt(psdfreqs, psd)
                         invtt_list.append(invtt)
                         # if det not in psds:
                         #     psds[det] = [(0, psd)]
@@ -537,100 +488,131 @@ class OpMappraiser(Operator):
 
         return invtt_list
 
-    def _stage_signal(self, data, detectors, nsamp, ndet):
+    @function_timer
+    def _stage_signal(self, detectors, nsamp, ndet, nodecomm, nread):
         """ Stage signal
         """
-        auto_timer = timing.auto_timer(type(self).__name__)
-        self._mappraiser_signal = self._cache.create(
-            "signal", mappraiser.SIGNAL_TYPE, (nsamp * ndet,)
-        )
-        self._mappraiser_signal[:] = np.nan
+        log = Logger.get()
+        timer = Timer()
+        # Determine if we can purge the signal and avoid keeping two
+        # copies in memory
+        purge = self._name is not None and self._purge_tod
+        if not purge:
+            nread = 1
+            nodecomm = MPI.COMM_SELF
 
-        global_offset = 0
-        local_blocks_sizes = []
-        for iobs, obs in enumerate(data.obs):
-            tod = obs["tod"]
+        for iread in range(nread):
+            nodecomm.Barrier()
+            timer.start()
+            if nodecomm.rank % nread == iread:
+                self._mappraiser_signal = self._cache.create(
+                "signal", mappraiser.SIGNAL_TYPE, (nsamp * ndet,)
+                )
+                self._mappraiser_signal[:] = np.nan
 
-            for idet, det in enumerate(detectors):
-                # Get the signal.
-                signal = tod.local_signal(det, self._name)
-                signal_dtype = signal.dtype
-                offset = global_offset
-                local_V_size = len(signal)
-                dslice = slice(idet * nsamp + offset, idet * nsamp + offset + local_V_size)
-                self._mappraiser_signal[dslice] = signal
-                offset += local_V_size
-                local_blocks_sizes.append(local_V_size)
+                global_offset = 0
+                local_blocks_sizes = []
+                for iobs, obs in enumerate(self._data.obs):
+                    tod = obs["tod"]
+
+                    for idet, det in enumerate(detectors):
+                        # Get the signal.
+                        signal = tod.local_signal(det, self._name)
+                        signal_dtype = signal.dtype
+                        offset = global_offset
+                        local_V_size = len(signal)
+                        dslice = slice(idet * nsamp + offset, idet * nsamp + offset + local_V_size)
+                        self._mappraiser_signal[dslice] = signal
+                        offset += local_V_size
+                        local_blocks_sizes.append(local_V_size)
 
 
-                del signal
+                        del signal
+                    # Purge only after all detectors are staged in case some are aliased
+                    # cache.clear() will not fail if the object was already
+                    # deleted as an alias
+                    if purge:
+                        for det in detectors:
+                            cachename = "{}_{}".format(self._name, det)
+                            tod.cache.clear(cachename)
+                    global_offset = offset
 
-            for idet, det in enumerate(detectors):
-                if self._name is not None and (
-                    self._purge_tod
-                ):
-                    cachename = "{}_{}".format(self._name, det)
-                    tod.cache.clear(pattern=cachename)
-
-            global_offset = offset
-
-        local_blocks_sizes = np.array(local_blocks_sizes, dtype=np.int32)
+                local_blocks_sizes = np.array(local_blocks_sizes, dtype=np.int32)
+            if self._verbose and nread > 1:
+                nodecomm.Barrier()
+                if self._rank == 0:
+                    timer.report_clear("Stage signal {} / {}".format(iread + 1, nread))
 
         return signal_dtype, local_blocks_sizes
 
-    def _stage_noise(self, data, detectors, nsamp, ndet):
+    @function_timer
+    def _stage_noise(self, detectors, nsamp, ndet, nodecomm, nread):
         """ Stage noise timestream (detector noise + atmosphere)
         """
-        auto_timer = timing.auto_timer(type(self).__name__)
-        self._mappraiser_noise = self._cache.create(
-            "noise", mappraiser.SIGNAL_TYPE, (nsamp * ndet,)
-        )
-        if self._noise_name == None:
-            self._mappraiser_noise = np.zeros_like(self._mappraiser_noise)
-            return self._mappraiser_noise.dtype
+        log = Logger.get()
+        timer = Timer()
+        # Determine if we can purge the signal and avoid keeping two
+        # copies in memory
+        purge = self._noise_name is not None and self._purge_tod
+        if not purge:
+            nread = 1
+            nodecomm = MPI.COMM_SELF
 
-        self._mappraiser_noise[:] = np.nan
+        for iread in range(nread):
+            nodecomm.Barrier()
+            timer.start()
+            if nodecomm.rank % nread == iread:
+                self._mappraiser_noise = self._cache.create(
+                "noise", mappraiser.SIGNAL_TYPE, (nsamp * ndet,)
+                )
+                if self._noise_name == None:
+                    self._mappraiser_noise = np.zeros_like(self._mappraiser_noise)
+                    return self._mappraiser_noise.dtype
 
-        global_offset = 0
-        for iobs, obs in enumerate(data.obs):
-            tod = obs["tod"]
+                self._mappraiser_noise[:] = np.nan
 
-            for idet, det in enumerate(detectors):
-                # Get the signal.
-                noise = tod.local_signal(det, self._noise_name)
-                noise_dtype = noise.dtype
-                offset = global_offset
-                nn = len(noise)
-                dslice = slice(idet * nsamp + offset, idet * nsamp + offset + nn)
-                self._mappraiser_noise[dslice] = noise
-                offset += nn
+                global_offset = 0
+                for iobs, obs in enumerate(self._data.obs):
+                    tod = obs["tod"]
+
+                    for idet, det in enumerate(detectors):
+                        # Get the signal.
+                        noise = tod.local_signal(det, self._noise_name)
+                        noise_dtype = noise.dtype
+                        offset = global_offset
+                        nn = len(noise)
+                        dslice = slice(idet * nsamp + offset, idet * nsamp + offset + nn)
+                        self._mappraiser_noise[dslice] = noise
+                        offset += nn
 
 
-                del noise
-
-            for idet, det in enumerate(detectors):
-                if self._noise_name is not None and (
-                    self._purge_tod
-                ):
-                    cachename = "{}_{}".format(self._noise_name, det)
-                    tod.cache.clear(pattern=cachename)
-
-            global_offset = offset
-
+                        del noise
+                    # Purge only after all detectors are staged in case some are aliased
+                    # cache.clear() will not fail if the object was already
+                    # deleted as an alias
+                    if purge:
+                        for det in detectors:
+                            cachename = "{}_{}".format(self._noise_name, det)
+                            tod.cache.clear(cachename)
+                    global_offset = offset
+            if self._verbose and nread > 1:
+                nodecomm.Barrier()
+                if self._rank == 0:
+                    timer.report_clear("Stage noise {} / {}".format(iread + 1, nread))
 
         return noise_dtype
 
-    def _stage_pixels(self, data, detectors, nsamp, ndet, nnz, nside):
+    @function_timer
+    def _stage_pixels(self, detectors, nsamp, ndet, nnz, nside):
         """ Stage pixels
         """
-        auto_timer = timing.auto_timer(type(self).__name__)
         self._mappraiser_pixels = self._cache.create(
             "pixels", mappraiser.PIXEL_TYPE, (nsamp * ndet * nnz,)
         )
         self._mappraiser_pixels[:] = -1
 
         global_offset = 0
-        for iobs, obs in enumerate(data.obs):
+        for iobs, obs in enumerate(self._data.obs):
             tod = obs["tod"]
 
             commonflags = None
@@ -684,141 +666,225 @@ class OpMappraiser(Operator):
 
             # Always purge the pixels but restore them from the Mappraiser
             # buffers when purge_pixels = False
-            for idet, det in enumerate(detectors):
+            # Purging MUST happen after all detectors are staged because
+            # some the pixel numbers may be aliased between detectors
+            for det in detectors:
                 pixelsname = "{}_{}".format(self._pixels, det)
-                tod.cache.clear(pattern=pixelsname)
-                if self._name is not None and (
-                    self._purge_tod
-                ):
-                    cachename = "{}_{}".format(self._name, det)
-                    tod.cache.clear(pattern=cachename)
+                # cache.clear() will not fail if the object was already
+                # deleted as an alias
+                tod.cache.clear(pixelsname)
                 if self._purge_flags and self._flag_name is not None:
                     cacheflagname = "{}_{}".format(self._flag_name, det)
-                    tod.cache.clear(pattern=cacheflagname)
+                    tod.cache.clear(cacheflagname)
 
             del commonflags
             if self._purge_flags and self._common_flag_name is not None:
-                tod.cache.clear(pattern=self._common_flag_name)
+                tod.cache.clear(self._common_flag_name)
             global_offset = offset
-
         return pixels_dtype
 
+    @function_timer
     def _stage_pixweights(
-        self, data, detectors, nsamp, ndet, nnz, nnz_full, nnz_stride
+        self,
+        detectors,
+        nsamp,
+        ndet,
+        nnz,
+        nnz_full,
+        nnz_stride,
+        nodecomm,
+        nread,
     ):
         """Now collect the pixel weights
         """
-        auto_timer = timing.auto_timer(type(self).__name__)
-
-        self._mappraiser_pixweights = self._cache.create(
-            "pixweights", mappraiser.WEIGHT_TYPE, (nsamp * ndet * nnz,)
-        )
-        self._mappraiser_pixweights[:] = 0
-
-        global_offset = 0
-        for iobs, obs in enumerate(data.obs):
-            tod = obs["tod"]
-
-            for idet, det in enumerate(detectors):
-                # get the pixels and weights for the valid intervals
-                # from the cache
-                weightsname = "{}_{}".format(self._weights, det)
-                weights = tod.cache.reference(weightsname)
-                weight_dtype = weights.dtype
-                offset = global_offset
-                nn = len(weights)
-                dwslice = slice(
-                    (idet * nsamp + offset) * nnz,
-                    (idet * nsamp + offset + nn) * nnz,
+        log = Logger.get()
+        timer = Timer()
+        # Determine if we can purge the pixel weights and avoid keeping two
+        # copies of the weights in memory
+        purge = self._purge_weights or (nnz == nnz_full)
+        if not purge:
+            nread = 1
+            nodecomm = MPI.COMM_SELF
+        for iread in range(nread):
+            nodecomm.Barrier()
+            timer.start()
+            if nodecomm.rank % nread == iread:
+                self._mappraiser_pixweights = self._cache.create(
+                "pixweights", mappraiser.WEIGHT_TYPE, (nsamp * ndet * nnz,)
                 )
-                self._mappraiser_pixweights[dwslice] = weights.flatten()[
-                    ::nnz_stride
-                ]
-                offset += nn
-                del weights
-            # Purge the weights but restore them from the Mappraiser
-            # buffers when purge_weights=False.
-            # Handle special case when Madam only stores a subset of
-            # the weights. (not the case for Mappraiser but keeping it for now)
-            if not self._purge_weights and (nnz != nnz_full):
-                pass
-            else:
-                for idet, det in enumerate(detectors):
-                    # get the pixels and weights for the valid intervals
-                    # from the cache
-                    weightsname = "{}_{}".format(self._weights, det)
-                    tod.cache.clear(pattern=weightsname)
+                self._mappraiser_pixweights[:] = 0
 
-            global_offset = offset
+                global_offset = 0
+                for iobs, obs in enumerate(self._data.obs):
+                    tod = obs["tod"]
 
+                    for idet, det in enumerate(detectors):
+                        # get the pixels and weights for the valid intervals
+                        # from the cache
+                        weightsname = "{}_{}".format(self._weights, det)
+                        weights = tod.cache.reference(weightsname)
+                        weight_dtype = weights.dtype
+                        offset = global_offset
+                        nn = len(weights)
+                        dwslice = slice(
+                        (idet * nsamp + offset) * nnz,
+                        (idet * nsamp + offset + nn) * nnz,
+                        )
+                        self._mappraiser_pixweights[dwslice] = weights.flatten()[
+                        ::nnz_stride
+                        ]
+                        offset += nn
+                        del weights
+                    # Purge the weights but restore them from the Mappraiser
+                    # buffers when purge_weights=False.
+                    if purge:
+                        for idet, det in enumerate(detectors):
+                            weightsname = "{}_{}".format(self._weights, det)
+                            tod.cache.clear(pattern=weightsname)
+
+                    global_offset = offset
+            if self._verbose and nread > 1:
+                nodecomm.Barrier()
+                if self._rank == 0:
+                    timer.report_clear(
+                        "Stage pixel weights {} / {}".format(iread + 1, nread)
+                    )
         return weight_dtype
 
+    @function_timer
     def _stage_data(
         self,
-        data,
-        comm,
         nsamp,
         ndet,
         nnz,
         nnz_full,
         nnz_stride,
         psdfreqs,
-        Lambda,
         detectors,
         nside,
     ):
         """ create Mappraiser-compatible buffers
+
         Collect the TOD into Mappraiser buffers. Process pixel weights
         Separate from the rest to reduce the memory high water mark
         When the user has set purge=True
+
         Moving data between toast and Mappraiser buffers has an overhead.
         We perform the operation in a staggered fashion to have the
         overhead only once per node.
         """
-        auto_timer = timing.auto_timer(type(self).__name__)
-
+        log = Logger.get()
+        nodecomm = self._comm.Split_type(MPI.COMM_TYPE_SHARED, self._rank)
+        # Check if the user has elected to stagger staging the data on each
+        # node to avoid exhausting memory
         if self._conserve_memory:
-            # The user has elected to stagger staging the data on each
-            # node to avoid exhausting memory
-            nodecomm = comm.Split_type(MPI.COMM_TYPE_SHARED, comm.rank)
             if self._conserve_memory == 1:
                 nread = nodecomm.size
             else:
                 nread = min(self._conserve_memory, nodecomm.size)
         else:
-            nodecomm = MPI.COMM_SELF
             nread = 1
 
+        self._comm.Barrier()
+        timer_tot = Timer()
+        timer_tot.start()
+
+        # Stage time (Tpltz blocks in Mappraiser), it is never purged
+        # so the staging is never stepped
+        timer = Timer()
+        timer.start()
+        invtt_list = self._stage_time(detectors, nsamp, psdfreqs)
+        self._mappraiser_invtt = np.array([np.array(invtt_i, dtype= mappraiser.INVTT_TYPE) for invtt_i in invtt_list])
+        del invtt_list
+        self._mappraiser_invtt = np.concatenate(self._mappraiser_invtt)
+        if self._verbose:
+            nodecomm.Barrier()
+            if self._rank == 0:
+                timer.report_clear("Stage time")
+        memreport("after staging time", self._comm)  # DEBUG
+        count_caches(
+            self._data, self._comm, nodecomm, self._cache, "after staging time"
+        )  # DEBUG
+
+         # Stage signal.  If signal is not being purged, staging is not stepped
+        timer.start()
+        signal_dtype, local_blocks_sizes = self._stage_signal(
+            detectors, nsamp, ndet, nodecomm, nread
+        )
+        if self._verbose:
+            nodecomm.Barrier()
+            if self._rank == 0:
+                timer.report_clear("Stage signal")
+        memreport("after staging signal", self._comm)  # DEBUG
+        count_caches(
+            self._data, self._comm, nodecomm, self._cache, "after staging signal"
+        )  # DEBUG
+
+        # Stage noise.  If noise is not being purged, staging is not stepped
+        timer.start()
+        noise_dtype = self._stage_noise(
+           detectors, nsamp, ndet, nodecomm, nread
+        )
+        if self._verbose:
+            nodecomm.Barrier()
+            if self._rank == 0:
+                timer.report_clear("Stage noise")
+        memreport("after staging noise", self._comm)  # DEBUG
+        count_caches(
+            self._data, self._comm, nodecomm, self._cache, "after staging noise"
+        )  # DEBUG
+
+        # Stage pixels
+        timer_step = Timer()
+        timer_step.start()
         for iread in range(nread):
             nodecomm.Barrier()
-            if nodecomm.rank % nread != iread:
-                continue
-            invtt_list = self._stage_time(data, detectors, nsamp, psdfreqs, Lambda)
-            self._mappraiser_invtt = np.array([np.array(invtt_i, dtype= mappraiser.INVTT_TYPE) for invtt_i in invtt_list])
-            del invtt_list
-            self._mappraiser_invtt = np.concatenate(self._mappraiser_invtt)
-            signal_dtype, local_blocks_sizes = self._stage_signal(
-                data, detectors, nsamp, ndet
-            )
-            noise_dtype = self._stage_noise(
-                data, detectors, nsamp, ndet
-            )
-            pixels_dtype = self._stage_pixels(
-                data, detectors, nsamp, ndet, nnz, nside
-            )
-            weight_dtype = self._stage_pixweights(
-                data,
-                detectors,
-                nsamp,
-                ndet,
-                nnz,
-                nnz_full,
-                nnz_stride,
-            )
+            timer.start()
+            if nodecomm.rank % nread == iread:
+                pixels_dtype = self._stage_pixels(
+                    detectors, nsamp, ndet, nnz, nside
+                )
+            if self._verbose and nread > 1:
+                nodecomm.Barrier()
+                if self._rank == 0:
+                    timer.report_clear("Stage pixels {} / {}".format(iread + 1, nread))
+        if self._verbose:
+            nodecomm.Barrier()
+            if self._rank == 0:
+                timer_step.report_clear("Stage pixels")
+        memreport("after staging pixels", self._comm)  # DEBUG
+        count_caches(
+            self._data, self._comm, nodecomm, self._cache, "after staging pixels"
+        )  # DEBUG
+
+        # Stage pixel weights
+        timer_step.start()
+        weight_dtype = self._stage_pixweights(
+            detectors,
+            nsamp,
+            ndet,
+            nnz,
+            nnz_full,
+            nnz_stride,
+            nodecomm,
+            nread,
+        )
+        if self._verbose:
+            nodecomm.Barrier()
+            if self._rank == 0:
+                timer_step.report_clear("Stage pixel weights")
+        memreport("after staging pixel weights", self._comm)  # DEBUG
+        count_caches(
+            self._data, self._comm, nodecomm, self._cache, "after staging pixel weights"
+        )  # DEBUG
+
         del nodecomm
+        if self._rank == 0 and self._verbose:
+            timer_tot.report_clear("Stage all data")
 
         # detweights is either a dictionary of weights specified at
         # construction time, or else we use uniform weighting.
+        # N.B: This is essentially useless in current implementation
         detw = {}
         if self._detw is None:
             for idet, det in enumerate(detectors):
@@ -831,16 +897,126 @@ class OpMappraiser(Operator):
             detweights[idet] = detw[det]
 
         # Get global array of data sizes of the full communicator
-        data_size_proc = np.array(comm.allgather(len(self._mappraiser_signal)), dtype=np.int32)
+        data_size_proc = np.array(self._comm.allgather(len(self._mappraiser_signal)), dtype=np.int32)
         # Get number of local observations
-        nobsloc = len(data.obs)
+        nobsloc = len(self._data.obs)
 
         return data_size_proc, nobsloc, local_blocks_sizes, signal_dtype, noise_dtype, pixels_dtype, weight_dtype
 
+    @function_timer
+    def _unstage_signal(self, detectors, nsamp, signal_type):
+        # N.B: useful when we want to get back data after mapmaking, not allowed for now
+        # if self._name_out is not None:
+        #     global_offset = 0
+        #     for obs, period_ranges in zip(self._data.obs, obs_period_ranges):
+        #         tod = obs["tod"]
+        #         nlocal = tod.local_samples[1]
+        #         for idet, det in enumerate(detectors):
+        #             signal = np.ones(nlocal, dtype=signal_type) * np.nan
+        #             offset = global_offset
+        #             for istart, istop in period_ranges:
+        #                 nn = istop - istart
+        #                 dslice = slice(
+        #                     idet * nsamp + offset, idet * nsamp + offset + nn
+        #                 )
+        #                 signal[istart:istop] = self._madam_signal[dslice]
+        #                 offset += nn
+        #             cachename = "{}_{}".format(self._name_out, det)
+        #             tod.cache.put(cachename, signal, replace=True)
+        #         global_offset = offset
+        self._mappraiser_signal = None
+        self._cache.destroy("signal")
+        return
+
+    @function_timer
+    def _unstage_noise(self, detectors, nsamp, noise_type):
+        # N.B: useful when we want to get back data after mapmaking, not allowed for now
+        # if self._name_out is not None:
+        #     global_offset = 0
+        #     for obs, period_ranges in zip(self._data.obs, obs_period_ranges):
+        #         tod = obs["tod"]
+        #         nlocal = tod.local_samples[1]
+        #         for idet, det in enumerate(detectors):
+        #             signal = np.ones(nlocal, dtype=signal_type) * np.nan
+        #             offset = global_offset
+        #             for istart, istop in period_ranges:
+        #                 nn = istop - istart
+        #                 dslice = slice(
+        #                     idet * nsamp + offset, idet * nsamp + offset + nn
+        #                 )
+        #                 signal[istart:istop] = self._madam_signal[dslice]
+        #                 offset += nn
+        #             cachename = "{}_{}".format(self._name_out, det)
+        #             tod.cache.put(cachename, signal, replace=True)
+        #         global_offset = offset
+        self._mappraiser_noise = None
+        self._cache.destroy("noise")
+        return
+
+    @function_timer
+    def _unstage_pixels(self, detectors, nsamp, pixels_dtype, nside):
+        # N.B: useful when we want to get back data after mapmaking, not allowed for now
+        # if not self._purge_pixels:
+        #     # restore the pixels from the Madam buffers
+        #     global_offset = 0
+        #     for obs, period_ranges in zip(self._data.obs, obs_period_ranges):
+        #         tod = obs["tod"]
+        #         nlocal = tod.local_samples[1]
+        #         for idet, det in enumerate(detectors):
+        #             pixels = -(np.ones(nlocal, dtype=pixels_dtype))
+        #             offset = global_offset
+        #             for istart, istop in period_ranges:
+        #                 nn = istop - istart
+        #                 dslice = slice(
+        #                     idet * nsamp + offset, idet * nsamp + offset + nn
+        #                 )
+        #                 pixels[istart:istop] = self._madam_pixels[dslice]
+        #                 offset += nn
+        #             npix = 12 * nside ** 2
+        #             good = np.logical_and(pixels >= 0, pixels < npix)
+        #             if not self._pixels_nested:
+        #                 pixels[good] = hp.nest2ring(nside, pixels[good])
+        #             pixels[np.logical_not(good)] = -1
+        #             cachename = "{}_{}".format(self._pixels, det)
+        #             tod.cache.put(cachename, pixels, replace=True)
+        #         global_offset = offset
+        self._mappraiser_pixels = None
+        self._cache.destroy("pixels")
+        return
+
+    @function_timer
+    def _unstage_pixweights(
+        self, detectors, nsamp, weight_dtype, nnz, nnz_full
+    ):
+        # N.B: useful when we want to get back data after mapmaking, not allowed for now
+        # if not self._purge_weights and nnz == nnz_full:
+        #     # restore the weights from the Madam buffers
+        #     global_offset = 0
+        #     for obs, period_ranges in zip(self._data.obs, obs_period_ranges):
+        #         tod = obs["tod"]
+        #         nlocal = tod.local_samples[1]
+        #         for idet, det in enumerate(detectors):
+        #             weights = np.zeros([nlocal, nnz], dtype=weight_dtype)
+        #             offset = global_offset
+        #             for istart, istop in period_ranges:
+        #                 nn = istop - istart
+        #                 dwslice = slice(
+        #                     (idet * nsamp + offset) * nnz,
+        #                     (idet * nsamp + offset + nn) * nnz,
+        #                 )
+        #                 weights[istart:istop] = self._madam_pixweights[dwslice].reshape(
+        #                     [-1, nnz]
+        #                 )
+        #                 offset += nn
+        #             cachename = "{}_{}".format(self._weights, det)
+        #             tod.cache.put(cachename, weights, replace=True)
+        #         global_offset = offset
+        self._mappraiser_pixweights = None
+        self._cache.destroy("pixweights")
+        return
+
     def _unstage_data(
         self,
-        comm,
-        data,
         nsamp,
         nnz,
         nnz_full,
@@ -851,78 +1027,67 @@ class OpMappraiser(Operator):
         nside,
         weight_dtype,
     ):
-        """ Clear Mappraiser buffers, restore pointing into TOAST caches.
+        """ Clear Mappraiser buffers, [restore pointing into TOAST caches-> not done currently].
         """
-        auto_timer = timing.auto_timer(type(self).__name__)
+        log = Logger.get()
         # self._mappraiser_timestamps = None
         # self._cache.destroy("timestamps")
 
         if self._conserve_memory:
-            nodecomm = comm.Split_type(MPI.COMM_TYPE_SHARED, comm.rank)
+            nodecomm = self._comm.Split_type(MPI.COMM_TYPE_SHARED, self._rank)
             nread = nodecomm.size
         else:
             nodecomm = MPI.COMM_SELF
             nread = 1
 
+        self._comm.Barrier()
+        timer_tot = Timer()
+        timer_tot.start()
         for iread in range(nread):
+            timer_step = Timer()
+            timer_step.start()
+            timer = Timer()
+            timer.start()
+            if nodecomm.rank % nread == iread:
+                self._unstage_signal(detectors, nsamp, signal_type)
+            if self._verbose:
+                nodecomm.Barrier()
+                if self._rank == 0:
+                    timer.report_clear(
+                        "Unstage signal {} / {}".format(iread + 1, nread)
+                    )
+            if nodecomm.rank % nread == iread:
+                self._unstage_noise(detectors, nsamp, noise_type)
+            if self._verbose:
+                nodecomm.Barrier()
+                if self._rank == 0:
+                    timer.report_clear(
+                        "Unstage noise {} / {}".format(iread + 1, nread)
+                    )
+            if nodecomm.rank % nread == iread:
+                self._unstage_pixels(
+                    detectors, nsamp, pixels_dtype, nside
+                )
+            if self._verbose:
+                nodecomm.Barrier()
+                if self._rank == 0:
+                    timer.report_clear(
+                        "Unstage pixels {} / {}".format(iread + 1, nread)
+                    )
+            if nodecomm.rank % nread == iread:
+                self._unstage_pixweights(
+                    detectors, nsamp, weight_dtype, nnz, nnz_full
+                )
             nodecomm.Barrier()
-            if nodecomm.rank % nread != iread:
-                continue
-            self._mappraiser_signal = None
-            self._cache.destroy("signal")
-            self._mappraiser_noise = None
-            self._cache.destroy("noise")
+            if self._verbose and self._rank == 0:
+                timer.report_clear(
+                    "Unstage pixel weights {} / {}".format(iread + 1, nread)
+                )
+            if self._rank == 0 and self._verbose and nread > 1:
+                timer_step.report_clear("Unstage data {} / {}".format(iread + 1, nread))
+        self._comm.Barrier()
+        if self._rank == 0 and self._verbose:
+            timer_tot.report_clear("Unstage all data")
 
-            # if not self._purge_pixels:
-            #     # restore the pixels from the Mappraiser buffers
-            #     global_offset = 0
-            #     for obs, period_ranges in zip(data.obs, obs_period_ranges):
-            #         tod = obs["tod"]
-            #         nlocal = tod.local_samples[1]
-            #         for idet, det in enumerate(detectors):
-            #             pixels = -np.ones(nlocal, dtype=pixels_dtype)
-            #             offset = global_offset
-            #             for istart, istop in period_ranges:
-            #                 nn = istop - istart
-            #                 dslice = slice(
-            #                     idet * nsamp + offset, idet * nsamp + offset + nn
-            #                 )
-            #                 pixels[istart:istop] = self._mappraiser_pixels[dslice]
-            #                 offset += nn
-            #             npix = 12 * nside ** 2
-            #             good = np.logical_and(pixels >= 0, pixels < npix)
-            #             if not self._pixels_nested:
-            #                 pixels[good] = hp.nest2ring(nside, pixels[good])
-            #             pixels[np.logical_not(good)] = -1
-            #             cachename = "{}_{}".format(self._pixels, det)
-            #             tod.cache.put(cachename, pixels, replace=True)
-            #         global_offset = offset
-            self._mappraiser_pixels = None
-            self._cache.destroy("pixels")
-
-            # if not self._purge_weights and nnz == nnz_full:
-            #     # restore the weights from the Mappraiser buffers
-            #     global_offset = 0
-            #     for obs, period_ranges in zip(data.obs, obs_period_ranges):
-            #         tod = obs["tod"]
-            #         nlocal = tod.local_samples[1]
-            #         for idet, det in enumerate(detectors):
-            #             weights = np.zeros([nlocal, nnz], dtype=weight_dtype)
-            #             offset = global_offset
-            #             for istart, istop in period_ranges:
-            #                 nn = istop - istart
-            #                 dwslice = slice(
-            #                     (idet * nsamp + offset) * nnz,
-            #                     (idet * nsamp + offset + nn) * nnz,
-            #                 )
-            #                 weights[istart:istop] = self._mappraiser_pixweights[
-            #                     dwslice
-            #                 ].reshape([-1, nnz])
-            #                 offset += nn
-            #             cachename = "{}_{}".format(self._weights, det)
-            #             tod.cache.put(cachename, weights, replace=True)
-            #         global_offset = offset
-            self._mappraiser_pixweights = None
-            self._cache.destroy("pixweights")
         del nodecomm
         return
