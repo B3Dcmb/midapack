@@ -201,11 +201,15 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
   // int bs_red = 0;
 
   st=MPI_Wtime();
+  
 // Conjugate Gradient
   if(solver==0)
     PCG_GLS_true(outpath, ref, &A, Nm1, x, signal, noise, cond, lhits, tol, maxiter);
-  else
+  else if (solver == 1)
     ECG_GLS(outpath, ref, &A, Nm1, x, signal, noise, cond, lhits, tol, maxiter, enlFac, ortho_alg, bs_red);
+  else /* 2 (a priori) and 3 (a posteriori) */
+    PCG_GLS_true_2lvl(outpath, ref, &A, Nm1, x, signal, noise, cond, lhits, tol, maxiter, solver);
+
   MPI_Barrier(comm);
   t=MPI_Wtime();
    if(rank==0)

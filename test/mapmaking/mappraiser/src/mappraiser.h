@@ -60,5 +60,8 @@ int get_pixshare_pond(Mat *A, double *pixpond);
 //PCG routine
 int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K);
 
+//PCG routine with 2lvl precond
+int PCG_GLS_true_2lvl(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K, int solver);
+
 //ECG routine
 int ECG_GLS(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int maxIter, int enlFac, int ortho_alg, int bs_red);

@@ -1,12 +1,13 @@
-DIR = /global/homes/e/elbouha/midapack
+DIR = /global/homes/a/ajamal/CMB_TOAST/midapack
 TOEPLITZ = $(DIR)/src/toeplitz/
 GCC = gcc
 # MPICC = /global/homes/e/elbouha/.conda/envs/hamzaenv/bin/mpicc
 MPICC = cc
 CC = $(MPICC) -qopenmp $(OPT)
-INC = -I$(DIR)/include -I/opt/cray/pe/fftw/3.3.6.2/haswell/include
+OPT =  -D W_MPI -D W_OPENMP -D MPI -D OPENMP -O3
+INC = -I$(DIR)/include -I/opt/cray/pe/fftw/3.3.8.3/haswell/include
 LIB = -L$(DIR)/lib -lmidapack
-FFTW_LIB = -L/opt/cray/pe/fftw/3.3.6.2/haswell/lib -lfftw3 -lfftw3_threads
+FFTW_LIB = -L/opt/cray/pe/fftw/3.3.8.3/haswell/lib -lfftw3 -lfftw3_threads
 FFTW     = -D FFTW_MULTITHREADING
 
 

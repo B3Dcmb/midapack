@@ -1,21 +1,21 @@
-DIR = /global/homes/e/elbouha/midapack
+DIR = /global/homes/a/ajamal/CMB_TOAST/midapack
 MAPMAT = $(DIR)/src/mapmat/
 F90 = ftn
 GCC = gcc
 # MPICC = /global/homes/e/elbouha/.conda/envs/hamzaenv/bin/mpicc
 MPICC = cc
-OPT =  -D W_MPI -D W_OPENMP -O3
+OPT =  -D W_MPI -D W_OPENMP -D MPI -D OPENMP -O3
 CC = $(MPICC) -qopenmp $(OPT)
-INC = -I$(DIR)/include -I/opt/cray/pe/fftw/3.3.6.2/haswell/include
+INC = -I$(DIR)/include -I/opt/cray/pe/fftw/3.3.8.3/haswell/include
 LIB = -L$(DIR)/lib -lmidapack
 #supplementary libraries
 # PTSCOTCH_INC = -I$(HOME)/scotch_5.1.12/include/
-HEALPIX_INC = -I$(HOME)/Healpix_3.31/include
-CFITSIO_INC = -I/usr/common/software/cfitsio/3.370-reentrant/hsw/intel/include
+HEALPIX_INC = -I$(HOME)/Healpix_3.50/include
+CFITSIO_INC = -I/usr/common/software/cfitsio/3.47/include
 
 # PTSCOTCH_LIB = -L$(HOME)/scotch_5.1.12/lib/ -lptscotch -lptscotcherr
-HEALPIX_LIB = -L$(HOME)/Healpix_3.31/lib -lchealpix -lhealpix
-CFITSIO_LIB = -L/usr/common/software/cfitsio/3.370-reentrant/hsw/intel/lib -lcfitsio
+HEALPIX_LIB = -L$(HOME)/Healpix_3.50/lib -lchealpix -lhealpix
+CFITSIO_LIB = -L/usr/common/software/cfitsio/3.47/lib -lcfitsio
 # HDF5_LIB = -L/usr/lib/ -lhdf5
 # -lm -L/usr/lib64/gcc/x86_64-suse-linux/4.8/
 INTEL_DIR = /opt/intel/compilers_and_libraries_2018.1.163/linux/compiler/lib/intel64/
