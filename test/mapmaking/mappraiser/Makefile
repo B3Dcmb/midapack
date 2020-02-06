@@ -1,4 +1,4 @@
-DIR = /global/homes/e/elbouha/midapack
+DIR = /global/homes/t/tcimic/midapack
 TOEPLITZ = $(DIR)/src/toeplitz/
 MPICC = cc
 CC = $(MPICC) -qopenmp -g -Wall -fPIC $(OPT)
@@ -8,9 +8,9 @@ LIB = -L$(DIR)/lib -lmidapack
 CPLM_CORE     = utils/cplm_core
 CPLMDIR      = utils/cplm_light
 CPLM_V0_DIR  = utils/cplm_v0
-preAlpsDIR = /global/homes/e/elbouha/preAlps
+preAlpsDIR = /global/homes/t/tcimic/preAlps
 
-LIBpreAlps = -L/global/homes/e/elbouha/preAlps/lib/ -lpreAlps_release -lcplm_light -lcplm_v0 -lcplm_core
+LIBpreAlps = -L/global/homes/t/tcimic/preAlps/lib/ -lpreAlps_release -lcplm_light -lcplm_v0 -lcplm_core
 INCpreAlps = -I$(preAlpsDIR) -I../ -I../include -I$(preAlpsDIR)/$(CPLM_CORE) -I$(preAlpsDIR)/$(CPLMDIR) -I$(preAlpsDIR)/$(CPLM_V0_DIR) -I$(preAlpsDIR)/utils -I$(preAlpsDIR)/src/preconditioners -I$(preAlpsDIR)/src/solvers
 
 METIS_DIR=/global/common/cori/software/metis/5.1.0

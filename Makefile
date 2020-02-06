@@ -1,6 +1,6 @@
 PROJECT = Midapack_
 VERSION = 1.1b
-DIR = /global/homes/e/elbouha/midapack
+DIR = /global/homes/t/tcimic/midapack
 DIRTAR = export_tar
 LIBNAME = libmidapack
 
