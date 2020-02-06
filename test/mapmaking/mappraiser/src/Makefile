@@ -1,24 +1,32 @@
-DIR = /global/homes/e/elbouha/midapack
-TOEPLITZ = $(DIR)/src/toeplitz/
+DIR = $(HOME)/midapack
+MIDAPACK_ROOT=$(PREFIX)/midapack
+MIDAPACK_LIB=$(MIDAPACK_ROOT)/lib
 MPICC = cc
+OPT =  -D W_MPI -D W_OPENMP -O3
 CC = $(MPICC) -qopenmp -g -Wall -fPIC $(OPT)
 INC = -I$(DIR)/include
-LIB = -L$(DIR)/lib -lmidapack
+LIB = -L$(MIDAPACK_LIB) -lmidapack
+MAPPRAISER_ROOT=$(PREFIX)/mappraiser
+MAPPRAISER_OBJ=$(MAPPRAISER_ROOT)/obj
+MAPPRAISER_LIB=$(MAPPRAISER_ROOT)/lib
 
+# Linking preAlps library for ECG solver utilities
 CPLM_CORE     = utils/cplm_core
 CPLMDIR      = utils/cplm_light
 CPLM_V0_DIR  = utils/cplm_v0
-preAlpsDIR = /global/homes/e/elbouha/preAlps
+preAlpsDIR = $(HOME)/preAlps
 
-LIBpreAlps = -L/global/homes/e/elbouha/preAlps/lib/ -lpreAlps_release -lcplm_light -lcplm_v0 -lcplm_core
-INCpreAlps = -I$(preAlpsDIR) -I../ -I../include -I$(preAlpsDIR)/$(CPLM_CORE) -I$(preAlpsDIR)/$(CPLMDIR) -I$(preAlpsDIR)/$(CPLM_V0_DIR) -I$(preAlpsDIR)/utils -I$(preAlpsDIR)/src/preconditioners -I$(preAlpsDIR)/src/solvers
+LIBpreAlps = -L$(preAlpsDIR)/lib/ -lpreAlps_release -lcplm_light -lcplm_v0 -lcplm_core
+INCpreAlps = -I$(preAlpsDIR)/$(CPLM_CORE) -I$(preAlpsDIR)/$(CPLMDIR) -I$(preAlpsDIR)/$(CPLM_V0_DIR) -I$(preAlpsDIR)/utils -I$(preAlpsDIR)/src/preconditioners -I$(preAlpsDIR)/src/solvers
 
+# Linking metis library needed by preAlps
 METIS_DIR=/global/common/cori/software/metis/5.1.0
 METIS_INC            = $(METIS_DIR)/include
 METIS_LIB            = $(METIS_DIR)/lib
 INCpreAlps += $(addprefix -I,$(METIS_INC))
 LIBpreAlps += -L$(METIS_LIB) -lmetis
 
+# linking MKL library
 MKL_DIR=/opt/intel/mkl
 MKL_INC              = $(MKL_DIR)/include
 MKL_LIB              = $(MKL_DIR)/lib/intel64
@@ -28,12 +36,6 @@ LIBpreAlps            += -L$(MKL_LIB) -lmkl_rt
 # FFTW_LIB = -L/opt/cray/pe/fftw/3.3.6.3/haswell/lib -lfftw3 -lfftw3_threads
 # FFTW_INC = -I/opt/cray/pe/fftw/3.3.6.3/haswell/include
 # FFTW_LIB = -L/opt/cray/pe/fftw/3.3.6.3/haswell/lib/libfftw3.a /opt/cray/pe/fftw/3.3.6.3/haswell/lib/libfftw3_threads.a
-
-SRC = $(DIR)/src/toeplitz/
-
-MAPMAT = $(DIR)/src/mapmat/
-F90 = ftn
-OPT =  -D W_MPI -D W_OPENMP -O3
 
 #supplementary libraries
 HEALPIX_INC = -I$(HOME)/Healpix_3.50/include
@@ -47,32 +49,32 @@ CFITSIO_LIB = -L/usr/common/software/cfitsio/3.47/lib -lcfitsio
 all:
 	make mappraiser
 
-mappraiser: $(TOEPLITZ) $(MAPMAT)
+mappraiser:
 	@echo "start compiling MAPPRAISER ........"
-	make createToeplitz.o \
-	precond.o \
-	pcg_true.o \
-	ecg.o \
-	iofiles.o \
-	mappraiser.o \
+	make $(MAPPRAISER_OBJ)/createToeplitz.o \
+	$(MAPPRAISER_OBJ)/precond.o \
+	$(MAPPRAISER_OBJ)/pcg_true.o \
+	$(MAPPRAISER_OBJ)/ecg.o \
+	$(MAPPRAISER_OBJ)/iofiles.o \
+	$(MAPPRAISER_OBJ)/mappraiser.o \
 
-createToeplitz.o: $(SRC)
-	$(CC) -c createToeplitz.c $(INC) $(LIB)
+$(MAPPRAISER_OBJ)/createToeplitz.o: createToeplitz.c
+	$(CC) -c $< $(INC) $(LIB) -o $@
 
-precond.o: $(MAPMAT)
-	$(CC) -c precond.c $(INC) $(LIB)
+$(MAPPRAISER_OBJ)/precond.o: precond.c
+	$(CC) -c $< $(INC) $(LIB) -o $@
 
-pcg_true.o: $(SRC) $(MAPMAT)
-	$(CC) -c pcg_true.c $(INC) $(LIB)
+$(MAPPRAISER_OBJ)/pcg_true.o: pcg_true.c
+	$(CC) -c $< $(INC) $(LIB) -o $@
 
-ecg.o:
-	$(CC) -c ecg.c $(INC) $(LIB) $(INCpreAlps) $(LIBpreAlps)
+$(MAPPRAISER_OBJ)/ecg.o: ecg.c
+	$(CC) -c $< $(INC) $(LIB) $(INCpreAlps) $(LIBpreAlps) -o $@
 
-iofiles.o:
-	$(CC) -c iofiles.c $(INC) $(LIB) $(CFITSIO_INC) $(CFITSIO_LIB)
+$(MAPPRAISER_OBJ)/iofiles.o: iofiles.c
+	$(CC) -c $< $(INC) $(LIB) $(CFITSIO_INC) $(CFITSIO_LIB) -o $@
 
-mappraiser.o: $(SRC) $(MAPMAT)
-	$(CC) -v -c mappraiser.c $(INC) $(LIB) $(CFITSIO_INC) $(INCpreAlps) $(LIBpreAlps)
+$(MAPPRAISER_OBJ)/mappraiser.o: mappraiser.c
+	$(CC) -c $< $(INC) $(LIB) $(CFITSIO_INC) $(INCpreAlps) $(LIBpreAlps) -o $@
 
 # s4cmb_pipeline: createToeplitz.o precond.o s4cmb_pipeline.c iofiles.o pcg_true.o
 # 	$(CC) s4cmb_pipeline.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(LIB) $(FFTW_LIB) -lm -o s4cmb_pcg -Wl,@/global/homes/e/elbouha/midapack/test/mapmaking/allinea-profiler.ld
@@ -80,4 +82,4 @@ mappraiser.o: $(SRC) $(MAPMAT)
 ##############   u t i l s   #############
 
 clean:
-	rm -f *.o ;
+	rm -f $(MAPPRAISER_OBJ)/*.o ;

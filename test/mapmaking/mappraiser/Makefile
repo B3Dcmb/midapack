@@ -1,35 +1,37 @@
-DIR = /global/homes/e/elbouha/midapack
-TOEPLITZ = $(DIR)/src/toeplitz/
+DIR = $(HOME)/midapack
+MIDAPACK_ROOT=$(PREFIX)/midapack
+MIDAPACK_LIB=$(MIDAPACK_ROOT)/lib
 MPICC = cc
+OPT =  -D W_MPI -D W_OPENMP -O3
 CC = $(MPICC) -qopenmp -g -Wall -fPIC $(OPT)
 INC = -I$(DIR)/include
-LIB = -L$(DIR)/lib -lmidapack
+LIB = -L$(MIDAPACK_LIB) -lmidapack
+MAPPRAISER_ROOT=$(PREFIX)/mappraiser
+MAPPRAISER_OBJ=$(MAPPRAISER_ROOT)/obj
+MAPPRAISER_LIB=$(MAPPRAISER_ROOT)/lib
 
+# Linking preAlps library for ECG solver utilities
 CPLM_CORE     = utils/cplm_core
 CPLMDIR      = utils/cplm_light
 CPLM_V0_DIR  = utils/cplm_v0
-preAlpsDIR = /global/homes/e/elbouha/preAlps
+preAlpsDIR = $(HOME)/preAlps
 
-LIBpreAlps = -L/global/homes/e/elbouha/preAlps/lib/ -lpreAlps_release -lcplm_light -lcplm_v0 -lcplm_core
-INCpreAlps = -I$(preAlpsDIR) -I../ -I../include -I$(preAlpsDIR)/$(CPLM_CORE) -I$(preAlpsDIR)/$(CPLMDIR) -I$(preAlpsDIR)/$(CPLM_V0_DIR) -I$(preAlpsDIR)/utils -I$(preAlpsDIR)/src/preconditioners -I$(preAlpsDIR)/src/solvers
+LIBpreAlps = -L$(preAlpsDIR)/lib/ -lpreAlps_release -lcplm_light -lcplm_v0 -lcplm_core
+INCpreAlps = -I$(preAlpsDIR)/$(CPLM_CORE) -I$(preAlpsDIR)/$(CPLMDIR) -I$(preAlpsDIR)/$(CPLM_V0_DIR) -I$(preAlpsDIR)/utils -I$(preAlpsDIR)/src/preconditioners -I$(preAlpsDIR)/src/solvers
 
+# Linking metis library needed by preAlps
 METIS_DIR=/global/common/cori/software/metis/5.1.0
 METIS_INC            = $(METIS_DIR)/include
 METIS_LIB            = $(METIS_DIR)/lib
 INCpreAlps += $(addprefix -I,$(METIS_INC))
 LIBpreAlps += -L$(METIS_LIB) -lmetis
 
+# linking MKL library
 MKL_DIR=/opt/intel/mkl
 MKL_INC              = $(MKL_DIR)/include
 MKL_LIB              = $(MKL_DIR)/lib/intel64
 INCpreAlps       += $(addprefix -I,$(MKL_INC))
 LIBpreAlps            += -L$(MKL_LIB) -lmkl_rt
-
-SRC = $(DIR)/src/toeplitz/
-
-MAPMAT = $(DIR)/src/mapmat/
-F90 = ftn
-OPT =  -D W_MPI -D W_OPENMP -O3
 
 #supplementary libraries
 HEALPIX_INC = -I$(HOME)/Healpix_3.50/include
@@ -41,6 +43,8 @@ CFITSIO_LIB = -L/usr/common/software/cfitsio/3.47/lib -lcfitsio
 ##############   t e s t s   ############
 
 all:
+	mkdir -p $(MAPPRAISER_ROOT) $(MAPPRAISER_OBJ) $(MAPPRAISER_LIB)
+	cp -r $(DIR)/test/mapmaking/mappraiser/python $(MAPPRAISER_ROOT)
 	make map
 	make library
 
@@ -48,10 +52,11 @@ map: ./src/
 	make -C ./src/
 
 library:
-	cc -shared ./src/createToeplitz.o ./src/precond.o ./src/pcg_true.o ./src/ecg.o ./src/iofiles.o ./src/mappraiser.o $(LIB) $(CFITSIO_LIB) $(LIBpreAlps) -o ./lib/libmappraiser.so
+	cc -qopenmp -shared $(MAPPRAISER_OBJ)/createToeplitz.o $(MAPPRAISER_OBJ)/precond.o $(MAPPRAISER_OBJ)/pcg_true.o $(MAPPRAISER_OBJ)/ecg.o $(MAPPRAISER_OBJ)/iofiles.o $(MAPPRAISER_OBJ)/mappraiser.o $(LIB) $(CFITSIO_LIB) $(LIBpreAlps) -o $(MAPPRAISER_LIB)/libmappraiser.so
 
 ##############   u t i l s   #############
 
 clean:
 	make clean -C ./src/
-	rm -f lib/*midapack.so
+	rm -f $(MAPPRAISER_LIB)/*midapack.so
+	rm -r $(MAPPRAISER_ROOT)
