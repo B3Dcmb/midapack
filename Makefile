@@ -1,11 +1,17 @@
 PROJECT = Midapack_
 VERSION = 1.1b
-DIR = /global/homes/t/tcimic/midapack
+DIR = $(HOME)/midapack
 DIRTAR = export_tar
 LIBNAME = libmidapack
+MIDAPACK_ROOT=$(PREFIX)/midapack
+MIDAPACK_OBJ=$(MIDAPACK_ROOT)/obj
+MAPMAT_OBJ=$(MIDAPACK_OBJ)/mapmat
+TOEPLITZ_OBJ=$(MIDAPACK_OBJ)/toeplitz
+MIDAPACK_LIB=$(MIDAPACK_ROOT)/lib
 
 all :
 	@echo "starts compiling ........"
+	mkdir -p $(MIDAPACK_ROOT) $(MIDAPACK_OBJ) $(MAPMAT_OBJ) $(TOEPLITZ_OBJ) $(MIDAPACK_LIB)
 	make mapmat
 	make toeplitz
 	make lib
@@ -37,19 +43,20 @@ mapmat_example: ./lib
 	make example -C test/mapmat/
 
 
-lib: ./src/mapmat/ ./src/toeplitz
-	ar r ./lib/$(LIBNAME).a src/mapmat/mapmat.o src/mapmat/mapmatc.o src/mapmat/bitop.o src/mapmat/als.o src/mapmat/alm.o \
-           src/mapmat/csort.o src/mapmat/cindex.o src/mapmat/ring.o src/mapmat/butterfly.o \
-           src/toeplitz/toeplitz.o src/toeplitz/toeplitz_seq.o src/toeplitz/toeplitz_block.o \
-           src/toeplitz/toeplitz_nofft.o src/toeplitz/toeplitz_gappy.o src/toeplitz/toeplitz_params.o \
-           src/toeplitz/toeplitz_rshp.o src/toeplitz/toeplitz_utils.o src/toeplitz/toeplitz_wizard.o
-	ranlib ./lib/$(LIBNAME).a
-	cc -qopenmp -shared src/mapmat/mapmat.o src/mapmat/mapmatc.o src/mapmat/bitop.o src/mapmat/als.o src/mapmat/alm.o \
-           src/mapmat/csort.o src/mapmat/cindex.o src/mapmat/ring.o src/mapmat/butterfly.o \
-           src/toeplitz/toeplitz.o src/toeplitz/toeplitz_seq.o src/toeplitz/toeplitz_block.o \
-           src/toeplitz/toeplitz_nofft.o src/toeplitz/toeplitz_gappy.o src/toeplitz/toeplitz_params.o \
-           src/toeplitz/toeplitz_rshp.o src/toeplitz/toeplitz_utils.o src/toeplitz/toeplitz_wizard.o \
-					 -o ./lib/$(LIBNAME).so
+lib:
+	ar r $(MIDAPACK_LIB)/$(LIBNAME).a $(MAPMAT_OBJ)/mapmat.o $(MAPMAT_OBJ)/mapmatc.o \
+				$(MAPMAT_OBJ)/bitop.o $(MAPMAT_OBJ)/als.o $(MAPMAT_OBJ)/alm.o \
+        $(MAPMAT_OBJ)/csort.o $(MAPMAT_OBJ)/cindex.o $(MAPMAT_OBJ)/ring.o $(MAPMAT_OBJ)/butterfly.o \
+        $(TOEPLITZ_OBJ)/toeplitz.o $(TOEPLITZ_OBJ)/toeplitz_seq.o $(TOEPLITZ_OBJ)/toeplitz_block.o \
+        $(TOEPLITZ_OBJ)/toeplitz_nofft.o $(TOEPLITZ_OBJ)/toeplitz_gappy.o $(TOEPLITZ_OBJ)/toeplitz_params.o \
+        $(TOEPLITZ_OBJ)/toeplitz_rshp.o $(TOEPLITZ_OBJ)/toeplitz_utils.o $(TOEPLITZ_OBJ)/toeplitz_wizard.o
+	ranlib $(MIDAPACK_LIB)/$(LIBNAME).a
+	cc -qopenmp -shared $(MAPMAT_OBJ)/mapmat.o $(MAPMAT_OBJ)/mapmatc.o $(MAPMAT_OBJ)/bitop.o \
+	 			$(MAPMAT_OBJ)/als.o $(MAPMAT_OBJ)/alm.o $(MAPMAT_OBJ)/csort.o $(MAPMAT_OBJ)/cindex.o \
+				$(MAPMAT_OBJ)/ring.o $(MAPMAT_OBJ)/butterfly.o $(TOEPLITZ_OBJ)/toeplitz.o $(TOEPLITZ_OBJ)/toeplitz_seq.o \
+				$(TOEPLITZ_OBJ)/toeplitz_block.o $(TOEPLITZ_OBJ)/toeplitz_nofft.o $(TOEPLITZ_OBJ)/toeplitz_gappy.o \
+				$(TOEPLITZ_OBJ)/toeplitz_params.o $(TOEPLITZ_OBJ)/toeplitz_rshp.o $(TOEPLITZ_OBJ)/toeplitz_utils.o \
+				$(TOEPLITZ_OBJ)/toeplitz_wizard.o $(FFTW_LIB) -o $(MIDAPACK_LIB)/$(LIBNAME).so
 
 seq :
 	make mapmat
@@ -61,7 +68,8 @@ clean:
 	make clean -C ./src/mapmat
 	make clean -C ./test/toeplitz
 	make clean -C ./test/mapmat
-	rm lib/*midapack.a
+	rm $(MIDAPACK_LIB)/*midapack.*
+	rm -r $(MIDAPACK_ROOT)
 
 doc : ./src ./src/mapmat ./src/toeplitz ./doc/mkdoc.dox
 	pushd ./doc ; doxygen mkdoc.dox ; popd
