@@ -13,31 +13,38 @@
 /* Templates Classes */
 #include "templates.h"
 #include <math.h>
+#include <mkl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 
 /******************************************************************************/
 /*                          Defining Algebra routines                         */
 /******************************************************************************/
 /* Projecting templates amplitudes in time domain */
-int TVecProd(TemplateClass *X, int m, double sampling_freq, int *sweeptstams,
+int TVecProd(TemplateClass *X, int m, double sampling_freq, int *sweeptstamps,
   double *tau, double *out){
 
   int i,j,k;
   for(k=0;k<m;k++){
-    if((X+k)->flag_w == "OTF"){
+    if(strcmp((X+k)->flag_w,"OTF") == 0){
       (X+k)->bins = (int *) calloc((X+k)->nsamples * (X+k)->nmult, sizeof(int));
-      (X+k)->wghts = (double *) calloc((X+k)->nsamples * (X+k)->numlt, sizeof(double));
+      (X+k)->wghts = (double *) calloc((X+k)->nsamples * (X+k)->nmult, sizeof(double));
       expandpolydata(X+k, (X+k)->bins, (X+k)->wghts, sweeptstamps, sampling_freq, X->order);
     }
     for(i=0;i<(X+k)->nsamples;i++){
+      out[(X+k)->tinit + i] = 0;
       for(j=0;j<(X+k)->nmult;j++){
         out[(X+k)->tinit + i] += (X+k)->wghts[i * (X+k)->nmult + j] * tau[(X+k)->bins[i * (X+k)->nmult + j]];
       }
     }
-    if((X+k)->flag_w == "OTF"){
+    if(strcmp((X+k)->flag_w,"OTF") == 0){
       free((X+k)->bins);
       free((X+k)->wghts);
     }
   }
+  return 0;
 }
 
 /* Projecting time domain in templates space */
@@ -46,54 +53,79 @@ int TrTVecProd(TemplateClass *X, int m, double sampling_freq, int *sweeptstamps,
 
   int i,j,k;
   for(k=0;k<m;k++){
-    if((X+k)->flag_w == "OTF"){
+    if(strcmp((X+k)->flag_w,"OTF") == 0){
       (X+k)->bins = (int *) calloc((X+k)->nsamples * (X+k)->nmult, sizeof(int));
-      (X+k)->wghts = (double *) calloc((X+k)->nsamples * (X+k)->numlt, sizeof(double));
+      (X+k)->wghts = (double *) calloc((X+k)->nsamples * (X+k)->nmult, sizeof(double));
       expandpolydata(X+k, (X+k)->bins, (X+k)->wghts, sweeptstamps, sampling_freq, X->order);
     }
+    // initialize output vector
+    for(i=(X+k)->nbinMin;i<=(X+k)->nbinMax;i++)
+      out[i] = 0;
+
     for(i=0;i<(X+k)->nsamples;i++){
       for(j=0;j<(X+k)->nmult;j++){
         out[(X+k)->bins[i * (X+k)->nmult + j]] += (X+k)->wghts[i * (X+k)->nmult + j] * d[(X+k)->tinit + i];
       }
     }
-    if((X+k)->flag_w == "OTF"){
+    if(strcmp((X+k)->flag_w,"OTF") == 0){
       free((X+k)->bins);
       free((X+k)->wghts);
     }
   }
+  return 0;
 }
 
 /* Building Kernel Blocks */
-int BuildKernel(TemplateClass *X, int n, double *B){
+int BuildKernel(TemplateClass *X, int n, double *B, double w, int *sweeptstamps, double sampling_freq){
   // n : number of template classes in one kernel Block (1 det data in 1 CES)
-  int l,k;
+  int i,j,l,k;
+  int m1,m2;
   for(k=0;k<n;k++){
-    if((X+k)->flag_w == "OTF"){
+    if(strcmp((X+k)->flag_w,"OTF") == 0){
+      // printf("I'm here");
+      // fflush(stdout);
       (X+k)->bins = (int *) calloc((X+k)->nsamples * (X+k)->nmult, sizeof(int));
-      (X+k)->wghts = (double *) calloc((X+k)->nsamples * (X+k)->numlt, sizeof(double));
+      (X+k)->wghts = (double *) calloc((X+k)->nsamples * (X+k)->nmult, sizeof(double));
       expandpolydata(X+k, (X+k)->bins, (X+k)->wghts, sweeptstamps, sampling_freq, X->order);
     }
     for(l=0;l<n;l++){
-      if((X+l)->flag_w == "OTF"){
+      if((strcmp((X+l)->flag_w,"OTF") == 0) && (l!=k)){
         (X+l)->bins = (int *) calloc((X+k)->nsamples * (X+l)->nmult, sizeof(int));
-        (X+l)->wghts = (double *) calloc((X+k)->nsamples * (X+l)->numlt, sizeof(double));
+        (X+l)->wghts = (double *) calloc((X+k)->nsamples * (X+l)->nmult, sizeof(double));
         expandpolydata(X+l, (X+l)->bins, (X+l)->wghts, sweeptstamps, sampling_freq, X->order);
       }
-      for(i=0;i<(X+k)->nsamples * (X+k)->nmult;i++){
-        for(j=0;j<(X+l)->nsamples * (X+l)->nmult;j++){
-          B[((X+k)->bins[i]-(X+k)->nbinMin) * (X+l)->nbins + ((X+l)->bins[j]-(X+l)->nbinMin)] += (X+k)->wghts[i] * (X+l)->wghts[j];
+      // for(i=0;i<10;i++){
+      //   printf("bins[%d] = %d\n",i,X->bins[i]);
+      //   printf("wghts[%d] = %f\n",i,X->wghts[i]);
+      // }
+
+      for(i=0;i<(X+k)->nsamples;i++){
+        for(m1=0;m1<(X+k)->nmult;m1++){
+          for(m2=0;m2<(X+l)->nmult;m2++){
+            B[((X+k)->bins[i*(X+k)->nmult + m1]-X->nbinMin) * ((X+n-1)->nbinMax-X->nbinMin+1) + ((X+l)->bins[i*(X+l)->nmult + m2]-X->nbinMin)] += w * (X+k)->wghts[i*(X+k)->nmult + m1] * (X+l)->wghts[i*(X+l)->nmult + m2];
+          }
         }
       }
-      if((X+l)->flag_w == "OTF"){
+
+      // for(i=0;i<(X+k)->nsamples * (X+k)->nmult;i++){
+      //   for(j=0;j<(X+l)->nsamples * (X+l)->nmult;j++){
+      //     // VERY TIME CONSUMING ON SIMPLE TEST JUMPED FROM 0.02s to ~5s !
+      //     // if((i<5) && (j<5))
+      //     // printf("\nindex of B = %d\n",((X+k)->bins[i]-(X+k)->nbinMin) * (X+l)->nbins + ((X+l)->bins[j]-(X+l)->nbinMin));
+      //     B[((X+k)->bins[i]-(X+k)->nbinMin) * (X+l)->nbins + ((X+l)->bins[j]-(X+l)->nbinMin)] += w * (X+k)->wghts[i] * (X+l)->wghts[j];
+      //   }
+      // }
+      if((strcmp((X+l)->flag_w, "OTF") == 0) && (l!=k)){
         free((X+l)->bins);
         free((X+l)->wghts);
       }
     }
-    if((X+k)->flag_w == "OTF"){
+    if(strcmp((X+k)->flag_w, "OTF") == 0){
       free((X+k)->bins);
       free((X+k)->wghts);
     }
   }
+  return 0;
 }
 
 /* Inverting the kernel Blocks */
@@ -123,6 +155,7 @@ int InvKernel(double *B, int n, double *Binv){
     printf("Failure of the pseudo-inverse computation, LAPACK exit index = %d\n",info);
     exit(1);
   }
+  free(s);
   return rank;
 }
 /* Define Legendre Polynomials */
@@ -156,7 +189,7 @@ double Legendre(double x, double a, double b, int n){
   - Input:
     @X: The templates classes list
     @ndet: local number of detectors assigned to the process
-    @npoly: maximum ordered considered for polynomial templates
+    @npoly: maximum order considered for polynomial templates
     N.B: Will introduce nground, nhwp and ncustom when we implement support for
     other templates classes types. Flags are ignored for now.
 */
@@ -164,7 +197,7 @@ int Tlist_init(TemplateClass *X, int ndet, int *detnsamples, int *detnsweeps,
   int *sweeptstamps, double sampling_freq, int npoly){
 
   int i,j;
-  int tinit,tlast,nbinMin;
+  int tinit,tlast,nbinMin, nbinMax;
   // looping over local list of detectors
   tinit = 0;
   tlast = detnsamples[0] -1;
@@ -182,17 +215,18 @@ int Tlist_init(TemplateClass *X, int ndet, int *detnsamples, int *detnsweeps,
     tinit += detnsamples[i];
     tlast += detnsamples[i];
   }
+  return 0;
 }
 /* Build polynomial template class instance */
 int Polyinit(TemplateClass *X, int tinit, int tlast, int nbinMin, int nbinMax,
   int *sweeptstamps, double sampling_freq, int order){
 
-  char flag[256];
-  char flag_w[256];
+  char *flag = (char *) malloc(10 * sizeof(char));
+  char *flag_w = (char *) malloc(10 * sizeof(char));
   int *bins;
   double *wghts;
   sprintf(flag,"NULL");
-  sprinf(flag_w,"OTF");
+  sprintf(flag_w,"OTF");
   TCinit(X, tinit, tlast, nbinMin, nbinMax, 1, flag, flag, flag ,flag_w, flag);
   X->order = order;
   if(strcmp(X->flag_w,"S")==0){ // Stored weights
@@ -200,6 +234,7 @@ int Polyinit(TemplateClass *X, int tinit, int tlast, int nbinMin, int nbinMax,
     wghts = (double *) calloc(X->nsamples * X->nmult, sizeof(double));
     expandpolydata(X, bins, wghts, sweeptstamps, sampling_freq, order);
   }
+  return 0;
 }
 /* Build Templates Classes objects */
 int TCinit(TemplateClass *X, int tinit, int tlast, int nbinMin, int nbinMax,
@@ -218,16 +253,22 @@ int TCinit(TemplateClass *X, int tinit, int tlast, int nbinMin, int nbinMax,
   X->flag_dataset = flag_dataset;
   X->flag_w = flag_w;
   X->ID = ID;
+
+  return 0;
 }
 /* Build bins and weights profile for a polynomial template nmult = 1 for now */
 int expandpolydata(TemplateClass *X ,int *bins, double *wghts,
-  int *sweepstamps, double sampling_freq, int order){
+  int *sweeptstamps, double sampling_freq, int order){
 
   int i, j;
   for(i=0;i<X->nbins;i++){
     for(j=sweeptstamps[i];j<sweeptstamps[i+1];j++){
       bins[j] = X->nbinMin + i;
-      wghts[j] = Legendre(j*sampling_freq, sweepstamps[i]*sampling_freq, sweepstamps[i+1]*sampling_freq, order);
+      // printf("expandpoly: bins[%d]=%d\n",j,bins[j]);
+      wghts[j] = Legendre(j*sampling_freq, sweeptstamps[i]*sampling_freq, sweeptstamps[i+1]*sampling_freq, order);
+      // printf("expandpoly: wghts[%d]=%f\n",j,wghts[j]);
+
     }
   }
+  return 0;
 }

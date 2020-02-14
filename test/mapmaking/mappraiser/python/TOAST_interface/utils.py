@@ -24,6 +24,8 @@ def add_mappraiser_args(parser):
     )
     parser.add_argument("--ref", required=False, default="run0", help="Output maps references"
     )
+    parser.add_argument("--map-maker",dest="map_maker", required=False, default="ML", help="Map-making procedure"
+    )
     parser.add_argument("--Lambda", required=False, default=16384, type=np.int, help="Half bandwidth (lambda) of noise covariance"
     )
     parser.add_argument("--solver", required=False, default=0, type=np.int, help="Choose map-making solver: 0->PCG, 1->ECG"
@@ -96,6 +98,7 @@ def setup_mappraiser(args):
     """
     params = {}
 
+    params["map-maker"] = args.map_maker
     params["nside"] = args.nside
     params["Lambda"] = args.Lambda
     params["samplerate"] = args.sample_rate
