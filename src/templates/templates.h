@@ -48,6 +48,9 @@ int BuildKernel(TemplateClass *X, int n, double *B, double w, int *sweeptstamps,
 /* Inverting the Kernel Blocks */
 int InvKernel(double *B, int n, double *Binv);
 
+void transpose_nn(double *A, int n);
+int inverse_svd(int m, int n, int lda,  double *a);
+
 double P0(double x);
 
 double P1(double x);

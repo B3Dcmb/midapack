@@ -527,7 +527,7 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
   //Templates classes initialization
   st=MPI_Wtime();
   //hardcoded parameters to be changed later on
-  int npoly = 1;
+  int npoly = 11;
   int *detnsweeps = (int *) malloc(nb_blocks_loc * sizeof(int));
   for(i=0;i<nb_blocks_loc;i++){
     detnsweeps[i] = nsweeps;
@@ -550,10 +550,11 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
     BuildKernel(X+i*npoly, npoly, B+i*(npoly*nsweeps)*(npoly*nsweeps), Nm1.tpltzblocks[i].T_block[0], sweeptstamps, sampling_freq);
     // printf("i=%d, af kernel\n",i);
     // fflush(stdout);
-    // for( j = 0; j < 5; j++ ) {
-    //         for( k = 0; k < 5; k++ ) printf( " %6.2f", (B+i*(npoly*nsweeps)*(npoly*nsweeps))[j*npoly*nsweeps+k] );
+    // if(i==0 && rank ==0){
+    // for( j = 78; j < 78+5; j++ ) {
+    //         for( k = 78; k < 78+5; k++ ) printf( " %6.2f", (B+i*(npoly*nsweeps)*(npoly*nsweeps))[j*npoly*nsweeps+k] );
     //         printf( "\n" );
-    // }
+    // }}
     // printf("i=%d, af init\n",i);
     // printf("bf: nbins = %d\n",(X+1)->nbins);
     // printf("bf: nbinMin = %d\n",(X+1)->nbinMin);
@@ -562,18 +563,19 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
     // printf("bf: flagw = %s\n",(X+1)->flag_w);
     // fflush(stdout);
 
+    // printf("[rank %d] Effective rank of local kernel block %d = %d\n",rank, i, inverse_svd(npoly*nsweeps, npoly*nsweeps, npoly*nsweeps,  B+i*(npoly*nsweeps)*(npoly*nsweeps)));
     printf("[rank %d] Effective rank of local kernel block %d = %d\n",rank, i, InvKernel(B+i*(npoly*nsweeps)*(npoly*nsweeps), npoly*nsweeps, Binv));
     // printf("af: nbins = %d\n",(X+1)->nbins);
     // printf("af: nbinMin = %d\n",(X+1)->nbinMin);
     // printf("af: nbinMax = %d\n",(X+1)->nbinMax);
     // printf("af: nsamples = %d\n",(X+1)->nsamples);
     // printf("af: flagw = %s\n",(X+1)->flag_w);
-    // fflush(stdout);
+    fflush(stdout);
 
     // printf("%d rank kernel = %d, access block = %f\n",i, rang, block[npoly*nsweeps*77+77]);
     // printf("%d rank kernel = %d\n",i, InvKernel(block, npoly*nsweeps, Binv));
     for(j=0;j<(npoly*nsweeps)*(npoly*nsweeps);j++){
-      // printf("B[%d] = %f\n",j,(B+i*(npoly*nsweeps)*(npoly*nsweeps))[j]);
+    //   // printf("B[%d] = %f\n",j,(B+i*(npoly*nsweeps)*(npoly*nsweeps))[j]);
       B[i*(npoly*nsweeps)*(npoly*nsweeps)+j] = Binv[j];
       Binv[j] = 0;
     }

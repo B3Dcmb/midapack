@@ -27,14 +27,17 @@ int TVecProd(TemplateClass *X, int m, double sampling_freq, int *sweeptstamps,
   double *tau, double *out){
 
   int i,j,k;
+  //initialization of output vector
+  for(i=X->tinit;i<=(X+m-1)->tlast;i++)
+    out[i] = 0;
+  //operation
   for(k=0;k<m;k++){
     if(strcmp((X+k)->flag_w,"OTF") == 0){
       (X+k)->bins = (int *) calloc((X+k)->nsamples * (X+k)->nmult, sizeof(int));
       (X+k)->wghts = (double *) calloc((X+k)->nsamples * (X+k)->nmult, sizeof(double));
-      expandpolydata(X+k, (X+k)->bins, (X+k)->wghts, sweeptstamps, sampling_freq, X->order);
+      expandpolydata(X+k, (X+k)->bins, (X+k)->wghts, sweeptstamps, sampling_freq, (X+k)->order);
     }
     for(i=0;i<(X+k)->nsamples;i++){
-      out[(X+k)->tinit + i] = 0;
       for(j=0;j<(X+k)->nmult;j++){
         out[(X+k)->tinit + i] += (X+k)->wghts[i * (X+k)->nmult + j] * tau[(X+k)->bins[i * (X+k)->nmult + j]];
       }
@@ -56,7 +59,7 @@ int TrTVecProd(TemplateClass *X, int m, double sampling_freq, int *sweeptstamps,
     if(strcmp((X+k)->flag_w,"OTF") == 0){
       (X+k)->bins = (int *) calloc((X+k)->nsamples * (X+k)->nmult, sizeof(int));
       (X+k)->wghts = (double *) calloc((X+k)->nsamples * (X+k)->nmult, sizeof(double));
-      expandpolydata(X+k, (X+k)->bins, (X+k)->wghts, sweeptstamps, sampling_freq, X->order);
+      expandpolydata(X+k, (X+k)->bins, (X+k)->wghts, sweeptstamps, sampling_freq, (X+k)->order);
     }
     // initialize output vector
     for(i=(X+k)->nbinMin;i<=(X+k)->nbinMax;i++)
@@ -80,24 +83,35 @@ int BuildKernel(TemplateClass *X, int n, double *B, double w, int *sweeptstamps,
   // n : number of template classes in one kernel Block (1 det data in 1 CES)
   int i,j,l,k;
   int m1,m2;
+  double sum=0;
   for(k=0;k<n;k++){
     if(strcmp((X+k)->flag_w,"OTF") == 0){
       // printf("I'm here");
       // fflush(stdout);
       (X+k)->bins = (int *) calloc((X+k)->nsamples * (X+k)->nmult, sizeof(int));
       (X+k)->wghts = (double *) calloc((X+k)->nsamples * (X+k)->nmult, sizeof(double));
-      expandpolydata(X+k, (X+k)->bins, (X+k)->wghts, sweeptstamps, sampling_freq, X->order);
+      expandpolydata(X+k, (X+k)->bins, (X+k)->wghts, sweeptstamps, sampling_freq, (X+k)->order);
     }
     for(l=0;l<n;l++){
       if((strcmp((X+l)->flag_w,"OTF") == 0) && (l!=k)){
         (X+l)->bins = (int *) calloc((X+k)->nsamples * (X+l)->nmult, sizeof(int));
         (X+l)->wghts = (double *) calloc((X+k)->nsamples * (X+l)->nmult, sizeof(double));
-        expandpolydata(X+l, (X+l)->bins, (X+l)->wghts, sweeptstamps, sampling_freq, X->order);
+        expandpolydata(X+l, (X+l)->bins, (X+l)->wghts, sweeptstamps, sampling_freq, (X+l)->order);
       }
-      // for(i=0;i<10;i++){
-      //   printf("bins[%d] = %d\n",i,X->bins[i]);
-      //   printf("wghts[%d] = %f\n",i,X->wghts[i]);
+      // if((X+l)->order == 1){
+      //   for(i=0;i<10;i++){
+      //     printf("bins[%d] = %d\n",i,(X+l)->bins[i]);
+      //     printf("wghts[%d] = %f\n",i,(X+l)->wghts[i]);
+      //   }
       // }
+      // if((X+l)->order == 1){
+      //   for(i=0;i<sweeptstamps[1];i++){
+      //     printf("wghts[%d] = %6.2f\n",i,(X+l)->wghts[i]);
+      //     sum += (X+l)->wghts[i];
+      //   }
+      //   printf("sum wgths = %6.2f\n",sum);
+      // }
+
 
       for(i=0;i<(X+k)->nsamples;i++){
         for(m1=0;m1<(X+k)->nmult;m1++){
@@ -158,6 +172,112 @@ int InvKernel(double *B, int n, double *Binv){
   free(s);
   return rank;
 }
+
+void transpose_nn(double *A, int n)
+{
+    int i, j;
+    double temp;
+
+    for(i = 0; i < n-1 ; i++)
+        for (j = i+1; j < n; j++)
+        {
+            temp = A[i*n+j];
+            A[i*n+j] = A[j*n+i];
+            A[j*n+i] = temp;
+        }
+
+}
+/* Test inverse routine */
+int inverse_svd(int m, int n, int lda,  double *a)
+{
+    // A = UDVt
+    // A = USVt
+    int i, j, k;
+    int rank;
+
+    // Setup a buffer to hold the singular values:
+    int nsv = m < n ? m : n;
+    double *s = malloc(nsv * sizeof(double)); // = D
+
+    // Setup buffers to hold the matrices U and Vt:
+    double *u = malloc(m*m * sizeof(double)); // = U
+    double *vt = malloc(n*n * sizeof(double));
+
+    // Workspace and status variables:
+    /*
+    double workSize;//
+    double *work = &workSize;//
+    int lwork = -1;//
+    int *iwork = malloc(8 * nsv * sizeof(int));//
+    */
+    //double *superb = malloc((nsv-1) * sizeof(double));
+
+
+
+    int info = 0;
+
+    transpose_nn(a, m);
+
+    info = LAPACKE_dgesdd(LAPACK_COL_MAJOR, 'A', m, n, a, lda, s, u, m, vt, n);
+    //info = LAPACKE_dgesvd(LAPACK_COL_MAJOR, 'A', 'A', m, n, a, lda, s, u, m, vt, n, superb);
+    /*
+    // Call dgesdd_ with lwork = -1 to query optimal workspace size:
+    dgesvd_("A", "A", &m, &n, a, &lda, s, u, &m, vt, &n, work, &lwork, &info);
+    //dgesdd_("A", &m, &n, a, &lda, s, u, &m, vt, &n, work, &lwork, iwork, &info);
+ // info = LAPACKE_dgesdd_work(LAPACK_COL_MAJOR, 'A', m, n, a, lda, s, u, m, vt, n, work, lwork, iwork);
+     //info = LAPACKE_dgesdd(LAPACK_COL_MAJOR, 'A', m, n, a, lda, s, u, m, vt, n);
+    if (info > 0) {
+        printf( "The algorithm computing SVD failed to converge (1).\n" );
+        exit(1);
+    }
+    // Optimal workspace size is returned in work[0].
+    lwork = workSize;
+    work = malloc(lwork * sizeof(double));
+    // Call dgesdd_ to do the actual computation:
+    dgesvd_("A", "A", &m, &n, a, &lda, s, u, &m, vt, &n, work, &lwork, &info);
+    //dgesdd_("A", &m, &n, a, &lda, s, u, &m, vt, &n, work, &lwork, iwork, &info);
+
+    */
+
+    if (info > 0) {
+        printf( "The algorithm computing SVD failed to converge (1).\n" );
+        exit(1);
+    }
+    if (info < 0)
+    { printf( "General error .\n" );
+        exit(1);
+    }
+
+    // Cleanup workspace:
+    // free(work);
+    // free(iwork);
+
+    // Computing S-1
+    for (k = 0; k < nsv; ++k) {
+        if (fabs(s[k]) < 1.0e-15) s[k] = 0.0;
+        else {
+          s[k] = 1.0 / s[k];
+          rank++;
+        }
+    }
+
+    // do something useful with U, S, Vt ...
+    for (i = 0; i < n; i++) {
+        for (j = 0; j < m; j++) {
+            a[i * m + j] = 0.0;
+            for (k = 0; k < n; k++) {
+                a[i * m + j] += vt[i * m + k] * s[k] * u[k * m + j];
+            }
+        }
+    }
+
+    // and then clean them up too:
+    free(s);
+    free(u);
+    free(vt);
+return rank;
+}
+
 /* Define Legendre Polynomials */
 double P0(double x){
     return 1;
@@ -265,7 +385,7 @@ int expandpolydata(TemplateClass *X ,int *bins, double *wghts,
     for(j=sweeptstamps[i];j<sweeptstamps[i+1];j++){
       bins[j] = X->nbinMin + i;
       // printf("expandpoly: bins[%d]=%d\n",j,bins[j]);
-      wghts[j] = Legendre(j*sampling_freq, sweeptstamps[i]*sampling_freq, sweeptstamps[i+1]*sampling_freq, order);
+      wghts[j] = Legendre(j*sampling_freq, sweeptstamps[i]*sampling_freq, (sweeptstamps[i+1]-1)*sampling_freq, order);
       // printf("expandpoly: wghts[%d]=%f\n",j,wghts[j]);
 
     }

@@ -412,7 +412,8 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz Nm1, TemplateClass
   // for(i=0;i<npoly*nsweeps*nb_blocks_loc;i++)
   //   out2[i] = 1+0.01*(i%nsweeps);
   // TVecProd(X, npoly * nb_blocks_loc, sampling_freq, sweeptstamps, out2, b);
-
+  // for(i=0;i<10;i++)
+  //   printf("b[%d] = %f\n",i,b[i]);
   MatVecProd(A, x, _g, 0);		//
   // for(i=0; i<10; i++){//
   //     printf("MatVecProd: _g[%d] = %f\n",i,_g[i]);
@@ -484,17 +485,27 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz Nm1, TemplateClass
   // }
 
   // if(rank==0){
-  //   char fdet0filename[256];
-  //   char fdetnfilename[256];
-  //   FILE *fp2,*fp3;
-  //   sprintf(fdet0filename,"%s/det0_data_filtered.dat",outpath);
-  //   sprintf(fdetnfilename,"%s/det%d_data_filtered.dat",outpath,Nm1.nb_blocks_loc-1);
-  //   fp2=fopen(fdet0filename, "wb");
-  //   fp3=fopen(fdetnfilename, "wb");
+  //   char fdet0filename_filtered[256];
+  //   char fdetnfilename_filtered[256];
+  //   char fdet0filename_fit[256];
+  //   char fdetnfilename_fit[256];
+  //   FILE *fp2,*fp3,*fp4,*fp5;
+  //   sprintf(fdet0filename_filtered,"%s/det0_data_filtered.dat",outpath);
+  //   sprintf(fdetnfilename_filtered,"%s/det%d_data_filtered.dat",outpath,Nm1.nb_blocks_loc-1);
+  //   sprintf(fdet0filename_fit,"%s/det0_data_fit.dat",outpath);
+  //   sprintf(fdetnfilename_fit,"%s/det%d_data_fit.dat",outpath,Nm1.nb_blocks_loc-1);
+  //   fp2=fopen(fdet0filename_filtered, "wb");
+  //   fp3=fopen(fdetnfilename_filtered, "wb");
+  //   fp4=fopen(fdet0filename_fit, "wb");
+  //   fp5=fopen(fdetnfilename_fit, "wb");
   //   fwrite(_g, sizeof(double), Nm1.tpltzblocks[0].n, fp2);
   //   fwrite(_g+Nm1.tpltzblocks[Nm1.nb_blocks_loc-1].idv, sizeof(double), Nm1.tpltzblocks[Nm1.nb_blocks_loc-1].n, fp3);
+  //   fwrite(Tvec, sizeof(double), Nm1.tpltzblocks[0].n, fp4);
+  //   fwrite(Tvec+Nm1.tpltzblocks[Nm1.nb_blocks_loc-1].idv, sizeof(double), Nm1.tpltzblocks[Nm1.nb_blocks_loc-1].n, fp5);
   //   fclose(fp2);
   //   fclose(fp3);
+  //   fclose(fp4);
+  //   fclose(fp5);
   // }
 
 
