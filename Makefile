@@ -7,13 +7,21 @@ MIDAPACK_ROOT=$(PREFIX)/midapack
 MIDAPACK_OBJ=$(MIDAPACK_ROOT)/obj
 MAPMAT_OBJ=$(MIDAPACK_OBJ)/mapmat
 TOEPLITZ_OBJ=$(MIDAPACK_OBJ)/toeplitz
+TEMPLATES_OBJ=$(MIDAPACK_OBJ)/templates
 MIDAPACK_LIB=$(MIDAPACK_ROOT)/lib
+
+# linking MKL library
+MKL_DIR=/opt/intel/mkl
+MKL_INC              = $(MKL_DIR)/include
+MKL_LIB              = $(MKL_DIR)/lib/intel64
+LIBMKL 							= -L$(MKL_LIB) -lmkl_rt
 
 all :
 	@echo "starts compiling ........"
-	mkdir -p $(MIDAPACK_ROOT) $(MIDAPACK_OBJ) $(MAPMAT_OBJ) $(TOEPLITZ_OBJ) $(MIDAPACK_LIB)
+	mkdir -p $(MIDAPACK_ROOT) $(MIDAPACK_OBJ) $(MAPMAT_OBJ) $(TOEPLITZ_OBJ) $(TEMPLATES_OBJ) $(MIDAPACK_LIB)
 	make mapmat
 	make toeplitz
+	make templates
 	make lib
 
 example :
@@ -42,6 +50,9 @@ mapmat_test: ./test/mapmat/ ./src/mapmat/
 mapmat_example: ./lib
 	make example -C test/mapmat/
 
+templates: ./src/templates/
+	make -C ./src/templates/
+
 
 lib:
 	ar r $(MIDAPACK_LIB)/$(LIBNAME).a $(MAPMAT_OBJ)/mapmat.o $(MAPMAT_OBJ)/mapmatc.o \
@@ -56,7 +67,7 @@ lib:
 				$(MAPMAT_OBJ)/ring.o $(MAPMAT_OBJ)/butterfly.o $(TOEPLITZ_OBJ)/toeplitz.o $(TOEPLITZ_OBJ)/toeplitz_seq.o \
 				$(TOEPLITZ_OBJ)/toeplitz_block.o $(TOEPLITZ_OBJ)/toeplitz_nofft.o $(TOEPLITZ_OBJ)/toeplitz_gappy.o \
 				$(TOEPLITZ_OBJ)/toeplitz_params.o $(TOEPLITZ_OBJ)/toeplitz_rshp.o $(TOEPLITZ_OBJ)/toeplitz_utils.o \
-				$(TOEPLITZ_OBJ)/toeplitz_wizard.o $(FFTW_LIB) -o $(MIDAPACK_LIB)/$(LIBNAME).so
+				$(TOEPLITZ_OBJ)/toeplitz_wizard.o $(TEMPLATES_OBJ)/templates.o $(FFTW_LIB) $(LIBMKL) -o $(MIDAPACK_LIB)/$(LIBNAME).so
 
 seq :
 	make mapmat
@@ -66,6 +77,7 @@ seq :
 clean:
 	make clean -C ./src/toeplitz
 	make clean -C ./src/mapmat
+	make clean -C ./src/templates
 	make clean -C ./test/toeplitz
 	make clean -C ./test/mapmat
 	rm $(MIDAPACK_LIB)/*midapack.*
