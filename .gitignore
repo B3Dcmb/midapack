@@ -43,5 +43,6 @@ test/toeplitz/*
 Makefile
 src/mapmat/Makefile
 src/toeplitz/Makefile
+src/templates/Makefile
 test/mapmaking/mappraiser/Makefile
 test/mapmaking/mappraiser/src/Makefile
