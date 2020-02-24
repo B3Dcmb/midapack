@@ -6,7 +6,6 @@
  * @credit  ANR-B3DCMB
  * @description Defining algebra routines for the filtering operations
  */
-
 /*****************************************************************************/
 /*                                  INCLUDE                                  */
 /*****************************************************************************/
@@ -17,8 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-
+#include <time.h>
 /******************************************************************************/
 /*                          Defining Algebra routines                         */
 /******************************************************************************/
@@ -286,7 +284,7 @@ double P0(double x){
 double P1(double x){
     return x;
 }
-//The following is a general functoin that returns the value of the Legendre Polynomial for any given x and n=0,1,2,3,...
+//The following is a general function that returns the value of the Legendre Polynomial for any given x and n=0,1,2,3,...
 double Pn(double x, int n){
     if(n==0){
         return P0(x);
