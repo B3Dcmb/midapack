@@ -218,7 +218,7 @@ class OpMappraiser(Operator):
             nside,
         ) = self._prepare()
 
-        data_size_proc, nobsloc, local_blocks_sizes, signal_type, noise_type, pixels_dtype, sweeptstamps, nsweeps, weight_dtype = self._stage_data(
+        data_size_proc, nobsloc, local_blocks_sizes, signal_type, noise_type, pixels_dtype, sweeptstamps, nsweeps, nces, weight_dtype = self._stage_data(
             nsamp,
             ndet,
             nnz,
@@ -231,7 +231,7 @@ class OpMappraiser(Operator):
         if self._params["map-maker"] == 'ML':
             self._MLmap(data_size_proc, nobsloc*ndet, local_blocks_sizes, nnz)
         elif self._params["map-maker"] == 'MT':
-            self._MTmap(sweeptstamps, nsweeps, data_size_proc, nobsloc*ndet, local_blocks_sizes, nnz)
+            self._MTmap(sweeptstamps, nsweeps, nces, data_size_proc, nobsloc*ndet, local_blocks_sizes, nnz)
         else:
             raise RuntimeError(
                 "Unvalid Map-making technique please choose:"
@@ -261,7 +261,7 @@ class OpMappraiser(Operator):
             memreport("just before calling libmappraiser.MLmap", self._comm)
 
         # Compute the Maximum Likelihood map
-        # os.environ["OMP_NUM_THREADS"] = "1"
+        os.environ["OMP_NUM_THREADS"] = "1"
         mappraiser.MLmap(
             self._comm,
             self._params,
@@ -281,19 +281,20 @@ class OpMappraiser(Operator):
         return
 
     @function_timer
-    def _MTmap(self, sweeptstamps, nsweeps, data_size_proc, nb_blocks_loc, local_blocks_sizes, nnz):
+    def _MTmap(self, sweeptstamps, nsweeps, nces, data_size_proc, nb_blocks_loc, local_blocks_sizes, nnz):
         """ Compute the Marginalized templates map
         """
         if self._verbose:
             memreport("just before calling libmappraiser.MTmap", self._comm)
 
         # Compute the marginalized templates map
-        # os.environ["OMP_NUM_THREADS"] = "1"
+        os.environ["OMP_NUM_THREADS"] = "1"
         mappraiser.MTmap(
             self._comm,
             self._params,
             sweeptstamps,
             nsweeps,
+            nces,
             data_size_proc,
             nb_blocks_loc,
             local_blocks_sizes,
@@ -651,10 +652,14 @@ class OpMappraiser(Operator):
         self._mappraiser_pixels[:] = -1
 
         global_offset = 0
+        nces = 0
+        sweeptstamps_list = []
+        nsweeps_list = []
         for iobs, obs in enumerate(self._data.obs): #assume only one obs per process for now
             tod = obs["tod"]
 
             # commonflags = None
+            nces += 1
             sweeptstamps = [0]
             commonflags = tod.local_common_flags(self._common_flag_name)
             for iflg, flg in enumerate(commonflags[:-1]):
@@ -663,6 +668,9 @@ class OpMappraiser(Operator):
             sweeptstamps.append(len(commonflags))
             nsweeps = len(sweeptstamps)-1
             sweeptstamps = np.array(sweeptstamps, dtype=np.int32)
+
+            sweeptstamps_list.append(sweeptstamps)
+            nsweeps_list.append(nsweeps)
 
             for idet, det in enumerate(detectors):
                 # Optionally get the flags, otherwise they are
@@ -729,7 +737,11 @@ class OpMappraiser(Operator):
             if self._purge_flags and self._common_flag_name is not None:
                 tod.cache.clear(self._common_flag_name)
             global_offset = offset
-        return pixels_dtype, sweeptstamps, nsweeps
+
+        sweeptstamps_list = np.array(sweeptstamps_list)
+        nsweeps_list = np.array(nsweeps_list)
+
+        return pixels_dtype, sweeptstamps_list, nsweeps_list, nces
 
     @function_timer
     def _stage_pixweights(
@@ -889,7 +901,7 @@ class OpMappraiser(Operator):
             nodecomm.Barrier()
             timer.start()
             if nodecomm.rank % nread == iread:
-                pixels_dtype, sweeptstamps, nsweeps = self._stage_pixels(
+                pixels_dtype, sweeptstamps, nsweeps, nces = self._stage_pixels(
                     detectors, nsamp, ndet, nnz, nside
                 )
             if self._verbose and nread > 1:
@@ -949,7 +961,7 @@ class OpMappraiser(Operator):
         # Get number of local observations
         nobsloc = len(self._data.obs)
 
-        return data_size_proc, nobsloc, local_blocks_sizes, signal_dtype, noise_dtype, pixels_dtype, sweeptstamps, nsweeps, weight_dtype
+        return data_size_proc, nobsloc, local_blocks_sizes, signal_dtype, noise_dtype, pixels_dtype, sweeptstamps, nsweeps, nces, weight_dtype
 
     @function_timer
     def _unstage_signal(self, detectors, nsamp, signal_type):

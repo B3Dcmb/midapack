@@ -17,6 +17,7 @@ WEIGHT_TYPE = np.float64
 INVTT_TYPE = np.float64
 TIMESTAMP_TYPE = np.float64
 PSD_TYPE = np.float64
+array_ptrs_type = npc.ndpointer(dtype=np.uintp, ndim=1, flags='C')
 
 try:
     _mappraiser = ct.CDLL("libmappraiser.so")
