@@ -324,7 +324,7 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz Nm1, TemplateClass
   int 		i, j, k, l ;			// some indexes
   int		m, n, rank, size;
   double 	localreduce;			//reduce buffer
-  double	st, t;				//timers
+  double	st, t,t2,st2;				//timers
   double	solve_time;
   double	res, res0, *res_rel;
   double *tmp;
@@ -439,17 +439,32 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz Nm1, TemplateClass
   //   fclose(fp1);
   // }
 
-
-  stbmmProd(Nm1, _g);		// _g = Nm1 (b-Ax)
+  st2=MPI_Wtime();
+  int t_id = 0; //time sample index in local data
+  for(i=0;i<nb_blocks_loc;i++){
+    for(j=0;j<Nm1.tpltzblocks[i].n;j++){
+      _g[t_id+j] = Nm1.tpltzblocks[i].T_block[0] * _g[t_id+j];
+    }
+    t_id += Nm1.tpltzblocks[i].n;
+  }
+  // stbmmProd(Nm1, _g);		// _g = Nm1 (b-Ax)
   // for(i=0; i<10; i++){//
   //     printf("Nm1*_g: _g[%d] = %f\n",i,_g[i]);
   // }
+  t2 = MPI_Wtime();
+  if(rank==0)
+    printf("Nm1 * v, t=%lf\n",t2-st2);
 
+  st2=MPI_Wtime();
   TrTVecProd(X, npoly * nb_blocks_loc, sampling_freq, sweeptstamps, _g, out1);
   // for(i=0; i<10; i++){//
   //     printf("TrT*_g: out1[%d] = %f\n",i,out1[i]);
   // }
+  t2 = MPI_Wtime();
+  if(rank==0)
+    printf("Tt * v, t=%lf\n",t2-st2);
 
+  st2 = MPI_Wtime();
   for(i=0;i<nb_blocks_loc;i++){
     for(j=0;j<(npoly*nsweeps);j++){
       out2[i*(npoly*nsweeps) + j] = 0;
@@ -460,21 +475,39 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz Nm1, TemplateClass
       //   printf("(TtMT)^-1 * out1: out2[%d] = %f\n",i*(npoly*nsweeps) + j,out2[i*(npoly*nsweeps) + j]);
     }
   }
+  t2 = MPI_Wtime();
+  if(rank==0)
+    printf("(Tt N^-1 T)^-1 * v, t=%lf\n",t2-st2);
 
   // for(i=0; i<10; i++){//
   //     printf("(TtMT)^-1 * out1: out2[%d] = %f\n",i,out2[i]);
   // }
-
+  st2 = MPI_Wtime();
   TVecProd(X, npoly * nb_blocks_loc, sampling_freq, sweeptstamps, out2, Tvec);
   // for(i=0; i<10; i++){//
   //     printf("(T*out2: Tvec[%d] = %f\n",i,Tvec[i]);
   // }
+  t2 = MPI_Wtime();
+  if(rank==0)
+    printf("T * v, t=%lf\n",t2-st2);
 
-  stbmmProd(Nm1, Tvec);
+  st2 = MPI_Wtime();
+  t_id = 0; //time sample index in local data
+  for(i=0;i<nb_blocks_loc;i++){
+    for(j=0;j<Nm1.tpltzblocks[i].n;j++){
+      Tvec[t_id+j] = Nm1.tpltzblocks[i].T_block[0] * Tvec[t_id+j];
+    }
+    t_id += Nm1.tpltzblocks[i].n;
+  }
+  // stbmmProd(Nm1, Tvec);
   // for(i=0; i<10; i++){//
   //     printf("(Nm1*Tvec: Tvec[%d] = %f\n",i,Tvec[i]);
   // }
+  t2 = MPI_Wtime();
+  if(rank==0)
+    printf("N^-1 * v, t=%lf\n",t2-st2);
 
+  st2 = MPI_Wtime();
   for(i=0;i<m;i++){
     _g[i] = _g[i] - Tvec[i];
     // _g[i] = b[i] + noise[i] - Tvec[i];
@@ -483,7 +516,9 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz Nm1, TemplateClass
   // for(i=0; i<10; i++){//
   //     printf("_g -= Tvec: _g[%d] = %f\n",i,_g[i]);
   // }
-
+  t2 = MPI_Wtime();
+  if(rank==0)
+    printf("_g-=Tvec, t=%lf\n",t2-st2);
   // if(rank==0){
   //   char fdet0filename_filtered[256];
   //   char fdetnfilename_filtered[256];
@@ -586,7 +621,14 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz Nm1, TemplateClass
     // for(i=0; i<8; i++){//
     //     printf("MatVecProd: Ah[%d] = %f\n",i,Ah[i]);
     // }
-    stbmmProd(Nm1, Nm1Ah);		// Nm1Ah = Nm1 Ah   (Nm1Ah == Ah)
+    t_id = 0; //time sample index in local data
+    for(i=0;i<nb_blocks_loc;i++){
+      for(j=0;j<Nm1.tpltzblocks[i].n;j++){
+        Nm1Ah[t_id+j] = Nm1.tpltzblocks[i].T_block[0] * Nm1Ah[t_id+j];
+      }
+      t_id += Nm1.tpltzblocks[i].n;
+    }
+    // stbmmProd(Nm1, Nm1Ah);		// Nm1Ah = Nm1 Ah   (Nm1Ah == Ah)
     // for(i=0; i<8; i++){//
     //     printf("Nm1Ah: Nm1Ah[%d] = %f\n",i,Nm1Ah[i]);
     // }
@@ -604,7 +646,14 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz Nm1, TemplateClass
 
     TVecProd(X, npoly * nb_blocks_loc, sampling_freq, sweeptstamps, out2, Tvec);
 
-    stbmmProd(Nm1, Tvec);
+    t_id = 0; //time sample index in local data
+    for(i=0;i<nb_blocks_loc;i++){
+      for(j=0;j<Nm1.tpltzblocks[i].n;j++){
+        Tvec[t_id+j] = Nm1.tpltzblocks[i].T_block[0] * Tvec[t_id+j];
+      }
+      t_id += Nm1.tpltzblocks[i].n;
+    }
+    // stbmmProd(Nm1, Tvec);
 
     for(i=0;i<m;i++)
       Nm1Ah[i] = Nm1Ah[i] - Tvec[i];

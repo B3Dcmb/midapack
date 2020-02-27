@@ -236,7 +236,6 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
   }
 
   if (rank==0){
-    int nside=512;
     int npix = 12*pow(nside,2);
     int oldsize;
 
@@ -527,7 +526,7 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
   //Templates classes initialization
   st=MPI_Wtime();
   //hardcoded parameters to be changed later on
-  int npoly = 11;
+  int npoly = 5;
   int *detnsweeps = (int *) malloc(nb_blocks_loc * sizeof(int));
   for(i=0;i<nb_blocks_loc;i++){
     detnsweeps[i] = nsweeps;
@@ -564,7 +563,10 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
     // fflush(stdout);
 
     // printf("[rank %d] Effective rank of local kernel block %d = %d\n",rank, i, inverse_svd(npoly*nsweeps, npoly*nsweeps, npoly*nsweeps,  B+i*(npoly*nsweeps)*(npoly*nsweeps)));
-    printf("[rank %d] Effective rank of local kernel block %d = %d\n",rank, i, InvKernel(B+i*(npoly*nsweeps)*(npoly*nsweeps), npoly*nsweeps, Binv));
+    if(rank==0)
+      printf("[rank %d] Effective rank of local kernel block %d = %d\n",rank, i, InvKernel(B+i*(npoly*nsweeps)*(npoly*nsweeps), npoly*nsweeps, Binv));
+    else
+      InvKernel(B+i*(npoly*nsweeps)*(npoly*nsweeps), npoly*nsweeps, Binv);
     // printf("af: nbins = %d\n",(X+1)->nbins);
     // printf("af: nbinMin = %d\n",(X+1)->nbinMin);
     // printf("af: nbinMax = %d\n",(X+1)->nbinMax);
@@ -629,7 +631,6 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
   }
 
   if (rank==0){
-    int nside=512;
     int npix = 12*pow(nside,2);
     int oldsize;
 
