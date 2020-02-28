@@ -21,56 +21,60 @@
 /*                          Defining Algebra routines                         */
 /******************************************************************************/
 /* Projecting templates amplitudes in time domain */
-int TVecProd(TemplateClass *X, int m, double sampling_freq, int *sweeptstamps,
+int TVecProd(TemplateClass *X, int nces, int m, double sampling_freq, int **sweeptstamps,
   double *tau, double *out){
 
-  int i,j,k;
+  int i,j,k,ces_id;
   //initialization of output vector
-  for(i=X->tinit;i<=(X+m-1)->tlast;i++)
+  for(i=X->tinit;i<=(X+nces*m-1)->tlast;i++)
     out[i] = 0;
   //operation
-  for(k=0;k<m;k++){
-    if(strcmp((X+k)->flag_w,"OTF") == 0){
-      (X+k)->bins = (int *) calloc((X+k)->nsamples * (X+k)->nmult, sizeof(int));
-      (X+k)->wghts = (double *) calloc((X+k)->nsamples * (X+k)->nmult, sizeof(double));
-      expandpolydata(X+k, (X+k)->bins, (X+k)->wghts, sweeptstamps, sampling_freq, (X+k)->order);
-    }
-    for(i=0;i<(X+k)->nsamples;i++){
-      for(j=0;j<(X+k)->nmult;j++){
-        out[(X+k)->tinit + i] += (X+k)->wghts[i * (X+k)->nmult + j] * tau[(X+k)->bins[i * (X+k)->nmult + j]];
+  for(ces_id=0;ces_id<nces;ces_id++){
+    for(k=0;k<m;k++){
+      if(strcmp((X+(ces_id*m+k))->flag_w,"OTF") == 0){
+        (X+(ces_id*m+k))->bins = (int *) calloc((X+(ces_id*m+k))->nsamples * (X+(ces_id*m+k))->nmult, sizeof(int));
+        (X+(ces_id*m+k))->wghts = (double *) calloc((X+(ces_id*m+k))->nsamples * (X+(ces_id*m+k))->nmult, sizeof(double));
+        expandpolydata(X+(ces_id*m+k), (X+(ces_id*m+k))->bins, (X+(ces_id*m+k))->wghts, sweeptstamps[ces_id], sampling_freq, (X+(ces_id*m+k))->order);
       }
-    }
-    if(strcmp((X+k)->flag_w,"OTF") == 0){
-      free((X+k)->bins);
-      free((X+k)->wghts);
+      for(i=0;i<(X+(ces_id*m+k))->nsamples;i++){
+        for(j=0;j<(X+(ces_id*m+k))->nmult;j++){
+          out[(X+(ces_id*m+k))->tinit + i] += (X+(ces_id*m+k))->wghts[i * (X+(ces_id*m+k))->nmult + j] * tau[(X+(ces_id*m+k))->bins[i * (X+(ces_id*m+k))->nmult + j]];
+        }
+      }
+      if(strcmp((X+(ces_id*m+k))->flag_w,"OTF") == 0){
+        free((X+(ces_id*m+k))->bins);
+        free((X+(ces_id*m+k))->wghts);
+      }
     }
   }
   return 0;
 }
 
 /* Projecting time domain in templates space */
-int TrTVecProd(TemplateClass *X, int m, double sampling_freq, int *sweeptstamps,
+int TrTVecProd(TemplateClass *X, int nces, int m, double sampling_freq, int **sweeptstamps,
   double *d, double *out){
 
-  int i,j,k;
-  for(k=0;k<m;k++){
-    if(strcmp((X+k)->flag_w,"OTF") == 0){
-      (X+k)->bins = (int *) calloc((X+k)->nsamples * (X+k)->nmult, sizeof(int));
-      (X+k)->wghts = (double *) calloc((X+k)->nsamples * (X+k)->nmult, sizeof(double));
-      expandpolydata(X+k, (X+k)->bins, (X+k)->wghts, sweeptstamps, sampling_freq, (X+k)->order);
-    }
-    // initialize output vector
-    for(i=(X+k)->nbinMin;i<=(X+k)->nbinMax;i++)
-      out[i] = 0;
-
-    for(i=0;i<(X+k)->nsamples;i++){
-      for(j=0;j<(X+k)->nmult;j++){
-        out[(X+k)->bins[i * (X+k)->nmult + j]] += (X+k)->wghts[i * (X+k)->nmult + j] * d[(X+k)->tinit + i];
+  int i,j,k,ces_id;
+  for(ces_id=0;ces_id<nces;ces_id++){
+    for(k=0;k<m;k++){
+      if(strcmp((X+(ces_id*m+k))->flag_w,"OTF") == 0){
+        (X+(ces_id*m+k))->bins = (int *) calloc((X+(ces_id*m+k))->nsamples * (X+(ces_id*m+k))->nmult, sizeof(int));
+        (X+(ces_id*m+k))->wghts = (double *) calloc((X+(ces_id*m+k))->nsamples * (X+(ces_id*m+k))->nmult, sizeof(double));
+        expandpolydata(X+(ces_id*m+k), (X+(ces_id*m+k))->bins, (X+(ces_id*m+k))->wghts, sweeptstamps[ces_id], sampling_freq, (X+(ces_id*m+k))->order);
       }
-    }
-    if(strcmp((X+k)->flag_w,"OTF") == 0){
-      free((X+k)->bins);
-      free((X+k)->wghts);
+      // initialize output vector
+      for(i=(X+(ces_id*m+k))->nbinMin;i<=(X+(ces_id*m+k))->nbinMax;i++)
+        out[i] = 0;
+
+        for(i=0;i<(X+(ces_id*m+k))->nsamples;i++){
+          for(j=0;j<(X+(ces_id*m+k))->nmult;j++){
+            out[(X+(ces_id*m+k))->bins[i * (X+(ces_id*m+k))->nmult + j]] += (X+(ces_id*m+k))->wghts[i * (X+(ces_id*m+k))->nmult + j] * d[(X+(ces_id*m+k))->tinit + i];
+          }
+        }
+        if(strcmp((X+(ces_id*m+k))->flag_w,"OTF") == 0){
+          free((X+(ces_id*m+k))->bins);
+          free((X+(ces_id*m+k))->wghts);
+        }
     }
   }
   return 0;
@@ -311,27 +315,29 @@ double Legendre(double x, double a, double b, int n){
     N.B: Will introduce nground, nhwp and ncustom when we implement support for
     other templates classes types. Flags are ignored for now.
 */
-int Tlist_init(TemplateClass *X, int ndet, int *detnsamples, int *detnsweeps,
-  int *sweeptstamps, double sampling_freq, int npoly){
+int Tlist_init(TemplateClass *X, int ndet, int nces, int *block_nsamples, int **detnsweeps,
+  int **sweeptstamps, double sampling_freq, int npoly){
 
-  int i,j;
+  int i,j,k;
   int tinit,tlast,nbinMin, nbinMax;
   // looping over local list of detectors
   tinit = 0;
-  tlast = detnsamples[0] -1;
+  tlast = block_nsamples[0] -1;
   nbinMin = 0;
-  nbinMax = detnsweeps[0]-1;
-  for(i=0;i<ndet;i++){
-    // looping over polynomial templates for each detector
-    for(j=0;j<npoly;j++){
-      // looping over polynomial orders
-      // For each order build the corresponding polynomial template class
-      Polyinit((X + (i*npoly) + j), tinit, tlast, nbinMin, nbinMax, sweeptstamps, sampling_freq, j);
-      nbinMin += detnsweeps[i];
-      nbinMax += detnsweeps[i];
+  nbinMax = detnsweeps[0][0]-1;
+  for(i=0;i<nces;i++){
+    for(j=0;j<ndet;j++){
+      // looping over polynomial templates for each detector
+      for(k=0;k<npoly;k++){
+        // looping over polynomial orders
+        // For each order build the corresponding polynomial template class
+        Polyinit((X + ((i*ndet+j)*npoly) + k), tinit, tlast, nbinMin, nbinMax, sweeptstamps[i], sampling_freq, k);
+        nbinMin += detnsweeps[i][j];
+        nbinMax += detnsweeps[i][j];
+      }
+      tinit += block_nsamples[i*ndet+j];
+      tlast += block_nsamples[i*ndet+j];
     }
-    tinit += detnsamples[i];
-    tlast += detnsamples[i];
   }
   return 0;
 }

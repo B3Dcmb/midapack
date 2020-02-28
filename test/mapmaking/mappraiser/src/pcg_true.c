@@ -319,9 +319,9 @@ fflush(stdout);
   return 0;
 }
 
-int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz Nm1, TemplateClass *X, double *B, int *sweeptstamps, int npoly, int nsweeps, int nb_blocks_loc, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K, double sampling_freq)
+int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz Nm1, TemplateClass *X, double *B, int **sweeptstamps, int npoly, int *nsweeps, int nces, int nb_blocks_loc, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K, double sampling_freq)
 {
-  int 		i, j, k, l ;			// some indexes
+  int 		i, j, k, l, ces_id ;			// some indexes
   int		m, n, rank, size;
   double 	localreduce;			//reduce buffer
   double	st, t,t2,st2;				//timers
@@ -354,6 +354,7 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz Nm1, TemplateClass
   // c = (double *) malloc(n*sizeof(double));
   Mat BJ;
 
+  int ndet = nb_blocks_loc / nces;
 
 // for no preconditionner:
  // for(j=0; j<n; j++)                    //
@@ -379,8 +380,11 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz Nm1, TemplateClass
   AtNm1Ah = (double *) malloc(n * sizeof(double));
 
   //templates domain
-  double *out1 = (double *) malloc(npoly * nsweeps * nb_blocks_loc * sizeof(double));
-  double *out2 = (double *) malloc(npoly * nsweeps * nb_blocks_loc * sizeof(double));
+  int nb_templates_loc = 0;
+  for(i=0;i<nces;i++)
+    nb_templates_loc += npoly * ndet * nsweeps[i];
+  double *out1 = (double *) malloc(nb_templates_loc * sizeof(double));
+  double *out2 = (double *) malloc(nb_templates_loc * sizeof(double));
 
   //time domain
   Ah = (double *) malloc(m * sizeof(double));
@@ -409,9 +413,13 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz Nm1, TemplateClass
   st=MPI_Wtime();
 
   // to test that we get zero residual for template modes
-  // for(i=0;i<npoly*nsweeps*nb_blocks_loc;i++)
-  //   out2[i] = 1+0.01*(i%nsweeps);
-  // TVecProd(X, npoly * nb_blocks_loc, sampling_freq, sweeptstamps, out2, b);
+  // int cumul_offset = 0;
+  // for(ces_id=0;ces_id<nces;ces_id++){
+  //   for(i=0;i<npoly*nsweeps[ces_id]*ndet;i++)
+  //     out2[cumul_offset+i] = 1+0.01*(i%nsweeps[ces_id]);
+  //   cumul_offset += npoly*nsweeps[ces_id]*ndet;
+  // }
+  // TVecProd(X, nces, npoly * ndet, sampling_freq, sweeptstamps, out2, b);
   // for(i=0;i<10;i++)
   //   printf("b[%d] = %f\n",i,b[i]);
   MatVecProd(A, x, _g, 0);		//
@@ -456,7 +464,7 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz Nm1, TemplateClass
     printf("Nm1 * v, t=%lf\n",t2-st2);
 
   st2=MPI_Wtime();
-  TrTVecProd(X, npoly * nb_blocks_loc, sampling_freq, sweeptstamps, _g, out1);
+  TrTVecProd(X, nces, npoly * ndet, sampling_freq, sweeptstamps, _g, out1);
   // for(i=0; i<10; i++){//
   //     printf("TrT*_g: out1[%d] = %f\n",i,out1[i]);
   // }
@@ -465,14 +473,16 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz Nm1, TemplateClass
     printf("Tt * v, t=%lf\n",t2-st2);
 
   st2 = MPI_Wtime();
-  for(i=0;i<nb_blocks_loc;i++){
-    for(j=0;j<(npoly*nsweeps);j++){
-      out2[i*(npoly*nsweeps) + j] = 0;
-      for(k=0;k<(npoly*nsweeps);k++){
-        out2[i*(npoly*nsweeps) + j] += B[i*(npoly*nsweeps)*(npoly*nsweeps) + j*(npoly*nsweeps) + k] * out1[i*(npoly*nsweeps) + k];
+  for(ces_id=0;ces_id<nces;ces_id++){
+    for(i=0;i<ndet;i++){
+      for(j=0;j<(npoly*nsweeps[ces_id]);j++){
+        out2[(ces_id*ndet+i)*(npoly*nsweeps[ces_id]) + j] = 0;
+        for(k=0;k<(npoly*nsweeps[ces_id]);k++){
+          out2[(ces_id*ndet+i)*(npoly*nsweeps[ces_id]) + j] += B[(ces_id*ndet+i)*(npoly*nsweeps[ces_id])*(npoly*nsweeps[ces_id]) + j*(npoly*nsweeps[ces_id]) + k] * out1[(ces_id*ndet+i)*(npoly*nsweeps[ces_id]) + k];
+        }
+        // if(out2[i*(npoly*nsweeps) + j]>1+1e-15 || out2[i*(npoly*nsweeps) + j] <1-1e-15)
+        //   printf("(TtMT)^-1 * out1: out2[%d] = %f\n",i*(npoly*nsweeps) + j,out2[i*(npoly*nsweeps) + j]);
       }
-      // if(out2[i*(npoly*nsweeps) + j]>1+1e-15 || out2[i*(npoly*nsweeps) + j] <1-1e-15)
-      //   printf("(TtMT)^-1 * out1: out2[%d] = %f\n",i*(npoly*nsweeps) + j,out2[i*(npoly*nsweeps) + j]);
     }
   }
   t2 = MPI_Wtime();
@@ -483,7 +493,7 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz Nm1, TemplateClass
   //     printf("(TtMT)^-1 * out1: out2[%d] = %f\n",i,out2[i]);
   // }
   st2 = MPI_Wtime();
-  TVecProd(X, npoly * nb_blocks_loc, sampling_freq, sweeptstamps, out2, Tvec);
+  TVecProd(X, nces, npoly * ndet, sampling_freq, sweeptstamps, out2, Tvec);
   // for(i=0; i<10; i++){//
   //     printf("(T*out2: Tvec[%d] = %f\n",i,Tvec[i]);
   // }
@@ -633,18 +643,20 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz Nm1, TemplateClass
     //     printf("Nm1Ah: Nm1Ah[%d] = %f\n",i,Nm1Ah[i]);
     // }
 
-    TrTVecProd(X, npoly * nb_blocks_loc, sampling_freq, sweeptstamps, Nm1Ah, out1);
+    TrTVecProd(X, nces, npoly * ndet, sampling_freq, sweeptstamps, Nm1Ah, out1);
 
-    for(i=0;i<nb_blocks_loc;i++){
-      for(j=0;j<(npoly*nsweeps);j++){
-        out2[i*(npoly*nsweeps) + j] = 0;
-        for(l=0;l<(npoly*nsweeps);l++){
-          out2[i*(npoly*nsweeps) + j] += B[i*(npoly*nsweeps)*(npoly*nsweeps) + j*(npoly*nsweeps) + l] * out1[i*(npoly*nsweeps) + l];
+    for(ces_id=0;ces_id<nces;ces_id++){
+      for(i=0;i<ndet;i++){
+        for(j=0;j<(npoly*nsweeps[ces_id]);j++){
+          out2[(ces_id*ndet+i)*(npoly*nsweeps[ces_id]) + j] = 0;
+          for(l=0;l<(npoly*nsweeps[ces_id]);l++){
+            out2[(ces_id*ndet+i)*(npoly*nsweeps[ces_id]) + j] += B[(ces_id*ndet+i)*(npoly*nsweeps[ces_id])*(npoly*nsweeps[ces_id]) + j*(npoly*nsweeps[ces_id]) + l] * out1[(ces_id*ndet+i)*(npoly*nsweeps[ces_id]) + l];
+          }
         }
       }
     }
 
-    TVecProd(X, npoly * nb_blocks_loc, sampling_freq, sweeptstamps, out2, Tvec);
+    TVecProd(X, nces, npoly * ndet, sampling_freq, sweeptstamps, out2, Tvec);
 
     t_id = 0; //time sample index in local data
     for(i=0;i<nb_blocks_loc;i++){

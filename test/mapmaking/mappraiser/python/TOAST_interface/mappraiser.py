@@ -738,8 +738,8 @@ class OpMappraiser(Operator):
                 tod.cache.clear(self._common_flag_name)
             global_offset = offset
 
-        sweeptstamps_list = np.array(sweeptstamps_list)
-        nsweeps_list = np.array(nsweeps_list)
+        sweeptstamps_list = np.array(sweeptstamps_list, dtype=np.int32)
+        nsweeps_list = np.array(nsweeps_list, dtype=np.int32)
 
         return pixels_dtype, sweeptstamps_list, nsweeps_list, nces
 
