@@ -134,7 +134,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
       cond[(int)(j/3)] = 0.;
     }
   }
-
+  // printf("[rank %d] npix = %d\n",rank,A.lcount);
 //Create piecewise Toeplitz matrix
 //specifics parameters:
   int nb_blocks_tot = Nb_t_Intervals;
@@ -468,7 +468,7 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
       cond[(int)(j/3)] = 0.;
     }
   }
-
+  // printf("[rank %d] npix = %d\n",rank,A.lcount);
 //Create piecewise Toeplitz matrix
 //specifics parameters:
   int nb_blocks_tot = Nb_t_Intervals;
@@ -537,6 +537,7 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
   st=MPI_Wtime();
   //hardcoded parameters to be changed later on
   int npoly = 3;
+  double sigma2;
   int ndet = nb_blocks_loc / nces;
   int **detnsweeps = (int **) malloc(nces * sizeof(int*));
   for(i=0;i<nces;i++){
@@ -572,6 +573,8 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
       // printf("i=%d, bf kernel\n",i);
       // fflush(stdout);
       BuildKernel(X+(i*ndet+j)*npoly, npoly, B+(i*ndet+j)*(npoly*nsweeps[i])*(npoly*nsweeps[i]), Nm1.tpltzblocks[i*ndet+j].T_block[0], sweeptstamps[i], sampling_freq);
+      if((i==0) && (j==0))
+        sigma2 = B[0];
       // printf("i=%d, af kernel\n",i);
       // fflush(stdout);
       // if(i==0 && rank ==0){
@@ -586,6 +589,10 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
       // printf("bf: nsamples = %d\n",(X+1)->nsamples);
       // printf("bf: flagw = %s\n",(X+1)->flag_w);
       // fflush(stdout);
+      for(k=0;k<(npoly*nsweeps)*(npoly*nsweeps);k++){
+      //   // printf("B[%d] = %f\n",j,(B+i*(npoly*nsweeps)*(npoly*nsweeps))[j]);
+        B[(i*ndet+j)*(npoly*nsweeps[i])*(npoly*nsweeps[i])+k] += sigma2;
+      }
 
       // printf("[rank %d] Effective rank of local kernel block %d = %d\n",rank, i, inverse_svd(npoly*nsweeps, npoly*nsweeps, npoly*nsweeps,  B+i*(npoly*nsweeps)*(npoly*nsweeps)));
       if(rank==0)
