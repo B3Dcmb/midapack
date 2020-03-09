@@ -589,7 +589,7 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
       // printf("bf: nsamples = %d\n",(X+1)->nsamples);
       // printf("bf: flagw = %s\n",(X+1)->flag_w);
       // fflush(stdout);
-      for(k=0;k<(npoly*nsweeps)*(npoly*nsweeps);k++){
+      for(k=0;k<(npoly*nsweeps[i])*(npoly*nsweeps[i]);k++){
       //   // printf("B[%d] = %f\n",j,(B+i*(npoly*nsweeps)*(npoly*nsweeps))[j]);
         B[(i*ndet+j)*(npoly*nsweeps[i])*(npoly*nsweeps[i])+k] += sigma2;
       }
