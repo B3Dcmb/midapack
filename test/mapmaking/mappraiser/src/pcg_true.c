@@ -319,7 +319,7 @@ fflush(stdout);
   return 0;
 }
 
-int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz Nm1, TemplateClass *X, double *B, int **sweeptstamps, int npoly, int *nsweeps, int nces, int nb_blocks_loc, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K, double sampling_freq)
+int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz Nm1, TemplateClass *X, double *B, int **sweeptstamps, int npoly, int *nsweeps, int **az_binned, int n_sss_bins, int nces, int nb_blocks_loc, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K, double sampling_freq)
 {
   int 		i, j, k, l, ces_id ;			// some indexes
   int		m, n, rank, size;
@@ -382,7 +382,7 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz Nm1, TemplateClass
   //templates domain
   int nb_templates_loc = 0;
   for(i=0;i<nces;i++)
-    nb_templates_loc += npoly * ndet * nsweeps[i];
+    nb_templates_loc += ndet * (npoly*nsweeps[i] + n_sss_bins);
   double *out1 = (double *) malloc(nb_templates_loc * sizeof(double));
   double *out2 = (double *) malloc(nb_templates_loc * sizeof(double));
 
@@ -415,11 +415,11 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz Nm1, TemplateClass
   // to test that we get zero residual for template modes
   // int cumul_offset = 0;
   // for(ces_id=0;ces_id<nces;ces_id++){
-  //   for(i=0;i<npoly*nsweeps[ces_id]*ndet;i++)
-  //     out2[cumul_offset+i] = 1+0.01*(i%nsweeps[ces_id]);
-  //   cumul_offset += npoly*nsweeps[ces_id]*ndet;
+  //   for(i=0;i<(npoly*nsweeps[ces_id]+n_sss_bins)*ndet;i++)
+  //     out2[cumul_offset+i] = 1+0.01*(i%n_sss_bins);
+  //   cumul_offset += (npoly*nsweeps[ces_id]+n_sss_bins)*ndet;
   // }
-  // TVecProd(X, nces, npoly * ndet, sampling_freq, sweeptstamps, out2, b);
+  // TVecProd(X, nces, (npoly+1) * ndet, sampling_freq, sweeptstamps, az_binned, out2, noise);
   // for(i=0;i<10;i++)
   //   printf("b[%d] = %f\n",i,b[i]);
   MatVecProd(A, x, _g, 0);		//
@@ -463,22 +463,25 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz Nm1, TemplateClass
   if(rank==0)
     printf("Nm1 * v, t=%lf\n",t2-st2);
 
+
   st2=MPI_Wtime();
-  TrTVecProd(X, nces, npoly * ndet, sampling_freq, sweeptstamps, _g, out1);
-  // for(i=0; i<10; i++){//
+  TrTVecProd(X, nces, (npoly+1) * ndet, sampling_freq, sweeptstamps, az_binned, _g, out1);
+  // for(i=78*3; i<78*3+10; i++){//
   //     printf("TrT*_g: out1[%d] = %f\n",i,out1[i]);
   // }
   t2 = MPI_Wtime();
   if(rank==0)
     printf("Tt * v, t=%lf\n",t2-st2);
 
+
+
   st2 = MPI_Wtime();
   for(ces_id=0;ces_id<nces;ces_id++){
     for(i=0;i<ndet;i++){
-      for(j=0;j<(npoly*nsweeps[ces_id]);j++){
-        out2[(ces_id*ndet+i)*(npoly*nsweeps[ces_id]) + j] = 0;
-        for(k=0;k<(npoly*nsweeps[ces_id]);k++){
-          out2[(ces_id*ndet+i)*(npoly*nsweeps[ces_id]) + j] += B[(ces_id*ndet+i)*(npoly*nsweeps[ces_id])*(npoly*nsweeps[ces_id]) + j*(npoly*nsweeps[ces_id]) + k] * out1[(ces_id*ndet+i)*(npoly*nsweeps[ces_id]) + k];
+      for(j=0;j<(npoly*nsweeps[ces_id])+n_sss_bins;j++){
+        out2[(ces_id*ndet+i)*(npoly*nsweeps[ces_id]+n_sss_bins) + j] = 0;
+        for(k=0;k<(npoly*nsweeps[ces_id])+n_sss_bins;k++){
+          out2[(ces_id*ndet+i)*(npoly*nsweeps[ces_id]+n_sss_bins) + j] += B[(ces_id*ndet+i)*(npoly*nsweeps[ces_id]+n_sss_bins)*(npoly*nsweeps[ces_id]+n_sss_bins) + j*(npoly*nsweeps[ces_id]+n_sss_bins) + k] * out1[(ces_id*ndet+i)*(npoly*nsweeps[ces_id]+n_sss_bins) + k];
         }
         // if(out2[i*(npoly*nsweeps) + j]>1+1e-15 || out2[i*(npoly*nsweeps) + j] <1-1e-15)
         //   printf("(TtMT)^-1 * out1: out2[%d] = %f\n",i*(npoly*nsweeps) + j,out2[i*(npoly*nsweeps) + j]);
@@ -493,7 +496,7 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz Nm1, TemplateClass
   //     printf("(TtMT)^-1 * out1: out2[%d] = %f\n",i,out2[i]);
   // }
   st2 = MPI_Wtime();
-  TVecProd(X, nces, npoly * ndet, sampling_freq, sweeptstamps, out2, Tvec);
+  TVecProd(X, nces, (npoly+1) * ndet, sampling_freq, sweeptstamps, az_binned, out2, Tvec);
   // for(i=0; i<10; i++){//
   //     printf("(T*out2: Tvec[%d] = %f\n",i,Tvec[i]);
   // }
@@ -558,6 +561,7 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz Nm1, TemplateClass
   // for(i=0; i<10; i++){			//
   //     printf("At*_g: index = %d, g[%d] = %.18f\n", A->lindices[i], i, g[i]);
   // }
+
 //COMMENT
   MatVecProd(&BJ, g, Cg, 0);
   // for(j=0; j<n; j++)                    //
@@ -565,7 +569,6 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz Nm1, TemplateClass
   // for(i=3360; i<3380; i++){
   //     printf("index = %d , Cg[%d]=%.18f\n", A->lindices[i], i, Cg[i]);
   // }
-
 
   for(j=0; j<n; j++)   		        //  h = -Cg
     h[j]=Cg[j];
@@ -643,20 +646,20 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz Nm1, TemplateClass
     //     printf("Nm1Ah: Nm1Ah[%d] = %f\n",i,Nm1Ah[i]);
     // }
 
-    TrTVecProd(X, nces, npoly * ndet, sampling_freq, sweeptstamps, Nm1Ah, out1);
+    TrTVecProd(X, nces, (npoly+1) * ndet, sampling_freq, sweeptstamps, az_binned, Nm1Ah, out1);
 
     for(ces_id=0;ces_id<nces;ces_id++){
       for(i=0;i<ndet;i++){
-        for(j=0;j<(npoly*nsweeps[ces_id]);j++){
-          out2[(ces_id*ndet+i)*(npoly*nsweeps[ces_id]) + j] = 0;
-          for(l=0;l<(npoly*nsweeps[ces_id]);l++){
-            out2[(ces_id*ndet+i)*(npoly*nsweeps[ces_id]) + j] += B[(ces_id*ndet+i)*(npoly*nsweeps[ces_id])*(npoly*nsweeps[ces_id]) + j*(npoly*nsweeps[ces_id]) + l] * out1[(ces_id*ndet+i)*(npoly*nsweeps[ces_id]) + l];
+        for(j=0;j<(npoly*nsweeps[ces_id]+n_sss_bins);j++){
+          out2[(ces_id*ndet+i)*(npoly*nsweeps[ces_id]+n_sss_bins) + j] = 0;
+          for(l=0;l<(npoly*nsweeps[ces_id]+n_sss_bins);l++){
+            out2[(ces_id*ndet+i)*(npoly*nsweeps[ces_id]+n_sss_bins) + j] += B[(ces_id*ndet+i)*(npoly*nsweeps[ces_id]+n_sss_bins)*(npoly*nsweeps[ces_id]+n_sss_bins) + j*(npoly*nsweeps[ces_id]+n_sss_bins) + l] * out1[(ces_id*ndet+i)*(npoly*nsweeps[ces_id]+n_sss_bins) + l];
           }
         }
       }
     }
 
-    TVecProd(X, nces, npoly * ndet, sampling_freq, sweeptstamps, out2, Tvec);
+    TVecProd(X, nces, (npoly+1) * ndet, sampling_freq, sweeptstamps, az_binned, out2, Tvec);
 
     t_id = 0; //time sample index in local data
     for(i=0;i<nb_blocks_loc;i++){

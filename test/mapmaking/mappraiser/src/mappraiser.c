@@ -366,12 +366,12 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
   // MPI_Finalize();
 }
 
-void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_commflag, double tol, int maxiter, int enlFac, int ortho_alg, int bs_red, int nside, int **sweeptstamps, int *nsweeps, int nces, void *data_size_proc, int nb_blocks_loc, void *local_blocks_sizes, int Nnz, void *pix, void *pixweights, void *signal, double *noise, double sampling_freq, double *invtt)
+void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_commflag, double tol, int maxiter, int enlFac, int ortho_alg, int bs_red, int nside, int **sweeptstamps, int *nsweeps, double **az, double *az_min, double *az_max, int nces, void *data_size_proc, int nb_blocks_loc, void *local_blocks_sizes, int Nnz, void *pix, void *pixweights, void *signal, double *noise, double sampling_freq, double *invtt)
 {
   int64_t	M;       //Global number of rows
   int		m, Nb_t_Intervals;  //local number of rows of the pointing matrix A, nbr of stationary intervals
   int64_t	gif;			//global indice for the first local line
-  int		i, j, k;
+  int		i, j, k, l;
   Mat	A;			        //pointing matrix structure
   int 		*id0pix, *ll;
   double	*x;	//pixel domain vectors
@@ -536,50 +536,54 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
   //Templates classes initialization
   st=MPI_Wtime();
   //hardcoded parameters to be changed later on
-  int npoly = 3;
+  int npoly = 5;
+  int n_sss_bins = 100;
   double sigma2;
   int ndet = nb_blocks_loc / nces;
   int **detnsweeps = (int **) malloc(nces * sizeof(int*));
+  int *ces_length = (int *) malloc(nces * sizeof(int));
   for(i=0;i<nces;i++){
     detnsweeps[i] = (int *) malloc(ndet * sizeof(int));
     for(j=0;j<ndet;j++)
       detnsweeps[i][j] = nsweeps[i];
+    ces_length[i] = sweeptstamps[i][nsweeps[i]];
   }
+  int **az_binned = bin_az(az, az_min, az_max, ces_length, n_sss_bins, nces);
 
-  //Allocate memory to the templates classes instances
-  TemplateClass *X = (TemplateClass *) malloc(npoly * nb_blocks_loc * sizeof(TemplateClass));
+  //Allocate memory to the templates classes instances (polynomials + SSS template)
+  TemplateClass *X = (TemplateClass *) malloc((npoly+1) * nb_blocks_loc * sizeof(TemplateClass));
 
   //Initialize templates classes list
-  Tlist_init(X, ndet, nces, (int *)local_blocks_sizes, detnsweeps, sweeptstamps, sampling_freq, npoly);
+  Tlist_init(X, ndet, nces, (int *)local_blocks_sizes, detnsweeps, sweeptstamps, n_sss_bins, az_binned, sampling_freq, npoly);
 
   //Allocate memory for the list of kernel blocks and inv block container
   int global_size_kernel = 0;
+  int id_kernelblock = 0;
   for(i=0;i<nces;i++){
-    global_size_kernel += ndet * (npoly * nsweeps[i]) * (npoly * nsweeps[i]);
+    global_size_kernel += ndet * (npoly*nsweeps[i] + n_sss_bins) * (npoly*nsweeps[i] + n_sss_bins);
   }
   double *B = (double *) calloc(global_size_kernel, sizeof(double));
-  double *Binv = (double *) calloc((npoly*nsweeps[0])*(npoly*nsweeps[0]), sizeof(double));
+  double *Binv = (double *) calloc((npoly*nsweeps[0] + n_sss_bins)*(npoly*nsweeps[0] + n_sss_bins), sizeof(double));
 
   //Build the list of inverse kernel blocks
   for(i=0;i<nces;i++){
     if(i!=0){
-      Binv = (double *) realloc(Binv, (npoly*nsweeps[i])*(npoly*nsweeps[i])*sizeof(double));
+      Binv = (double *) realloc(Binv, (npoly*nsweeps[i] + n_sss_bins)*(npoly*nsweeps[i] + n_sss_bins)*sizeof(double));
       // init to zero
-      for(k=0;k<(npoly*nsweeps[i])*(npoly*nsweeps[i]);k++)
+      for(k=0;k<(npoly*nsweeps[i] + n_sss_bins)*(npoly*nsweeps[i] + n_sss_bins);k++)
         Binv[k] = 0;
     }
     // Processing detector blocks
     for(j=0;j<ndet;j++){
-      // printf("i=%d, bf kernel\n",i);
       // fflush(stdout);
-      BuildKernel(X+(i*ndet+j)*npoly, npoly, B+(i*ndet+j)*(npoly*nsweeps[i])*(npoly*nsweeps[i]), Nm1.tpltzblocks[i*ndet+j].T_block[0], sweeptstamps[i], sampling_freq);
+      BuildKernel(X+(i*ndet+j)*(npoly+1), npoly+1, B+id_kernelblock, Nm1.tpltzblocks[i*ndet+j].T_block[0], sweeptstamps[i], az_binned[i], sampling_freq);
       if((i==0) && (j==0))
         sigma2 = B[0];
       // printf("i=%d, af kernel\n",i);
       // fflush(stdout);
       // if(i==0 && rank ==0){
-      // for( j = 78; j < 78+5; j++ ) {
-      //         for( k = 78; k < 78+5; k++ ) printf( " %6.2f", (B+i*(npoly*nsweeps)*(npoly*nsweeps))[j*npoly*nsweeps+k] );
+      // for( l = 78*3; l < 78*3+5; l++ ) {
+      //         for( k = 78*3; k < 78*3+5; k++ ) printf( " %6.2f", (B+id_kernelblock)[l*(npoly*nsweeps[i] + n_sss_bins)+k] );
       //         printf( "\n" );
       // }}
       // printf("i=%d, af init\n",i);
@@ -589,16 +593,16 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
       // printf("bf: nsamples = %d\n",(X+1)->nsamples);
       // printf("bf: flagw = %s\n",(X+1)->flag_w);
       // fflush(stdout);
-      for(k=0;k<(npoly*nsweeps[i])*(npoly*nsweeps[i]);k++){
+      // for(k=0;k<(npoly*nsweeps[i] + n_sss_bins);k++){
       //   // printf("B[%d] = %f\n",j,(B+i*(npoly*nsweeps)*(npoly*nsweeps))[j]);
-        B[(i*ndet+j)*(npoly*nsweeps[i])*(npoly*nsweeps[i])+k] += sigma2;
-      }
+      //   B[id_kernelblock + k*(npoly*nsweeps[i] + n_sss_bins) + k] += sigma2;
+      // }
 
       // printf("[rank %d] Effective rank of local kernel block %d = %d\n",rank, i, inverse_svd(npoly*nsweeps, npoly*nsweeps, npoly*nsweeps,  B+i*(npoly*nsweeps)*(npoly*nsweeps)));
       if(rank==0)
-        printf("[rank %d] Effective rank of local kernel block %d = %d\n",rank, i*ndet+j, InvKernel(B+(i*ndet+j)*(npoly*nsweeps[i])*(npoly*nsweeps[i]), npoly*nsweeps[i], Binv));
+        printf("[rank %d] Effective rank of local kernel block %d = %d\n",rank, i*ndet+j, InvKernel(B+id_kernelblock, npoly*nsweeps[i] + n_sss_bins, Binv));
       else
-        InvKernel(B+(i*ndet+j)*(npoly*nsweeps[i])*(npoly*nsweeps[i]), npoly*nsweeps[i], Binv);
+        InvKernel(B+id_kernelblock, npoly*nsweeps[i] + n_sss_bins, Binv);
       // printf("af: nbins = %d\n",(X+1)->nbins);
       // printf("af: nbinMin = %d\n",(X+1)->nbinMin);
       // printf("af: nbinMax = %d\n",(X+1)->nbinMax);
@@ -608,11 +612,12 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
 
       // printf("%d rank kernel = %d, access block = %f\n",i, rang, block[npoly*nsweeps*77+77]);
       // printf("%d rank kernel = %d\n",i, InvKernel(block, npoly*nsweeps, Binv));
-      for(k=0;k<(npoly*nsweeps[i])*(npoly*nsweeps[i]);k++){
+      for(k=0;k<(npoly*nsweeps[i] + n_sss_bins)*(npoly*nsweeps[i] + n_sss_bins);k++){
       //   // printf("B[%d] = %f\n",j,(B+i*(npoly*nsweeps)*(npoly*nsweeps))[j]);
-        B[(i*ndet+j)*(npoly*nsweeps[i])*(npoly*nsweeps[i])+k] = Binv[k];
+        B[id_kernelblock+k] = Binv[k];
         Binv[k] = 0;
       }
+      id_kernelblock += (npoly*nsweeps[i] + n_sss_bins)*(npoly*nsweeps[i] + n_sss_bins);
     }
   }
 
@@ -630,7 +635,7 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
   st=MPI_Wtime();
 // Conjugate Gradient
   if(solver==0)
-    PCG_GLS_templates(outpath, ref, &A, Nm1, X, B, sweeptstamps, npoly, nsweeps, nces, nb_blocks_loc, x, signal, noise, cond, lhits, tol, maxiter, sampling_freq);
+    PCG_GLS_templates(outpath, ref, &A, Nm1, X, B, sweeptstamps, npoly, nsweeps, az_binned, n_sss_bins, nces, nb_blocks_loc, x, signal, noise, cond, lhits, tol, maxiter, sampling_freq);
   else{
     printf("ECG unavailable at this stage please choose the PCG solver: solver=0\n");
     exit(1);

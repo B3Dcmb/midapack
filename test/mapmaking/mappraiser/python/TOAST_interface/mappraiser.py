@@ -17,6 +17,7 @@ from toast.cache import Cache
 from toast.op import Operator
 from toast.timing import function_timer, Timer
 from toast.utils import Logger, memreport
+import toast.qarray as qa
 
 from numpy.fft import fft, fftfreq, fftshift
 from scipy import interpolate
@@ -218,7 +219,7 @@ class OpMappraiser(Operator):
             nside,
         ) = self._prepare()
 
-        data_size_proc, nobsloc, local_blocks_sizes, signal_type, noise_type, pixels_dtype, sweeptstamps, nsweeps, nces, weight_dtype = self._stage_data(
+        data_size_proc, nobsloc, local_blocks_sizes, signal_type, noise_type, pixels_dtype, sweeptstamps, nsweeps, az, az_min, az_max, nces, weight_dtype = self._stage_data(
             nsamp,
             ndet,
             nnz,
@@ -231,7 +232,7 @@ class OpMappraiser(Operator):
         if self._params["map-maker"] == 'ML':
             self._MLmap(data_size_proc, nobsloc*ndet, local_blocks_sizes, nnz)
         elif self._params["map-maker"] == 'MT':
-            self._MTmap(sweeptstamps, nsweeps, nces, data_size_proc, nobsloc*ndet, local_blocks_sizes, nnz)
+            self._MTmap(sweeptstamps, nsweeps, az, az_min, az_max, nces, data_size_proc, nobsloc*ndet, local_blocks_sizes, nnz)
         else:
             raise RuntimeError(
                 "Unvalid Map-making technique please choose:"
@@ -281,7 +282,7 @@ class OpMappraiser(Operator):
         return
 
     @function_timer
-    def _MTmap(self, sweeptstamps, nsweeps, nces, data_size_proc, nb_blocks_loc, local_blocks_sizes, nnz):
+    def _MTmap(self, sweeptstamps, nsweeps, az, az_min, az_max, nces, data_size_proc, nb_blocks_loc, local_blocks_sizes, nnz):
         """ Compute the Marginalized templates map
         """
         if self._verbose:
@@ -294,6 +295,9 @@ class OpMappraiser(Operator):
             self._params,
             sweeptstamps,
             nsweeps,
+            az,
+            az_min,
+            az_max,
             nces,
             data_size_proc,
             nb_blocks_loc,
@@ -655,6 +659,9 @@ class OpMappraiser(Operator):
         nces = 0
         sweeptstamps_list = []
         nsweeps_list = []
+        az_list = []
+        az_min_list = []
+        az_max_list = []
         for iobs, obs in enumerate(self._data.obs): #assume only one obs per process for now
             tod = obs["tod"]
 
@@ -671,6 +678,14 @@ class OpMappraiser(Operator):
 
             sweeptstamps_list.append(sweeptstamps)
             nsweeps_list.append(nsweeps)
+
+            qazel = tod.read_boresight_azel()
+            az = 180/np.pi *(2*np.pi-qa.to_position(qazel)[1])
+            az_list.append(az)
+            az_min_list.append(az.min())
+            az_max_list.append(az.max())
+
+
 
             for idet, det in enumerate(detectors):
                 # Optionally get the flags, otherwise they are
@@ -740,8 +755,11 @@ class OpMappraiser(Operator):
 
         sweeptstamps_list = np.array(sweeptstamps_list, dtype=np.int32)
         nsweeps_list = np.array(nsweeps_list, dtype=np.int32)
+        az_list = np.array(az_list)
+        az_min_list = np.array(az_min_list)
+        az_max_list = np.array(az_max_list)
 
-        return pixels_dtype, sweeptstamps_list, nsweeps_list, nces
+        return pixels_dtype, sweeptstamps_list, nsweeps_list, az_list, az_min_list, az_max_list, nces
 
     @function_timer
     def _stage_pixweights(
@@ -901,7 +919,7 @@ class OpMappraiser(Operator):
             nodecomm.Barrier()
             timer.start()
             if nodecomm.rank % nread == iread:
-                pixels_dtype, sweeptstamps, nsweeps, nces = self._stage_pixels(
+                pixels_dtype, sweeptstamps, nsweeps, az, az_min, az_max, nces = self._stage_pixels(
                     detectors, nsamp, ndet, nnz, nside
                 )
             if self._verbose and nread > 1:
@@ -961,7 +979,7 @@ class OpMappraiser(Operator):
         # Get number of local observations
         nobsloc = len(self._data.obs)
 
-        return data_size_proc, nobsloc, local_blocks_sizes, signal_dtype, noise_dtype, pixels_dtype, sweeptstamps, nsweeps, nces, weight_dtype
+        return data_size_proc, nobsloc, local_blocks_sizes, signal_dtype, noise_dtype, pixels_dtype, sweeptstamps, nsweeps, az, az_min, az_max, nces, weight_dtype
 
     @function_timer
     def _unstage_signal(self, detectors, nsamp, signal_type):

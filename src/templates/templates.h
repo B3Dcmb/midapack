@@ -35,15 +35,15 @@ int order; // temporary
 /******************************************************************************/
 /* Projecting templates amplitudes in time domain */
 int TVecProd(TemplateClass *X, int nces, int m, double sampling_freq, int **sweeptstamps,
-  double *tau, double *out);
+  int **az_binned, double *tau, double *out);
 
 /* Projecting time domain in templates space */
 int TrTVecProd(TemplateClass *X, int nces, int m, double sampling_freq, int **sweeptstamps,
-  double *d, double *out);
+  int **az_binned, double *d, double *out);
 
 /* Building Kernel Blocks */
 int BuildKernel(TemplateClass *X, int n, double *B, double w, int *sweeptstamps,
-  double sampling_freq);
+  int *az_binned, double sampling_freq);
 
 /* Inverting the Kernel Blocks */
 int InvKernel(double *B, int n, double *Binv);
@@ -62,16 +62,25 @@ double Legendre(double x, double a, double b, int n);
 /*        Utility routines for building templates classes objects             */
 /******************************************************************************/
 int Tlist_init(TemplateClass *X, int ndet, int nces, int *block_nsamples, int **detnsweeps,
-  int **sweeptstamps, double sampling_freq, int npoly);
+  int **sweeptstamps, int n_sss_bins, int **az_binned, double sampling_freq, int npoly);
 
 int Polyinit(TemplateClass *X, int tinit, int tlast, int nbinMin, int nbinMax,
   int *sweeptstamps, double sampling_freq, int order);
+
+int SSSinit(TemplateClass *X, int tinit, int tlast, int nbinMin, int nbinMax,
+  int *az_binned);
 
 /* Build Template Class object */
 int TCinit(TemplateClass *X, int tinit, int tlast, int nbinMin, int nbinMax,
   int nmult, char *flag_det, char *flag_CES, char* flag_dataset, char *flag_w,
   char *ID);
 
-
 int expandpolydata(TemplateClass *X ,int *bins, double *wghts,
   int *sweeptstamps, double sampling_freq, int order);
+
+int expandSSSdata(TemplateClass *X, int *bins, int *az_binned);
+
+int** bin_az(double **az, double *az_min, double *az_max, int *ces_length,
+  int n_sss_bins, int nces);
+
+int miin(int x, int y);

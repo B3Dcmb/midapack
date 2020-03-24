@@ -22,7 +22,7 @@
 /******************************************************************************/
 /* Projecting templates amplitudes in time domain */
 int TVecProd(TemplateClass *X, int nces, int m, double sampling_freq, int **sweeptstamps,
-  double *tau, double *out){
+  int **az_binned, double *tau, double *out){
 
   int i,j,k,ces_id;
   //initialization of output vector
@@ -33,17 +33,40 @@ int TVecProd(TemplateClass *X, int nces, int m, double sampling_freq, int **swee
     for(k=0;k<m;k++){
       if(strcmp((X+(ces_id*m+k))->flag_w,"OTF") == 0){
         (X+(ces_id*m+k))->bins = (int *) calloc((X+(ces_id*m+k))->nsamples * (X+(ces_id*m+k))->nmult, sizeof(int));
-        (X+(ces_id*m+k))->wghts = (double *) calloc((X+(ces_id*m+k))->nsamples * (X+(ces_id*m+k))->nmult, sizeof(double));
-        expandpolydata(X+(ces_id*m+k), (X+(ces_id*m+k))->bins, (X+(ces_id*m+k))->wghts, sweeptstamps[ces_id], sampling_freq, (X+(ces_id*m+k))->order);
-      }
-      for(i=0;i<(X+(ces_id*m+k))->nsamples;i++){
-        for(j=0;j<(X+(ces_id*m+k))->nmult;j++){
-          out[(X+(ces_id*m+k))->tinit + i] += (X+(ces_id*m+k))->wghts[i * (X+(ces_id*m+k))->nmult + j] * tau[(X+(ces_id*m+k))->bins[i * (X+(ces_id*m+k))->nmult + j]];
+        if(strcmp((X+(ces_id*m+k))->ID,"POLY") == 0){
+          (X+(ces_id*m+k))->wghts = (double *) calloc((X+(ces_id*m+k))->nsamples * (X+(ces_id*m+k))->nmult, sizeof(double));
+          expandpolydata(X+(ces_id*m+k), (X+(ces_id*m+k))->bins, (X+(ces_id*m+k))->wghts, sweeptstamps[ces_id], sampling_freq, (X+(ces_id*m+k))->order);
+        }
+        else if(strcmp((X+(ces_id*m+k))->ID,"SSS") == 0){
+          expandSSSdata(X+(ces_id*m+k), (X+(ces_id*m+k))->bins, az_binned[ces_id]);
         }
       }
+      //Case1: Polynomial template
+      if(strcmp((X+(ces_id*m+k))->ID,"POLY") == 0){
+        for(i=0;i<(X+(ces_id*m+k))->nsamples;i++){
+          for(j=0;j<(X+(ces_id*m+k))->nmult;j++){
+            out[(X+(ces_id*m+k))->tinit + i] += (X+(ces_id*m+k))->wghts[i * (X+(ces_id*m+k))->nmult + j] * tau[(X+(ces_id*m+k))->bins[i * (X+(ces_id*m+k))->nmult + j]];
+          }
+        }
+      }
+      //Case2: SSS template
+      else if(strcmp((X+(ces_id*m+k))->ID,"SSS") == 0){
+        for(i=0;i<(X+(ces_id*m+k))->nsamples;i++){
+          for(j=0;j<(X+(ces_id*m+k))->nmult;j++){
+            out[(X+(ces_id*m+k))->tinit + i] +=  tau[(X+(ces_id*m+k))->bins[i * (X+(ces_id*m+k))->nmult + j]];
+          }
+        }
+      }
+      // Else, something wrong is going on ...
+      else{
+        printf("Run time error while projecting templates in time domain: invalid template type, please verify templates ID\n");
+        exit(1);
+      }
+
       if(strcmp((X+(ces_id*m+k))->flag_w,"OTF") == 0){
         free((X+(ces_id*m+k))->bins);
-        free((X+(ces_id*m+k))->wghts);
+        if(strcmp((X+(ces_id*m+k))->ID,"POLY") == 0)
+          free((X+(ces_id*m+k))->wghts);
       }
     }
   }
@@ -52,36 +75,58 @@ int TVecProd(TemplateClass *X, int nces, int m, double sampling_freq, int **swee
 
 /* Projecting time domain in templates space */
 int TrTVecProd(TemplateClass *X, int nces, int m, double sampling_freq, int **sweeptstamps,
-  double *d, double *out){
+  int **az_binned, double *d, double *out){
 
   int i,j,k,ces_id;
   for(ces_id=0;ces_id<nces;ces_id++){
     for(k=0;k<m;k++){
       if(strcmp((X+(ces_id*m+k))->flag_w,"OTF") == 0){
         (X+(ces_id*m+k))->bins = (int *) calloc((X+(ces_id*m+k))->nsamples * (X+(ces_id*m+k))->nmult, sizeof(int));
-        (X+(ces_id*m+k))->wghts = (double *) calloc((X+(ces_id*m+k))->nsamples * (X+(ces_id*m+k))->nmult, sizeof(double));
-        expandpolydata(X+(ces_id*m+k), (X+(ces_id*m+k))->bins, (X+(ces_id*m+k))->wghts, sweeptstamps[ces_id], sampling_freq, (X+(ces_id*m+k))->order);
+        if(strcmp((X+(ces_id*m+k))->ID,"POLY") == 0){
+          (X+(ces_id*m+k))->wghts = (double *) calloc((X+(ces_id*m+k))->nsamples * (X+(ces_id*m+k))->nmult, sizeof(double));
+          expandpolydata(X+(ces_id*m+k), (X+(ces_id*m+k))->bins, (X+(ces_id*m+k))->wghts, sweeptstamps[ces_id], sampling_freq, (X+(ces_id*m+k))->order);
+        }
+        else if(strcmp((X+(ces_id*m+k))->ID,"SSS") == 0){
+          expandSSSdata(X+(ces_id*m+k), (X+(ces_id*m+k))->bins, az_binned[ces_id]);
+        }
       }
       // initialize output vector
       for(i=(X+(ces_id*m+k))->nbinMin;i<=(X+(ces_id*m+k))->nbinMax;i++)
         out[i] = 0;
-
+      //Case1: Polynomial template
+      if(strcmp((X+(ces_id*m+k))->ID,"POLY") == 0){
         for(i=0;i<(X+(ces_id*m+k))->nsamples;i++){
           for(j=0;j<(X+(ces_id*m+k))->nmult;j++){
             out[(X+(ces_id*m+k))->bins[i * (X+(ces_id*m+k))->nmult + j]] += (X+(ces_id*m+k))->wghts[i * (X+(ces_id*m+k))->nmult + j] * d[(X+(ces_id*m+k))->tinit + i];
           }
         }
-        if(strcmp((X+(ces_id*m+k))->flag_w,"OTF") == 0){
-          free((X+(ces_id*m+k))->bins);
-          free((X+(ces_id*m+k))->wghts);
+      }
+      //Case2: SSS template
+      else if(strcmp((X+(ces_id*m+k))->ID,"SSS") == 0){
+        for(i=0;i<(X+(ces_id*m+k))->nsamples;i++){
+          for(j=0;j<(X+(ces_id*m+k))->nmult;j++){
+            out[(X+(ces_id*m+k))->bins[i * (X+(ces_id*m+k))->nmult + j]] +=  d[(X+(ces_id*m+k))->tinit + i];
+          }
         }
+      }
+      // Else, something wrong is going on ...
+      else{
+        printf("Run time error while projecting templates in time domain: invalid template type, please verify templates ID\n");
+        exit(1);
+      }
+
+      if(strcmp((X+(ces_id*m+k))->flag_w,"OTF") == 0){
+        free((X+(ces_id*m+k))->bins);
+        if(strcmp((X+(ces_id*m+k))->ID,"POLY") == 0)
+          free((X+(ces_id*m+k))->wghts);
+      }
     }
   }
   return 0;
 }
 
 /* Building Kernel Blocks */
-int BuildKernel(TemplateClass *X, int n, double *B, double w, int *sweeptstamps, double sampling_freq){
+int BuildKernel(TemplateClass *X, int n, double *B, double w, int *sweeptstamps, int *az_binned, double sampling_freq){
   // n : number of template classes in one kernel Block (1 det data in 1 CES)
   int i,j,l,k;
   int m1,m2;
@@ -91,14 +136,22 @@ int BuildKernel(TemplateClass *X, int n, double *B, double w, int *sweeptstamps,
       // printf("I'm here");
       // fflush(stdout);
       (X+k)->bins = (int *) calloc((X+k)->nsamples * (X+k)->nmult, sizeof(int));
-      (X+k)->wghts = (double *) calloc((X+k)->nsamples * (X+k)->nmult, sizeof(double));
-      expandpolydata(X+k, (X+k)->bins, (X+k)->wghts, sweeptstamps, sampling_freq, (X+k)->order);
+      if(strcmp((X+k)->ID,"POLY") == 0){
+        (X+k)->wghts = (double *) calloc((X+k)->nsamples * (X+k)->nmult, sizeof(double));
+        expandpolydata(X+k, (X+k)->bins, (X+k)->wghts, sweeptstamps, sampling_freq, (X+k)->order);
+      }
+      else
+        expandSSSdata(X+k, (X+k)->bins, az_binned);
     }
     for(l=0;l<n;l++){
       if((strcmp((X+l)->flag_w,"OTF") == 0) && (l!=k)){
         (X+l)->bins = (int *) calloc((X+k)->nsamples * (X+l)->nmult, sizeof(int));
-        (X+l)->wghts = (double *) calloc((X+k)->nsamples * (X+l)->nmult, sizeof(double));
-        expandpolydata(X+l, (X+l)->bins, (X+l)->wghts, sweeptstamps, sampling_freq, (X+l)->order);
+        if(strcmp((X+l)->ID,"POLY") == 0){
+          (X+l)->wghts = (double *) calloc((X+k)->nsamples * (X+l)->nmult, sizeof(double));
+          expandpolydata(X+l, (X+l)->bins, (X+l)->wghts, sweeptstamps, sampling_freq, (X+l)->order);
+        }
+        else
+          expandSSSdata(X+l, (X+l)->bins, az_binned);
       }
       // if((X+l)->order == 1){
       //   for(i=0;i<10;i++){
@@ -114,15 +167,51 @@ int BuildKernel(TemplateClass *X, int n, double *B, double w, int *sweeptstamps,
       //   printf("sum wgths = %6.2f\n",sum);
       // }
 
-
-      for(i=0;i<(X+k)->nsamples;i++){
-        for(m1=0;m1<(X+k)->nmult;m1++){
-          for(m2=0;m2<(X+l)->nmult;m2++){
-            B[((X+k)->bins[i*(X+k)->nmult + m1]-X->nbinMin) * ((X+n-1)->nbinMax-X->nbinMin+1) + ((X+l)->bins[i*(X+l)->nmult + m2]-X->nbinMin)] += w * (X+k)->wghts[i*(X+k)->nmult + m1] * (X+l)->wghts[i*(X+l)->nmult + m2];
+      // Case1: poly x poly kernel
+      if((strcmp((X+k)->ID,"POLY") == 0) && (strcmp((X+l)->ID,"POLY") == 0)){
+        for(i=0;i<(X+k)->nsamples;i++){
+          for(m1=0;m1<(X+k)->nmult;m1++){
+            for(m2=0;m2<(X+l)->nmult;m2++){
+              B[((X+k)->bins[i*(X+k)->nmult + m1]-X->nbinMin) * ((X+n-1)->nbinMax-X->nbinMin+1) + ((X+l)->bins[i*(X+l)->nmult + m2]-X->nbinMin)] += w * (X+k)->wghts[i*(X+k)->nmult + m1] * (X+l)->wghts[i*(X+l)->nmult + m2];
+            }
           }
         }
       }
-
+      // Case2: SSS x poly kernel
+      else if((strcmp((X+k)->ID,"SSS") == 0) && (strcmp((X+l)->ID,"POLY") == 0)){
+        for(i=0;i<(X+k)->nsamples;i++){
+          for(m1=0;m1<(X+k)->nmult;m1++){
+            for(m2=0;m2<(X+l)->nmult;m2++){
+              B[((X+k)->bins[i*(X+k)->nmult + m1]-X->nbinMin) * ((X+n-1)->nbinMax-X->nbinMin+1) + ((X+l)->bins[i*(X+l)->nmult + m2]-X->nbinMin)] += w * (X+l)->wghts[i*(X+l)->nmult + m2];
+            }
+          }
+        }
+      }
+      // Case3: poly x SSS kernel
+      else if((strcmp((X+k)->ID,"POLY") == 0) && (strcmp((X+l)->ID,"SSS") == 0)){
+        for(i=0;i<(X+k)->nsamples;i++){
+          for(m1=0;m1<(X+k)->nmult;m1++){
+            for(m2=0;m2<(X+l)->nmult;m2++){
+              B[((X+k)->bins[i*(X+k)->nmult + m1]-X->nbinMin) * ((X+n-1)->nbinMax-X->nbinMin+1) + ((X+l)->bins[i*(X+l)->nmult + m2]-X->nbinMin)] += w * (X+k)->wghts[i*(X+k)->nmult + m1];
+            }
+          }
+        }
+      }
+      // Case4: SSS x SSS kernel
+      else if((strcmp((X+k)->ID,"SSS") == 0) && (strcmp((X+l)->ID,"SSS") == 0)){
+        for(i=0;i<(X+k)->nsamples;i++){
+          for(m1=0;m1<(X+k)->nmult;m1++){
+            for(m2=0;m2<(X+l)->nmult;m2++){
+              B[((X+k)->bins[i*(X+k)->nmult + m1]-X->nbinMin) * ((X+n-1)->nbinMax-X->nbinMin+1) + ((X+l)->bins[i*(X+l)->nmult + m2]-X->nbinMin)] += w ;
+            }
+          }
+        }
+      }
+      // Else, something wrong is going on ...
+      else{
+        printf("Run time error while computing templates kernel: invalid templates combination, please verify templates ID\n");
+        exit(1);
+      }
       // for(i=0;i<(X+k)->nsamples * (X+k)->nmult;i++){
       //   for(j=0;j<(X+l)->nsamples * (X+l)->nmult;j++){
       //     // VERY TIME CONSUMING ON SIMPLE TEST JUMPED FROM 0.02s to ~5s !
@@ -133,12 +222,14 @@ int BuildKernel(TemplateClass *X, int n, double *B, double w, int *sweeptstamps,
       // }
       if((strcmp((X+l)->flag_w, "OTF") == 0) && (l!=k)){
         free((X+l)->bins);
-        free((X+l)->wghts);
+        if(strcmp((X+l)->ID,"POLY") == 0)
+          free((X+l)->wghts);
       }
     }
     if(strcmp((X+k)->flag_w, "OTF") == 0){
       free((X+k)->bins);
-      free((X+k)->wghts);
+      if(strcmp((X+k)->ID,"POLY") == 0)
+        free((X+k)->wghts);
     }
   }
   return 0;
@@ -160,7 +251,7 @@ int BuildKernel(TemplateClass *X, int n, double *B, double w, int *sweeptstamps,
 */
 int InvKernel(double *B, int n, double *Binv){
   int i,info,rank;
-  double epsilon = -1; // machine epsilon: threshold for regularization
+  double epsilon = 1e-12; // machine epsilon: threshold for regularization
   double *s; // vector of singular values (from SVD)
   // Allocate memory and initialize Binv as unit matrix
   s = (double *) calloc(n, sizeof(double));
@@ -316,31 +407,35 @@ double Legendre(double x, double a, double b, int n){
     other templates classes types. Flags are ignored for now.
 */
 int Tlist_init(TemplateClass *X, int ndet, int nces, int *block_nsamples, int **detnsweeps,
-  int **sweeptstamps, double sampling_freq, int npoly){
+  int **sweeptstamps, int n_sss_bins, int **az_binned, double sampling_freq, int npoly){
 
   int i,j,k;
   int tinit,tlast,nbinMin, nbinMax;
   // looping over local list of detectors
   tinit = 0;
-  tlast = block_nsamples[0] -1;
+  tlast = -1;
   nbinMin = 0;
-  nbinMax = detnsweeps[0][0]-1;
+  nbinMax = -1;
   for(i=0;i<nces;i++){
     for(j=0;j<ndet;j++){
+      tlast += block_nsamples[i*ndet+j];
       // looping over polynomial templates for each detector
       for(k=0;k<npoly;k++){
         // looping over polynomial orders
-        // For each order build the corresponding polynomial template class
-        Polyinit((X + ((i*ndet+j)*npoly) + k), tinit, tlast, nbinMin, nbinMax, sweeptstamps[i], sampling_freq, k);
-        nbinMin += detnsweeps[i][j];
         nbinMax += detnsweeps[i][j];
+        // For each order build the corresponding polynomial template class
+        Polyinit((X + ((i*ndet+j)*(npoly+1)) + k), tinit, tlast, nbinMin, nbinMax, sweeptstamps[i], sampling_freq, k);
+        nbinMin += detnsweeps[i][j];
       }
+      nbinMax += n_sss_bins;
+      SSSinit((X + ((i*ndet+j)*(npoly+1)) + npoly), tinit, tlast, nbinMin, nbinMax, az_binned[i]);
+      nbinMin += n_sss_bins;
       tinit += block_nsamples[i*ndet+j];
-      tlast += block_nsamples[i*ndet+j];
     }
   }
   return 0;
 }
+
 /* Build polynomial template class instance */
 int Polyinit(TemplateClass *X, int tinit, int tlast, int nbinMin, int nbinMax,
   int *sweeptstamps, double sampling_freq, int order){
@@ -349,7 +444,7 @@ int Polyinit(TemplateClass *X, int tinit, int tlast, int nbinMin, int nbinMax,
   char *flag_w = (char *) malloc(10 * sizeof(char));
   int *bins;
   double *wghts;
-  sprintf(flag,"NULL");
+  sprintf(flag,"POLY");
   sprintf(flag_w,"OTF");
   TCinit(X, tinit, tlast, nbinMin, nbinMax, 1, flag, flag, flag ,flag_w, flag);
   X->order = order;
@@ -360,6 +455,24 @@ int Polyinit(TemplateClass *X, int tinit, int tlast, int nbinMin, int nbinMax,
   }
   return 0;
 }
+
+/* Build SSS template class instance */
+int SSSinit(TemplateClass *X, int tinit, int tlast, int nbinMin, int nbinMax,
+  int *az_binned){
+
+  char *flag = (char *) malloc(10 * sizeof(char));
+  char *flag_w = (char *) malloc(10 * sizeof(char));
+  int *bins;
+  sprintf(flag,"SSS");
+  sprintf(flag_w,"OTF");
+  TCinit(X, tinit, tlast, nbinMin, nbinMax, 1, flag, flag, flag ,flag_w, flag);
+  if(strcmp(X->flag_w,"S")==0){ // Stored weights
+    bins = (int *) calloc(X->nsamples * X->nmult,sizeof(int));
+    expandSSSdata(X, bins, az_binned);
+  }
+  return 0;
+}
+
 /* Build Templates Classes objects */
 int TCinit(TemplateClass *X, int tinit, int tlast, int nbinMin, int nbinMax,
   int nmult, char *flag_det, char *flag_CES,
@@ -395,4 +508,43 @@ int expandpolydata(TemplateClass *X ,int *bins, double *wghts,
     }
   }
   return 0;
+}
+/* Build bins profile for a SSS template nmult = 1 for now */
+int expandSSSdata(TemplateClass *X, int *bins, int *az_binned){
+  int i;
+  for(i=0;i<X->nsamples * X->nmult;i++){
+    bins[i] = X->nbinMin + az_binned[i];
+  }
+  return 0;
+}
+
+/* Bin boresight azimuth array */
+int** bin_az(double **az, double *az_min, double *az_max, int *ces_length, int n_sss_bins, int nces)
+{
+  int i,j;
+  int **az_binned = (int **) malloc(nces * sizeof(int*));
+
+  // Build binned boresight azimuth array
+  for(i=0; i<nces;i++){
+    az_binned[i] = (int *) malloc(ces_length[i] * sizeof(int));
+    for(j=0;j<ces_length[i];j++){
+      az_binned[i][j] = miin(n_sss_bins-1,floor((az[i][j]-az_min[i])/((az_max[i]-az_min[i])/n_sss_bins)));
+    }
+  }
+
+  //free memory
+  // for(i=0;i<nces;i++){
+  //   free(az[i]);
+  // }
+  // free(az);
+  // free(az_min);
+  // free(az_max);
+  free(ces_length);
+
+  return az_binned;
+}
+
+/*Function to find minimum of x and y*/
+int miin(int x, int y){
+  return y ^ ((x ^ y) & -(x < y));
 }
