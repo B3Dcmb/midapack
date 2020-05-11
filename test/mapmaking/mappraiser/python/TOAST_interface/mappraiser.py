@@ -20,6 +20,7 @@ from toast.utils import Logger, memreport
 
 from numpy.fft import fft, fftfreq, fftshift
 from scipy import interpolate
+from scipy.optimize import curve_fit
 import scipy.signal
 import math
 
@@ -53,6 +54,17 @@ def count_caches(data, comm, nodecomm, mappraisercache, msg=""):
         )
     return
 
+def psd_model(f,sigma,alpha,f0):
+    return sigma * (1+(f/f0)**alpha)
+
+def logpsd_model(f,a,alpha,f0):
+    return a + np.log10(1+(f/f0)**alpha)
+
+def inversepsd_model(f,sigma,alpha,f0):
+    return sigma * 1./(1+(f/f0)**alpha)
+
+def inverselogpsd_model(f,a,alpha,f0):
+    return a - np.log10(1+(f/f0)**alpha)
 
 class OpMappraiser(Operator):
     """
@@ -368,6 +380,75 @@ class OpMappraiser(Operator):
 
         return inv_tt_w[:self._params["Lambda"]]
 
+    def _noise2invtt(self, noise, nn, idet):
+        """ Computes a periodogram from a noise timestream, and fits a PSD model
+        to it, which is then used to build the first row of a Toeplitz block.
+        """
+        # parameters
+        sampling_freq = self._params["samplerate"]
+        Max_lambda = 2**(int(math.log(nn/4,2))) # closest power of two to 1/4 of the timestream length
+        f_defl = sampling_freq/(np.pi*Max_lambda)
+        df = f_defl/2
+        block_size = 2**(int(math.log(sampling_freq*1./df,2)))
+
+        # Compute periodogram
+        f, psd = scipy.signal.periodogram(noise, sampling_freq,nfft=block_size,window='blackman')
+        # if idet==37:
+        #     print(len(f), flush=True)
+
+
+        # Fit the psd model to the periodogram (in log scale)
+        popt,pcov = curve_fit(logpsd_model,f[1:],np.log10(psd[1:]),p0=np.array([-7, -0.5, 0.5]))
+        if idet == 0:
+            print("\n[det "+str(idet)+"]: PSD fit logσ² = %1.2f, alpha = %1.2f, fknee = %1.2f\n" % tuple(popt), flush=True)
+            print("[det"+str(idet)+"]: PSD fit covariance: \n", pcov, flush=True)
+        # psd_fit_m1 = np.zeros_like(f)
+        # psd_fit_m1[1:] = inversepsd_model(f[1:],10**popt[0],popt[1],popt[2])
+
+        # Invert periodogram
+        psd_sim_m1 = np.reciprocal(psd)
+        # if idet == 37:
+        #     np.save("psd_sim.npy",psd_sim_m1)
+        # psd_sim_m1_log = np.log10(psd_sim_m1)
+
+        # Invert the fit to the psd model / Fit the inverse psd model to the inverted periodogram
+        # popt,pcov = curve_fit(inverselogpsd_model,f[1:],psd_sim_m1_log[1:])
+        # print(popt)
+        # print(pcov)
+        psd_fit_m1 = np.zeros_like(f)
+        psd_fit_m1[1:] = inversepsd_model(f[1:],10**(-popt[0]),popt[1],popt[2])
+
+        # Initialize full size inverse PSD in frequency domain
+        fs = fftfreq(block_size, 1./sampling_freq)
+        psdm1 = np.zeros_like(fs)
+
+        # Symmetrize inverse PSD according to fs shape
+        psdm1[:int(block_size/2)] = psd_fit_m1[:-1] #psdfit[:int(block_size/2)]
+        psdm1[int(block_size/2):] = np.flip(psd_fit_m1[1:],0)
+
+        # Compute inverse noise autocorrelation functions
+        inv_tt = np.real(np.fft.ifft(psdm1, n=block_size))
+
+        # Define apodization window
+        window = scipy.signal.gaussian(2*self._params["Lambda"], 1./2*self._params["Lambda"])
+        window = np.fft.ifftshift(window)
+        window = window[:self._params["Lambda"]]
+        window = np.pad(window,(0,int(block_size/2-(self._params["Lambda"]))),'constant')
+        symw = np.zeros(block_size)
+        symw[:int(block_size/2)] = window
+        symw[int(block_size/2):] = np.flip(window,0)
+
+        inv_tt_w = np.multiply(symw, inv_tt, dtype = mappraiser.INVTT_TYPE)
+
+        #effective inverse noise power
+        # if idet==37:
+        #     psd = np.abs(np.fft.fft(inv_tt_w,n=block_size))
+        #     np.save("freq.npy",fs[:int(block_size/2)])
+        #     np.save("psd0.npy",psdm1[:int(block_size/2)])
+        #     np.save("psd"+str(self._params["Lambda"])+".npy",psd[:int(block_size/2)])
+
+        return inv_tt_w[:self._params["Lambda"]]
+
     @function_timer
     def _prepare(self):
         """ Examine the data object.
@@ -572,6 +653,7 @@ class OpMappraiser(Operator):
                 self._mappraiser_noise[:] = np.nan
 
                 global_offset = 0
+                invtt_list = []
                 for iobs, obs in enumerate(self._data.obs):
                     tod = obs["tod"]
 
@@ -581,6 +663,8 @@ class OpMappraiser(Operator):
                         noise_dtype = noise.dtype
                         offset = global_offset
                         nn = len(noise)
+                        invtt = self._noise2invtt(noise, nn, idet)
+                        invtt_list.append(invtt)
                         dslice = slice(idet * nsamp + offset, idet * nsamp + offset + nn)
                         self._mappraiser_noise[dslice] = noise
                         offset += nn
@@ -600,7 +684,7 @@ class OpMappraiser(Operator):
                 if self._rank == 0:
                     timer.report_clear("Stage noise {} / {}".format(iread + 1, nread))
 
-        return noise_dtype
+        return invtt_list, noise_dtype
 
     @function_timer
     def _stage_pixels(self, detectors, nsamp, ndet, nnz, nside):
@@ -792,19 +876,21 @@ class OpMappraiser(Operator):
         # Stage time (Tpltz blocks in Mappraiser), it is never purged
         # so the staging is never stepped
         timer = Timer()
-        timer.start()
-        invtt_list = self._stage_time(detectors, nsamp, psdfreqs)
-        self._mappraiser_invtt = np.array([np.array(invtt_i, dtype= mappraiser.INVTT_TYPE) for invtt_i in invtt_list])
-        del invtt_list
-        self._mappraiser_invtt = np.concatenate(self._mappraiser_invtt)
-        if self._verbose:
-            nodecomm.Barrier()
-            if self._rank == 0:
-                timer.report_clear("Stage time")
-        memreport("after staging time", self._comm)  # DEBUG
-        count_caches(
-            self._data, self._comm, nodecomm, self._cache, "after staging time"
-        )  # DEBUG
+        # THIS STEP IS SKIPPED: we do not have timestamps, nor do we build Toeplitz blocks
+        # from TOAST psds which comprise detector noise only - a psd fit is done when staging noise -
+        # timer.start()
+        # invtt_list = self._stage_time(detectors, nsamp, psdfreqs)
+        # self._mappraiser_invtt = np.array([np.array(invtt_i, dtype= mappraiser.INVTT_TYPE) for invtt_i in invtt_list])
+        # del invtt_list
+        # self._mappraiser_invtt = np.concatenate(self._mappraiser_invtt)
+        # if self._verbose:
+        #     nodecomm.Barrier()
+        #     if self._rank == 0:
+        #         timer.report_clear("Stage time")
+        # memreport("after staging time", self._comm)  # DEBUG
+        # count_caches(
+        #     self._data, self._comm, nodecomm, self._cache, "after staging time"
+        # )  # DEBUG
 
          # Stage signal.  If signal is not being purged, staging is not stepped
         timer.start()
@@ -822,9 +908,12 @@ class OpMappraiser(Operator):
 
         # Stage noise.  If noise is not being purged, staging is not stepped
         timer.start()
-        noise_dtype = self._stage_noise(
+        invtt_list, noise_dtype = self._stage_noise(
            detectors, nsamp, ndet, nodecomm, nread
         )
+        self._mappraiser_invtt = np.array([np.array(invtt_i, dtype= mappraiser.INVTT_TYPE) for invtt_i in invtt_list])
+        del invtt_list
+        self._mappraiser_invtt = np.concatenate(self._mappraiser_invtt)
         if self._verbose:
             nodecomm.Barrier()
             if self._rank == 0:
