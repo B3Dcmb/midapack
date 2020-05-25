@@ -54,17 +54,17 @@ def count_caches(data, comm, nodecomm, mappraisercache, msg=""):
         )
     return
 
-def psd_model(f,sigma,alpha,f0):
-    return sigma * (1+(f/f0)**alpha)
+def psd_model(f,sigma,alpha,f0,fmin):
+    return sigma * (1+((f+fmin)/f0)**alpha)
 
-def logpsd_model(f,a,alpha,f0):
-    return a + np.log10(1+(f/f0)**alpha)
+def logpsd_model(f,a,alpha,f0,fmin):
+    return a + np.log10(1+((f+fmin)/f0)**alpha)
 
-def inversepsd_model(f,sigma,alpha,f0):
-    return sigma * 1./(1+(f/f0)**alpha)
+def inversepsd_model(f,sigma,alpha,f0,fmin):
+    return sigma * 1./(1+((f+fmin)/f0)**alpha)
 
-def inverselogpsd_model(f,a,alpha,f0):
-    return a - np.log10(1+(f/f0)**alpha)
+def inverselogpsd_model(f,a,alpha,f0,fmin):
+    return a - np.log10(1+((f+fmin)/f0)**alpha)
 
 class OpMappraiser(Operator):
     """
@@ -398,16 +398,18 @@ class OpMappraiser(Operator):
 
 
         # Fit the psd model to the periodogram (in log scale)
-        popt,pcov = curve_fit(logpsd_model,f[1:],np.log10(psd[1:]),p0=np.array([-7, -0.5, 0.5]))
-        if idet == 0:
-            print("\n[det "+str(idet)+"]: PSD fit logσ² = %1.2f, alpha = %1.2f, fknee = %1.2f\n" % tuple(popt), flush=True)
-            print("[det"+str(idet)+"]: PSD fit covariance: \n", pcov, flush=True)
+        popt,pcov = curve_fit(logpsd_model,f[1:],np.log10(psd[1:]),p0=np.array([-7, -0.5, 0.5, 0.1]), bounds=([-np.inf, -np.inf, 0., 0.], [0., 0., np.inf, 1.]))
+        # popt[1] = -5.
+        # popt[2] = 2.
+        if self._rank == 0 and idet == 0:
+            print("\n[det "+str(idet)+"]: PSD fit log(sigma2) = %1.2f, alpha = %1.2f, fknee = %1.2f, fmin = %1.2f\n" % tuple(popt), flush=True)
+            print("[det "+str(idet)+"]: PSD fit covariance: \n", pcov, flush=True)
         # psd_fit_m1 = np.zeros_like(f)
         # psd_fit_m1[1:] = inversepsd_model(f[1:],10**popt[0],popt[1],popt[2])
 
         # Invert periodogram
         psd_sim_m1 = np.reciprocal(psd)
-        # if idet == 37:
+        # if self._rank == 0 and idet == 0:
         #     np.save("psd_sim.npy",psd_sim_m1)
         # psd_sim_m1_log = np.log10(psd_sim_m1)
 
@@ -416,7 +418,7 @@ class OpMappraiser(Operator):
         # print(popt)
         # print(pcov)
         psd_fit_m1 = np.zeros_like(f)
-        psd_fit_m1[1:] = inversepsd_model(f[1:],10**(-popt[0]),popt[1],popt[2])
+        psd_fit_m1[1:] = inversepsd_model(f[1:],10**(-popt[0]),popt[1],popt[2], popt[3])
 
         # Initialize full size inverse PSD in frequency domain
         fs = fftfreq(block_size, 1./sampling_freq)
@@ -441,13 +443,13 @@ class OpMappraiser(Operator):
         inv_tt_w = np.multiply(symw, inv_tt, dtype = mappraiser.INVTT_TYPE)
 
         #effective inverse noise power
-        # if idet==37:
+        # if self._rank == 0 and idet == 0:
         #     psd = np.abs(np.fft.fft(inv_tt_w,n=block_size))
         #     np.save("freq.npy",fs[:int(block_size/2)])
         #     np.save("psd0.npy",psdm1[:int(block_size/2)])
         #     np.save("psd"+str(self._params["Lambda"])+".npy",psd[:int(block_size/2)])
 
-        return inv_tt_w[:self._params["Lambda"]]
+        return inv_tt_w[:self._params["Lambda"]] #, popt[0], popt[1], popt[2], popt[3]
 
     @function_timer
     def _prepare(self):
@@ -654,6 +656,10 @@ class OpMappraiser(Operator):
 
                 global_offset = 0
                 invtt_list = []
+                # fknee_list = []
+                # fmin_list = []
+                # alpha_list = []
+                # logsigma2_list = []
                 for iobs, obs in enumerate(self._data.obs):
                     tod = obs["tod"]
 
@@ -663,8 +669,12 @@ class OpMappraiser(Operator):
                         noise_dtype = noise.dtype
                         offset = global_offset
                         nn = len(noise)
-                        invtt = self._noise2invtt(noise, nn, idet)
+                        invtt = self._noise2invtt(noise, nn, idet) #, logsigma2, alpha, fknee, fmin = self._noise2invtt(noise, nn, idet)
                         invtt_list.append(invtt)
+                        # logsigma2_list.append(logsigma2)
+                        # alpha_list.append(alpha)
+                        # fknee_list.append(fknee)
+                        # fmin_list.append(fmin)
                         dslice = slice(idet * nsamp + offset, idet * nsamp + offset + nn)
                         self._mappraiser_noise[dslice] = noise
                         offset += nn
@@ -683,6 +693,32 @@ class OpMappraiser(Operator):
                 nodecomm.Barrier()
                 if self._rank == 0:
                     timer.report_clear("Stage noise {} / {}".format(iread + 1, nread))
+
+        # sendcounts = np.array(self._comm.gather(len(fknee_list), 0))
+        #
+        # Fknee_list = None
+        # Fmin_list = None
+        # Alpha_list = None
+        # Logsigma2_list = None
+        #
+        # if self._rank ==0:
+        #     Fknee_list = np.empty(sum(sendcounts))
+        #     Fmin_list = np.empty(sum(sendcounts))
+        #     Alpha_list = np.empty(sum(sendcounts))
+        #     Logsigma2_list = np.empty(sum(sendcounts))
+        #
+        # self._comm.Gatherv(np.array(fknee_list),(Fknee_list,sendcounts),0)
+        # self._comm.Gatherv(np.array(fmin_list),(Fmin_list, sendcounts),0)
+        # self._comm.Gatherv(np.array(alpha_list),(Alpha_list, sendcounts),0)
+        # self._comm.Gatherv(np.array(logsigma2_list),(Logsigma2_list, sendcounts),0)
+
+
+
+        # if self._rank ==0:
+        #     np.save("fknee.npy",Fknee_list)
+        #     np.save("fmin.npy", Fmin_list)
+        #     np.save("logsigma2.npy",Logsigma2_list)
+        #     np.save("alpha.npy",Alpha_list)
 
         return invtt_list, noise_dtype
 
