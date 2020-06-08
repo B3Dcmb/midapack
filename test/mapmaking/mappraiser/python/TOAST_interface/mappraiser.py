@@ -650,7 +650,7 @@ class OpMappraiser(Operator):
                 )
                 if self._noise_name == None:
                     self._mappraiser_noise = np.zeros_like(self._mappraiser_noise)
-                    return self._mappraiser_noise.dtype
+                    return [np.ones(1)], self._mappraiser_noise.dtype
 
                 self._mappraiser_noise[:] = np.nan
 
