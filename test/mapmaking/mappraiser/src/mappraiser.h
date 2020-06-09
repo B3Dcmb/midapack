@@ -37,7 +37,7 @@ void write_map (void *signal, int type, long nside, const char *filename,
 /* Preconditioner routines */
 
 // Block-Jacobi preconditioner
-int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ, double *b, double *cond, int *lhits);
+int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ_inv, Mat *BJ, double *b, double *cond, int *lhits);
 
 // Point Jacobi preconditioner
 int precondjacobilike(Mat A, Tpltz Nm1, int *lhits, double *cond, double *vpixDiag);
@@ -57,11 +57,9 @@ int commScheme(Mat *A, double *vpixDiag, int pflag);
 // Pixel share ponderation to deal with overlapping pixels between multiple MPI procs
 int get_pixshare_pond(Mat *A, double *pixpond);
 
-//PCG routine
-int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K);
 
-//PCG routine with 2lvl precond
-int PCG_GLS_true_2lvl(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K, int solver);
+//PCG routine
+int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond);
 
 //ECG routine
 int ECG_GLS(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int maxIter, int enlFac, int ortho_alg, int bs_red);

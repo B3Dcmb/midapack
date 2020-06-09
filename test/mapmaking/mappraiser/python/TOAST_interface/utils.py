@@ -28,6 +28,8 @@ def add_mappraiser_args(parser):
     )
     parser.add_argument("--solver", required=False, default=0, type=np.int, help="Choose map-making solver: 0->PCG, 1->ECG"
     )
+    parser.add_argument("--precond", required=False, default=0, type=np.int, help="Choose map-making preconditioner: 0->BD, 1->2lvl a priori, 2->2lvl a posteriori"
+    )
     parser.add_argument("--ptcomm_flag", required=False, default=6, type=np.int, help="Choose collective communication scheme"
     )
     parser.add_argument("--tol", required=False, default=1e-6, type=np.double, help="Tolerance parameter for convergence"
@@ -102,6 +104,7 @@ def setup_mappraiser(args):
     params["output"] = args.outpath
     params["ref"] = args.ref
     params["solver"] = args.solver
+    params["precond"] = args.precond
     params["pointing_commflag"] = args.ptcomm_flag
     params["tol"] = args.tol
     params["maxiter"] = args.maxiter

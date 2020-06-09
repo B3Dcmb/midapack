@@ -1,11 +1,11 @@
-// MAPPRAISER preconditioner vdev
-// Routines for computing the diagonal and block-diagonal Jacobi preconditioners for the PCG
-// The routines also deal with degenerate pixels to ensure numerical stability of the system
+// Midapack library
+// mapmaking code example using the Midapack library - release 1.2b, Nov 2012
+// Compute the diagonal and block-diagonal Jacobi preconditioners for the PCG
 
 /** @file   precond.c
     @author Frederic Dauvergne
     @date   November 2012
-    @Last_update May 2019 by Hamza El Bouhargani*/
+    @Last_update February 2019 by Hamza El Bouhargani*/
 
 
 #include <stdlib.h>
@@ -15,7 +15,6 @@
 #include <time.h>
 #include <string.h>
 #include "midapack.h"
-#include "mappraiser.h"
 
 extern int dgecon_(const char *norm, const int *n, double *a, const int *lda, const double *anorm, double *rcond, double *work, int *iwork, int *info, int len);
 extern int dgetrf_(const int *m, const int *n, double *a, const int *lda, int *lpiv, int *info);
@@ -26,10 +25,9 @@ int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ, double *b, double *cond, 
   int           i, j, k ;                       // some indexes
   int           m, m_cut, n, rank, size;
   int *indices_new, *tmp1;
-  double *vpixBlock, *vpixBlock_loc, *hits_proc, *tmp2,*tmp3;
-  // float *vpixBlock, *tmp2;
+  double *vpixBlock, *vpixBlock_loc, *hits_proc, *tmp2, *tmp3;
   double det, invdet;
-  // int pointing_commflag = 6;
+  // int pointing_commflag = 2;
   int info, nb, lda;
   double anorm, rcond;
 
@@ -78,6 +76,7 @@ int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ, double *b, double *cond, 
 
 
 
+
   //communicate with the other processes to have the global reduce
   //TODO : This should be done in a more efficient way
   for(i=0;i<n*(A->nnz);i+=(A->nnz)*(A->nnz)){
@@ -114,6 +113,7 @@ int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ, double *b, double *cond, 
 
   //Compute the inverse of the global AtA blocks (beware this part is only valid for nnz = 3)
   int uncut_pixel_index = 0;
+
   for(i=0;i<n*(A->nnz);i+=(A->nnz)*(A->nnz)){
     // lhits[(int)i/((A->nnz)*(A->nnz))] = (int)vpixBlock[i];
     //init 3x3 block
@@ -166,6 +166,7 @@ int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ, double *b, double *cond, 
       // Remove the poorly conditioned pixel from the map, point the associated gap samples to trash pixel
       // Set flag of trash pixel in pointing matrix to 1
       A->trash_pix = 1;
+
       // Search for the corresponding gap samples
       // j = A->id0pix[(int)uncut_pixel_index/((A->nnz)*(A->nnz))]; // first index of time sample pointing to degenerate pixel
       // // Point the first gap sample to trash pixel
@@ -212,10 +213,12 @@ int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ, double *b, double *cond, 
     }
     uncut_pixel_index += (A->nnz)*(A->nnz);
   }
+
   // free memory
   free(A->id0pix);
   free(A->ll);
   // Reallocate memory for preconditioner blocks and redefine pointing matrix in case of the presence of degenerate pixels
+
   if(A->trash_pix){
     // Reallocate memory of vpixBlock by shrinking its memory size to its effective size (no degenerate pixel)
     tmp2 = (double *) realloc(vpixBlock, n*(A->nnz)*sizeof(double));
@@ -227,6 +230,7 @@ int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ, double *b, double *cond, 
       cond = tmp3;
     }
   }
+
   // map local indices to global indices in indices_cut
   for(i=0; i<m*A->nnz;i++){
     // switch to global indices
@@ -239,6 +243,8 @@ int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ, double *b, double *cond, 
   MatInit(A, m, A->nnz, A->indices, A->values, A->flag, MPI_COMM_WORLD);
 
   //Define Block-Jacobi preconditioner indices
+  fflush(stdout);
+
   for(i=0;i<n;i++){
     for(j=0;j<(A->nnz);j++){
         indices_new[i*(A->nnz)+j] = A->lindices[(A->nnz)*(A->trash_pix)+(A->nnz)*((int)i/(A->nnz))+j];
@@ -276,7 +282,7 @@ int precondjacobilike_avg(Mat A, Tpltz Nm1, double *c)
 //multiply by the diagonal Toeplitz
   diagNm1 = Nm1.tpltzblocks[0].T_block[0];
 
-  printf("diagNm1 = %f \n", diagNm1 );
+  printf("diagNm1 = %f \n", i, diagNm1 );
   for(j=0; j<n; j++)
     c[j] = diagNm1 * c[j];
 
@@ -317,9 +323,9 @@ int precondjacobilike(Mat A, Tpltz Nm1, int *lhits, double *cond, double *vpixDi
 
 //communicate with the other processes to have the global reduce
   commScheme(&A, vpixDiag, 2);
-  // for(i=0;i<50;i++){
-  //   printf("global AtA block: vpixDiag[%d]=%f\n",i,vpixDiag[i]);
-  // }
+  for(i=0;i<50;i++){
+    printf("global AtA block: vpixDiag[%d]=%f\n",i,vpixDiag[i]);
+  }
 // compute the inverse vector
   for(i=0; i<n; i++){
     if(i%3 == 0){
@@ -387,10 +393,8 @@ int getlocalW(Mat *A, Tpltz Nm1, double *vpixBlock, int *lhits)
       istartn= Nm1.local_V_size;
       // istartn = 0;
 
-
     istart = max( 0, Nm1.tpltzblocks[k].idv-Nm1.idp);
     il = Nm1.tpltzblocks[k].n; // added this line to default code
-
 
     //if block cut from the left:
     if (k==idv0)
@@ -404,6 +408,7 @@ int getlocalW(Mat *A, Tpltz Nm1, double *vpixBlock, int *lhits)
 
     //get the diagonal value of the Toeplitz
     diagNm1 = Nm1.tpltzblocks[k].T_block[0];
+
 /*
     printf("istart=%d, il=%d, istartn=%d\n", istart, il, istartn);
     printf("Nm1.tpltzblocks[k=%d].idv=%d, Nm1.tpltzblocks[k=%d].n=%d, Nm1.idp=%d\n", k, Nm1.tpltzblocks[k].idv, k, Nm1.tpltzblocks[k].n, Nm1.idp);

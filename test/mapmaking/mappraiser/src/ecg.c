@@ -60,10 +60,10 @@
    int N; //Global number of pixels (no overlapping correction)
    int m, n; //local number of time samples, local number of pixels x nnz (IQU)
    double *tmp; //temporary pointer
-   Mat BJ; //Block-Jacobi preconditioner
+   Mat BJ, BJ_true; //Block-Jacobi preconditioner
 
    /*=== Pre-process degenerate pixels & build the preconditioner ===*/
-   precondblockjacobilike(A, Nm1, &BJ, b, cond, lhits);
+   precondblockjacobilike(A, Nm1, &BJ, &BJ_true, b, cond, lhits);
    //Correct the pixels counter after pre-processing
    n=A->lcount-(A->nnz)*(A->trash_pix);
    //Reallocate memory for the well-conditioned map

@@ -14,13 +14,20 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
+#include <mkl.h>
 #include "fitsio.h"
 #include "midapack.h"
 #include "mappraiser.h"
 
+
+#include <execinfo.h>
+//#include <signal.h>
+#include <fenv.h>
+
+
 int x2map_pol( double *mapI, double *mapQ, double *mapU, double *Cond, int * hits, int npix, double *x, int *lstid, double *cond, int *lhits, int xsize);
 
-void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_commflag, double tol, int maxiter, int enlFac, int ortho_alg, int bs_red, int nside, void *data_size_proc, int nb_blocks_loc, void *local_blocks_sizes, int Nnz, void *pix, void *pixweights, void *signal, double *noise, int lambda, double *invtt)
+void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int pointing_commflag, double tol, int maxiter, int enlFac, int ortho_alg, int bs_red, int nside, void *data_size_proc, int nb_blocks_loc, void *local_blocks_sizes, int Nnz, void *pix, void *pixweights, void *signal, double *noise, int lambda, double *invtt)
 {
   int64_t	M;       //Global number of rows
   int		m, Nb_t_Intervals;  //local number of rows of the pointing matrix A, nbr of stationary intervals
@@ -35,7 +42,12 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
   double	st, t;		 	//timer, start time
   int 		rank, size;
   MPI_Status status;
+  
 
+mkl_set_num_threads(1);
+  
+  feclearexcept(FE_ALL_EXCEPT);
+  
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &size);
   if(rank==0){
@@ -43,6 +55,9 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
     printf("rank = %d, size = %d\n",rank,size);
   }
   fflush(stdout);
+
+
+  
 
 //communication scheme for the pointing matrix  (to move in .h)
   // pointing_commflag=6; //2==BUTTERFLY - 1==RING - 6==MPI_Allreduce
@@ -61,11 +76,13 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
   }
   fflush(stdout);
 
+
 //compute distribution indexes over the processes
   m = ((int *)data_size_proc)[rank];
   gif = 0;
   for(i=0;i<rank;i++)
     gif += ((int *)data_size_proc)[i];
+
 
 //Print information on data distribution
   int Nb_t_Intervals_loc = nb_blocks_loc;
@@ -91,6 +108,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
   }
   // printf("A.lcount = %d\n", A.lcount);
 
+  
 //Build pixel-to-time domain mapping
   st=MPI_Wtime();
   id0pix = (int *) malloc(A.lcount/(A.nnz) * sizeof(int)); //index of the last time sample pointing to each pixel
@@ -120,6 +138,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
     fflush(stdout);
   }
 
+  
 //PCG beginning vector input definition for the pixel domain map (MatInit gives A.lcount)
   int *lhits;
   double *cond;
@@ -134,6 +153,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
     }
   }
 
+  
 //Create piecewise Toeplitz matrix
 //specifics parameters:
   int nb_blocks_tot = Nb_t_Intervals;
@@ -176,11 +196,13 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
   // int nb_proc_shared_a_block = ceil( size*1.0/nb_blocks_tot );
   // int nb_comm = (nb_proc_shared_a_block)-1 ;
 
+  
 //Block definition
   tpltzblocks = (Block *) malloc(nb_blocks_loc * sizeof(Block));
   defineBlocks_avg(tpltzblocks, invtt, nb_blocks_loc, local_blocks_sizes, lambda_block_avg, id0 );
   defineTpltz_avg( &Nm1, nrow, 1, mcol, tpltzblocks, nb_blocks_loc, nb_blocks_tot, id0, local_V_size, flag_stgy, comm);
 
+  
 //print Toeplitz parameters for information
   if (rank==0 | rank==1) {
     printf("[rank %d] size=%d, nrow=%ld, local_V_size=%d, id0=%ld \n", rank, size, nrow, local_V_size, id0);
@@ -188,6 +210,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
     // printf("[rank %d] nb_proc_shared_a_block=%d, nb_comm=%d \n", rank, nb_proc_shared_a_block, nb_comm);
   }
 
+  
   MPI_Barrier(comm);
    if(rank==0)
  printf("##### Start PCG ####################\n");
@@ -203,12 +226,15 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
   st=MPI_Wtime();
   
 // Conjugate Gradient
-  if(solver==0)
-    PCG_GLS_true(outpath, ref, &A, Nm1, x, signal, noise, cond, lhits, tol, maxiter);
+  if(solver == 0)
+        PCG_GLS_true(outpath, ref, &A, Nm1, x, signal, noise, cond, lhits, tol, maxiter, precond);
   else if (solver == 1)
     ECG_GLS(outpath, ref, &A, Nm1, x, signal, noise, cond, lhits, tol, maxiter, enlFac, ortho_alg, bs_red);
-  else /* 2 (a priori) and 3 (a posteriori) */
-    PCG_GLS_true_2lvl(outpath, ref, &A, Nm1, x, signal, noise, cond, lhits, tol, maxiter, solver);
+  else {
+    printf("Unknown solver and preconditioner\n");
+    exit(1);
+  }
+
 
   MPI_Barrier(comm);
   t=MPI_Wtime();
