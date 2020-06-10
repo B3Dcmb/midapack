@@ -1072,13 +1072,6 @@ void PCG_Lanczos_eig(Mat *A, Tpltz Nm1, Mat *BJ, Mat *BJ_true, double *x, int *l
 }
 
 
-
-extern double stbmm_time;
-extern double trmv_time;
-extern double mv_time;
-extern double greedy_time;
-
-
 int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond)
 {
     
@@ -1290,10 +1283,6 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
     st=MPI_Wtime();
     fflush(stdout);
     
-    stbmm_time = 0.0;
-    mv_time = 0.0;
-    trmv_time = 0.0;
-    greedy_time = 0.0;
     
     // PCG Descent Loop *********************************************
     for(k=1; k<K ; k++){
@@ -1426,12 +1415,6 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
     if(rank ==0)
         printf("--> res_g2pix=%e  \n", g2pix);
     
-    if(rank == 0) {
-        printf("MatVec time: %f\n", mv_time);
-        printf("stbmmProd time: %f\n", stbmm_time);
-        printf("TrMatVec time (without comms): %f\n", trmv_time);
-        printf("greedy reduce time (comms only): %f\n", greedy_time);
-    }
     
     free(h);
     free(Ah);
