@@ -17,11 +17,8 @@
 #include <time.h>
 #include <string.h>
 #include <mkl.h>
-//#include <assert.h>
 #include "midapack.h"
 #include "mappraiser.h"
-
-//#define MAX_LINE      (12*128*128)
 
 
 

@@ -1610,21 +1610,23 @@ void free_precond(struct Precond **out_p)
 {
   int i;
   struct Precond *p = *out_p;
-  
-  for (i = 0; i < p->Zn; i++)
-    free(p->Z[i]);
-  free(p->Z);
-  
-  for (i = 0; i < p->Zn; i++)
-    free(p->AZ[i]);
-  free(p->AZ);
 
-  free(p->Em1);
-  free(p->Qg);
-  free(p->AQg);
-  free(p->w);
-  free(p->Qtx);
+  if (p->precond != 0) {
+    for (i = 0; i < p->Zn; i++)
+      free(p->Z[i]);
+    free(p->Z);
+  
+    for (i = 0; i < p->Zn; i++)
+      free(p->AZ[i]);
+    free(p->AZ);
 
+    free(p->Em1);
+    free(p->Qg);
+    free(p->AQg);
+    free(p->w);
+    free(p->Qtx);
+  }
+  
   free(p);
   *out_p = NULL;
 }
