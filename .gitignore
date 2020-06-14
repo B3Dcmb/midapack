@@ -45,3 +45,6 @@ src/mapmat/Makefile
 src/toeplitz/Makefile
 test/mapmaking/mappraiser/Makefile
 test/mapmaking/mappraiser/src/Makefile
+
+#System files
+.DS_Store

@@ -3,12 +3,10 @@ MIDAPACK_OBJ=$(MIDAPACK_ROOT)/obj
 TOEPLITZ_OBJ=$(MIDAPACK_OBJ)/toeplitz
 
 GCC = gcc
-# MPICC = /global/homes/e/elbouha/.conda/envs/hamzaenv/bin/mpicc
 MPICC = cc
-OPT =  -D W_MPI -D W_OPENMP -D MPI -D OPENMP -O3
-#CC = $(MPICC) -qopenmp -g $(OPT)
+OPT =  -D W_MPI -D W_OPENMP -O3
 CC = $(MPICC) -qopenmp -g -Wall -Werror -fPIC $(OPT)
-FFTW_INC = -I/opt/cray/pe/fftw/3.3.8.3/haswell/include
+
 ##############   s r c   ############
 all:
 	make $(TOEPLITZ_OBJ)/toeplitz.o \

@@ -9,8 +9,7 @@ MAPMAT_OBJ=$(MIDAPACK_OBJ)/mapmat
 TOEPLITZ_OBJ=$(MIDAPACK_OBJ)/toeplitz
 MIDAPACK_LIB=$(MIDAPACK_ROOT)/lib
 
-
-
+.PHONY: lib
 all : 
 	@echo "starts compiling ........"
 	mkdir -p $(MIDAPACK_ROOT) $(MIDAPACK_OBJ) $(MAPMAT_OBJ) $(TOEPLITZ_OBJ) $(MIDAPACK_LIB)

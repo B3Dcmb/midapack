@@ -33,10 +33,6 @@ MKL_LIB              = $(MKL_DIR)/lib/intel64
 INCpreAlps       += $(addprefix -I,$(MKL_INC))
 LIBpreAlps            += -L$(MKL_LIB) -lmkl_rt
 
-# FFTW_LIB = -L/opt/cray/pe/fftw/3.3.6.3/haswell/lib -lfftw3 -lfftw3_threads
-# FFTW_INC = -I/opt/cray/pe/fftw/3.3.6.3/haswell/include
-# FFTW_LIB = -L/opt/cray/pe/fftw/3.3.6.3/haswell/lib/libfftw3.a /opt/cray/pe/fftw/3.3.6.3/haswell/lib/libfftw3_threads.a
-
 #supplementary libraries
 HEALPIX_INC = -I$(HOME)/Healpix_3.50/include
 CFITSIO_INC = -I/usr/common/software/cfitsio/3.47/include

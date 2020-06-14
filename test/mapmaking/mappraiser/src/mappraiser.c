@@ -20,11 +20,6 @@
 #include "mappraiser.h"
 
 
-#include <execinfo.h>
-//#include <signal.h>
-#include <fenv.h>
-
-
 int x2map_pol( double *mapI, double *mapQ, double *mapU, double *Cond, int * hits, int npix, double *x, int *lstid, double *cond, int *lhits, int xsize);
 
 void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int pointing_commflag, double tol, int maxiter, int enlFac, int ortho_alg, int bs_red, int nside, void *data_size_proc, int nb_blocks_loc, void *local_blocks_sizes, int Nnz, void *pix, void *pixweights, void *signal, double *noise, int lambda, double *invtt)
@@ -44,47 +39,44 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
   MPI_Status status;
   
 
-mkl_set_num_threads(1);
-  
-  feclearexcept(FE_ALL_EXCEPT);
+  mkl_set_num_threads(1); // Circumvent an MKL bug
   
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &size);
   if(rank==0){
     printf("\n############# MAPPRAISER : MidAPack PaRAllel Iterative Sky EstimatoR vDev, May 2019 ################\n");
     printf("rank = %d, size = %d\n",rank,size);
+    fflush(stdout);
   }
-  fflush(stdout);
-
 
   
-
-//communication scheme for the pointing matrix  (to move in .h)
+  //communication scheme for the pointing matrix  (to move in .h)
   // pointing_commflag=6; //2==BUTTERFLY - 1==RING - 6==MPI_Allreduce
 
-//PCG parameters
+  //PCG parameters
   // tol=pow(10,-6);
   // K=500;
 
-//total length of the time domaine signal
+
+  //total length of the time domaine signal
   M = 0;
   for(i=0;i<size;i++){
     M += ((int *)data_size_proc)[i];
   }
   if(rank==0){
     printf("[rank %d] M=%ld\n", rank, M);
+    fflush(stdout);
   }
-  fflush(stdout);
 
 
-//compute distribution indexes over the processes
+  //compute distribution indexes over the processes
   m = ((int *)data_size_proc)[rank];
   gif = 0;
   for(i=0;i<rank;i++)
     gif += ((int *)data_size_proc)[i];
 
 
-//Print information on data distribution
+  //Print information on data distribution
   int Nb_t_Intervals_loc = nb_blocks_loc;
   MPI_Allreduce(&nb_blocks_loc, &Nb_t_Intervals, 1, MPI_INT, MPI_SUM, comm);
   int nb_proc_shared_one_interval = 1; //max(1, size/Nb_t_Intervals );
@@ -97,7 +89,7 @@ mkl_set_num_threads(1);
   }
 
 
-//Pointing matrix init
+  //Pointing matrix init
   st=MPI_Wtime();
   A.trash_pix =0;
   MatInit( &A, m, Nnz, pix, pixweights, pointing_commflag, comm);
@@ -109,7 +101,7 @@ mkl_set_num_threads(1);
   // printf("A.lcount = %d\n", A.lcount);
 
   
-//Build pixel-to-time domain mapping
+  //Build pixel-to-time domain mapping
   st=MPI_Wtime();
   id0pix = (int *) malloc(A.lcount/(A.nnz) * sizeof(int)); //index of the last time sample pointing to each pixel
   ll = (int *) malloc(m * sizeof(int)); //linked list of time samples indexes
@@ -139,7 +131,7 @@ mkl_set_num_threads(1);
   }
 
   
-//PCG beginning vector input definition for the pixel domain map (MatInit gives A.lcount)
+  //PCG beginning vector input definition for the pixel domain map (MatInit gives A.lcount)
   int *lhits;
   double *cond;
   x   = (double *) malloc(A.lcount*sizeof(double));
@@ -154,25 +146,25 @@ mkl_set_num_threads(1);
   }
 
   
-//Create piecewise Toeplitz matrix
-//specifics parameters:
+  //Create piecewise Toeplitz matrix
+  //specifics parameters:
   int nb_blocks_tot = Nb_t_Intervals;
   // int n_block_avg = M/nb_blocks_tot;  //should be equal to t_Intervals_length in the current config
   //                                     //because we dont have flotting blocks
   int lambda_block_avg = lambda;
 
-//flags for Toeplitz product strategy
+  //flags for Toeplitz product strategy
   Flag flag_stgy;
   flag_stgy_init_auto(&flag_stgy);
 
-//to print something on screen
+  //to print something on screen
   flag_stgy.flag_verbose=1;
 
-//define Toeplitz blocks list and structure for Nm1
+  //define Toeplitz blocks list and structure for Nm1
   Block *tpltzblocks;
   Tpltz Nm1;
 
-//dependants parameters:
+  //dependants parameters:
   int64_t nrow = M;
   int mcol = 1;
 
@@ -184,9 +176,9 @@ mkl_set_num_threads(1);
 
   // double nb_blocks_loc_part =  (local_V_size*1.0)/(n_block_avg) ;
 
-// // check special cases to have exact number of local blocks
-//   if ((id0/n_block_avg + nb_blocks_loc) * n_block_avg < (id0+local_V_size))
-//     nb_blocks_loc=nb_blocks_loc+1;
+  // // check special cases to have exact number of local blocks
+  //   if ((id0/n_block_avg + nb_blocks_loc) * n_block_avg < (id0+local_V_size))
+  //     nb_blocks_loc=nb_blocks_loc+1;
 
   if (rank==0 | rank==1) {
     printf("M=%ld, m=%d \n", M, m);
@@ -197,13 +189,13 @@ mkl_set_num_threads(1);
   // int nb_comm = (nb_proc_shared_a_block)-1 ;
 
   
-//Block definition
+  //Block definition
   tpltzblocks = (Block *) malloc(nb_blocks_loc * sizeof(Block));
   defineBlocks_avg(tpltzblocks, invtt, nb_blocks_loc, local_blocks_sizes, lambda_block_avg, id0 );
   defineTpltz_avg( &Nm1, nrow, 1, mcol, tpltzblocks, nb_blocks_loc, nb_blocks_tot, id0, local_V_size, flag_stgy, comm);
 
   
-//print Toeplitz parameters for information
+  //print Toeplitz parameters for information
   if (rank==0 | rank==1) {
     printf("[rank %d] size=%d, nrow=%ld, local_V_size=%d, id0=%ld \n", rank, size, nrow, local_V_size, id0);
     printf("[rank %d] nb_blocks_tot=%d, nb_blocks_loc=%d, lambda_block_avg=%d \n", rank, nb_blocks_tot, nb_blocks_loc, lambda_block_avg);
@@ -212,9 +204,9 @@ mkl_set_num_threads(1);
 
   
   MPI_Barrier(comm);
-   if(rank==0)
- printf("##### Start PCG ####################\n");
- fflush(stdout);
+  if(rank==0)
+    printf("##### Start PCG ####################\n");
+  fflush(stdout);
 
   //Hard coded parameters (To be removed)
   // int solver = 1;
@@ -225,9 +217,9 @@ mkl_set_num_threads(1);
 
   st=MPI_Wtime();
   
-// Conjugate Gradient
+  // Conjugate Gradient
   if(solver == 0)
-        PCG_GLS_true(outpath, ref, &A, Nm1, x, signal, noise, cond, lhits, tol, maxiter, precond);
+    PCG_GLS_true(outpath, ref, &A, Nm1, x, signal, noise, cond, lhits, tol, maxiter, precond);
   else if (solver == 1)
     ECG_GLS(outpath, ref, &A, Nm1, x, signal, noise, cond, lhits, tol, maxiter, enlFac, ortho_alg, bs_red);
   else {
@@ -238,14 +230,14 @@ mkl_set_num_threads(1);
 
   MPI_Barrier(comm);
   t=MPI_Wtime();
-   if(rank==0)
- printf("##### End PCG ####################\n");
+  if(rank==0)
+    printf("##### End PCG ####################\n");
   if (rank==0) {
     printf("[rank %d] Total PCG time=%lf \n", rank, t-st);
   }
   fflush(stdout);
 
-//write output to fits files:
+  //write output to fits files:
   st=MPI_Wtime();
   int mapsize = A.lcount-(A.nnz)*(A.trash_pix);
   int map_id = rank;
@@ -394,7 +386,7 @@ mkl_set_num_threads(1);
     fflush(stdout);
   }
   // MPI_Finalize();
- }
+}
 
 int x2map_pol( double *mapI, double *mapQ, double *mapU, double *Cond, int * hits, int npix, double *x, int *lstid, double *cond, int *lhits, int xsize)
 {
