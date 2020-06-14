@@ -52,6 +52,13 @@ int DiagAtA(Mat *A, double *diag, int pflag);
 // Communication routine for building the pixel blocks of the preconditioner
 int commScheme(Mat *A, double *vpixDiag, int pflag);
 
+// 2 lvl preconditionning routines
+struct Precond;
+void build_precond(struct Precond **out_p, const double *pixpond, Mat *A, const Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *x, const double *b, const double *noise, double tol, int n, int Zn, int precond);
+void apply_precond(struct Precond *p, const double *pixpond, const Mat *A, const Tpltz *Nm1, double *g, double *Cg);
+void free_precond(struct Precond **out_p);
+
+
 /* PCG routines */
 
 // Pixel share ponderation to deal with overlapping pixels between multiple MPI procs
