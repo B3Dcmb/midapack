@@ -6,7 +6,7 @@
 /** @file   pcg_true.c
  @author Frederic Dauvergne
  @date   November 2012
- @Last_update October 2018 by Hamza El Bouhargani
+ @Last_update May 2019 by Hamza El Bouhargani
  @Last_update June 2020 by Aygul Jamal */
 
 
@@ -86,7 +86,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
     Cg = AtNm1Ah;
     Nm1Ah = Ah;
     
-    printf("n=%d, m=%d, A.nnz=%d \n", n, m, A->nnz );
+    //printf("n=%d, m=%d, A.nnz=%d \n", n, m, A->nnz );
     
     struct Precond *p = NULL;
     
@@ -101,7 +101,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
     
     t=MPI_Wtime();
     if (rank==0) {
-        printf("[rank %d] 2lvl compute BD time=%lf \n", rank, t-st);
+        printf("[rank %d] compute BJ_inv time=%lf \n", rank, t-st);
         fflush(stdout);
     }
 

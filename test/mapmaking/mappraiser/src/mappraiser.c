@@ -4,7 +4,8 @@
 
 /** @file   mappraiser.c
     @author Hamza El Bouhargani
-    @date   May 2019 */
+    @date   May 2019
+    @Last_update June 2020 by Aygul Jamal  */
 
 #include <stdlib.h>
 #include <stdio.h>

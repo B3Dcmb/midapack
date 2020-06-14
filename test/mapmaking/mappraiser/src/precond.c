@@ -22,11 +22,6 @@
 
 #define eps 1.0e-17
 
-/*
-extern int dgecon_(const char *norm, const int *n, double *a, const int *lda, const double *anorm, double *rcond, double *work, int *iwork, int *info, int len);
-extern int dgetrf_(const int *m, const int *n, double *a, const int *lda, int *lpiv, int *info);
-extern double dlange_(const char *norm, const int *m, const int *n, const double *a, const int *lda, double *work, const int norm_len);
-*/
 
 int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ_inv, Mat *BJ, double *b, double *cond, int *lhits)
 {
@@ -1083,7 +1078,7 @@ void build_Em1(const Mat *A, double **Z, double **AZ, const double *pixpond, int
   dgecon_("1", &Zn, EO, &Zn, &anorm, &rcond, w, iw, &info);
   // if (info != 0) fprintf(stderr, "failure with error %d\n", info);
     
-  printf("condition number of Einv = %25.18e\n", rcond);
+  //printf("condition number of Einv = %25.18e\n", rcond);
     
   free(EO);
     
@@ -1236,11 +1231,8 @@ void PCG_Lanczos_eig(Mat *A, const Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ,
     Ritz_vectors_AZ[i] = calloc(n, sizeof(double));
 
     
-    
-  //srand (time(NULL));
   for (i = 0; i < n; ++i)
     w[i] = 0.0;
-  //w[i] = (double)rand() / (RAND_MAX);
     
   MatVecProd(A, x, _g, 0);
     
@@ -1262,10 +1254,10 @@ void PCG_Lanczos_eig(Mat *A, const Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ,
   beta = sqrt(result);
     
     
-  if (rank == 0){
-    printf("Before Iteration 0\n");
-    printf("beta = %e\n", beta);
-  }
+  //if (rank == 0){
+  //  printf("Before Iteration 0\n");
+  //  printf("beta = %e\n", beta);
+  //}
     
   if (beta > eps){
     for (i = 0; i < n; i++){
@@ -1289,8 +1281,8 @@ void PCG_Lanczos_eig(Mat *A, const Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ,
     dot += v[i] * Av[i] * pixpond[i];
   MPI_Allreduce(&dot, &alpha, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     
-  if (rank == 0)
-    printf("alpha = %e\n", alpha);
+  //if (rank == 0)
+  //  printf("alpha = %e\n", alpha);
     
   for (i = 0; i < n; i++)
     {
@@ -1309,7 +1301,7 @@ void PCG_Lanczos_eig(Mat *A, const Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ,
   st=MPI_Wtime();
     
   for (i = 0; i < K; i++) {
-    if (rank == 0) printf("Iteration %d\n", i);
+    //if (rank == 0) printf("Iteration %d\n", i);
                 
     dot = 0.0;
     for (j = 0; j < n; j++)
@@ -1317,8 +1309,8 @@ void PCG_Lanczos_eig(Mat *A, const Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ,
     MPI_Allreduce(&dot, &result, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     beta = sqrt(result);
         
-    if (rank == 0)
-      printf("beta = %e\n", beta);
+    //if (rank == 0)
+    //  printf("beta = %e\n", beta);
         
     if (beta > eps) {
       for (j = 0; j < n; j++) {
@@ -1352,8 +1344,8 @@ void PCG_Lanczos_eig(Mat *A, const Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ,
       dot += v[j] * Av[j] * pixpond[j];
     MPI_Allreduce(&dot, &alpha, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         
-    if (rank == 0)
-      printf("alpha = %e\n", alpha);
+    //if (rank == 0)
+    //  printf("alpha = %e\n", alpha);
         
     for (j = 0; j < n; j++) {
       AmulV[j * (K+1) + i + 1] = w[j];
@@ -1364,7 +1356,7 @@ void PCG_Lanczos_eig(Mat *A, const Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ,
         
     t = MPI_Wtime();
     if (rank==0) {
-      printf("Iteration = %d, [rank %d] Lanczos constructing time=%lf \n", i, rank, t-st);
+      printf("Iteration = %d, [rank %d] Lanczos iteration time=%lf \n", i, rank, t-st);
       fflush(stdout);
     }
         
