@@ -21,13 +21,6 @@
 #include "mappraiser.h"
 
 
-
-int get_pixshare_pond(Mat *A, double *pixpond);
-
-//int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ_inv, Mat *BJ, double *b, double *cond, int *lhits);
-
-
-
 int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond)
 {
     

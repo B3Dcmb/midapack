@@ -36,7 +36,7 @@
  /* Build right hand side */
  int get_rhs(Mat *A, Tpltz Nm1, double *b, double *noise, double *x, double *rhs);
  /* Preconditioner operator */
- double Opmmpreconditioner(Mat *A, Mat BJ,  double *X, double *Y, int ncol);
+ double Opmmpreconditioner(Mat *A, Mat BJ_inv,  double *X, double *Y, int ncol);
  /* System matrix operator: A^T * N^-1 * A */
  double Opmmmatrix(Mat *A, Tpltz Nm1, double *X, double *Y, int ncol);
  /*****************************************************************************/
@@ -60,10 +60,10 @@
    int N; //Global number of pixels (no overlapping correction)
    int m, n; //local number of time samples, local number of pixels x nnz (IQU)
    double *tmp; //temporary pointer
-   Mat BJ, BJ_true; //Block-Jacobi preconditioner
+   Mat BJ_inv, BJ; //Block-Jacobi preconditioner
 
    /*=== Pre-process degenerate pixels & build the preconditioner ===*/
-   precondblockjacobilike(A, Nm1, &BJ, &BJ_true, b, cond, lhits);
+   precondblockjacobilike(A, Nm1, &BJ_inv, &BJ, b, cond, lhits);
    //Correct the pixels counter after pre-processing
    n=A->lcount-(A->nnz)*(A->trash_pix);
    //Reallocate memory for the well-conditioned map
@@ -129,7 +129,7 @@
    rel_res[0] = 1.0;
 
    // Finish initialization
-   time_invMV += Opmmpreconditioner(A, BJ, ecg.R_p, ecg.P_p, ecg.bs);
+   time_invMV += Opmmpreconditioner(A, BJ_inv, ecg.R_p, ecg.P_p, ecg.bs);
    // preconditioner ecg.R -> ecg.P
    time_AV += Opmmmatrix(A, Nm1, ecg.P_p, ecg.AP_p, ecg.bs);
    // block operator ecg.P -> ecg.AP
@@ -148,11 +148,11 @@
        rel_res[ecg.iter] = ecg.res/ecg.normb;
        if (stop == 1) break;
        if (ecg.ortho_alg == ORTHOMIN) {
-         time_invMV += Opmmpreconditioner(A, BJ, ecg.R_p, ecg.Z_p, ecg.enlFac);
+         time_invMV += Opmmpreconditioner(A, BJ_inv, ecg.R_p, ecg.Z_p, ecg.enlFac);
          // preconditioner ecg.R -> ecg.Z
        }
        else if (ecg.ortho_alg == ORTHODIR) {
-         time_invMV += Opmmpreconditioner(A, BJ, ecg.AP_p, ecg.Z_p, ecg.bs);
+         time_invMV += Opmmpreconditioner(A, BJ_inv, ecg.AP_p, ecg.Z_p, ecg.bs);
          // preconditioner ecg.AP -> ecg.Z
        }
      }
@@ -213,7 +213,7 @@
  }
 
  /* Preconditioner operator */
- double Opmmpreconditioner(Mat *A, Mat BJ,  double *X, double *Y, int ncol)
+ double Opmmpreconditioner(Mat *A, Mat BJ_inv,  double *X, double *Y, int ncol)
  { // Y = M^-1 X
    double timing = MPI_Wtime();
 
@@ -228,7 +228,7 @@
    for(i=0; i<ncol; i++){
      // get column vector x
      x = X + i*n;
-     MatVecProd(&BJ, x, Cg, 0);
+     MatVecProd(&BJ_inv, x, Cg, 0);
      for(j=0; j<n; j++){
        Y[i*n+j] = Cg[j];
      }

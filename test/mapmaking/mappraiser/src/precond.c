@@ -23,6 +23,26 @@
 #define eps 1.0e-17
 
 
+
+struct Precond {
+  int precond; // 0 = BJ, 1 = 2lvl a priori, 2 = 2lvl a posteriori
+  int n;
+  int Zn;
+  Mat *BJ_inv; // alias
+  Mat *BJ; // alias
+
+  /* 2 lvl only (NULL otherwise) */
+  double **Z;
+  double **AZ;
+  double *Em1; // size Zn*Zn
+  double *Qg; // size n
+  double *AQg; // size n
+  double *Qtx; // size Zn
+  double *w; // size Zn
+};
+
+
+
 int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ_inv, Mat *BJ, double *b, double *cond, int *lhits)
 {
   int           i, j, k ;                       // some indexes
@@ -1163,7 +1183,7 @@ void mul_ZQtx(double **Z, const double *Qtx, double *vec, int Zn, int n)
 
 
 
-void PCG_Lanczos_eig(Mat *A, const Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ, double *x, const double *b, const double *noise, double tol, const double *pixpond, int K, double ***out_Ritz_vectors, double ***out_Ritz_vectors_AZ)
+void Lanczos_eig(Mat *A, const Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ, double *x, const double *b, const double *noise, double tol, const double *pixpond, int K, double ***out_Ritz_vectors, double ***out_Ritz_vectors_AZ)
 {
     
   int i, j, k ;            // some indexes
@@ -1482,27 +1502,6 @@ void PCG_Lanczos_eig(Mat *A, const Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ,
 
 
 
-
-
-struct Precond {
-  int precond; // 0 = BJ, 1 = 2lvl a priori, 2 = 2lvl a posteriori
-  int n;
-  int Zn;
-  Mat *BJ_inv; // alias
-  Mat *BJ; // alias
-
-  /* 2 lvl only (NULL otherwise) */
-  double **Z;
-  double **AZ;
-  double *Em1; // size Zn*Zn
-  double *Qg; // size n
-  double *AQg; // size n
-  double *Qtx; // size Zn
-  double *w; // size Zn
-};
-
-
-
 void build_precond(struct Precond **out_p, const double *pixpond, Mat *A, const Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *x, const double *b, const double *noise, double tol, int n, int Zn, int precond)
 {
   int rank, size;
@@ -1535,7 +1534,7 @@ void build_precond(struct Precond **out_p, const double *pixpond, Mat *A, const 
 
     // 2lvl a posteriori
     else if (precond == 2)
-      PCG_Lanczos_eig(A, Nm1, BJ_inv, BJ, x, b, noise, tol, pixpond, Zn, &(p->Z), &(p->AZ)); // 2lvl a posteriori preconditioner
+      Lanczos_eig(A, Nm1, BJ_inv, BJ, x, b, noise, tol, pixpond, Zn, &(p->Z), &(p->AZ)); // 2lvl a posteriori preconditioner
 
     // Invalid precond
     else {
