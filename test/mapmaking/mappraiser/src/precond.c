@@ -28,8 +28,9 @@ struct Precond {
   int precond; // 0 = BJ, 1 = 2lvl a priori, 2 = 2lvl a posteriori
   int n;
   int Zn;
-  Mat *BJ_inv; // alias
-  Mat *BJ; // alias
+  Mat BJ_inv;
+  Mat BJ;
+  double *pixpond;
 
   /* 2 lvl only (NULL otherwise) */
   double **Z;
@@ -800,7 +801,6 @@ int get_pixshare_pond(Mat *A, double *pixpond )
 
 
 
-
 void transpose_nn(double *A, int n)
 {
   int i, j;
@@ -874,33 +874,6 @@ void inverse_svd(int m, int n, int lda, double *a)
 
 
 
-/** Function m2m_sum for "sum map to map"
-    Extract values from one map (A1, vA1), and for each pixel shared with an other map (A2, vA2),
-    sum pixel value in vA1 to pixel value in vA2.
-    @return a number of elements shared between A1 and A2
-    @sa m2m
-    @ingroup matmap_group22*/
-int m2m_sum_i(int *vA1, int *A1, int n1, int *vA2, int *A2, int n2){
-  int i=0, j=0, k= 0;
-  while( i<n1 && j<n2){
-    if(A1[i] < A2[j]){
-      i++;
-    }
-    else if(A1[i] > A2[j]){
-      j++;
-    }
-    else{
-      vA2[j]+=vA1[i];
-      k++;
-      i++;
-      j++;
-    }
-  }
-  return k;
-}
-
-
-
 void build_Z(const Mat *A, int Zn, double ***out_Z)
 {
   int i, j, e, k, rank, size;
@@ -913,9 +886,8 @@ void build_Z(const Mat *A, int Zn, double ***out_Z)
   int *rcount, *rindices;
   double *rZ;
   double **Z; // Zn * A->lcount, pointers to columns (ie column-major)
-    
-    
-  MPI_Comm_rank(A->comm, &rank);                //get rank and size of the communicator
+
+  MPI_Comm_rank(A->comm, &rank); //get rank and size of the communicator
   MPI_Comm_size(A->comm, &size);
     
     
@@ -929,78 +901,73 @@ void build_Z(const Mat *A, int Zn, double ***out_Z)
   rindices  = (int *)malloc(lcount_max * sizeof(int)); //real indices in neighbor processors
     
     
-  // Calculer count local pour un pixel donné
+  // Compute local count for a given pixel
   for (i = 0; i < A->m * A->nnz; i++)
     count[A->indices[i]]++;
     
-  // Recopier count local dans total
+  // Copy local count in total count
   for (i = 0; i < A->m * A->nnz; i++)
     tcount[A->indices[i]] = count[A->indices[i]];
     
   // Compute total counts
-    
-  for (p=1; p < size; p++) {    //loop : collective global reduce in ring-like fashion
+  for (p=1; p < size; p++) { //loop : collective global reduce in ring-like fashion
     rp = (size + rank - p)%size;
     sp = (rank + p)%size;
-    MPI_Send(&(A->lcount), 1, MPI_INT, sp, 0, A->comm);                //exchange sizes
+    MPI_Send(&(A->lcount), 1, MPI_INT, sp, 0, A->comm); //exchange sizes
     MPI_Recv(&rlcount, 1, MPI_INT, rp, 0, A->comm, &status);
     tag++;
-    MPI_Irecv(rindices, rlcount, MPI_INT, rp, tag, A->comm, &r_request);//exchange global indices
+    MPI_Irecv(rindices, rlcount, MPI_INT, rp, tag, A->comm, &r_request); //exchange global indices
     MPI_Isend(A->lindices, A->lcount, MPI_INT, sp, tag, A->comm, &s_request);
     MPI_Wait(&r_request, &status);
     MPI_Wait(&s_request, &status);
     tag++;
-    MPI_Irecv(rcount, rlcount, MPI_INT, rp, tag, A->comm, &r_request);    //exchange local count/rcount values
+    MPI_Irecv(rcount, rlcount, MPI_INT, rp, tag, A->comm, &r_request); //exchange local count/rcount values
     MPI_Isend(count, A->lcount, MPI_INT, sp, tag, A->comm, &s_request);
     tag++;
     MPI_Wait(&r_request, &status);
-    m2m_sum_i(rcount, rindices, rlcount, tcount, A->lindices, A->lcount);        //sum in the result
+    m2m_sum_i(rcount, rindices, rlcount, tcount, A->lindices, A->lcount); //sum in the result
     MPI_Wait(&s_request, &status);
   }
-    
-  // Libérer les buffers non utilisés
+
+  // Free no longer used buffers
   free(rcount);
     
-    
-  // Allouer Z
+  // Allocate Z
   Z = calloc(size, sizeof(double *));
     
-  // Calculer le Z correspondant au processus courant
+  // Compute the current process' Z
   Z[rank] = calloc(A->lcount, sizeof(double));
   for (i = 0; i < A->lcount; i += A->nnz)
     Z[rank][i] = (double)((double)count[i] / (double)tcount[i]);
     
-    
-  // Libérer les buffers non utilisés
+  // Free no longer used buffers
   free(count);
   free(tcount);
     
-  // Allouer le buffer pour échanger Z
+  // Allocate the buffer to exchange Z
   rZ = (double *)malloc(lcount_max * sizeof(double));
     
-  // Echanger Z
-    
-  for (p=1; p < size; p++) {    //loop : collective global reduce in ring-like fashion
+  // Exchange Z
+  for (p=1; p < size; p++) { //loop : collective global reduce in ring-like fashion
     rp = (size + rank - p)%size;
     sp = (rank + p)%size;
-    MPI_Send(&(A->lcount), 1, MPI_INT, sp, 0, A->comm);                //exchange sizes
+    MPI_Send(&(A->lcount), 1, MPI_INT, sp, 0, A->comm); //exchange sizes
     MPI_Recv(&rlcount, 1, MPI_INT, rp, 0, A->comm, &status);
     tag++;
-    MPI_Irecv(rindices, rlcount, MPI_INT, rp, tag, A->comm, &r_request);    //exchange global indices
+    MPI_Irecv(rindices, rlcount, MPI_INT, rp, tag, A->comm, &r_request); //exchange global indices
     MPI_Isend(A->lindices, A->lcount, MPI_INT, sp, tag, A->comm, &s_request);
     MPI_Wait(&r_request, &status);
     MPI_Wait(&s_request, &status);
     tag++;
-    MPI_Irecv(rZ, rlcount, MPI_DOUBLE, rp, tag, A->comm, &r_request);    //exchange local values
+    MPI_Irecv(rZ, rlcount, MPI_DOUBLE, rp, tag, A->comm, &r_request); //exchange local values
     MPI_Isend(Z[rank], A->lcount, MPI_DOUBLE, sp, tag, A->comm, &s_request);
     tag++;
     MPI_Wait(&r_request, &status);
     Z[rp] = calloc(A->lcount, sizeof(double));
-    m2m(rZ, rindices, rlcount, Z[rp], A->lindices, A->lcount);        //copy the interesting value the corresponding Z[rp] value
+    m2m(rZ, rindices, rlcount, Z[rp], A->lindices, A->lcount); //copy the interesting value the corresponding Z[rp] value
     MPI_Wait(&s_request, &status);
   }
-    
-    
+
   int ratio = size / Zn;
   assert(size >= Zn);
   assert(Zn * ratio == size);
@@ -1020,19 +987,17 @@ void build_Z(const Mat *A, int Zn, double ***out_Z)
     }
   free(Z);
     
-  for(j=0; j < Zn; j++)
+  for (j=0; j < Zn; j++)
     {
       for (i = 0; i < A->lcount - A->nnz * A->trash_pix; i++)
         {
 	  ZZ[j][i] = ZZ[j][i + (A->nnz)*(A->trash_pix)];
         }
     }
-    
-    
-  // Libérer les buffers non utilisés
+        
+  // Free no longer used buffers
   free(rindices);
   free(rZ);
-    
 
   *out_Z = ZZ;
 }
@@ -1137,11 +1102,10 @@ void build_AZ(Mat *A, const Tpltz *Nm1, double **Z, int Zn, int n, double ***out
 
 void build_Qtx(const Mat *A, double **Z, const double *Em1, const double *x, const double *pixpond, double *w, double *Qtx, int Zn, int n)
 {
-  int i,j,k;
-    
+  int i,j,k;    
   int rank;
-  MPI_Comm_rank(A->comm, &rank);
-    
+
+  MPI_Comm_rank(A->comm, &rank);  
     
   // Pt N^{-1} P Z (Zt Pt N^{-1} P Z)^{-1} Zt x
   // Pt N^{-1} P Z (E)^{-1} Zt x
@@ -1155,8 +1119,7 @@ void build_Qtx(const Mat *A, double **Z, const double *Em1, const double *x, con
     }
   }
   MPI_Allreduce(MPI_IN_PLACE, w, Zn, MPI_DOUBLE, MPI_SUM, A->comm);
-    
-    
+
   // Qtx = Em1 * w (dense matrix E (Zn*Zn) times a vector w (Zn*1)
   for (i = 0; i < Zn; i++) {
     Qtx[i] = 0.0;
@@ -1164,7 +1127,6 @@ void build_Qtx(const Mat *A, double **Z, const double *Em1, const double *x, con
       Qtx[i] += Em1[i * Zn + j] * w[j];
     }
   }
-
 }
 
 void mul_ZQtx(double **Z, const double *Qtx, double *vec, int Zn, int n)
@@ -1184,8 +1146,7 @@ void mul_ZQtx(double **Z, const double *Qtx, double *vec, int Zn, int n)
 
 
 void Lanczos_eig(Mat *A, const Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ, double *x, const double *b, const double *noise, double tol, const double *pixpond, int K, double ***out_Ritz_vectors, double ***out_Ritz_vectors_AZ)
-{
-    
+{ 
   int i, j, k ;            // some indexes
   int m, n, rank, size;
   double st, t;               //timers
@@ -1195,7 +1156,7 @@ void Lanczos_eig(Mat *A, const Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ, dou
     
   double *Av = NULL, *_g = NULL;
   double *Tt = NULL, *T = NULL;
-  double *w = NULL, *v = NULL, *vold = NULL, *tmp = NULL;
+  double *w = NULL, *v = NULL, *vold = NULL;
   double *V = NULL, *AmulV = NULL;
     
   double *Ritz_values = NULL;
@@ -1206,29 +1167,22 @@ void Lanczos_eig(Mat *A, const Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ, dou
     
   double *work = NULL;
   double wkopt = 0.0;
-    
-    
-    
-  m=A->m;                    // Number of local time samples
-  //n=A->lcount;               // Number of local pixels
-  n=(A->lcount)-(A->nnz)*(A->trash_pix);
 
   MPI_Comm_rank(A->comm, &rank);
   MPI_Comm_size(A->comm, &size);
+
+  m = A->m;                                    // Number of local time samples
+  n = (A->lcount) - (A->nnz) * (A->trash_pix); // Number of local pixels
     
-  st=MPI_Wtime();
-    
-  tmp = (double *)calloc(n, sizeof(double));
+  st = MPI_Wtime();
     
   // Map domain
-  Av = (double *)malloc(n*sizeof(double));
-  _g = (double *)malloc(m*sizeof(double));
+  Av = (double *)malloc(n * sizeof(double));
+  _g = (double *)malloc(m * sizeof(double));
     
   T = (double *)calloc((K+1)*(K+1), sizeof(double));
   Tt = (double *)calloc(K*K, sizeof(double));
-    
-    
-    
+
   Ritz_vectors_out = (double *)calloc(n*K,  sizeof(double));
   // Ritz_vectors_out_r = (double *)calloc(n*K,  sizeof(double));
   w = (double *)malloc(n*sizeof(double));
@@ -1237,34 +1191,28 @@ void Lanczos_eig(Mat *A, const Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ, dou
   V = (double *)calloc(n * (K+1), sizeof(double));
     
   AmulV = (double *)calloc(n * (K+1), sizeof(double));
-    
-        
+
   Ritz_values = (double *)calloc(K, sizeof(double));
     
   Ritz_vectors = calloc(K, sizeof(double *));
   for (i = 0; i < K; i++)
     Ritz_vectors[i] = calloc(n, sizeof(double));
-    
-    
+
   Ritz_vectors_AZ = calloc(K, sizeof(double *));
   for (i = 0; i < K; i++)
     Ritz_vectors_AZ[i] = calloc(n, sizeof(double));
-
     
   for (i = 0; i < n; ++i)
     w[i] = 0.0;
     
   MatVecProd(A, x, _g, 0);
-    
-  for(i=0; i<m; i++)
-        
+
+  for (i = 0; i < m; i++)
     _g[i] = b[i] + noise[i] - _g[i];
     
   stbmmProd(*Nm1, _g);
     
   TrMatVecProd(A, _g, w, 0);
-    
-    
     
   //beta = sqrt(dot(w, w))
   dot = 0.0;
@@ -1272,26 +1220,18 @@ void Lanczos_eig(Mat *A, const Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ, dou
     dot += w[i] * w[i] * pixpond[i];
   MPI_Allreduce(&dot, &result, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
   beta = sqrt(result);
-    
-    
-  //if (rank == 0){
-  //  printf("Before Iteration 0\n");
-  //  printf("beta = %e\n", beta);
-  //}
-    
+
   if (beta > eps){
     for (i = 0; i < n; i++){
       v[i] = w[i]/beta;
       V[i*(K+1)] = v[i];
     }
   }
-    
-    
+
   //Av = A * v = Pt N P * v
   MatVecProd(A, v, _g, 0);
   stbmmProd(*Nm1, _g);
   TrMatVecProd(A, _g, Av, 0);
-    
     
   memcpy(w, Av, n * sizeof(double));
     
@@ -1301,37 +1241,28 @@ void Lanczos_eig(Mat *A, const Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ, dou
     dot += v[i] * Av[i] * pixpond[i];
   MPI_Allreduce(&dot, &alpha, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     
-  //if (rank == 0)
-  //  printf("alpha = %e\n", alpha);
-    
   for (i = 0; i < n; i++)
     {
       AmulV[i*(K+1)] = w[i];
       w[i] = w[i] - (alpha * v[i]);
-    }
-    
-    
-  t=MPI_Wtime();
-  if (rank==0) {
-    printf("[rank %d] Lanczos init time=%lf \n", rank, t-st);
+    }    
+
+  t = MPI_Wtime();
+  if (rank == 0) {
+    printf("[rank %d] Lanczos init time=%lf \n", rank, t - st);
     fflush(stdout);
   }
-    
-    
-  st=MPI_Wtime();
-    
+
+  st = MPI_Wtime();
+
   for (i = 0; i < K; i++) {
-    //if (rank == 0) printf("Iteration %d\n", i);
                 
     dot = 0.0;
     for (j = 0; j < n; j++)
       dot += w[j] * w[j] * pixpond[j];
     MPI_Allreduce(&dot, &result, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     beta = sqrt(result);
-        
-    //if (rank == 0)
-    //  printf("beta = %e\n", beta);
-        
+ 
     if (beta > eps) {
       for (j = 0; j < n; j++) {
 	v[j] = w[j] / beta;
@@ -1340,7 +1271,7 @@ void Lanczos_eig(Mat *A, const Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ, dou
     }
         
     else if (rank == 0) printf("division by zero in iteration %d\n", i);
-        
+    
     // What should we do to construct this special triangular matrix
     //T(i,i) = alpha
     //T(i,i+1) = beta
@@ -1356,34 +1287,28 @@ void Lanczos_eig(Mat *A, const Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ, dou
     TrMatVecProd(A, _g, Av, 0);
         
     memcpy(w, Av, n * sizeof(double));
-        
-        
+
     //alpha = dot(v, Av)
     dot = 0.0;
     for (j = 0; j < n; j++)
       dot += v[j] * Av[j] * pixpond[j];
     MPI_Allreduce(&dot, &alpha, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-        
-    //if (rank == 0)
-    //  printf("alpha = %e\n", alpha);
-        
+
     for (j = 0; j < n; j++) {
       AmulV[j * (K+1) + i + 1] = w[j];
       w[j] = w[j] - (alpha * v[j]) - (beta * vold[j]);
-      vold[j] = v[j];
-            
+      vold[j] = v[j];            
     }
-        
+
     t = MPI_Wtime();
-    if (rank==0) {
-      printf("Iteration = %d, [rank %d] Lanczos iteration time=%lf \n", i, rank, t-st);
+    if (rank == 0) {
+      printf("Iteration = %d, [rank %d] Lanczos iteration time=%lf \n", i, rank, t - st);
       fflush(stdout);
     }
-        
-    st=MPI_Wtime();
-  }
-    
-    
+
+    st = MPI_Wtime();
+  }    
+
   // Here we reduce the dimention of T from (K+1 * K+1) to K * K;
   // Here we reduce the dimention of V from (N * K+1) to (N * K)
     
@@ -1392,10 +1317,7 @@ void Lanczos_eig(Mat *A, const Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ, dou
       T[i*K + j] = T[i*(K+1) + j];
     }
   }
-  // memcpy(Tt, T, K * K * sizeof(double));
-    
-    
-    
+
   for (i = 0; i < n; i++){
     for (j = 0; j < K; j++){
       AmulV[i*K + j] = AmulV[i*(K+1) + j];
@@ -1407,10 +1329,7 @@ void Lanczos_eig(Mat *A, const Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ, dou
       V[i*K + j] = V[i*(K+1) + j];
     }
   }
-    
-    
-    
-    
+
   //[Ritz_vectors, Ritz_values] = eig(T)
   //Ritz_values contains the eigenvalues of the matrix A in ascending order.
     
@@ -1422,8 +1341,6 @@ void Lanczos_eig(Mat *A, const Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ, dou
     
   //int dsyev_(char *jobz, char *uplo, int *n, double *a, int *lda, double *w, double *work, int *lwork, int *info)
     
-    
-    
   dsyev_("Vectors", "Upper", &K, T, &K , Ritz_values, &wkopt, &lwork, &info);
     
     
@@ -1433,29 +1350,21 @@ void Lanczos_eig(Mat *A, const Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ, dou
   work = (double*)malloc( lwork*sizeof(double));
     
   dsyev_("Vectors", "Upper", &K, T, &K , Ritz_values, work, &lwork, &info);
-    
-    
+
   //free(work);
     
-    
-    
   transpose_nn(T, K);
-    
-    
-  t=MPI_Wtime();
-  if (rank==0) {
-    printf("[rank %d] Lanczos dsyev time=%lf \n", rank, t-st);
+
+  t = MPI_Wtime();
+  if (rank == 0) {
+    printf("[rank %d] Lanczos dsyev time=%lf \n", rank, t - st);
     fflush(stdout);
   }
-    
-    
-    
+   
   st = MPI_Wtime();
     
   memset(Ritz_vectors_out, 0, n*K*sizeof(double));
-    
-    
-    
+
   for (i = 0; i < n; i++) {
     for (k = 0; k < K; k++) {
       for (j = 0; j < K; j++) {
@@ -1467,9 +1376,7 @@ void Lanczos_eig(Mat *A, const Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ, dou
   for (i = 0; i < n; i++)
     for (j = 0; j < K; j++)
       Ritz_vectors[j][i] =  Ritz_vectors_out[i*K + j];
-    
-    
-    
+
   memset(Ritz_vectors_out, 0, n*K*sizeof(double));
     
   for (i = 0; i < n; i++) {
@@ -1484,15 +1391,12 @@ void Lanczos_eig(Mat *A, const Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ, dou
     for (j = 0; j < K; j++)
       Ritz_vectors_AZ[j][i] =  Ritz_vectors_out[i*K + j];
     
-    
-    
-    
-  t=MPI_Wtime();
-  if (rank==0) {
-    printf("[rank %d] Lanczos V*T multiplication time=%lf \n", rank, t-st);
+  t = MPI_Wtime();
+  if (rank == 0) {
+    printf("[rank %d] Lanczos V*T multiplication time=%lf \n", rank, t - st);
     fflush(stdout);
   }
-    
+
   free(Av); free(_g); free(Tt); free(T); free(w); free(v); free(vold);
   free(V); free(Ritz_values); free(Ritz_vectors_out);
     
@@ -1502,10 +1406,11 @@ void Lanczos_eig(Mat *A, const Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ, dou
 
 
 
-void build_precond(struct Precond **out_p, const double *pixpond, Mat *A, const Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *x, const double *b, const double *noise, double tol, int n, int Zn, int precond)
+void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tpltz *Nm1, double **in_out_x, double *b, const double *noise, double *cond, int *lhits, double tol, int Zn, int precond)
 {
   int rank, size;
   double st, t;
+  double *x;
 
   struct Precond *p = calloc(1, sizeof(struct Precond));
 
@@ -1513,28 +1418,41 @@ void build_precond(struct Precond **out_p, const double *pixpond, Mat *A, const 
   MPI_Comm_size(A->comm, &size);
 
   p->precond = precond;
-  p->BJ_inv = BJ_inv;
-  p->BJ = BJ;
-  p->n = n;
   p->Zn = Zn;
+
+  precondblockjacobilike(A, *Nm1, &(p->BJ_inv), &(p->BJ), b, cond, lhits);
+
+  p->n = (A->lcount) - (A->nnz) * (A->trash_pix);
+
+  // Reallocate memory for well-conditioned map
+  x = realloc(*in_out_x, p->n * sizeof(double));
+  if (x == NULL) {
+    printf("Out of memory");
+    exit(1);
+  }
+  
+  p->pixpond = (double *)malloc(p->n * sizeof(double));
     
+  // Compute pixel share ponderation
+  get_pixshare_pond(A, p->pixpond);
+
   if (precond != 0) {
-    p->Qg = calloc(n, sizeof(double));
-    p->AQg = calloc(n, sizeof(double));
+    p->Qg = calloc(p->n, sizeof(double));
+    p->AQg = calloc(p->n, sizeof(double));
     p->w = calloc(Zn, sizeof(double)); // Zt * x
     p->Qtx = calloc(Zn, sizeof(double)); // Em1 * Zt * x
 
-    st=MPI_Wtime();
+    st = MPI_Wtime();
 
     // 2lvl a priori
     if (precond == 1) {
       build_Z(A, Zn, &(p->Z));
-      build_AZ(A, Nm1, p->Z, Zn, n, &(p->AZ));
+      build_AZ(A, Nm1, p->Z, Zn, p->n, &(p->AZ));
     }
 
     // 2lvl a posteriori
     else if (precond == 2)
-      Lanczos_eig(A, Nm1, BJ_inv, BJ, x, b, noise, tol, pixpond, Zn, &(p->Z), &(p->AZ)); // 2lvl a posteriori preconditioner
+      Lanczos_eig(A, Nm1, &(p->BJ_inv), &(p->BJ), x, b, noise, tol, p->pixpond, Zn, &(p->Z), &(p->AZ)); // 2lvl a posteriori preconditioner
 
     // Invalid precond
     else {
@@ -1542,41 +1460,44 @@ void build_precond(struct Precond **out_p, const double *pixpond, Mat *A, const 
       exit(1);
     }
 
-    t=MPI_Wtime();
-    if (rank==0) {
-      printf("[rank %d] 2lvl compute Z time=%lf \n", rank, t-st);
+    t = MPI_Wtime();
+    if (rank == 0) {
+      printf("[rank %d] 2lvl compute Z time=%lf \n", rank, t - st);
       fflush(stdout);
-    }        
-    st=MPI_Wtime();
-    
-    build_Em1(A, p->Z, p->AZ, pixpond, Zn, n, &(p->Em1));
-    
-    t=MPI_Wtime();
-    if (rank==0){
-      printf("2lvl compute Em1 time=%lf \n", t-st);
+    }
+    st = MPI_Wtime();
+
+    build_Em1(A, p->Z, p->AZ, p->pixpond, Zn, p->n, &(p->Em1));
+
+    t = MPI_Wtime();
+    if (rank == 0){
+      printf("2lvl compute Em1 time=%lf \n", t - st);
       fflush(stdout);
     }
 
-    memcpy(x, p->Z[Zn-1], n * sizeof(double));
+    memcpy(x, p->Z[Zn-1], p->n * sizeof(double));
   }
 
   *out_p = p;
+  *out_pixpond = p->pixpond;
+  *out_n = p->n;
+  *in_out_x = x;
 }
 
 
 
-void apply_precond(struct Precond *p, const double *pixpond, const Mat *A, const Tpltz *Nm1, double *g, double *Cg)
+void apply_precond(struct Precond *p, const Mat *A, const Tpltz *Nm1, double *g, double *Cg)
 {
   int i;
 
   // BJ
   if (p->precond == 0) {
-    MatVecProd(p->BJ_inv, g, Cg, 0);
+    MatVecProd(&(p->BJ_inv), g, Cg, 0);
   }
   
   // 2lvl
   else {
-    build_Qtx(A, p->Z, p->Em1, g, pixpond, p->w, p->Qtx, p->Zn, p->n);
+    build_Qtx(A, p->Z, p->Em1, g, p->pixpond, p->w, p->Qtx, p->Zn, p->n);
     mul_ZQtx(p->Z, p->Qtx, p->Qg, p->Zn, p->n);
     mul_ZQtx(p->AZ, p->Qtx, p->AQg, p->Zn, p->n);
         
@@ -1584,7 +1505,7 @@ void apply_precond(struct Precond *p, const double *pixpond, const Mat *A, const
       p->AQg[i] = g[i] - p->AQg[i];
     }
         
-    MatVecProd(p->BJ_inv, p->AQg, Cg, 0);
+    MatVecProd(&(p->BJ_inv), p->AQg, Cg, 0);
         
     for (i = 0; i < p->n; ++i) {
       Cg[i] += p->Qg[i];
@@ -1596,11 +1517,15 @@ void apply_precond(struct Precond *p, const double *pixpond, const Mat *A, const
 
 
 
-
-void free_precond(struct Precond **out_p)
+void free_precond(struct Precond **in_out_p)
 {
   int i;
-  struct Precond *p = *out_p;
+  struct Precond *p = *in_out_p;
+
+  free(p->pixpond);
+
+  MatFree(&(p->BJ_inv));
+  MatFree(&(p->BJ));  
 
   if (p->precond != 0) {
     for (i = 0; i < p->Zn; i++)
@@ -1617,8 +1542,7 @@ void free_precond(struct Precond **out_p)
     free(p->w);
     free(p->Qtx);
   }
-  
-  free(p);
-  *out_p = NULL;
-}
 
+  free(p);
+  *in_out_p = NULL;
+}

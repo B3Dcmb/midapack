@@ -23,3 +23,5 @@ void omp_lmatvecprod(int *ind, double *val, int m, int nnz, double *in, double *
 int m2m(double *vA1, int *A1, int n1, double *vA2, int *A2, int n2);
 
 int m2m_sum(double *vA1, int *A1, int n1, double *vA2, int *A2, int n2);
+
+int m2m_sum_i(int *vA1, int *A1, int n1, int *vA2, int *A2, int n2);
