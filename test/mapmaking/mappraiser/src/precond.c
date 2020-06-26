@@ -1525,7 +1525,12 @@ void free_precond(struct Precond **in_out_p)
   free(p->pixpond);
 
   MatFree(&(p->BJ_inv));
-  MatFree(&(p->BJ));  
+  (p->BJ_inv).indices = NULL;
+  (p->BJ_inv).values = NULL;
+ 
+  MatFree(&(p->BJ));
+  (p->BJ).indices = NULL;
+  (p->BJ).values = NULL;
 
   if (p->precond != 0) {
     for (i = 0; i < p->Zn; i++)
