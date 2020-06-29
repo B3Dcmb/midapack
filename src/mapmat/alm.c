@@ -134,3 +134,30 @@ int m2m_sum(double *vA1, int *A1, int n1, double *vA2, int *A2, int n2){
   return k;
 }
 
+
+
+
+/** Function m2m_sum_i for "sum map to map"
+    Extract values from one map (A1, vA1), and for each pixel shared with an other map (A2, vA2),
+    sum pixel value in vA1 to pixel value in vA2.
+    @return a number of elements shared between A1 and A2
+    @sa m2m
+    @ingroup matmap_group22*/
+int m2m_sum_i(int *vA1, int *A1, int n1, int *vA2, int *A2, int n2){
+  int i=0, j=0, k= 0;
+  while( i<n1 && j<n2){
+    if(A1[i] < A2[j]){
+      i++;
+    }
+    else if(A1[i] > A2[j]){
+      j++;
+    }
+    else{
+      vA2[j]+=vA1[i];
+      k++;
+      i++;
+      j++;
+    }
+  }
+  return k;
+}

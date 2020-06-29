@@ -1,4 +1,6 @@
-DIR = /global/homes/e/elbouha/midapack
+DIR = /global/homes/a/ajamal/CMB_TOAST_SIM/midapack
+OPT =  -D W_MPI -D W_OPENMP -D MPI -D OPENMP -O3
+
 TOEPLITZ = $(DIR)/src/toeplitz/
 GCC = gcc
 # MPICC = /global/homes/e/elbouha/.conda/envs/hamzaenv/bin/mpicc
@@ -11,9 +13,9 @@ LIB = -L$(DIR)/lib -lmidapack
 CPLM_CORE     = utils/cplm_core
 CPLMDIR      = utils/cplm_light
 CPLM_V0_DIR  = utils/cplm_v0
-preAlpsDIR = /global/homes/e/elbouha/preAlps
+preAlpsDIR = /global/homes/a/ajamal/preAlps
 
-LIBpreAlps = -L/global/homes/e/elbouha/preAlps/lib/ -lpreAlps_release -lcplm_light -lcplm_v0 -lcplm_core
+LIBpreAlps = -L/global/homes/a/ajamal/preAlps/lib/ -lpreAlps_release -lcplm_light -lcplm_v0 -lcplm_core
 INCpreAlps = -I$(preAlpsDIR) -I../ -I../include -I$(preAlpsDIR)/$(CPLM_CORE) -I$(preAlpsDIR)/$(CPLMDIR) -I$(preAlpsDIR)/$(CPLM_V0_DIR) -I$(preAlpsDIR)/utils -I$(preAlpsDIR)/src/preconditioners -I$(preAlpsDIR)/src/solvers
 
 METIS_DIR=/usr/common/software/metis/5.1.0
