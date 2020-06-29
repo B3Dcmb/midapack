@@ -120,9 +120,8 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
     res0 = res;
     // Test if already converged
     if (rank == 0) {
-        printf("res = %e, res0 = %e, g2pix = %e, g2pixB = %e\n", res, res0, g2pix, g2pixB);
         res_rel = sqrt(res) / sqrt(res0);
-        printf("k=%d res_g2pix=%e res_g2pix_rel=%e res_rel=%e time=%lf\n", 0, g2pix, sqrt(g2pix) / sqrt(g2pixB), sqrt(res) / sqrt(res0), t - st);
+	printf("k = %d, res = %e, res0 = %e, g2pix = %e, g2pixB = %e, res_rel = %e, time = %lf\n", 0, res, res0, g2pix, g2pixB, res_rel, t - st);
         char filename[256];
         sprintf(filename,"%s/pcg_residuals_%s.dat", outpath, ref);
         fp = fopen(filename, "wb");
@@ -197,9 +196,8 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
         }
         
         if (rank == 0){ //print iterate info
-            printf("res = %e, res0 = %e, g2pix = %e, g2pixB = %e\n", res, res0, g2pix_polak, g2pixB);
-            res_rel = sqrt(res) / sqrt(res0);
-            printf("k=%d res_g2pix=%e res_g2pix_rel=%e res_rel=%e time=%lf \n", k, g2pix_polak, sqrt(g2pix_polak) / sqrt(g2pixB), sqrt(res) / sqrt(res0), t - st);
+	    res_rel = sqrt(res) / sqrt(res0);
+            printf("k = %d, res = %e, res0 = %e, g2pix = %e, g2pixB = %e, res_rel = %e, time = %lf\n", k, res, res0, g2pix_polak, g2pixB, res_rel, t - st);
             fwrite(&res_rel, sizeof(double), 1, fp);
         }
         fflush(stdout);
@@ -207,7 +205,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
         if (res <= tol2rel) {
             if (rank == 0) {
                 printf("--> converged (%e < %e) \n", res, tol2rel);
-                printf("--> i.e. \t (%e < %e) \n", sqrt(res / res0), tol);
+                printf("--> i.e. \t (%e < %e) \n", res_rel, tol);
                 printf("--> solve time = %lf \n", solve_time);
                 fclose(fp);
             }
@@ -237,7 +235,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
     }
 
     if (rank == 0)
-        printf("--> res_g2pix=%e\n", g2pix);
+        printf("--> res_g2pix = %e\n", g2pix);
 
     free(h);
     free(Ah);
