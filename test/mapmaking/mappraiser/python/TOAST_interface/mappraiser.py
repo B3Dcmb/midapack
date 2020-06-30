@@ -655,6 +655,7 @@ class OpMappraiser(Operator):
                         invtt_list.append(np.ones(1)) #Must be used with lambda = 1
                     return invtt_list, self._mappraiser_noise.dtype
 
+
                 self._mappraiser_noise[:] = np.nan
 
                 global_offset = 0
