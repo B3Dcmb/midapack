@@ -650,7 +650,10 @@ class OpMappraiser(Operator):
                 )
                 if self._noise_name == None:
                     self._mappraiser_noise = np.zeros_like(self._mappraiser_noise)
-                    return [np.ones(1)], self._mappraiser_noise.dtype
+                    invtt_list = []
+                    for i in range(len(self._data.obs)*len(detectors)):
+                        invtt_list.append(np.ones(1)) #Must be used with lambda = 1
+                    return invtt_list, self._mappraiser_noise.dtype
 
                 self._mappraiser_noise[:] = np.nan
 
