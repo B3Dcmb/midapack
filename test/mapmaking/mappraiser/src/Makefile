@@ -72,7 +72,6 @@ $(MAPPRAISER_OBJ)/iofiles.o: iofiles.c
 $(MAPPRAISER_OBJ)/mappraiser.o: mappraiser.c
 	$(CC) -c $< $(INC) $(LIB) $(CFITSIO_INC) $(INCpreAlps) $(LIBpreAlps) -o $@
 
-
 # s4cmb_pipeline: createToeplitz.o precond.o s4cmb_pipeline.c iofiles.o pcg_true.o
 # 	$(CC) s4cmb_pipeline.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(LIB) $(FFTW_LIB) -lm -o s4cmb_pcg -Wl,@/global/homes/t/tcimic/midapack/test/mapmaking/allinea-profiler.ld
 

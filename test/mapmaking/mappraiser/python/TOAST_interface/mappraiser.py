@@ -253,7 +253,7 @@ class OpMappraiser(Operator):
             memreport("just before calling libmappraiser.MLmap", self._comm)
 
         # Compute the Maximum Likelihood map
-        os.environ["OMP_NUM_THREADS"] = "1"
+        # os.environ["OMP_NUM_THREADS"] = "1"
         mappraiser.MLmap(
             self._comm,
             self._params,
@@ -268,7 +268,7 @@ class OpMappraiser(Operator):
             self._params["Lambda"],
             self._mappraiser_invtt,
             )
-        os.environ["OMP_NUM_THREADS"] = "4"
+        # os.environ["OMP_NUM_THREADS"] = "4"
 
         return
 

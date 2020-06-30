@@ -1,14 +1,13 @@
 // Midapack library
 // mapmaking code example using the Midapack library - release 1.2b, Nov 2012
-// PCG routine applied to the mapmaking equation
-// This can use the diagonal or the block-diagonal jacobi preconditionners
+// PCG routine applied to the map-making equation
+// This can use the block-diagonal jacobi or Two-level preconditionners
 
 /** @file   pcg_true.c
- @author Frederic Dauvergne
- @date   November 2012
- @Last_update May 2019 by Hamza El Bouhargani
+ @author Hamza El Bouhargani
+ @date   May 2019
+ @credit  Adapted from work by Frederic Dauvergne
  @Last_update June 2020 by Aygul Jamal */
-
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -20,7 +19,6 @@
 #include "midapack.h"
 #include "mappraiser.h"
 
-
 int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond)
 {
     int    i, j, k;     // some indexes
@@ -30,7 +28,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
     double st, t;       // timers
     double solve_time = 0.0;
     double res, res0, res_rel;
-    
+
     double *_g, *ACg, *Ah, *Nm1Ah; // time domain vectors
     double *g, *gp, *gt, *Cg, *h;  // map domain vectors
     double *AtNm1Ah;               // map domain
@@ -47,36 +45,34 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
 
     MPI_Comm_rank(A->comm, &rank);
     MPI_Comm_size(A->comm, &size);
-    m = A->m;                    
+    m = A->m;
 
     st = MPI_Wtime();
-    
-    //void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tpltz *Nm1, double **in_out_x, double *b, const double *noise, double *cond, int *lhits, double tol, int Zn, int precond)
+
     build_precond(&p, &pixpond, &n, A, &Nm1, &x, b, noise, cond, lhits, tol, size /* Zn */, precond);
 
-    // map domain
+    t = MPI_Wtime();
+    if (rank == 0) {
+        printf("[rank %d] Preconditioner computation time = %lf \n", rank, t - st);
+        fflush(stdout);
+    }
+
+    // map domain objects memory allocation
     h = (double *) malloc(n * sizeof(double)); // descent direction
-    g = (double *) malloc(n * sizeof(double));
-    gp = (double *) malloc(n * sizeof(double));
+    g = (double *) malloc(n * sizeof(double)); // residual
+    gp = (double *) malloc(n * sizeof(double)); // residual of previous iteration
     AtNm1Ah = (double *) malloc(n * sizeof(double));
-    
-    // time domain
+
+    // time domain objects memory allocation
     Ah = (double *) malloc(m * sizeof(double));
 
     _g = Ah;
     Cg = AtNm1Ah;
     Nm1Ah = Ah;
 
-    //printf("n=%d, m=%d, A.nnz=%d \n", n, m, A->nnz);
-
-    t = MPI_Wtime();
-    if (rank == 0) {
-        printf("[rank %d] compute precond time = %lf \n", rank, t - st);
-        fflush(stdout);
-    }
-
     st = MPI_Wtime();
 
+    // Compute RHS
     MatVecProd(A, x, _g, 0);
 
     for (i = 0; i < m; i++)
@@ -85,13 +81,12 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
     stbmmProd(Nm1, _g); // _g = Nm1 (Ax-b)
 
     TrMatVecProd(A, _g, g, 0); // g = At _g
-    
-    //void apply_precond(struct precond *p, Mat *A, Tpltz *Nm1, double *g, double *Cg)
+
     apply_precond(p, A, &Nm1, g, Cg);
 
     for (j = 0; j < n; j++) // h = -Cg
         h[j] = Cg[j];
-    
+
     g2pix = 0.0; // g2 = "res"
     localreduce = 0.0;
     for (i = 0; i < n; i++) // g2 = (Cg, g)
@@ -111,7 +106,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
 
         MPI_Allreduce(&localreduce, &res, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     }
-    else {        
+    else {
         res = g2pix;
     }
 
@@ -121,7 +116,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
     // Test if already converged
     if (rank == 0) {
         res_rel = sqrt(res) / sqrt(res0);
-	printf("k = %d, res = %e, res0 = %e, g2pix = %e, g2pixB = %e, res_rel = %e, time = %lf\n", 0, res, res0, g2pix, g2pixB, res_rel, t - st);
+	      printf("k = %d, res0 = %e, g2pix = %e, time = %lf\n", 0, res0, g2pix, t - st);
         char filename[256];
         sprintf(filename,"%s/pcg_residuals_%s.dat", outpath, ref);
         fp = fopen(filename, "wb");
@@ -136,27 +131,27 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
 
     st = MPI_Wtime();
     fflush(stdout);
-    
-    
+
+
     // PCG Descent Loop *********************************************
     for (k = 1; k < K ; k++){
-        
+
         // Swap g backup pointers (Ribière-Polak needs g from previous iteration)
         gt = gp;
         gp = g;
         g = gt;
-        
+
         MatVecProd(A, h, Ah, 0);            // Ah = A h
         stbmmProd(Nm1, Nm1Ah);              // Nm1Ah = Nm1 Ah   (Nm1Ah == Ah)
         TrMatVecProd(A, Nm1Ah, AtNm1Ah, 0); // AtNm1Ah = At Nm1Ah
-        
+
         coeff = 0.0;
         localreduce = 0.0;
         for (i = 0; i < n; i++)
             localreduce += h[i] * AtNm1Ah[i] * pixpond[i];
         MPI_Allreduce(&localreduce, &coeff, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
-        ro = g2pix / coeff;        
+        ro = g2pix / coeff;
 
         for (j = 0; j < n; j++) // x = x + ro * h
             x[j] = x[j] + ro * h[j];
@@ -164,44 +159,43 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
         for (j = 0; j < n; j++)             // g = g + ro * (At Nm1 A) h
             g[j] = gp[j] - ro * AtNm1Ah[j]; // Use Ribière-Polak formula
 
-	//void apply_precond(struct precond *p, Mat *A, Tpltz *Nm1, double *g, double *Cg)
-	apply_precond(p, A, &Nm1, g, Cg);
+	      apply_precond(p, A, &Nm1, g, Cg);
 
         g2pixp = g2pix; // g2p = "res"
         localreduce = 0.0;
         for (i = 0; i < n; i++) // g2 = (Cg, g)
             localreduce += Cg[i] * g[i] * pixpond[i];
-        
+
         MPI_Allreduce(&localreduce, &g2pix, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
         localreduce = 0.0;
         for (i = 0; i < n; i++) // g2 = (Cg, g)
             localreduce += Cg[i] * (g[i] - gp[i]) * pixpond[i];
-        
+
         MPI_Allreduce(&localreduce, &g2pix_polak, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
         t = MPI_Wtime();
         solve_time += (t - st);
-        
+
         // Just to check with the true norm:
         if (TRUE_NORM == 1) {
             localreduce = 0.0;
             for (i = 0; i < n; i++) // g2 = (Cg, g)
                 localreduce += g[i] * g[i] * pixpond[i];
-            
+
             MPI_Allreduce(&localreduce, &res, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         }
         else {
             res = g2pix_polak;
         }
-        
+
         if (rank == 0){ //print iterate info
-	    res_rel = sqrt(res) / sqrt(res0);
-            printf("k = %d, res = %e, res0 = %e, g2pix = %e, g2pixB = %e, res_rel = %e, time = %lf\n", k, res, res0, g2pix_polak, g2pixB, res_rel, t - st);
+	          res_rel = sqrt(res) / sqrt(res0);
+            printf("k = %d, res = %e, g2pix = %e, res_rel = %e, time = %lf\n", k, res, g2pix_polak, res_rel, t - st);
             fwrite(&res_rel, sizeof(double), 1, fp);
         }
         fflush(stdout);
-                
+
         if (res <= tol2rel) {
             if (rank == 0) {
                 printf("--> converged (%e < %e) \n", res, tol2rel);
@@ -211,14 +205,14 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
             }
             break;
         }
-  
+
         if (g2pix_polak > g2pixp) {
             if (rank == 0)
                 printf("--> g2pix > g2pixp pb (%e > %e) \n", g2pix, g2pixp);
         }
 
         st = MPI_Wtime();
-        
+
         //gamma = g2pix / g2pixp;
         gamma = g2pix_polak / g2pixp;
 
@@ -229,18 +223,19 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
 
     if (k == K) { // check unconverged
         if (rank == 0) {
-            printf("--> unconverged, max iterate reached (%le > %le)\n", g2pix, tol2rel);
+            printf("--> unconverged, max iterate reached (%le > %le)\n", res, tol2rel);
             fclose(fp);
         }
     }
 
     if (rank == 0)
-        printf("--> res_g2pix = %e\n", g2pix);
+        printf("--> g2pix = %e\n", g2pix);
 
     free(h);
-    free(Ah);
     free(g);
+    free(gp);
     free(AtNm1Ah);
+    free(Ah);
     free_precond(&p);
 
     return 0;

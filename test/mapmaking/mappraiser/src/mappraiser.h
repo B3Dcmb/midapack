@@ -35,35 +35,24 @@ void write_map (void *signal, int type, long nside, const char *filename,
   char nest, const char *coordsys);
 
 /* Preconditioner routines */
+struct Precond;
 
 // Block-Jacobi preconditioner
 int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ_inv, Mat *BJ, double *b, double *cond, int *lhits);
 
-// Point Jacobi preconditioner
-int precondjacobilike(Mat A, Tpltz Nm1, int *lhits, double *cond, double *vpixDiag);
-
-// Local product A^T * diagNM1 * A
-int getlocalW(Mat *A, Tpltz Nm1, double *vpixBlock, int *lhits);
-
-int getlocDiagN(Mat *A, Tpltz Nm1, double *vpixDiag);
-
-int DiagAtA(Mat *A, double *diag, int pflag);
-
-// Communication routine for building the pixel blocks of the preconditioner
-int commScheme(Mat *A, double *vpixDiag, int pflag);
-
-// 2 lvl preconditionning routines
-struct Precond;
+// Preconditioner constructor
 void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tpltz *Nm1, double **in_out_x, double *b, const double *noise, double *cond, int *lhits, double tol, int Zn, int precond);
-void apply_precond(struct Precond *p, const Mat *A, const Tpltz *Nm1, double *g, double *Cg);
-void free_precond(struct Precond **in_out_p);
 
+// Product of the preconditioner with a map vector
+void apply_precond(struct Precond *p, const Mat *A, const Tpltz *Nm1, double *g, double *Cg);
+
+// Free memory of the preconditioner
+void free_precond(struct Precond **in_out_p);
 
 /* PCG routines */
 
 // Pixel share ponderation to deal with overlapping pixels between multiple MPI procs
 int get_pixshare_pond(Mat *A, double *pixpond);
-
 
 //PCG routine
 int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond);
