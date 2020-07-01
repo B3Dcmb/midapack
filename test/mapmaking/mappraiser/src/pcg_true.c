@@ -116,7 +116,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
     // Test if already converged
     if (rank == 0) {
         res_rel = sqrt(res) / sqrt(res0);
-	      printf("k = %d, res0 = %e, g2pix = %e, time = %lf\n", 0, res0, g2pix, t - st);
+	printf("k = %d, res = %e, g2pix = %e, res_rel = %e, time = %lf\n", 0, res, g2pix, res_rel, t - st);
         char filename[256];
         sprintf(filename,"%s/pcg_residuals_%s.dat", outpath, ref);
         fp = fopen(filename, "wb");
