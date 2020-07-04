@@ -380,6 +380,7 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz Nm1, TemplateClass
   AtNm1Ah = (double *) malloc(n * sizeof(double));
 
   //templates domain
+  int n_class = npoly + miin(1,n_sss_bins);
   int nb_templates_loc = 0;
   for(i=0;i<nces;i++)
     nb_templates_loc += ndet * (npoly*nsweeps[i] + n_sss_bins);
@@ -465,7 +466,7 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz Nm1, TemplateClass
 
 
   st2=MPI_Wtime();
-  TrTVecProd(X, nces, (npoly+1) * ndet, sampling_freq, sweeptstamps, az_binned, _g, out1);
+  TrTVecProd(X, nces, n_class * ndet, sampling_freq, sweeptstamps, az_binned, _g, out1);
   // for(i=78*3; i<78*3+10; i++){//
   //     printf("TrT*_g: out1[%d] = %f\n",i,out1[i]);
   // }
@@ -496,7 +497,7 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz Nm1, TemplateClass
   //     printf("(TtMT)^-1 * out1: out2[%d] = %f\n",i,out2[i]);
   // }
   st2 = MPI_Wtime();
-  TVecProd(X, nces, (npoly+1) * ndet, sampling_freq, sweeptstamps, az_binned, out2, Tvec);
+  TVecProd(X, nces, n_class * ndet, sampling_freq, sweeptstamps, az_binned, out2, Tvec);
   // for(i=0; i<10; i++){//
   //     printf("(T*out2: Tvec[%d] = %f\n",i,Tvec[i]);
   // }
@@ -646,7 +647,7 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz Nm1, TemplateClass
     //     printf("Nm1Ah: Nm1Ah[%d] = %f\n",i,Nm1Ah[i]);
     // }
 
-    TrTVecProd(X, nces, (npoly+1) * ndet, sampling_freq, sweeptstamps, az_binned, Nm1Ah, out1);
+    TrTVecProd(X, nces, n_class * ndet, sampling_freq, sweeptstamps, az_binned, Nm1Ah, out1);
 
     for(ces_id=0;ces_id<nces;ces_id++){
       for(i=0;i<ndet;i++){
@@ -659,7 +660,7 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz Nm1, TemplateClass
       }
     }
 
-    TVecProd(X, nces, (npoly+1) * ndet, sampling_freq, sweeptstamps, az_binned, out2, Tvec);
+    TVecProd(X, nces, n_class * ndet, sampling_freq, sweeptstamps, az_binned, out2, Tvec);
 
     t_id = 0; //time sample index in local data
     for(i=0;i<nb_blocks_loc;i++){

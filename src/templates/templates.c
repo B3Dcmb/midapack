@@ -411,6 +411,7 @@ int Tlist_init(TemplateClass *X, int ndet, int nces, int *block_nsamples, int **
 
   int i,j,k;
   int tinit,tlast,nbinMin, nbinMax;
+  int n_class = npoly + miin(1,n_sss_bins);
   // looping over local list of detectors
   tinit = 0;
   tlast = -1;
@@ -424,12 +425,14 @@ int Tlist_init(TemplateClass *X, int ndet, int nces, int *block_nsamples, int **
         // looping over polynomial orders
         nbinMax += detnsweeps[i][j];
         // For each order build the corresponding polynomial template class
-        Polyinit((X + ((i*ndet+j)*(npoly+1)) + k), tinit, tlast, nbinMin, nbinMax, sweeptstamps[i], sampling_freq, k);
+        Polyinit(X + ((i*ndet+j)*n_class + k), tinit, tlast, nbinMin, nbinMax, sweeptstamps[i], sampling_freq, k);
         nbinMin += detnsweeps[i][j];
       }
-      nbinMax += n_sss_bins;
-      SSSinit((X + ((i*ndet+j)*(npoly+1)) + npoly), tinit, tlast, nbinMin, nbinMax, az_binned[i]);
-      nbinMin += n_sss_bins;
+      if(n_sss_bins > 0){
+        nbinMax += n_sss_bins;
+        SSSinit((X + ((i*ndet+j)*n_class) + npoly), tinit, tlast, nbinMin, nbinMax, az_binned[i]);
+        nbinMin += n_sss_bins;
+      }
       tinit += block_nsamples[i*ndet+j];
     }
   }

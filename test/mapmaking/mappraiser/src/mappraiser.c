@@ -537,7 +537,8 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
   st=MPI_Wtime();
   //hardcoded parameters to be changed later on
   int npoly = 5;
-  int n_sss_bins = 100;
+  int n_sss_bins = 0;
+  int n_class = 0;
   double sigma2;
   int ndet = nb_blocks_loc / nces;
   int **detnsweeps = (int **) malloc(nces * sizeof(int*));
@@ -548,10 +549,14 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
       detnsweeps[i][j] = nsweeps[i];
     ces_length[i] = sweeptstamps[i][nsweeps[i]];
   }
-  int **az_binned = bin_az(az, az_min, az_max, ces_length, n_sss_bins, nces);
+  int **az_binned;
+  if(n_sss_bins > 0)
+    az_binned = bin_az(az, az_min, az_max, ces_length, n_sss_bins, nces);
+
+  n_class = npoly + miin(1, n_sss_bins);
 
   //Allocate memory to the templates classes instances (polynomials + SSS template)
-  TemplateClass *X = (TemplateClass *) malloc((npoly+1) * nb_blocks_loc * sizeof(TemplateClass));
+  TemplateClass *X = (TemplateClass *) malloc(n_class * nb_blocks_loc * sizeof(TemplateClass));
 
   //Initialize templates classes list
   Tlist_init(X, ndet, nces, (int *)local_blocks_sizes, detnsweeps, sweeptstamps, n_sss_bins, az_binned, sampling_freq, npoly);
@@ -576,7 +581,7 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
     // Processing detector blocks
     for(j=0;j<ndet;j++){
       // fflush(stdout);
-      BuildKernel(X+(i*ndet+j)*(npoly+1), npoly+1, B+id_kernelblock, Nm1.tpltzblocks[i*ndet+j].T_block[0], sweeptstamps[i], az_binned[i], sampling_freq);
+      BuildKernel(X+(i*ndet+j)*n_class, n_class, B+id_kernelblock, Nm1.tpltzblocks[i*ndet+j].T_block[0], sweeptstamps[i], az_binned[i], sampling_freq);
       if((i==0) && (j==0))
         sigma2 = B[0];
       // printf("i=%d, af kernel\n",i);
