@@ -219,7 +219,7 @@ class OpMappraiser(Operator):
             nside,
         ) = self._prepare()
 
-        data_size_proc, nobsloc, local_blocks_sizes, signal_type, noise_type, pixels_dtype, sweeptstamps, nsweeps, az, az_min, az_max, nces, weight_dtype = self._stage_data(
+        data_size_proc, nobsloc, local_blocks_sizes, signal_type, noise_type, pixels_dtype, sweeptstamps, nsweeps, az, az_min, az_max, hwp_angle, nces, weight_dtype = self._stage_data(
             nsamp,
             ndet,
             nnz,
@@ -232,7 +232,7 @@ class OpMappraiser(Operator):
         if self._params["map-maker"] == 'ML':
             self._MLmap(data_size_proc, nobsloc*ndet, local_blocks_sizes, nnz)
         elif self._params["map-maker"] == 'MT':
-            self._MTmap(sweeptstamps, nsweeps, az, az_min, az_max, nces, data_size_proc, nobsloc*ndet, local_blocks_sizes, nnz)
+            self._MTmap(sweeptstamps, nsweeps, az, az_min, az_max, hwp_angle, nces, data_size_proc, nobsloc*ndet, local_blocks_sizes, nnz)
         else:
             raise RuntimeError(
                 "Unvalid Map-making technique please choose:"
@@ -282,12 +282,11 @@ class OpMappraiser(Operator):
         return
 
     @function_timer
-    def _MTmap(self, sweeptstamps, nsweeps, az, az_min, az_max, nces, data_size_proc, nb_blocks_loc, local_blocks_sizes, nnz):
+    def _MTmap(self, sweeptstamps, nsweeps, az, az_min, az_max, hwp_angle, nces, data_size_proc, nb_blocks_loc, local_blocks_sizes, nnz):
         """ Compute the Marginalized templates map
         """
         if self._verbose:
             memreport("just before calling libmappraiser.MTmap", self._comm)
-
         # Compute the marginalized templates map
         os.environ["OMP_NUM_THREADS"] = "1"
         mappraiser.MTmap(
@@ -298,6 +297,7 @@ class OpMappraiser(Operator):
             az,
             az_min,
             az_max,
+            hwp_angle,
             nces,
             data_size_proc,
             nb_blocks_loc,
@@ -662,6 +662,8 @@ class OpMappraiser(Operator):
         az_list = []
         az_min_list = []
         az_max_list = []
+        hwp_angle_list = []
+        #hwp_sin_list = []
         for iobs, obs in enumerate(self._data.obs): #assume only one obs per process for now
             tod = obs["tod"]
 
@@ -684,6 +686,16 @@ class OpMappraiser(Operator):
             az_list.append(az)
             az_min_list.append(az.min())
             az_max_list.append(az.max())
+
+            hwp_angle = tod.read_hwp_angle()
+            if hwp_angle is not None:
+                hwp_angle_list.append(hwp_angle)
+                # hwp_cos = np.cos(hwp_angle)
+                # hwp_cos_list.append(hwp_cos)
+                # hwp_sin = np.sin(hwp_angle)
+                # print("sum python = {}\n".format(np.sum(np.cos(hwp_angle)[:100]*np.sin(hwp_angle)[:100])))
+                # hwp_sin_list.append(hwp_sin)
+
 
 
 
@@ -758,8 +770,11 @@ class OpMappraiser(Operator):
         az_list = np.array(az_list)
         az_min_list = np.array(az_min_list)
         az_max_list = np.array(az_max_list)
+        hwp_angle_list = np.array(hwp_angle_list)
+        # hwp_cos_list = np.array(hwp_cos_list)
+        # hwp_sin_list = np.array(hwp_sin_list)
 
-        return pixels_dtype, sweeptstamps_list, nsweeps_list, az_list, az_min_list, az_max_list, nces
+        return pixels_dtype, sweeptstamps_list, nsweeps_list, az_list, az_min_list, az_max_list, hwp_angle_list, nces
 
     @function_timer
     def _stage_pixweights(
@@ -919,7 +934,7 @@ class OpMappraiser(Operator):
             nodecomm.Barrier()
             timer.start()
             if nodecomm.rank % nread == iread:
-                pixels_dtype, sweeptstamps, nsweeps, az, az_min, az_max, nces = self._stage_pixels(
+                pixels_dtype, sweeptstamps, nsweeps, az, az_min, az_max, hwp_angle, nces = self._stage_pixels(
                     detectors, nsamp, ndet, nnz, nside
                 )
             if self._verbose and nread > 1:
@@ -979,7 +994,7 @@ class OpMappraiser(Operator):
         # Get number of local observations
         nobsloc = len(self._data.obs)
 
-        return data_size_proc, nobsloc, local_blocks_sizes, signal_dtype, noise_dtype, pixels_dtype, sweeptstamps, nsweeps, az, az_min, az_max, nces, weight_dtype
+        return data_size_proc, nobsloc, local_blocks_sizes, signal_dtype, noise_dtype, pixels_dtype, sweeptstamps, nsweeps, az, az_min, az_max, hwp_angle, nces, weight_dtype
 
     @function_timer
     def _unstage_signal(self, detectors, nsamp, signal_type):

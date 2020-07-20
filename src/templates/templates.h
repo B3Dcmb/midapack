@@ -30,20 +30,28 @@ char *ID;  // Unique ID defining the Templates class type (poly of order n, grou
 int order; // temporary
 } TemplateClass;
 
+typedef struct hwpss_w {
+  int ces_id; // CES local index
+  double **hwpcos; // array of cosines harmonics in the HWPSS: hwpcos[order-1][t]
+  double **hwpsin; // array of sines harmonics in the HWPSS: hwpsin[order-1][t]
+} hwpss_w;
+
 /******************************************************************************/
 /*                      Prototypes of Algebra routines                        */
 /******************************************************************************/
 /* Projecting templates amplitudes in time domain */
-int TVecProd(TemplateClass *X, int nces, int m, double sampling_freq, int **sweeptstamps,
-  int **az_binned, double *tau, double *out);
+int TVecProd(TemplateClass *X, int nces, int m, double sampling_freq, int *scan_size,
+  int **sweeptstamps, int **az_binned, double ***hwp_mod, int nhwp, double delta_t,
+  int store_hwp, double *tau, double *out);
 
 /* Projecting time domain in templates space */
-int TrTVecProd(TemplateClass *X, int nces, int m, double sampling_freq, int **sweeptstamps,
-  int **az_binned, double *d, double *out);
+int TrTVecProd(TemplateClass *X, int nces, int m, double sampling_freq, int *scan_size,
+  int **sweeptstamps, int **az_binned, double ***hwp_mod, int nhwp, double delta_t,
+  int store_hwp, double *d, double *out);
 
 /* Building Kernel Blocks */
 int BuildKernel(TemplateClass *X, int n, double *B, double w, int *sweeptstamps,
-  int *az_binned, double sampling_freq);
+  int *az_binned, hwpss_w hwpss_wghts, double delta_t, double sampling_freq);
 
 /* Inverting the Kernel Blocks */
 int InvKernel(double *B, int n, double *Binv);
@@ -58,17 +66,26 @@ double P1(double x);
 double Pn(double x, int n);
 
 double Legendre(double x, double a, double b, int n);
+
+void build_hwpss_w(hwpss_w *hwpss_wghts, double **hwp_mod, int size, int order,
+  int ces_id);
+
+void free_hwpss_w(hwpss_w *hwpss_wghts, int order);
 /******************************************************************************/
 /*        Utility routines for building templates classes objects             */
 /******************************************************************************/
 int Tlist_init(TemplateClass *X, int ndet, int nces, int *block_nsamples, int **detnsweeps,
-  int **sweeptstamps, int n_sss_bins, int **az_binned, double sampling_freq, int npoly);
+  int *scan_size, int **sweeptstamps, int n_sss_bins, int **az_binned, double sampling_freq,
+  int npoly, int ground, int nhwp, double delta_t, int store_hwp, double ***hwp_mod);
 
 int Polyinit(TemplateClass *X, int tinit, int tlast, int nbinMin, int nbinMax,
   int *sweeptstamps, double sampling_freq, int order);
 
 int SSSinit(TemplateClass *X, int tinit, int tlast, int nbinMin, int nbinMax,
   int *az_binned);
+
+int HWPSSinit(TemplateClass *X, int tinit, int tlast, int nbinMin, int nbinMax,
+    double delta_t, double sampling_freq, int order, hwpss_w hwpss_wghts);
 
 /* Build Template Class object */
 int TCinit(TemplateClass *X, int tinit, int tlast, int nbinMin, int nbinMax,
@@ -79,6 +96,10 @@ int expandpolydata(TemplateClass *X ,int *bins, double *wghts,
   int *sweeptstamps, double sampling_freq, int order);
 
 int expandSSSdata(TemplateClass *X, int *bins, int *az_binned);
+
+int expandHWPSSdata(TemplateClass *X, int *bins0, double **wghts0, int *bins1,
+  double **wghts1, double delta_t, double sampling_freq, int order,
+  hwpss_w hwpss_wghts);
 
 int** bin_az(double **az, double *az_min, double *az_max, int *ces_length,
   int n_sss_bins, int nces);

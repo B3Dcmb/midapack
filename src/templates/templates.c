@@ -5,6 +5,7 @@
  * @date  October 2019
  * @credit  ANR-B3DCMB
  * @description Defining algebra routines for the filtering operations
+ * @Last update: July 2020 by Hamza El Bouhargani
  */
 /*****************************************************************************/
 /*                                  INCLUDE                                  */
@@ -21,15 +22,19 @@
 /*                          Defining Algebra routines                         */
 /******************************************************************************/
 /* Projecting templates amplitudes in time domain */
-int TVecProd(TemplateClass *X, int nces, int m, double sampling_freq, int **sweeptstamps,
-  int **az_binned, double *tau, double *out){
+int TVecProd(TemplateClass *X, int nces, int m, double sampling_freq, int *scan_size,
+  int **sweeptstamps, int **az_binned, double ***hwp_mod, int nhwp, double delta_t,
+  int store_hwp, double *tau, double *out){
 
   int i,j,k,ces_id;
+  hwpss_w hwpss_wghts;
   //initialization of output vector
   for(i=X->tinit;i<=(X+nces*m-1)->tlast;i++)
     out[i] = 0;
   //operation
   for(ces_id=0;ces_id<nces;ces_id++){
+    if(store_hwp == 0)
+      build_hwpss_w(&hwpss_wghts, hwp_mod[ces_id], scan_size[ces_id], nhwp, ces_id);
     for(k=0;k<m;k++){
       if(strcmp((X+(ces_id*m+k))->flag_w,"OTF") == 0){
         (X+(ces_id*m+k))->bins = (int *) calloc((X+(ces_id*m+k))->nsamples * (X+(ces_id*m+k))->nmult, sizeof(int));
@@ -39,6 +44,12 @@ int TVecProd(TemplateClass *X, int nces, int m, double sampling_freq, int **swee
         }
         else if(strcmp((X+(ces_id*m+k))->ID,"SSS") == 0){
           expandSSSdata(X+(ces_id*m+k), (X+(ces_id*m+k))->bins, az_binned[ces_id]);
+        }
+        else if(strcmp((X+(ces_id*m+k))->ID,"HWPSS") == 0){
+          (X+(ces_id*m+k+1))->bins = (int *) calloc((X+(ces_id*m+k+1))->nsamples * (X+(ces_id*m+k+1))->nmult, sizeof(int));
+          expandHWPSSdata(X+(ces_id*m+k), (X+(ces_id*m+k))->bins, &(X+(ces_id*m+k))->wghts,
+            (X+(ces_id*m+k+1))->bins, &(X+(ces_id*m+k+1))->wghts, delta_t, sampling_freq,
+            (X+(ces_id*m+k))->order, hwpss_wghts);
         }
       }
       //Case1: Polynomial template
@@ -57,6 +68,15 @@ int TVecProd(TemplateClass *X, int nces, int m, double sampling_freq, int **swee
           }
         }
       }
+      //Case3: HWPSS template
+      else if(strcmp((X+(ces_id*m+k))->ID,"HWPSS") == 0){
+        for(i=0;i<(X+(ces_id*m+k))->nsamples;i++){
+          for(j=0;j<(X+(ces_id*m+k))->nmult;j++){
+            out[(X+(ces_id*m+k))->tinit + i] += (X+(ces_id*m+k))->wghts[i * (X+(ces_id*m+k))->nmult + j] * tau[(X+(ces_id*m+k))->bins[i * (X+(ces_id*m+k))->nmult + j]]; // cosine terms
+            out[(X+(ces_id*m+k+1))->tinit + i] += (X+(ces_id*m+k+1))->wghts[i * (X+(ces_id*m+k+1))->nmult + j] * tau[(X+(ces_id*m+k+1))->bins[i * (X+(ces_id*m+k+1))->nmult + j]]; // sine terms
+          }
+        }
+      }
       // Else, something wrong is going on ...
       else{
         printf("Run time error while projecting templates in time domain: invalid template type, please verify templates ID\n");
@@ -67,18 +87,36 @@ int TVecProd(TemplateClass *X, int nces, int m, double sampling_freq, int **swee
         free((X+(ces_id*m+k))->bins);
         if(strcmp((X+(ces_id*m+k))->ID,"POLY") == 0)
           free((X+(ces_id*m+k))->wghts);
+        else if(strcmp((X+(ces_id*m+k))->ID,"HWPSS") == 0){
+          free((X+(ces_id*m+k+1))->bins);
+          k++;
+        }
+      }
+      else{
+        if(strcmp((X+(ces_id*m+k))->ID,"HWPSS") == 0)
+          k++;
       }
     }
+    if(store_hwp == 0)
+      free_hwpss_w(&hwpss_wghts, nhwp);
   }
   return 0;
 }
 
 /* Projecting time domain in templates space */
-int TrTVecProd(TemplateClass *X, int nces, int m, double sampling_freq, int **sweeptstamps,
-  int **az_binned, double *d, double *out){
+int TrTVecProd(TemplateClass *X, int nces, int m, double sampling_freq, int *scan_size,
+  int **sweeptstamps, int **az_binned, double ***hwp_mod, int nhwp, double delta_t,
+  int store_hwp, double *d, double *out){
 
   int i,j,k,ces_id;
+  hwpss_w hwpss_wghts;
+  // initialize output vector
+  for(i=X->nbinMin;i<=(X+nces*m-1)->nbinMax;i++)
+    out[i] = 0;
+  // operation
   for(ces_id=0;ces_id<nces;ces_id++){
+    if(store_hwp == 0)
+      build_hwpss_w(&hwpss_wghts, hwp_mod[ces_id], scan_size[ces_id], nhwp, ces_id);
     for(k=0;k<m;k++){
       if(strcmp((X+(ces_id*m+k))->flag_w,"OTF") == 0){
         (X+(ces_id*m+k))->bins = (int *) calloc((X+(ces_id*m+k))->nsamples * (X+(ces_id*m+k))->nmult, sizeof(int));
@@ -89,10 +127,13 @@ int TrTVecProd(TemplateClass *X, int nces, int m, double sampling_freq, int **sw
         else if(strcmp((X+(ces_id*m+k))->ID,"SSS") == 0){
           expandSSSdata(X+(ces_id*m+k), (X+(ces_id*m+k))->bins, az_binned[ces_id]);
         }
+        else if(strcmp((X+(ces_id*m+k))->ID,"HWPSS") == 0){
+          (X+(ces_id*m+k+1))->bins = (int *) calloc((X+(ces_id*m+k+1))->nsamples * (X+(ces_id*m+k+1))->nmult, sizeof(int));
+          expandHWPSSdata(X+(ces_id*m+k), (X+(ces_id*m+k))->bins, &(X+(ces_id*m+k))->wghts,
+            (X+(ces_id*m+k+1))->bins, &(X+(ces_id*m+k+1))->wghts, delta_t, sampling_freq,
+            (X+(ces_id*m+k))->order, hwpss_wghts);
+        }
       }
-      // initialize output vector
-      for(i=(X+(ces_id*m+k))->nbinMin;i<=(X+(ces_id*m+k))->nbinMax;i++)
-        out[i] = 0;
       //Case1: Polynomial template
       if(strcmp((X+(ces_id*m+k))->ID,"POLY") == 0){
         for(i=0;i<(X+(ces_id*m+k))->nsamples;i++){
@@ -109,6 +150,15 @@ int TrTVecProd(TemplateClass *X, int nces, int m, double sampling_freq, int **sw
           }
         }
       }
+      //Case3: HWPSS template
+      else if(strcmp((X+(ces_id*m+k))->ID,"HWPSS") == 0){
+        for(i=0;i<(X+(ces_id*m+k))->nsamples;i++){
+          for(j=0;j<(X+(ces_id*m+k))->nmult;j++){
+            out[(X+(ces_id*m+k))->bins[i * (X+(ces_id*m+k))->nmult + j]] += (X+(ces_id*m+k))->wghts[i * (X+(ces_id*m+k))->nmult + j] * d[(X+(ces_id*m+k))->tinit + i]; // cosine terms
+            out[(X+(ces_id*m+k+1))->bins[i * (X+(ces_id*m+k+1))->nmult + j]] += (X+(ces_id*m+k+1))->wghts[i * (X+(ces_id*m+k+1))->nmult + j] * d[(X+(ces_id*m+k+1))->tinit + i]; // sine terms
+          }
+        }
+      }
       // Else, something wrong is going on ...
       else{
         printf("Run time error while projecting templates in time domain: invalid template type, please verify templates ID\n");
@@ -119,29 +169,45 @@ int TrTVecProd(TemplateClass *X, int nces, int m, double sampling_freq, int **sw
         free((X+(ces_id*m+k))->bins);
         if(strcmp((X+(ces_id*m+k))->ID,"POLY") == 0)
           free((X+(ces_id*m+k))->wghts);
+        else if(strcmp((X+(ces_id*m+k))->ID,"HWPSS") == 0){
+          free((X+(ces_id*m+k+1))->bins);
+          k++;
+        }
+      }
+      else{
+        if(strcmp((X+(ces_id*m+k))->ID,"HWPSS") == 0)
+          k++;
       }
     }
+    if(store_hwp == 0)
+      free_hwpss_w(&hwpss_wghts, nhwp);
   }
   return 0;
 }
 
 /* Building Kernel Blocks */
-int BuildKernel(TemplateClass *X, int n, double *B, double w, int *sweeptstamps, int *az_binned, double sampling_freq){
+int BuildKernel(TemplateClass *X, int n, double *B, double w, int *sweeptstamps,
+  int *az_binned, hwpss_w hwpss_wghts, double delta_t, double sampling_freq){
   // n : number of template classes in one kernel Block (1 det data in 1 CES)
   int i,j,l,k;
   int m1,m2;
   double sum=0;
   for(k=0;k<n;k++){
     if(strcmp((X+k)->flag_w,"OTF") == 0){
-      // printf("I'm here");
+      // printf("I'm here\n");
       // fflush(stdout);
       (X+k)->bins = (int *) calloc((X+k)->nsamples * (X+k)->nmult, sizeof(int));
       if(strcmp((X+k)->ID,"POLY") == 0){
         (X+k)->wghts = (double *) calloc((X+k)->nsamples * (X+k)->nmult, sizeof(double));
         expandpolydata(X+k, (X+k)->bins, (X+k)->wghts, sweeptstamps, sampling_freq, (X+k)->order);
       }
-      else
+      else if(strcmp((X+k)->ID,"SSS") == 0)
         expandSSSdata(X+k, (X+k)->bins, az_binned);
+      else if(strcmp((X+k)->ID,"HWPSS") == 0){
+        (X+k+1)->bins = (int *) calloc((X+k+1)->nsamples * (X+k+1)->nmult, sizeof(int));
+        expandHWPSSdata(X+k, (X+k)->bins, &(X+k)->wghts, (X+k+1)->bins, &(X+k+1)->wghts,
+          delta_t, sampling_freq, (X+k)->order, hwpss_wghts);
+      }
     }
     for(l=0;l<n;l++){
       if((strcmp((X+l)->flag_w,"OTF") == 0) && (l!=k)){
@@ -150,9 +216,16 @@ int BuildKernel(TemplateClass *X, int n, double *B, double w, int *sweeptstamps,
           (X+l)->wghts = (double *) calloc((X+k)->nsamples * (X+l)->nmult, sizeof(double));
           expandpolydata(X+l, (X+l)->bins, (X+l)->wghts, sweeptstamps, sampling_freq, (X+l)->order);
         }
-        else
+        else if(strcmp((X+l)->ID,"SSS") == 0)
           expandSSSdata(X+l, (X+l)->bins, az_binned);
+        else if(strcmp((X+l)->ID,"HWPSS") == 0){
+          (X+l+1)->bins = (int *) calloc((X+l+1)->nsamples * (X+l+1)->nmult, sizeof(int));
+          expandHWPSSdata(X+l, (X+l)->bins, &(X+l)->wghts, (X+l+1)->bins, &(X+l+1)->wghts,
+            delta_t, sampling_freq, (X+l)->order, hwpss_wghts);
+        }
       }
+
+
       // if((X+l)->order == 1){
       //   for(i=0;i<10;i++){
       //     printf("bins[%d] = %d\n",i,(X+l)->bins[i]);
@@ -167,32 +240,91 @@ int BuildKernel(TemplateClass *X, int n, double *B, double w, int *sweeptstamps,
       //   printf("sum wgths = %6.2f\n",sum);
       // }
 
-      // Case1: poly x poly kernel
-      if((strcmp((X+k)->ID,"POLY") == 0) && (strcmp((X+l)->ID,"POLY") == 0)){
-        for(i=0;i<(X+k)->nsamples;i++){
-          for(m1=0;m1<(X+k)->nmult;m1++){
-            for(m2=0;m2<(X+l)->nmult;m2++){
-              B[((X+k)->bins[i*(X+k)->nmult + m1]-X->nbinMin) * ((X+n-1)->nbinMax-X->nbinMin+1) + ((X+l)->bins[i*(X+l)->nmult + m2]-X->nbinMin)] += w * (X+k)->wghts[i*(X+k)->nmult + m1] * (X+l)->wghts[i*(X+l)->nmult + m2];
+      // Case1: poly/HWPSS x poly/HWPSS kernel
+      if(((strcmp((X+k)->ID,"POLY") == 0) || (strcmp((X+k)->ID,"HWPSS") == 0)) && ((strcmp((X+l)->ID,"POLY") == 0) || (strcmp((X+l)->ID,"HWPSS") == 0))){
+        if((strcmp((X+k)->ID,"HWPSS") == 0) && (strcmp((X+l)->ID,"HWPSS") == 0)){
+          j=0;
+          for(i=0;i<(X+k)->nsamples;i++){
+            for(m1=0;m1<(X+k)->nmult;m1++){
+              for(m2=0;m2<(X+l)->nmult;m2++){
+                B[((X+k)->bins[i*(X+k)->nmult + m1]-X->nbinMin) * ((X+n-1)->nbinMax-X->nbinMin+1) + ((X+l)->bins[i*(X+l)->nmult + m2]-X->nbinMin)] += w * (X+k)->wghts[i*(X+k)->nmult + m1] * (X+l)->wghts[i*(X+l)->nmult + m2];
+                B[((X+k+1)->bins[i*(X+k+1)->nmult + m1]-X->nbinMin) * ((X+n-1)->nbinMax-X->nbinMin+1) + ((X+l)->bins[i*(X+l)->nmult + m2]-X->nbinMin)] += w * (X+k+1)->wghts[i*(X+k+1)->nmult + m1] * (X+l)->wghts[i*(X+l)->nmult + m2];
+                B[((X+k)->bins[i*(X+k)->nmult + m1]-X->nbinMin) * ((X+n-1)->nbinMax-X->nbinMin+1) + ((X+l+1)->bins[i*(X+l+1)->nmult + m2]-X->nbinMin)] += w * (X+k)->wghts[i*(X+k)->nmult + m1] * (X+l+1)->wghts[i*(X+l+1)->nmult + m2];
+                B[((X+k+1)->bins[i*(X+k+1)->nmult + m1]-X->nbinMin) * ((X+n-1)->nbinMax-X->nbinMin+1) + ((X+l+1)->bins[i*(X+l+1)->nmult + m2]-X->nbinMin)] += w * (X+k+1)->wghts[i*(X+k+1)->nmult + m1] * (X+l+1)->wghts[i*(X+l+1)->nmult + m2];
+              }
+            }
+          }
+        }
+        else if((strcmp((X+k)->ID,"HWPSS") == 0) && (strcmp((X+l)->ID,"HWPSS") != 0)){
+          for(i=0;i<(X+k)->nsamples;i++){
+            for(m1=0;m1<(X+k)->nmult;m1++){
+              for(m2=0;m2<(X+l)->nmult;m2++){
+                B[((X+k)->bins[i*(X+k)->nmult + m1]-X->nbinMin) * ((X+n-1)->nbinMax-X->nbinMin+1) + ((X+l)->bins[i*(X+l)->nmult + m2]-X->nbinMin)] += w * (X+k)->wghts[i*(X+k)->nmult + m1] * (X+l)->wghts[i*(X+l)->nmult + m2];
+                B[((X+k+1)->bins[i*(X+k+1)->nmult + m1]-X->nbinMin) * ((X+n-1)->nbinMax-X->nbinMin+1) + ((X+l)->bins[i*(X+l)->nmult + m2]-X->nbinMin)] += w * (X+k+1)->wghts[i*(X+k+1)->nmult + m1] * (X+l)->wghts[i*(X+l)->nmult + m2];
+              }
+            }
+          }
+        }
+        else if((strcmp((X+k)->ID,"HWPSS") != 0) && (strcmp((X+l)->ID,"HWPSS") == 0)){
+          for(i=0;i<(X+k)->nsamples;i++){
+            for(m1=0;m1<(X+k)->nmult;m1++){
+              for(m2=0;m2<(X+l)->nmult;m2++){
+                B[((X+k)->bins[i*(X+k)->nmult + m1]-X->nbinMin) * ((X+n-1)->nbinMax-X->nbinMin+1) + ((X+l)->bins[i*(X+l)->nmult + m2]-X->nbinMin)] += w * (X+k)->wghts[i*(X+k)->nmult + m1] * (X+l)->wghts[i*(X+l)->nmult + m2];
+                B[((X+k)->bins[i*(X+k)->nmult + m1]-X->nbinMin) * ((X+n-1)->nbinMax-X->nbinMin+1) + ((X+l+1)->bins[i*(X+l+1)->nmult + m2]-X->nbinMin)] += w * (X+k)->wghts[i*(X+k)->nmult + m1] * (X+l+1)->wghts[i*(X+l+1)->nmult + m2];
+              }
+            }
+          }
+        }
+        else{
+          for(i=0;i<(X+k)->nsamples;i++){
+            for(m1=0;m1<(X+k)->nmult;m1++){
+              for(m2=0;m2<(X+l)->nmult;m2++){
+                B[((X+k)->bins[i*(X+k)->nmult + m1]-X->nbinMin) * ((X+n-1)->nbinMax-X->nbinMin+1) + ((X+l)->bins[i*(X+l)->nmult + m2]-X->nbinMin)] += w * (X+k)->wghts[i*(X+k)->nmult + m1] * (X+l)->wghts[i*(X+l)->nmult + m2];
+              }
             }
           }
         }
       }
-      // Case2: SSS x poly kernel
-      else if((strcmp((X+k)->ID,"SSS") == 0) && (strcmp((X+l)->ID,"POLY") == 0)){
-        for(i=0;i<(X+k)->nsamples;i++){
-          for(m1=0;m1<(X+k)->nmult;m1++){
-            for(m2=0;m2<(X+l)->nmult;m2++){
-              B[((X+k)->bins[i*(X+k)->nmult + m1]-X->nbinMin) * ((X+n-1)->nbinMax-X->nbinMin+1) + ((X+l)->bins[i*(X+l)->nmult + m2]-X->nbinMin)] += w * (X+l)->wghts[i*(X+l)->nmult + m2];
+      // Case2: SSS x poly/HWPSS kernel
+      else if((strcmp((X+k)->ID,"SSS") == 0) && ((strcmp((X+l)->ID,"POLY") == 0) || (strcmp((X+l)->ID,"HWPSS") == 0))){
+        if(strcmp((X+l)->ID,"HWPSS") == 0){
+          for(i=0;i<(X+k)->nsamples;i++){
+            for(m1=0;m1<(X+k)->nmult;m1++){
+              for(m2=0;m2<(X+l)->nmult;m2++){
+                B[((X+k)->bins[i*(X+k)->nmult + m1]-X->nbinMin) * ((X+n-1)->nbinMax-X->nbinMin+1) + ((X+l)->bins[i*(X+l)->nmult + m2]-X->nbinMin)] += w * (X+l)->wghts[i*(X+l)->nmult + m2];
+                B[((X+k)->bins[i*(X+k)->nmult + m1]-X->nbinMin) * ((X+n-1)->nbinMax-X->nbinMin+1) + ((X+l+1)->bins[i*(X+l+1)->nmult + m2]-X->nbinMin)] += w * (X+l+1)->wghts[i*(X+l+1)->nmult + m2];
+              }
+            }
+          }
+        }
+        else{
+          for(i=0;i<(X+k)->nsamples;i++){
+            for(m1=0;m1<(X+k)->nmult;m1++){
+              for(m2=0;m2<(X+l)->nmult;m2++){
+                B[((X+k)->bins[i*(X+k)->nmult + m1]-X->nbinMin) * ((X+n-1)->nbinMax-X->nbinMin+1) + ((X+l)->bins[i*(X+l)->nmult + m2]-X->nbinMin)] += w * (X+l)->wghts[i*(X+l)->nmult + m2];
+              }
             }
           }
         }
       }
-      // Case3: poly x SSS kernel
-      else if((strcmp((X+k)->ID,"POLY") == 0) && (strcmp((X+l)->ID,"SSS") == 0)){
-        for(i=0;i<(X+k)->nsamples;i++){
-          for(m1=0;m1<(X+k)->nmult;m1++){
-            for(m2=0;m2<(X+l)->nmult;m2++){
-              B[((X+k)->bins[i*(X+k)->nmult + m1]-X->nbinMin) * ((X+n-1)->nbinMax-X->nbinMin+1) + ((X+l)->bins[i*(X+l)->nmult + m2]-X->nbinMin)] += w * (X+k)->wghts[i*(X+k)->nmult + m1];
+      // Case3: poly/HWPSS x SSS kernel
+      else if(((strcmp((X+k)->ID,"POLY") == 0) || (strcmp((X+k)->ID,"HWPSS") == 0)) && (strcmp((X+l)->ID,"SSS") == 0)){
+        if(strcmp((X+k)->ID,"HWPSS") == 0){
+          for(i=0;i<(X+k)->nsamples;i++){
+            for(m1=0;m1<(X+k)->nmult;m1++){
+              for(m2=0;m2<(X+l)->nmult;m2++){
+                B[((X+k)->bins[i*(X+k)->nmult + m1]-X->nbinMin) * ((X+n-1)->nbinMax-X->nbinMin+1) + ((X+l)->bins[i*(X+l)->nmult + m2]-X->nbinMin)] += w * (X+k)->wghts[i*(X+k)->nmult + m1];
+                B[((X+k+1)->bins[i*(X+k+1)->nmult + m1]-X->nbinMin) * ((X+n-1)->nbinMax-X->nbinMin+1) + ((X+l)->bins[i*(X+l)->nmult + m2]-X->nbinMin)] += w * (X+k+1)->wghts[i*(X+k+1)->nmult + m1];
+              }
+            }
+          }
+        }
+        else{
+          for(i=0;i<(X+k)->nsamples;i++){
+            for(m1=0;m1<(X+k)->nmult;m1++){
+              for(m2=0;m2<(X+l)->nmult;m2++){
+                B[((X+k)->bins[i*(X+k)->nmult + m1]-X->nbinMin) * ((X+n-1)->nbinMax-X->nbinMin+1) + ((X+l)->bins[i*(X+l)->nmult + m2]-X->nbinMin)] += w * (X+k)->wghts[i*(X+k)->nmult + m1];
+              }
             }
           }
         }
@@ -224,12 +356,28 @@ int BuildKernel(TemplateClass *X, int n, double *B, double w, int *sweeptstamps,
         free((X+l)->bins);
         if(strcmp((X+l)->ID,"POLY") == 0)
           free((X+l)->wghts);
+        else if(strcmp((X+l)->ID,"HWPSS") == 0){
+          free((X+l+1)->bins);
+          l++;
+        }
+      }
+      else{
+        if(strcmp((X+l)->ID,"HWPSS") == 0)
+          l++;
       }
     }
     if(strcmp((X+k)->flag_w, "OTF") == 0){
       free((X+k)->bins);
       if(strcmp((X+k)->ID,"POLY") == 0)
         free((X+k)->wghts);
+      else if(strcmp((X+k)->ID,"HWPSS") == 0){
+        free((X+k+1)->bins);
+        k++;
+      }
+    }
+    else{
+      if(strcmp((X+k)->ID,"HWPSS") == 0)
+        k++;
     }
   }
   return 0;
@@ -394,6 +542,48 @@ double Legendre(double x, double a, double b, int n){
   return Pn((2*x-a-b)/(b-a),n);
 }
 
+/* Build HWPSS harmonics weights through recursive computation of trig functions */
+void build_hwpss_w(hwpss_w *hwpss_wghts, double **hwp_mod, int size, int order,
+  int ces_id){
+
+  int i,j;
+  if(order == 0)
+    return;
+  //Initialization of fundamental harmonic & ces_id
+  hwpss_wghts->hwpcos = (double **) malloc(order * sizeof(double*));
+  hwpss_wghts->hwpsin = (double **) malloc(order * sizeof(double*));
+  hwpss_wghts->ces_id = ces_id;
+  hwpss_wghts->hwpcos[0] = (double *) calloc(size, sizeof(double));
+  hwpss_wghts->hwpsin[0] = (double *) calloc(size, sizeof(double));
+  memcpy(hwpss_wghts->hwpcos[0],hwp_mod[0],size*sizeof(double));
+  memcpy(hwpss_wghts->hwpsin[0],hwp_mod[1],size*sizeof(double));
+  if(order == 1)
+    return;
+
+  // Recursive computation
+  for(i=2;i<=order;i++){
+    hwpss_wghts->hwpcos[i-1] = (double *) calloc(size, sizeof(double));
+    hwpss_wghts->hwpsin[i-1] = (double *) calloc(size, sizeof(double));
+    for(j=0;j<size;j++){// recursive trig relation to compute the next harmonic
+      hwpss_wghts->hwpcos[i-1][j] = hwpss_wghts->hwpcos[i-2][j] * hwpss_wghts->hwpcos[0][j] - hwpss_wghts->hwpsin[i-2][j] * hwpss_wghts->hwpsin[0][j];
+      hwpss_wghts->hwpsin[i-1][j] = hwpss_wghts->hwpsin[i-2][j] * hwpss_wghts->hwpcos[0][j] + hwpss_wghts->hwpcos[i-2][j] * hwpss_wghts->hwpsin[0][j];
+    }
+  }
+  return;
+}
+
+/* Free the CES HWPSS data */
+void free_hwpss_w(hwpss_w *hwpss_wghts, int order){
+
+  int i;
+  for(i=0;i<order;i++){
+    free(hwpss_wghts->hwpcos[i]);
+    free(hwpss_wghts->hwpsin[i]);
+  }
+  free(hwpss_wghts->hwpcos);
+  free(hwpss_wghts->hwpsin);
+}
+
 /******************************************************************************/
 /*        Utility routines for building templates classes objects             */
 /******************************************************************************/
@@ -407,17 +597,21 @@ double Legendre(double x, double a, double b, int n){
     other templates classes types. Flags are ignored for now.
 */
 int Tlist_init(TemplateClass *X, int ndet, int nces, int *block_nsamples, int **detnsweeps,
-  int **sweeptstamps, int n_sss_bins, int **az_binned, double sampling_freq, int npoly){
+  int *scan_size, int **sweeptstamps, int n_sss_bins, int **az_binned, double sampling_freq,
+  int npoly, int ground, int nhwp, double delta_t, int store_hwp, double ***hwp_mod){
 
   int i,j,k;
   int tinit,tlast,nbinMin, nbinMax;
-  int n_class = npoly + miin(1,n_sss_bins);
+  int n_class = npoly + ground + 2*nhwp;
+  hwpss_w hwpss_wghts;
   // looping over local list of detectors
   tinit = 0;
   tlast = -1;
   nbinMin = 0;
   nbinMax = -1;
   for(i=0;i<nces;i++){
+    if(store_hwp != 0)
+      build_hwpss_w(&hwpss_wghts, hwp_mod[i], scan_size[i], nhwp, i);
     for(j=0;j<ndet;j++){
       tlast += block_nsamples[i*ndet+j];
       // looping over polynomial templates for each detector
@@ -428,10 +622,17 @@ int Tlist_init(TemplateClass *X, int ndet, int nces, int *block_nsamples, int **
         Polyinit(X + ((i*ndet+j)*n_class + k), tinit, tlast, nbinMin, nbinMax, sweeptstamps[i], sampling_freq, k);
         nbinMin += detnsweeps[i][j];
       }
-      if(n_sss_bins > 0){
+      if(ground == 1){
         nbinMax += n_sss_bins;
         SSSinit((X + ((i*ndet+j)*n_class) + npoly), tinit, tlast, nbinMin, nbinMax, az_binned[i]);
         nbinMin += n_sss_bins;
+      }
+      // looping over hwp harmonics orders
+      for(k=0;k<nhwp;k++){
+        nbinMax += (int)ceil((tlast-tinit+1)/(delta_t*sampling_freq));
+        HWPSSinit((X + ((i*ndet+j)*n_class) + npoly+ ground + 2*k), tinit, tlast, nbinMin, nbinMax, delta_t, sampling_freq, k+1, hwpss_wghts);
+        nbinMax += (int)ceil((tlast-tinit+1)/(delta_t*sampling_freq));
+        nbinMin += 2*((int)ceil((tlast-tinit+1)/(delta_t*sampling_freq)));
       }
       tinit += block_nsamples[i*ndet+j];
     }
@@ -452,9 +653,9 @@ int Polyinit(TemplateClass *X, int tinit, int tlast, int nbinMin, int nbinMax,
   TCinit(X, tinit, tlast, nbinMin, nbinMax, 1, flag, flag, flag ,flag_w, flag);
   X->order = order;
   if(strcmp(X->flag_w,"S")==0){ // Stored weights
-    bins = (int *) calloc(X->nsamples * X->nmult,sizeof(int));
-    wghts = (double *) calloc(X->nsamples * X->nmult, sizeof(double));
-    expandpolydata(X, bins, wghts, sweeptstamps, sampling_freq, order);
+    X->bins = (int *) calloc(X->nsamples * X->nmult,sizeof(int));
+    X->wghts = (double *) calloc(X->nsamples * X->nmult, sizeof(double));
+    expandpolydata(X, X->bins, X->wghts, sweeptstamps, sampling_freq, order);
   }
   return 0;
 }
@@ -470,8 +671,28 @@ int SSSinit(TemplateClass *X, int tinit, int tlast, int nbinMin, int nbinMax,
   sprintf(flag_w,"OTF");
   TCinit(X, tinit, tlast, nbinMin, nbinMax, 1, flag, flag, flag ,flag_w, flag);
   if(strcmp(X->flag_w,"S")==0){ // Stored weights
-    bins = (int *) calloc(X->nsamples * X->nmult,sizeof(int));
-    expandSSSdata(X, bins, az_binned);
+    X->bins = (int *) calloc(X->nsamples * X->nmult,sizeof(int));
+    expandSSSdata(X, X->bins, az_binned);
+  }
+  return 0;
+}
+
+/* Build HWP template class instance */
+int HWPSSinit(TemplateClass *X, int tinit, int tlast, int nbinMin, int nbinMax,
+  double delta_t, double sampling_freq, int order, hwpss_w hwpss_wghts){
+
+  char *flag = (char *) malloc(10 * sizeof(char));
+  char *flag_w = (char *) malloc(10 * sizeof(char));
+  sprintf(flag,"HWPSS");
+  sprintf(flag_w,"OTF");
+  TCinit(X, tinit, tlast, nbinMin, nbinMax, 1, flag, flag, flag ,flag_w, flag);
+  TCinit(X+1, tinit, tlast, nbinMax+1, nbinMax+(nbinMax-nbinMin+1), 1, flag, flag, flag ,flag_w, flag);
+  X->order = order;
+  (X+1)->order = order;
+  if(strcmp(X->flag_w,"S")==0 && strcmp((X+1)->flag_w,"S")==0){ // Stored weights
+    X->bins = (int *) calloc(X->nsamples * X->nmult,sizeof(int));
+    (X+1)->bins = (int *) calloc((X+1)->nsamples * (X+1)->nmult,sizeof(int));
+    expandHWPSSdata(X, X->bins, &X->wghts, (X+1)->bins, &(X+1)->wghts, delta_t, sampling_freq, order, hwpss_wghts);
   }
   return 0;
 }
@@ -505,7 +726,8 @@ int expandpolydata(TemplateClass *X ,int *bins, double *wghts,
     for(j=sweeptstamps[i];j<sweeptstamps[i+1];j++){
       bins[j] = X->nbinMin + i;
       // printf("expandpoly: bins[%d]=%d\n",j,bins[j]);
-      wghts[j] = Legendre(j*sampling_freq, sweeptstamps[i]*sampling_freq, (sweeptstamps[i+1]-1)*sampling_freq, order);
+      //N.B: the relation is rescaled so sampling_freq shouldn't really matter
+      wghts[j] = Legendre((double)j/sampling_freq, (double)sweeptstamps[i]/sampling_freq, (double)(sweeptstamps[i+1]-1)/sampling_freq, order);
       // printf("expandpoly: wghts[%d]=%f\n",j,wghts[j]);
 
     }
@@ -521,6 +743,26 @@ int expandSSSdata(TemplateClass *X, int *bins, int *az_binned){
   return 0;
 }
 
+/* Build bins and weights profile for a HWPSS template nmult = 1 for now */
+int expandHWPSSdata(TemplateClass *X, int *bins0, double **wghts0, int *bins1,
+  double **wghts1, double delta_t, double sampling_freq, int order,
+  hwpss_w hwpss_wghts){
+  int i;
+  for(i=0;i<X->nsamples * X->nmult;i++){
+    bins0[i] = X->nbinMin + (int)floor((double)i/(sampling_freq*delta_t));
+    bins1[i] = (X+1)->nbinMin + (int)floor((double)i/(sampling_freq*delta_t));
+  }
+  // for(i=8300;i<8400;i++){
+  //   if(X->order == 1){
+  //     printf("X->bins[%d]=%d\n",i,bins0[i]);
+  //     printf("X+1->bins[%d]=%d\n",i,bins1[i]);
+  //   }
+  // }
+  *wghts0 = hwpss_wghts.hwpcos[order-1];
+  *wghts1 = hwpss_wghts.hwpsin[order-1];
+  return 0;
+}
+
 /* Bin boresight azimuth array */
 int** bin_az(double **az, double *az_min, double *az_max, int *ces_length, int n_sss_bins, int nces)
 {
@@ -531,7 +773,7 @@ int** bin_az(double **az, double *az_min, double *az_max, int *ces_length, int n
   for(i=0; i<nces;i++){
     az_binned[i] = (int *) malloc(ces_length[i] * sizeof(int));
     for(j=0;j<ces_length[i];j++){
-      az_binned[i][j] = miin(n_sss_bins-1,floor((az[i][j]-az_min[i])/((az_max[i]-az_min[i])/n_sss_bins)));
+      az_binned[i][j] = miin(n_sss_bins-1,(int)floor((az[i][j]-az_min[i])/((az_max[i]-az_min[i])/n_sss_bins)));
     }
   }
 
@@ -542,7 +784,7 @@ int** bin_az(double **az, double *az_min, double *az_max, int *ces_length, int n
   // free(az);
   // free(az_min);
   // free(az_max);
-  free(ces_length);
+  // free(ces_length);
 
   return az_binned;
 }

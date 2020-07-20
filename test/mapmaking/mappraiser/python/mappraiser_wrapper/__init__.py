@@ -87,6 +87,7 @@ _mappraiser.MTmap.argtypes =[
     array_ptrs_type, #az
     npc.ndpointer(dtype=np.float64, ndim=1, flags="C_CONTIGUOUS"), #az_min
     npc.ndpointer(dtype=np.float64, ndim=1, flags="C_CONTIGUOUS"), #az_max
+    array_ptrs_type, # hwp_angle
     ct.c_int, #nces
     npc.ndpointer(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"), #data_size_proc
     ct.c_int, #nb_blocks_loc
@@ -97,6 +98,7 @@ _mappraiser.MTmap.argtypes =[
     npc.ndpointer(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"),
     npc.ndpointer(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"),
     ct.c_double, #samplerate
+    ct.c_double, #hwp_rpm
     npc.ndpointer(dtype=INVTT_TYPE, ndim=1, flags="C_CONTIGUOUS"),
 ]
 
@@ -111,7 +113,7 @@ def MLmap(comm, params, data_size_proc, nb_blocks_loc, local_blocks_sizes, Nnz, 
     _mappraiser.MLmap(encode_comm(comm), outpath, ref, params["solver"], params["pointing_commflag"], params["tol"], params["maxiter"], params["enlFac"], params["ortho_alg"], params["bs_red"], params["nside"], data_size_proc, nb_blocks_loc, local_blocks_sizes, Nnz, pixels, pixweights, signal, noise, Lambda, invtt)
     return
 
-def MTmap(comm, params, sweeptstamps, nsweeps, az, az_min, az_max, nces, data_size_proc, nb_blocks_loc, local_blocks_sizes, Nnz, pixels, pixweights, signal, noise, invtt):
+def MTmap(comm, params, sweeptstamps, nsweeps, az, az_min, az_max, hwp_angle, nces, data_size_proc, nb_blocks_loc, local_blocks_sizes, Nnz, pixels, pixweights, signal, noise, invtt):
     """
     Compute the map through marginalizing over a set templates modeling atmosphere, ground pickup and other systematics.
     """
@@ -123,6 +125,8 @@ def MTmap(comm, params, sweeptstamps, nsweeps, az, az_min, az_max, nces, data_si
     sweeptstamps_p = (sweeptstamps.__array_interface__['data'][0]
       + np.arange(sweeptstamps.shape[0])*sweeptstamps.strides[0]).astype(np.uintp)
     az_p = (az.__array_interface__['data'][0] + np.arange(az.shape[0])*az.strides[0]).astype(np.uintp)
+    hwp_angle_p = (hwp_angle.__array_interface__['data'][0] + np.arange(hwp_angle.shape[0])*hwp_angle.strides[0]).astype(np.uintp)
+    # hwp_sin_p = (hwp_sin.__array_interface__['data'][0] + np.arange(hwp_sin.shape[0])*hwp_sin.strides[0]).astype(np.uintp)
     # Call C-function
-    _mappraiser.MTmap(encode_comm(comm), outpath, ref, params["solver"], params["pointing_commflag"], params["tol"], params["maxiter"], params["enlFac"], params["ortho_alg"], params["bs_red"], params["nside"], sweeptstamps_p, nsweeps, az_p, az_min, az_max, nces, data_size_proc, nb_blocks_loc, local_blocks_sizes, Nnz, pixels, pixweights, signal, noise, params["samplerate"], invtt)
+    _mappraiser.MTmap(encode_comm(comm), outpath, ref, params["solver"], params["pointing_commflag"], params["tol"], params["maxiter"], params["enlFac"], params["ortho_alg"], params["bs_red"], params["nside"], sweeptstamps_p, nsweeps, az_p, az_min, az_max, hwp_angle_p, nces, data_size_proc, nb_blocks_loc, local_blocks_sizes, Nnz, pixels, pixweights, signal, noise, params["samplerate"], params["hwp_rpm"], invtt)
     return

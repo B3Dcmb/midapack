@@ -366,7 +366,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
   // MPI_Finalize();
 }
 
-void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_commflag, double tol, int maxiter, int enlFac, int ortho_alg, int bs_red, int nside, int **sweeptstamps, int *nsweeps, double **az, double *az_min, double *az_max, int nces, void *data_size_proc, int nb_blocks_loc, void *local_blocks_sizes, int Nnz, void *pix, void *pixweights, void *signal, double *noise, double sampling_freq, double *invtt)
+void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_commflag, double tol, int maxiter, int enlFac, int ortho_alg, int bs_red, int nside, int **sweeptstamps, int *nsweeps, double **az, double *az_min, double *az_max, double **hwp_angle, int nces, void *data_size_proc, int nb_blocks_loc, void *local_blocks_sizes, int Nnz, void *pix, void *pixweights, void *signal, double *noise, double sampling_freq, double hwp_rpm, double *invtt)
 {
   int64_t	M;       //Global number of rows
   int		m, Nb_t_Intervals;  //local number of rows of the pointing matrix A, nbr of stationary intervals
@@ -537,12 +537,18 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
   st=MPI_Wtime();
   //hardcoded parameters to be changed later on
   int npoly = 5;
-  int n_sss_bins = 0;
+  int ground = 1;
+  int n_sss_bins = 20;
+  int nhwp = 2;
+  double delta_t = 10.0;
+  int store_hwp = 0;
   int n_class = 0;
   double sigma2;
+  hwpss_w hwpss_wghts;
   int ndet = nb_blocks_loc / nces;
   int **detnsweeps = (int **) malloc(nces * sizeof(int*));
   int *ces_length = (int *) malloc(nces * sizeof(int));
+  int *hwp_bins = (int *) malloc(nces * sizeof(int));
   for(i=0;i<nces;i++){
     detnsweeps[i] = (int *) malloc(ndet * sizeof(int));
     for(j=0;j<ndet;j++)
@@ -550,45 +556,79 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
     ces_length[i] = sweeptstamps[i][nsweeps[i]];
   }
   int **az_binned;
-  if(n_sss_bins > 0)
-    az_binned = bin_az(az, az_min, az_max, ces_length, n_sss_bins, nces);
+  az_binned = bin_az(az, az_min, az_max, ces_length, n_sss_bins, nces);
 
-  n_class = npoly + miin(1, n_sss_bins);
+  double ***hwp_mod = (double ***) malloc(nces * sizeof(double **));
+  double hwp_f = (double) hwp_rpm / 60 ;
+  double hwp_angle_bis = 0.0;
+  for(i=0;i<nces;i++){
+    hwp_mod[i] = (double **) malloc(2 * sizeof(double *));
+    hwp_mod[i][0] = (double *) calloc(ces_length[i], sizeof(double));//hwp_cos[i];
+    hwp_mod[i][1] = (double *) calloc(ces_length[i], sizeof(double));//hwp_sin[i];
+    for(j=0;j<ces_length[i];j++){
+      hwp_angle_bis = (double)(2*M_PI*hwp_f*j)/sampling_freq;
+      hwp_mod[i][0][j] = cos(hwp_angle_bis);
+      hwp_mod[i][1][j] = sin(hwp_angle_bis);
+    }
+  }
 
+
+  n_class = npoly + ground + 2*nhwp;
   //Allocate memory to the templates classes instances (polynomials + SSS template)
   TemplateClass *X = (TemplateClass *) malloc(n_class * nb_blocks_loc * sizeof(TemplateClass));
-
   //Initialize templates classes list
-  Tlist_init(X, ndet, nces, (int *)local_blocks_sizes, detnsweeps, sweeptstamps, n_sss_bins, az_binned, sampling_freq, npoly);
+  Tlist_init(X, ndet, nces, (int *)local_blocks_sizes, detnsweeps, ces_length,
+  sweeptstamps, n_sss_bins, az_binned, sampling_freq, npoly, ground, nhwp, delta_t,
+  store_hwp, hwp_mod);
 
   //Allocate memory for the list of kernel blocks and inv block container
   int global_size_kernel = 0;
   int id_kernelblock = 0;
   for(i=0;i<nces;i++){
-    global_size_kernel += ndet * (npoly*nsweeps[i] + n_sss_bins) * (npoly*nsweeps[i] + n_sss_bins);
+    hwp_bins[i] = (int)ceil(ces_length[i]/(delta_t*sampling_freq));
+    printf("hwp_bins = %d\n",hwp_bins[i]);
+    global_size_kernel += ndet * (npoly*nsweeps[i] + ground*n_sss_bins + 2*nhwp*hwp_bins[i]) * (npoly*nsweeps[i] + ground*n_sss_bins + 2*nhwp*hwp_bins[i]);
   }
   double *B = (double *) calloc(global_size_kernel, sizeof(double));
-  double *Binv = (double *) calloc((npoly*nsweeps[0] + n_sss_bins)*(npoly*nsweeps[0] + n_sss_bins), sizeof(double));
+  double *Binv = (double *) calloc((npoly*nsweeps[0] + ground*n_sss_bins + 2*nhwp*hwp_bins[0])*(npoly*nsweeps[0] + ground*n_sss_bins + 2*nhwp*hwp_bins[0]), sizeof(double));
 
   //Build the list of inverse kernel blocks
   for(i=0;i<nces;i++){
+    if(store_hwp == 0)
+      build_hwpss_w(&hwpss_wghts, hwp_mod[i], ces_length[i], nhwp, i);
+    double sum  = 0.;
+    for(j=0;j<100;j++){
+      sum += Nm1.tpltzblocks[0].T_block[0]*hwpss_wghts.hwpcos[0][j]*hwpss_wghts.hwpsin[0][j];
+      // printf("hwp_cos[%d] = %e, cos[%d]= %e\n",j,hwpss_wghts.hwpcos[2][j],j,cos(3*2*M_PI*2*j/sampling_freq));
+      // printf("hwp_sin[%d] = %e, sin[%d]= %e\n",j,hwpss_wghts.hwpsin[2][j],j,sin(3*2*M_PI*2*j/sampling_freq));
+    }
+    printf("sum = %e\n",sum);
+
     if(i!=0){
-      Binv = (double *) realloc(Binv, (npoly*nsweeps[i] + n_sss_bins)*(npoly*nsweeps[i] + n_sss_bins)*sizeof(double));
+      Binv = (double *) realloc(Binv, (npoly*nsweeps[i] + ground*n_sss_bins + 2*nhwp*hwp_bins[i])*(npoly*nsweeps[i] + ground*n_sss_bins + 2*nhwp*hwp_bins[i])*sizeof(double));
       // init to zero
-      for(k=0;k<(npoly*nsweeps[i] + n_sss_bins)*(npoly*nsweeps[i] + n_sss_bins);k++)
+      for(k=0;k<(npoly*nsweeps[i] + ground*n_sss_bins + 2*nhwp*hwp_bins[i])*(npoly*nsweeps[i] + ground*n_sss_bins + 2*nhwp*hwp_bins[i]);k++)
         Binv[k] = 0;
     }
     // Processing detector blocks
     for(j=0;j<ndet;j++){
       // fflush(stdout);
-      BuildKernel(X+(i*ndet+j)*n_class, n_class, B+id_kernelblock, Nm1.tpltzblocks[i*ndet+j].T_block[0], sweeptstamps[i], az_binned[i], sampling_freq);
-      if((i==0) && (j==0))
-        sigma2 = B[0];
+      BuildKernel(X+(i*ndet+j)*n_class, n_class, B+id_kernelblock, Nm1.tpltzblocks[i*ndet+j].T_block[0], sweeptstamps[i], az_binned[i], hwpss_wghts, delta_t, sampling_freq);
+
+      // if((i==0) && (j==0))
+      //   sigma2 = B[0];
       // printf("i=%d, af kernel\n",i);
       // fflush(stdout);
+      // if(j==0)
+      //   for( l = 0; l < npoly*nsweeps[i] + ground*n_sss_bins+2*nhwp*hwp_bins[i]; l++ ) {
+      //     for(k=0;k < npoly*nsweeps[i] + ground*n_sss_bins+2*nhwp*hwp_bins[i]; k++){
+      //       if((B+id_kernelblock)[l*(npoly*nsweeps[i] + ground*n_sss_bins+2*nhwp*hwp_bins[i])+k] > 1e-6 && l!=k)
+      //         printf("B[%d,%d]=%e\n",l,k,(B+id_kernelblock)[l*(npoly*nsweeps[i] + ground*n_sss_bins+2*nhwp*hwp_bins[i])+k]);
+      //     }
+      //   }
       // if(i==0 && rank ==0){
-      // for( l = 78*3; l < 78*3+5; l++ ) {
-      //         for( k = 78*3; k < 78*3+5; k++ ) printf( " %6.2f", (B+id_kernelblock)[l*(npoly*nsweeps[i] + n_sss_bins)+k] );
+      // for( l = 84*0+0; l < 84*0+5; l++ ) {
+      //         for( k = 84*2+0; k < 84*2+5; k++ ) printf( " %6.12f", (B+id_kernelblock)[l*(npoly*nsweeps[i] + ground*n_sss_bins+2*nhwp*hwp_bins[i])+k] );
       //         printf( "\n" );
       // }}
       // printf("i=%d, af init\n",i);
@@ -605,9 +645,9 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
 
       // printf("[rank %d] Effective rank of local kernel block %d = %d\n",rank, i, inverse_svd(npoly*nsweeps, npoly*nsweeps, npoly*nsweeps,  B+i*(npoly*nsweeps)*(npoly*nsweeps)));
       if(rank==0)
-        printf("[rank %d] Effective rank of local kernel block %d = %d\n",rank, i*ndet+j, InvKernel(B+id_kernelblock, npoly*nsweeps[i] + n_sss_bins, Binv));
+        printf("[rank %d] Effective rank of local kernel block %d = %d\n",rank, i*ndet+j, InvKernel(B+id_kernelblock, npoly*nsweeps[i] + ground*n_sss_bins + 2*nhwp*hwp_bins[i], Binv));
       else
-        InvKernel(B+id_kernelblock, npoly*nsweeps[i] + n_sss_bins, Binv);
+        InvKernel(B+id_kernelblock, npoly*nsweeps[i] + ground*n_sss_bins +  2*nhwp*hwp_bins[i], Binv);
       // printf("af: nbins = %d\n",(X+1)->nbins);
       // printf("af: nbinMin = %d\n",(X+1)->nbinMin);
       // printf("af: nbinMax = %d\n",(X+1)->nbinMax);
@@ -617,13 +657,15 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
 
       // printf("%d rank kernel = %d, access block = %f\n",i, rang, block[npoly*nsweeps*77+77]);
       // printf("%d rank kernel = %d\n",i, InvKernel(block, npoly*nsweeps, Binv));
-      for(k=0;k<(npoly*nsweeps[i] + n_sss_bins)*(npoly*nsweeps[i] + n_sss_bins);k++){
+      for(k=0;k<(npoly*nsweeps[i] + ground*n_sss_bins +  2*nhwp*hwp_bins[i])*(npoly*nsweeps[i] + ground*n_sss_bins +  2*nhwp*hwp_bins[i]);k++){
       //   // printf("B[%d] = %f\n",j,(B+i*(npoly*nsweeps)*(npoly*nsweeps))[j]);
         B[id_kernelblock+k] = Binv[k];
         Binv[k] = 0;
       }
-      id_kernelblock += (npoly*nsweeps[i] + n_sss_bins)*(npoly*nsweeps[i] + n_sss_bins);
+      id_kernelblock += (npoly*nsweeps[i] + ground*n_sss_bins +  2*nhwp*hwp_bins[i])*(npoly*nsweeps[i] + ground*n_sss_bins +  2*nhwp*hwp_bins[i]);
     }
+    if(store_hwp == 0)
+      free_hwpss_w(&hwpss_wghts, nhwp);
   }
 
   t=MPI_Wtime();
@@ -640,7 +682,7 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
   st=MPI_Wtime();
 // Conjugate Gradient
   if(solver==0)
-    PCG_GLS_templates(outpath, ref, &A, Nm1, X, B, sweeptstamps, npoly, nsweeps, az_binned, n_sss_bins, nces, nb_blocks_loc, x, signal, noise, cond, lhits, tol, maxiter, sampling_freq);
+    PCG_GLS_templates(outpath, ref, &A, Nm1, X, B, sweeptstamps, npoly, ground, nhwp, nsweeps, az_binned, n_sss_bins, hwp_bins, hwp_mod, delta_t, store_hwp, nces, ces_length, nb_blocks_loc, x, signal, noise, cond, lhits, tol, maxiter, sampling_freq);
   else{
     printf("ECG unavailable at this stage please choose the PCG solver: solver=0\n");
     exit(1);

@@ -102,6 +102,7 @@ def setup_mappraiser(args):
     params["nside"] = args.nside
     params["Lambda"] = args.Lambda
     params["samplerate"] = args.sample_rate
+    params["hwp_rpm"] = args.hwp_rpm
     params["output"] = args.outpath
     params["ref"] = args.ref
     params["solver"] = args.solver
@@ -111,6 +112,7 @@ def setup_mappraiser(args):
     params["enlFac"] = args.enlFac
     params["ortho_alg"] = args.ortho_alg
     params["bs_red"] = args.bs_red
+
 
     return params
 
