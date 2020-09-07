@@ -540,7 +540,7 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
   int ground = 1;
   int n_sss_bins = 20;
   int nhwp = 2;
-  double delta_t = 10.0;
+  double delta_t = 30.0;
   int store_hwp = 0;
   int n_class = 0;
   double sigma2;
@@ -597,12 +597,12 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
     if(store_hwp == 0)
       build_hwpss_w(&hwpss_wghts, hwp_mod[i], ces_length[i], nhwp, i);
     double sum  = 0.;
-    for(j=0;j<100;j++){
-      sum += Nm1.tpltzblocks[0].T_block[0]*hwpss_wghts.hwpcos[0][j]*hwpss_wghts.hwpsin[0][j];
-      // printf("hwp_cos[%d] = %e, cos[%d]= %e\n",j,hwpss_wghts.hwpcos[2][j],j,cos(3*2*M_PI*2*j/sampling_freq));
-      // printf("hwp_sin[%d] = %e, sin[%d]= %e\n",j,hwpss_wghts.hwpsin[2][j],j,sin(3*2*M_PI*2*j/sampling_freq));
-    }
-    printf("sum = %e\n",sum);
+    // for(j=0;j<100;j++){
+    //   sum += Nm1.tpltzblocks[0].T_block[0]*hwpss_wghts.hwpcos[0][j]*hwpss_wghts.hwpsin[0][j];
+    //   // printf("hwp_cos[%d] = %e, cos[%d]= %e\n",j,hwpss_wghts.hwpcos[2][j],j,cos(3*2*M_PI*2*j/sampling_freq));
+    //   // printf("hwp_sin[%d] = %e, sin[%d]= %e\n",j,hwpss_wghts.hwpsin[2][j],j,sin(3*2*M_PI*2*j/sampling_freq));
+    // }
+    // printf("sum = %e\n",sum);
 
     if(i!=0){
       Binv = (double *) realloc(Binv, (npoly*nsweeps[i] + ground*n_sss_bins + 2*nhwp*hwp_bins[i])*(npoly*nsweeps[i] + ground*n_sss_bins + 2*nhwp*hwp_bins[i])*sizeof(double));
