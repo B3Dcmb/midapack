@@ -23,7 +23,7 @@
 
 int x2map_pol( double *mapI, double *mapQ, double *mapU, double *Cond, int * hits, int npix, double *x, int *lstid, double *cond, int *lhits, int xsize);
 
-void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int pointing_commflag, double tol, int maxiter, int enlFac, int ortho_alg, int bs_red, int nside, void *data_size_proc, int nb_blocks_loc, void *local_blocks_sizes, int Nnz, void *pix, void *pixweights, void *signal, double *noise, int lambda, double *invtt)
+void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int Z_2lvl, int pointing_commflag, double tol, int maxiter, int enlFac, int ortho_alg, int bs_red, int nside, void *data_size_proc, int nb_blocks_loc, void *local_blocks_sizes, int Nnz, void *pix, void *pixweights, void *signal, double *noise, int lambda, double *invtt)
 {
   int64_t	M;       //Global number of rows
   int		m, Nb_t_Intervals;  //local number of rows of the pointing matrix A, nbr of stationary intervals
@@ -118,6 +118,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
   x   = (double *) malloc(A.lcount*sizeof(double));
   cond = (double *) malloc((int)(A.lcount/3)*sizeof(double));
   lhits = (int *) malloc((int)(A.lcount/3) * sizeof(int));
+
   for(j=0; j<A.lcount; j++){
     x[j] = 0.;
     if(j%3 == 0){
@@ -165,10 +166,9 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
   fflush(stdout);
 
   st=MPI_Wtime();
-
   // Conjugate Gradient
   if(solver == 0)
-    PCG_GLS_true(outpath, ref, &A, Nm1, x, signal, noise, cond, lhits, tol, maxiter, precond);
+    PCG_GLS_true(outpath, ref, &A, Nm1, x, signal, noise, cond, lhits, tol, maxiter, precond, Z_2lvl);
   else if (solver == 1)
     ECG_GLS(outpath, ref, &A, Nm1, x, signal, noise, cond, lhits, tol, maxiter, enlFac, ortho_alg, bs_red);
   else {
