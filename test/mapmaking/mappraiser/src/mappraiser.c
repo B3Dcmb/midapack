@@ -536,10 +536,10 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
   //Templates classes initialization
   st=MPI_Wtime();
   //hardcoded parameters to be changed later on
-  int npoly = 5;
-  int ground = 1;
+  int npoly = 3;
+  int ground = 0;
   int n_sss_bins = 20;
-  int nhwp = 2;
+  int nhwp = 0;
   double delta_t = 30.0;
   int store_hwp = 0;
   int n_class = 0;
@@ -566,9 +566,9 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
     hwp_mod[i][0] = (double *) calloc(ces_length[i], sizeof(double));//hwp_cos[i];
     hwp_mod[i][1] = (double *) calloc(ces_length[i], sizeof(double));//hwp_sin[i];
     for(j=0;j<ces_length[i];j++){
-      hwp_angle_bis = (double)(2*M_PI*hwp_f*j)/sampling_freq;
-      hwp_mod[i][0][j] = cos(hwp_angle_bis);
-      hwp_mod[i][1][j] = sin(hwp_angle_bis);
+      //hwp_angle_bis = (double)(2*M_PI*hwp_f*j)/sampling_freq;
+      hwp_mod[i][0][j] = cos(hwp_angle[i][j]);
+      hwp_mod[i][1][j] = sin(hwp_angle[i][j]);
     }
   }
 

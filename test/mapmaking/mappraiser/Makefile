@@ -1,12 +1,12 @@
-DIR = $(HOME)/midapack
-MIDAPACK_ROOT=$(PREFIX)/midapack
+DIR = $(HOME)/midapack_bis
+MIDAPACK_ROOT=$(PREFIX)/midapack_bis
 MIDAPACK_LIB=$(MIDAPACK_ROOT)/lib
 MPICC = cc
 OPT =  -D W_MPI -D W_OPENMP -O3
 CC = $(MPICC) -qopenmp -g -Wall -fPIC $(OPT)
 INC = -I$(DIR)/include
 LIB = -L$(MIDAPACK_LIB) -lmidapack
-MAPPRAISER_ROOT=$(PREFIX)/mappraiser
+MAPPRAISER_ROOT=$(PREFIX)/mappraiser_bis
 MAPPRAISER_OBJ=$(MAPPRAISER_ROOT)/obj
 MAPPRAISER_LIB=$(MAPPRAISER_ROOT)/lib
 

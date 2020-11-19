@@ -621,7 +621,7 @@ class OpMappraiser(Operator):
 
                     for idet, det in enumerate(detectors):
                         # Get the signal.
-                        noise = tod.local_signal(det, self._noise_name)
+                        noise = tod.local_signal(det, self._noise_name) * 1./np.sqrt(365)
                         noise_dtype = noise.dtype
                         offset = global_offset
                         nn = len(noise)
