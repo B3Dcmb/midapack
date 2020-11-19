@@ -26,6 +26,16 @@ def add_mappraiser_args(parser):
     )
     parser.add_argument("--map-maker",dest="map_maker", required=False, default="ML", help="Map-making procedure"
     )
+    parser.add_argument("--npoly", required=False, default=0, type=np.int, help="Order of polynomial templates"
+    )
+    parser.add_argument("--nhwp", required=False, default=0, type=np.int, help="Order of HWPSS templates"
+    )
+    parser.add_argument("--hwpss-base", required=False, default=10.0, type=np.double, help="HWPSS baseline length in seconds (default = 10.0s)"
+    )
+    parser.add_argument("--sss", required=False, default=0, type=np.int, help="SSS template on/off (only effective in MT mapper): 0-> off, 1->on"
+    )
+    parser.add_argument("--sbins", required=False, default=20, type=np.int, help="Number of azimuth bins in the SSS template"
+    )
     parser.add_argument("--Lambda", required=False, default=16384, type=np.int, help="Half bandwidth (lambda) of noise covariance"
     )
     parser.add_argument("--solver", required=False, default=0, type=np.int, help="Choose map-making solver: 0->PCG, 1->ECG"
@@ -99,6 +109,11 @@ def setup_mappraiser(args):
     params = {}
 
     params["map-maker"] = args.map_maker
+    params["npoly"] = args.npoly
+    params["nhwp"] = args.nhwp
+    params["hwpss-base"] = args.hwpss_base
+    params["sss"] = args.sss
+    params["sbins"] = args.sbins
     params["nside"] = args.nside
     params["Lambda"] = args.Lambda
     params["samplerate"] = args.sample_rate
@@ -128,7 +143,7 @@ def apply_mappraiser(
     telescope_data=None,
     verbose=True,
 ):
-    """ Use libmappraiser to run the ML map-making
+    """ Use libmappraiser to run unbiased map-making
 
     Args:
         time_comms (iterable) :  Series of disjoint communicators that
