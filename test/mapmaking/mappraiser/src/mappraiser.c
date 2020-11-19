@@ -21,6 +21,10 @@
 
 int x2map_pol( double *mapI, double *mapQ, double *mapU, double *Cond, int * hits, int npix, double *x, int *lstid, double *cond, int *lhits, int xsize);
 
+double rand_gen();
+
+double normalRandom();
+
 void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_commflag, double tol, int maxiter, int enlFac, int ortho_alg, int bs_red, int nside, void *data_size_proc, int nb_blocks_loc, void *local_blocks_sizes, int Nnz, void *pix, void *pixweights, void *signal, double *noise, int lambda, double *invtt)
 {
   int64_t	M;       //Global number of rows
@@ -366,7 +370,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
   // MPI_Finalize();
 }
 
-void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_commflag, double tol, int maxiter, int enlFac, int ortho_alg, int bs_red, int nside, int **sweeptstamps, int *nsweeps, double **az, double *az_min, double *az_max, double **hwp_angle, int nces, void *data_size_proc, int nb_blocks_loc, void *local_blocks_sizes, int Nnz, void *pix, void *pixweights, void *signal, double *noise, double sampling_freq, double hwp_rpm, double *invtt)
+void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_commflag, int npoly, int nhwp, double delta_t, int ground, int n_sss_bins, double tol, int maxiter, int enlFac, int ortho_alg, int bs_red, int nside, int **sweeptstamps, int *nsweeps, double **az, double *az_min, double *az_max, double **hwp_angle, int nces, void *data_size_proc, int nb_blocks_loc, void *local_blocks_sizes, int Nnz, void *pix, void *pixweights, void *signal, double *noise, double sampling_freq, double hwp_rpm, double *invtt)
 {
   int64_t	M;       //Global number of rows
   int		m, Nb_t_Intervals;  //local number of rows of the pointing matrix A, nbr of stationary intervals
@@ -536,11 +540,11 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
   //Templates classes initialization
   st=MPI_Wtime();
   //hardcoded parameters to be changed later on
-  int npoly = 5;
-  int ground = 1;
-  int n_sss_bins = 20;
-  int nhwp = 2;
-  double delta_t = 10.0;
+  // int npoly = 3;
+  // int ground = 0;
+  // int n_sss_bins = 20;
+  // int nhwp = 0;
+  // double delta_t = 10.0;
   int store_hwp = 0;
   int n_class = 0;
   double sigma2;
@@ -559,18 +563,41 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
   az_binned = bin_az(az, az_min, az_max, ces_length, n_sss_bins, nces);
 
   double ***hwp_mod = (double ***) malloc(nces * sizeof(double **));
-  double hwp_f = (double) hwp_rpm / 60 ;
-  double hwp_angle_bis = 0.0;
+  // double hwp_f = (double) hwp_rpm / 60 ;
+  //double hwp_angle_bis = 0.0;
   for(i=0;i<nces;i++){
     hwp_mod[i] = (double **) malloc(2 * sizeof(double *));
     hwp_mod[i][0] = (double *) calloc(ces_length[i], sizeof(double));//hwp_cos[i];
     hwp_mod[i][1] = (double *) calloc(ces_length[i], sizeof(double));//hwp_sin[i];
     for(j=0;j<ces_length[i];j++){
-      hwp_angle_bis = (double)(2*M_PI*hwp_f*j)/sampling_freq;
-      hwp_mod[i][0][j] = cos(hwp_angle_bis);
-      hwp_mod[i][1][j] = sin(hwp_angle_bis);
+      //hwp_angle_bis = (double)(2*M_PI*hwp_f*j)/sampling_freq;
+      hwp_mod[i][0][j] = cos(hwp_angle[i][j]);
+      hwp_mod[i][1][j] = sin(hwp_angle[i][j]);
     }
   }
+
+  // //Simulate HWPSS signal (just harmonics of hwp angle)
+  // double hwpss_center = 0.002;
+  // double hwpss_dispersion = 0.01;
+  // int hwpss_order = 6;
+  // double **hwp_amp = (double **) malloc(hwpss_order * sizeof(double*));
+  // for(l=0;l<hwpss_order;l++){
+  //   hwp_amp[l] = (double *) calloc(nb_blocks_loc, sizeof(double));
+  //   for(i=0;i<nb_blocks_loc;i++){
+  //     hwp_amp[l][i] = hwpss_center * (1 + normalRandom()*hwpss_dispersion);
+  //   }
+  // }
+  // int id = 0;
+  // for(i=0;i<nces;i++){
+  //   for(j=0;j<ndet;j++){
+  //     for(k=0;k<ces_length[i];k++){
+  //       for(l=1;l<=hwpss_order;l++){
+  //         noise[id+k] += hwp_amp[l-1][i*ndet + j]*(1+0.0001*k/sampling_freq)*(cos(l*hwp_angle[i][k]) + sin(l*hwp_angle[i][k]));
+  //       }
+  //     }
+  //     id += ces_length[i];
+  //   }
+  // }
 
 
   n_class = npoly + ground + 2*nhwp;
@@ -586,7 +613,7 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
   int id_kernelblock = 0;
   for(i=0;i<nces;i++){
     hwp_bins[i] = (int)ceil(ces_length[i]/(delta_t*sampling_freq));
-    printf("hwp_bins = %d\n",hwp_bins[i]);
+    // printf("[rank %d] hwp_bins = %d\n", rank, hwp_bins[i]);
     global_size_kernel += ndet * (npoly*nsweeps[i] + ground*n_sss_bins + 2*nhwp*hwp_bins[i]) * (npoly*nsweeps[i] + ground*n_sss_bins + 2*nhwp*hwp_bins[i]);
   }
   double *B = (double *) calloc(global_size_kernel, sizeof(double));
@@ -596,13 +623,13 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
   for(i=0;i<nces;i++){
     if(store_hwp == 0)
       build_hwpss_w(&hwpss_wghts, hwp_mod[i], ces_length[i], nhwp, i);
-    double sum  = 0.;
-    for(j=0;j<100;j++){
-      sum += Nm1.tpltzblocks[0].T_block[0]*hwpss_wghts.hwpcos[0][j]*hwpss_wghts.hwpsin[0][j];
-      // printf("hwp_cos[%d] = %e, cos[%d]= %e\n",j,hwpss_wghts.hwpcos[2][j],j,cos(3*2*M_PI*2*j/sampling_freq));
-      // printf("hwp_sin[%d] = %e, sin[%d]= %e\n",j,hwpss_wghts.hwpsin[2][j],j,sin(3*2*M_PI*2*j/sampling_freq));
-    }
-    printf("sum = %e\n",sum);
+    // double sum  = 0.;
+    // for(j=0;j<100;j++){
+    //   sum += Nm1.tpltzblocks[0].T_block[0]*hwpss_wghts.hwpcos[0][j]*hwpss_wghts.hwpsin[0][j];
+    //   // printf("hwp_cos[%d] = %e, cos[%d]= %e\n",j,hwpss_wghts.hwpcos[2][j],j,cos(3*2*M_PI*2*j/sampling_freq));
+    //   // printf("hwp_sin[%d] = %e, sin[%d]= %e\n",j,hwpss_wghts.hwpsin[2][j],j,sin(3*2*M_PI*2*j/sampling_freq));
+    // }
+    // printf("sum = %e\n",sum);
 
     if(i!=0){
       Binv = (double *) realloc(Binv, (npoly*nsweeps[i] + ground*n_sss_bins + 2*nhwp*hwp_bins[i])*(npoly*nsweeps[i] + ground*n_sss_bins + 2*nhwp*hwp_bins[i])*sizeof(double));
@@ -860,4 +887,15 @@ int x2map_pol( double *mapI, double *mapQ, double *mapU, double *Cond, int * hit
   }
 
   return 0;
+}
+
+double rand_gen() {
+   // return a uniformly distributed random value
+   return ( (double)(rand()) + 1. )/( (double)(RAND_MAX) + 1. );
+}
+double normalRandom() {
+   // return a normally distributed random value
+   double v1=rand_gen();
+   double v2=rand_gen();
+   return cos(2*3.14*v2)*sqrt(-2.*log(v1));
 }

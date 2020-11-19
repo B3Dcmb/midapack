@@ -580,8 +580,10 @@ void free_hwpss_w(hwpss_w *hwpss_wghts, int order){
     free(hwpss_wghts->hwpcos[i]);
     free(hwpss_wghts->hwpsin[i]);
   }
-  free(hwpss_wghts->hwpcos);
-  free(hwpss_wghts->hwpsin);
+  if(order != 0){
+    free(hwpss_wghts->hwpcos);
+    free(hwpss_wghts->hwpsin);
+  }
 }
 
 /******************************************************************************/
