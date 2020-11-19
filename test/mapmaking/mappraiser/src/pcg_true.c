@@ -416,8 +416,14 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz Nm1, TemplateClass
   // to test that we get zero residual for template modes
   // int cumul_offset = 0;
   // for(ces_id=0;ces_id<nces;ces_id++){
-  //   for(i=0;i<(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id])*ndet;i++)
-  //     out2[cumul_offset+i] = 1/sqrt(2)*1+1/sqrt(2)*0.01*(i%hwp_bins[ces_id]);
+  //   for(i=0;i<(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id])*ndet;i++){
+  //     if(i%(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id])<=npoly*nsweeps[ces_id])
+  //       out2[cumul_offset+i] = 1+0.01*((i%(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id]))%nsweeps[ces_id]);
+  //     else if(i%(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id])<=npoly*nsweeps[ces_id]+ground*n_sss_bins)
+  //       out2[cumul_offset+i] = 1+0.01*((i%((npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id]))-npoly*nsweeps[ces_id])%n_sss_bins);
+  //     else
+  //       out2[cumul_offset+i] = 1/(6*sqrt(2))*1+1/(6*sqrt(2))*0.01*((i%((npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id]))-npoly*nsweeps[ces_id]-ground*n_sss_bins)%hwp_bins[ces_id]);
+  //   }
   //   cumul_offset += (npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id])*ndet;
   // }
   //
