@@ -6,7 +6,7 @@
     @author Hamza El Bouhargani
     @date   May 2019
     @credit  Adapted from work by Frederic Dauvergne
-    @Last_update June 2020 by Aygul Jamal */
+    @Last_update January 2021 by Aygul Jamal */
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -754,62 +754,28 @@ void transpose_nn(double *A, int n)
       }
 }
 
-
-//low-level routine: to be moved somwhere else
 void inverse_svd(int m, int n, int lda, double *a)
 {
-  // A = UDVt
-  // A = USVt
-  int i, j, k;
-
-  // Setup a buffer to hold the singular values:
-  int nsv = m < n ? m : n;
-  double *s = malloc(nsv * sizeof(double)); // = D
-
-  // Setup buffers to hold the matrices U and Vt:
-  double *u = malloc(m*m * sizeof(double)); // = U
-  double *vt = malloc(n*n * sizeof(double));
 
   int info = 0;
+  int i = 0;
+  int rank = 0;
+  //lapack_int LAPACKE_dgelss( int matrix_order, lapack_int m, lapack_int n, lapack_int nrhs, double* a, lapack_int lda, double* b, lapack_int ldb, double* s, double rcond, lapack_int* rank );
+    double *b = calloc(m * n, sizeof(double));
+    int nsv = m < n ? m : n;
+    double *s = malloc(nsv * sizeof(double));
 
-  transpose_nn(a, m);
-  mkl_set_num_threads(1);
+  for (i = 0; i < nsv; i++)
+      b[i*n+i] = 1;
+     
+  info =  LAPACKE_dgelss(LAPACK_ROW_MAJOR, m, n, n, a, n, b, n, s, -1, &rank);
 
-  info = LAPACKE_dgesdd(LAPACK_COL_MAJOR, 'A', m, n, a, lda, s, u, m, vt, n);
-  //info = LAPACKE_dgesvd(LAPACK_COL_MAJOR, 'A', m, n, a, lda, s, u, m, vt, n);
-
-  if (info > 0) {
-    printf( "The algorithm computing SVD failed to converge (1).\n" );
-    exit(1);
-  }
-  if (info < 0) {
-    printf("General error .\n");
-    exit(1);
-  }
-
-  // Computing S-1
-  for (k = 0; k < nsv; ++k) {
-    if (fabs(s[k]) < 1.0e-7) s[k] = 0.0;
-    //if (fabs(s[k]) < 1.0e-12) s[k] = 0.0;
-    else s[k] = 1.0 / s[k];
-  }
-
-  // do something useful with U, S, Vt ...
-  for (i = 0; i < n; i++) {
-    for (j = 0; j < m; j++) {
-      a[i * m + j] = 0.0;
-      for (k = 0; k < n; k++) {
-	       a[i * m + j] += vt[i * m + k] * s[k] * u[k * m + j];
-      }
-    }
-  }
-
-  // and then clean them up too:
-  free(s);
-  free(u);
-  free(vt);
-
+  if (info != 0) printf("LAPACK_dgelss does not work.\n");
+  memcpy(a, b, (m*n) *sizeof(double));
+  free(b);
+  
 }
+
 
 // Deflation subspace matrix constructor
 void build_Z(const Mat *A, int Zn, double ***out_Z)
@@ -891,16 +857,6 @@ void build_Z(const Mat *A, int Zn, double ***out_Z)
 	(double)((double)count[g * group + i] / (double)tcount[i]);
   }  
 
-  // Special case when there are two identical colunms
-  if (Zn == 2 * size) {
-    for (i = 0; i < A->lcount - A->nnz; i += (2 * A->nnz)) {
-      Z[rank * group + 0][i] *= 0.5;
-      Z[rank * group + 1][i] *= 1.5;
-      Z[rank * group + 0][i + A->nnz] *= 1.5;
-      Z[rank * group + 1][i + A->nnz] *= 0.5;
-    }  
-  }
-  
   // Free no longer used buffers
   free(count);
   free(tcount);
@@ -979,7 +935,7 @@ void build_Z(const Mat *A, int Zn, double ***out_Z)
 //in vector x overlapped,
 //in P distributed among processors
 //Z should be contructed in place
-// Calculation of E, then E^{-1}, we have the algorithm
+//Calculation of E, then E^{-1}, we have the algorithm
 //Pt N^{-1} P Z (Zt Pt N^{-1} P Z)^{-1} Zt x = A Z E^{-1} Zt x = A Q x
 //v1 = P * Zi column by column
 //v2 = N^{-1} * v1
@@ -1389,6 +1345,8 @@ void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat
   MPI_Comm_rank(A->comm, &rank);
   MPI_Comm_size(A->comm, &size);
 
+  if (rank == 0) printf("Last compiled on %s at %s\n", __DATE__, __TIME__);
+  
   p->precond = precond;
   p->Zn = Zn;
 
@@ -1407,23 +1365,6 @@ void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat
 
   // Compute pixel share ponderation
   get_pixshare_pond(A, p->pixpond);
-
-  /*
-  t1 = (double *) malloc(A->m * sizeof(double));
-  t2 = (double *) malloc(p->n * sizeof(double));
-  memcpy(t1, b, A->m * sizeof(double));
-  double diagNm1 = 0.0;
-
-  //multiply by the diagonal Toeplitz
-  diagNm1 = (*Nm1).tpltzblocks[0].T_block[0];
-  for(i = 0; i < A->m; i++)
-    t1[i] = diagNm1 * t1[i];
-  
-  TrMatVecProd(A, t1, t2, 0);
-  MatVecProd(&(p->BJ_inv), t2, x, 0);
-  free(t1);
-  free(t2);
-  */
   
   if (precond != 0) {
     p->Qg = calloc(p->n, sizeof(double));
