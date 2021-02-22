@@ -671,9 +671,15 @@ class OpMappraiser(Operator):
             nces += 1
             sweeptstamps = [0]
             commonflags = tod.local_common_flags(self._common_flag_name)
-            for iflg, flg in enumerate(commonflags[:-1]):
-                if (flg & commonflags[iflg+1] <=1): #sweep direction changes
-                    sweeptstamps.append(iflg+1)
+            if self._params["fixed_polybase"]:
+                base_sup_id = int(self._params["polybaseline_length"]*self._params["samplerate"])
+                while base_sup_id < len(commonflags):
+                    sweeptstamps.append(base_sup_id)
+                    base_sup_id += int(self._params["polybaseline_length"]*self._params["samplerate"])
+            else:
+                for iflg, flg in enumerate(commonflags[:-1]):
+                    if (flg & commonflags[iflg+1] <=1): #sweep direction changes
+                        sweeptstamps.append(iflg+1)
             sweeptstamps.append(len(commonflags))
             nsweeps = len(sweeptstamps)-1
             sweeptstamps = np.array(sweeptstamps, dtype=np.int32)

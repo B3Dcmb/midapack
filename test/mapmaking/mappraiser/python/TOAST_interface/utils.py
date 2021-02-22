@@ -28,11 +28,15 @@ def add_mappraiser_args(parser):
     )
     parser.add_argument("--npoly", required=False, default=0, type=np.int, help="Order of polynomial templates"
     )
+    parser.add_argument("--fixed_polybase", required=False, default=0, type=np.int, help="User sets a specific polynomial baseline length: 0->OFF, 1->ON"
+    )
+    parser.add_argument("--polybaseline_length", required=False, default=10.0, type=np.double, help="Polynomial baseline length in seconds (default = 10.0s)"
+    )
     parser.add_argument("--nhwp", required=False, default=0, type=np.int, help="Order of HWPSS templates"
     )
     parser.add_argument("--hwpss-base", required=False, default=10.0, type=np.double, help="HWPSS baseline length in seconds (default = 10.0s)"
     )
-    parser.add_argument("--sss", required=False, default=0, type=np.int, help="SSS template on/off (only effective in MT mapper): 0-> off, 1->on"
+    parser.add_argument("--sss", required=False, default=0, type=np.int, help="SSS template on/off (only effective in MT mapper): 0->OFF, 1->ON"
     )
     parser.add_argument("--sbins", required=False, default=20, type=np.int, help="Number of azimuth bins in the SSS template"
     )
@@ -50,7 +54,7 @@ def add_mappraiser_args(parser):
     )
     parser.add_argument("--ortho_alg", required=False, default=1, type=np.int, help="Orthogonalization scheme for ECG. O:odir, 1:omin"
     )
-    parser.add_argument("--bs_red", required=False, default = 0, type=np.int, help="Use dynamic search reduction"
+    parser.add_argument("--bs_red", required=False, default = 0, type=np.int, help="Use dynamic search reduction: 0->OFF, 1->ON"
     )
     parser.add_argument(
         "--conserve-memory",
@@ -110,6 +114,8 @@ def setup_mappraiser(args):
 
     params["map-maker"] = args.map_maker
     params["npoly"] = args.npoly
+    params["fixed_polybase"] = args.fixed_polybase
+    params["polybaseline_length"] = args.polybaseline_length
     params["nhwp"] = args.nhwp
     params["hwpss-base"] = args.hwpss_base
     params["sss"] = args.sss
