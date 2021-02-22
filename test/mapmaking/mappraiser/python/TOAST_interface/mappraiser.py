@@ -398,7 +398,7 @@ class OpMappraiser(Operator):
 
 
         # Fit the psd model to the periodogram (in log scale)
-        popt,pcov = curve_fit(logpsd_model,f[1:],np.log10(psd[1:]),p0=np.array([-7, -0.5, 0.5, 0.1]), bounds=([-np.inf, -np.inf, 0., 0.], [0., 0., np.inf, 1.]))
+        popt,pcov = curve_fit(logpsd_model,f[1:],np.log10(psd[1:]),p0=np.array([-7, -1.0, 0.1, 0.]), bounds=([-20, -10, 0., 0.], [0., 0., 10, 0.001]), maxfev = 1000)
         # popt[1] = -5.
         # popt[2] = 2.
         if self._rank == 0 and idet == 0:
