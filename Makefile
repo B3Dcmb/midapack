@@ -1,6 +1,6 @@
 PROJECT = Midapack_
 VERSION = 1.1b
-DIR = $(HOME)/software/midapack
+DIR = $(HOME)/midapack
 DIRTAR = export_tar
 LIBNAME = libmidapack
 MIDAPACK_ROOT=$(PREFIX)/midapack
@@ -62,7 +62,7 @@ lib:
         $(TOEPLITZ_OBJ)/toeplitz_nofft.o $(TOEPLITZ_OBJ)/toeplitz_gappy.o $(TOEPLITZ_OBJ)/toeplitz_params.o \
         $(TOEPLITZ_OBJ)/toeplitz_rshp.o $(TOEPLITZ_OBJ)/toeplitz_utils.o $(TOEPLITZ_OBJ)/toeplitz_wizard.o
 	ranlib $(MIDAPACK_LIB)/$(LIBNAME).a
-	mpiicc -qopenmp -shared $(MAPMAT_OBJ)/mapmat.o $(MAPMAT_OBJ)/mapmatc.o $(MAPMAT_OBJ)/bitop.o \
+	cc -qopenmp -shared $(MAPMAT_OBJ)/mapmat.o $(MAPMAT_OBJ)/mapmatc.o $(MAPMAT_OBJ)/bitop.o \
 	 			$(MAPMAT_OBJ)/als.o $(MAPMAT_OBJ)/alm.o $(MAPMAT_OBJ)/csort.o $(MAPMAT_OBJ)/cindex.o \
 				$(MAPMAT_OBJ)/ring.o $(MAPMAT_OBJ)/butterfly.o $(TOEPLITZ_OBJ)/toeplitz.o $(TOEPLITZ_OBJ)/toeplitz_seq.o \
 				$(TOEPLITZ_OBJ)/toeplitz_block.o $(TOEPLITZ_OBJ)/toeplitz_nofft.o $(TOEPLITZ_OBJ)/toeplitz_gappy.o \
