@@ -50,6 +50,7 @@ _mappraiser.MLmap.argtypes =[
     ct.c_char_p, #ref
     ct.c_int, #solver
     ct.c_int, #precond
+    ct.c_int, #Z_2lvl
     ct.c_int, #pointing_commflag
     ct.c_double, #tol
     ct.c_int, #maxIter
@@ -78,5 +79,5 @@ def MLmap(comm, params, data_size_proc, nb_blocks_loc, local_blocks_sizes, Nnz, 
         raise RuntimeError("No libmappraiser available, cannot reconstruct the map")
     outpath = params["output"].encode('ascii')
     ref = params["ref"].encode('ascii')
-    _mappraiser.MLmap(encode_comm(comm), outpath, ref, params["solver"],params["precond"], params["pointing_commflag"], params["tol"], params["maxiter"], params["enlFac"], params["ortho_alg"], params["bs_red"], params["nside"], data_size_proc, nb_blocks_loc, local_blocks_sizes, Nnz, pixels, pixweights, signal, noise, Lambda, invtt)
+    _mappraiser.MLmap(encode_comm(comm), outpath, ref, params["solver"], params["precond"], params["Z_2lvl"], params["pointing_commflag"], params["tol"], params["maxiter"], params["enlFac"], params["ortho_alg"], params["bs_red"], params["nside"], data_size_proc, nb_blocks_loc, local_blocks_sizes, Nnz, pixels, pixweights, signal, noise, Lambda, invtt)
     return
