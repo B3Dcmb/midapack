@@ -767,13 +767,13 @@ void inverse_svd(int m, int n, int lda, double *a)
 
   for (i = 0; i < nsv; i++)
       b[i*n+i] = 1;
-     
+
   info =  LAPACKE_dgelss(LAPACK_ROW_MAJOR, m, n, n, a, n, b, n, s, -1, &rank);
 
   if (info != 0) printf("LAPACK_dgelss does not work.\n");
   memcpy(a, b, (m*n) *sizeof(double));
   free(b);
-  
+
 }
 
 
@@ -855,7 +855,7 @@ void build_Z(const Mat *A, int Zn, double ***out_Z)
     for (i = 0; i < A->lcount; i += A->nnz)
       Z[rank * group + g][i] =
 	(double)((double)count[g * group + i] / (double)tcount[i]);
-  }  
+  }
 
   // Free no longer used buffers
   free(count);
@@ -1346,7 +1346,7 @@ void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat
   MPI_Comm_size(A->comm, &size);
 
   if (rank == 0) printf("Last compiled on %s at %s\n", __DATE__, __TIME__);
-  
+
   p->precond = precond;
   p->Zn = Zn;
 
@@ -1365,7 +1365,7 @@ void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat
 
   // Compute pixel share ponderation
   get_pixshare_pond(A, p->pixpond);
-  
+
   if (precond != 0) {
     p->Qg = calloc(p->n, sizeof(double));
     p->AQg = calloc(p->n, sizeof(double));
@@ -1408,12 +1408,12 @@ void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat
 
     // For x initial guess is 0
     memcpy(x, p->Z[Zn-1], p->n * sizeof(double));
-    
+
     // For x initial guess is not 0
     //for (i = 0; i < p->n; i++)
     //  x[i] = x[i] +  p->Z[Zn-1][i];
   }
-  
+
   *out_p = p;
   *out_pixpond = p->pixpond;
   *out_n = p->n;
