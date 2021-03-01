@@ -557,22 +557,24 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
     detnsweeps[i] = (int *) malloc(ndet * sizeof(int));
     for(j=0;j<ndet;j++)
       detnsweeps[i][j] = nsweeps[i];
-    ces_length[i] = sweeptstamps[i][nsweeps[i]];
+      ces_length[i] = sweeptstamps[i][nsweeps[i]];
   }
-  int **az_binned;
-  az_binned = bin_az(az, az_min, az_max, ces_length, n_sss_bins, nces);
+  int **az_binned = NULL;
+  az_binned = bin_az(az, az_min, az_max, ces_length, ground, n_sss_bins, nces);
 
   double ***hwp_mod = (double ***) malloc(nces * sizeof(double **));
   // double hwp_f = (double) hwp_rpm / 60 ;
   //double hwp_angle_bis = 0.0;
-  for(i=0;i<nces;i++){
-    hwp_mod[i] = (double **) malloc(2 * sizeof(double *));
-    hwp_mod[i][0] = (double *) calloc(ces_length[i], sizeof(double));//hwp_cos[i];
-    hwp_mod[i][1] = (double *) calloc(ces_length[i], sizeof(double));//hwp_sin[i];
-    for(j=0;j<ces_length[i];j++){
-      //hwp_angle_bis = (double)(2*M_PI*hwp_f*j)/sampling_freq;
-      hwp_mod[i][0][j] = cos(hwp_angle[i][j]);
-      hwp_mod[i][1][j] = sin(hwp_angle[i][j]);
+  if(nhwp){
+    for(i=0;i<nces;i++){
+      hwp_mod[i] = (double **) malloc(2 * sizeof(double *));
+      hwp_mod[i][0] = (double *) calloc(ces_length[i], sizeof(double));//hwp_cos[i];
+      hwp_mod[i][1] = (double *) calloc(ces_length[i], sizeof(double));//hwp_sin[i];
+      for(j=0;j<ces_length[i];j++){
+        //hwp_angle_bis = (double)(2*M_PI*hwp_f*j)/sampling_freq;
+        hwp_mod[i][0][j] = cos(hwp_angle[i][j]);
+        hwp_mod[i][1][j] = sin(hwp_angle[i][j]);
+      }
     }
   }
 
@@ -612,8 +614,8 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
   int global_size_kernel = 0;
   int id_kernelblock = 0;
   for(i=0;i<nces;i++){
-    hwp_bins[i] = (int)ceil(ces_length[i]/(delta_t*sampling_freq));
-    // printf("[rank %d] hwp_bins = %d\n", rank, hwp_bins[i]);
+      hwp_bins[i] = (int)ceil(ces_length[i]/(delta_t*sampling_freq));
+      // printf("[rank %d] hwp_bins = %d\n", rank, hwp_bins[i]);
     global_size_kernel += ndet * (npoly*nsweeps[i] + ground*n_sss_bins + 2*nhwp*hwp_bins[i]) * (npoly*nsweeps[i] + ground*n_sss_bins + 2*nhwp*hwp_bins[i]);
   }
   double *B = (double *) calloc(global_size_kernel, sizeof(double));

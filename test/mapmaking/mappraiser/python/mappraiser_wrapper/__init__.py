@@ -11,13 +11,23 @@ import numpy.ctypeslib as npc
 
 from mpi4py import MPI
 
+# A wrapper for ndpointer allowing to pass NULL pointers
+def wrapped_ndptr(*args, **kwargs):
+  base = npc.ndpointer(*args, **kwargs)
+  def from_param(cls, obj):
+    if obj is None:
+      return obj
+    return base.from_param(obj)
+  return type(base.__name__, (base,), {'from_param': classmethod(from_param)})
+
 SIGNAL_TYPE = np.float64
 PIXEL_TYPE = np.int32
 WEIGHT_TYPE = np.float64
 INVTT_TYPE = np.float64
 TIMESTAMP_TYPE = np.float64
 PSD_TYPE = np.float64
-array_ptrs_type = npc.ndpointer(dtype=np.uintp, ndim=1, flags='C')
+#array_ptrs_type = npc.ndpointer(dtype=np.uintp, ndim=1, flags='C')
+array_ptrs_type = wrapped_ndptr(dtype=np.uintp, ndim=1, flags='C')
 
 try:
     _mappraiser = ct.CDLL("libmappraiser.so")
@@ -57,16 +67,16 @@ _mappraiser.MLmap.argtypes =[
     ct.c_int, #ortho_alg
     ct.c_int, #bs_red
     ct.c_int, #nside
-    npc.ndpointer(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"), #data_size_proc
+    wrapped_ndptr(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"), #data_size_proc
     ct.c_int, #nb_blocks_loc
-    npc.ndpointer(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"), #local_blocks_sizes
+    wrapped_ndptr(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"), #local_blocks_sizes
     ct.c_int, #Nnz
-    npc.ndpointer(dtype=PIXEL_TYPE, ndim=1, flags="C_CONTIGUOUS"),
-    npc.ndpointer(dtype=WEIGHT_TYPE, ndim=1, flags="C_CONTIGUOUS"),
-    npc.ndpointer(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"),
-    npc.ndpointer(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"),
+    wrapped_ndptr(dtype=PIXEL_TYPE, ndim=1, flags="C_CONTIGUOUS"),
+    wrapped_ndptr(dtype=WEIGHT_TYPE, ndim=1, flags="C_CONTIGUOUS"),
+    wrapped_ndptr(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"),
+    wrapped_ndptr(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"),
     ct.c_int, #lambda
-    npc.ndpointer(dtype=INVTT_TYPE, ndim=1, flags="C_CONTIGUOUS"),
+    wrapped_ndptr(dtype=INVTT_TYPE, ndim=1, flags="C_CONTIGUOUS"),
 ]
 
 _mappraiser.MTmap.restype = None
@@ -88,23 +98,23 @@ _mappraiser.MTmap.argtypes =[
     ct.c_int, #bs_red
     ct.c_int, #nside
     array_ptrs_type, #sweeptstamps
-    npc.ndpointer(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"), #nsweeps
+    wrapped_ndptr(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"), #nsweeps
     array_ptrs_type, #az
-    npc.ndpointer(dtype=np.float64, ndim=1, flags="C_CONTIGUOUS"), #az_min
-    npc.ndpointer(dtype=np.float64, ndim=1, flags="C_CONTIGUOUS"), #az_max
+    wrapped_ndptr(dtype=np.float64, ndim=1, flags="C_CONTIGUOUS"), #az_min
+    wrapped_ndptr(dtype=np.float64, ndim=1, flags="C_CONTIGUOUS"), #az_max
     array_ptrs_type, # hwp_angle
     ct.c_int, #nces
-    npc.ndpointer(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"), #data_size_proc
+    wrapped_ndptr(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"), #data_size_proc
     ct.c_int, #nb_blocks_loc
-    npc.ndpointer(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"), #local_blocks_sizes
+    wrapped_ndptr(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"), #local_blocks_sizes
     ct.c_int, #Nnz
-    npc.ndpointer(dtype=PIXEL_TYPE, ndim=1, flags="C_CONTIGUOUS"),
-    npc.ndpointer(dtype=WEIGHT_TYPE, ndim=1, flags="C_CONTIGUOUS"),
-    npc.ndpointer(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"),
-    npc.ndpointer(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"),
+    wrapped_ndptr(dtype=PIXEL_TYPE, ndim=1, flags="C_CONTIGUOUS"),
+    wrapped_ndptr(dtype=WEIGHT_TYPE, ndim=1, flags="C_CONTIGUOUS"),
+    wrapped_ndptr(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"),
+    wrapped_ndptr(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"),
     ct.c_double, #samplerate
     ct.c_double, #hwp_rpm
-    npc.ndpointer(dtype=INVTT_TYPE, ndim=1, flags="C_CONTIGUOUS"),
+    wrapped_ndptr(dtype=INVTT_TYPE, ndim=1, flags="C_CONTIGUOUS"),
 ]
 
 def MLmap(comm, params, data_size_proc, nb_blocks_loc, local_blocks_sizes, Nnz, pixels, pixweights, signal, noise, Lambda, invtt):
@@ -127,10 +137,16 @@ def MTmap(comm, params, sweeptstamps, nsweeps, az, az_min, az_max, hwp_angle, nc
     outpath = params["output"].encode('ascii')
     ref = params["ref"].encode('ascii')
     # Format 2D arrays as arrays of uintp (pointers: void*)
-    sweeptstamps_p = (sweeptstamps.__array_interface__['data'][0]
-      + np.arange(sweeptstamps.shape[0])*sweeptstamps.strides[0]).astype(np.uintp)
-    az_p = (az.__array_interface__['data'][0] + np.arange(az.shape[0])*az.strides[0]).astype(np.uintp)
-    hwp_angle_p = (hwp_angle.__array_interface__['data'][0] + np.arange(hwp_angle.shape[0])*hwp_angle.strides[0]).astype(np.uintp)
+    sweeptstamps_p = None
+    az_p = None
+    hwp_angle_p = None
+    if sweeptstamps is not None:
+        sweeptstamps_p = (sweeptstamps.__array_interface__['data'][0]
+        + np.arange(sweeptstamps.shape[0])*sweeptstamps.strides[0]).astype(np.uintp)
+    if az is not None:
+        az_p = (az.__array_interface__['data'][0] + np.arange(az.shape[0])*az.strides[0]).astype(np.uintp)
+    if hwp_angle is not None:
+        hwp_angle_p = (hwp_angle.__array_interface__['data'][0] + np.arange(hwp_angle.shape[0])*hwp_angle.strides[0]).astype(np.uintp)
     # hwp_sin_p = (hwp_sin.__array_interface__['data'][0] + np.arange(hwp_sin.shape[0])*hwp_sin.strides[0]).astype(np.uintp)
     # Call C-function
     _mappraiser.MTmap(encode_comm(comm), outpath, ref, params["solver"], params["pointing_commflag"], params["npoly"], params["nhwp"], params["hwpss-base"], params["sss"], params["sbins"], params["tol"], params["maxiter"], params["enlFac"], params["ortho_alg"], params["bs_red"], params["nside"], sweeptstamps_p, nsweeps, az_p, az_min, az_max, hwp_angle_p, nces, data_size_proc, nb_blocks_loc, local_blocks_sizes, Nnz, pixels, pixweights, signal, noise, params["samplerate"], params["hwp_rpm"], invtt)
