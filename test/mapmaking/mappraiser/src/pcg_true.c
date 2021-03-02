@@ -472,6 +472,7 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz Nm1, TemplateClass
   if(rank==0)
     printf("Nm1 * v, t=%lf\n",t2-st2);
 
+  fflush(stdout);
 
   st2=MPI_Wtime();
   TrTVecProd(X, nces, n_class * ndet, sampling_freq, ces_length, sweeptstamps,
@@ -483,19 +484,25 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz Nm1, TemplateClass
   if(rank==0)
     printf("Tt * v, t=%lf\n",t2-st2);
 
-
+  fflush(stdout);
 
   st2 = MPI_Wtime();
+  int id_v = 0;
+  int id_block = 0;
   for(ces_id=0;ces_id<nces;ces_id++){
     for(i=0;i<ndet;i++){
       for(j=0;j<(npoly*nsweeps[ces_id])+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id];j++){
-        out2[(ces_id*ndet+i)*(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id]) + j] = 0;
+        out2[id_v + j] = 0;
+        //out2[(ces_id*ndet+i)*(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id]) + j] = 0;
         for(k=0;k<(npoly*nsweeps[ces_id])+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id];k++){
-          out2[(ces_id*ndet+i)*(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id]) + j] += B[(ces_id*ndet+i)*(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id])*(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id]) + j*(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id]) + k] * out1[(ces_id*ndet+i)*(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id]) + k];
+          out2[id_v + j] += B[id_block + j*(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id]) + k] * out1[id_v + k];
+          //out2[(ces_id*ndet+i)*(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id]) + j] += B[(ces_id*ndet+i)*(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id])*(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id]) + j*(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id]) + k] * out1[(ces_id*ndet+i)*(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id]) + k];
         }
         // if(out2[i*(npoly*nsweeps) + j]>1+1e-15 || out2[i*(npoly*nsweeps) + j] <1-1e-15)
         //   printf("(TtMT)^-1 * out1: out2[%d] = %f\n",i*(npoly*nsweeps) + j,out2[i*(npoly*nsweeps) + j]);
       }
+      id_v += npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id];
+      id_block += (npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id])*(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id]);
     }
   }
   t2 = MPI_Wtime();
@@ -505,6 +512,8 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz Nm1, TemplateClass
   // for(i=0; i<10; i++){//
   //     printf("(TtMT)^-1 * out1: out2[%d] = %f\n",i,out2[i]);
   // }
+  fflush(stdout);
+
   st2 = MPI_Wtime();
   TVecProd(X, nces, n_class * ndet, sampling_freq, ces_length, sweeptstamps,
     az_binned, hwp_mod, nhwp, delta_t, store_hwp, out2, Tvec);
@@ -514,6 +523,7 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz Nm1, TemplateClass
   t2 = MPI_Wtime();
   if(rank==0)
     printf("T * v, t=%lf\n",t2-st2);
+  fflush(stdout);
 
   st2 = MPI_Wtime();
   t_id = 0; //time sample index in local data
@@ -660,14 +670,20 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz Nm1, TemplateClass
     TrTVecProd(X, nces, n_class * ndet, sampling_freq, ces_length, sweeptstamps,
       az_binned, hwp_mod, nhwp, delta_t, store_hwp, Nm1Ah, out1);
 
+    id_v = 0;
+    id_block = 0;
     for(ces_id=0;ces_id<nces;ces_id++){
       for(i=0;i<ndet;i++){
         for(j=0;j<(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id]);j++){
-          out2[(ces_id*ndet+i)*(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id]) + j] = 0;
+          out2[id_v + j] = 0;
+          // out2[(ces_id*ndet+i)*(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id]) + j] = 0;
           for(l=0;l<(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id]);l++){
-            out2[(ces_id*ndet+i)*(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id]) + j] += B[(ces_id*ndet+i)*(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id])*(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id]) + j*(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id]) + l] * out1[(ces_id*ndet+i)*(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id]) + l];
+            out2[id_v + j] += B[id_block + j*(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id]) + l] * out1[id_v + l];
+            // out2[(ces_id*ndet+i)*(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id]) + j] += B[(ces_id*ndet+i)*(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id])*(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id]) + j*(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id]) + l] * out1[(ces_id*ndet+i)*(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id]) + l];
           }
         }
+        id_v += npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id];
+        id_block += (npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id])*(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id]);
       }
     }
 

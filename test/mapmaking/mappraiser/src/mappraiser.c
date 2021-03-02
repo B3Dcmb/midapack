@@ -554,12 +554,12 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
   int *ces_length = (int *) malloc(nces * sizeof(int));
   int *hwp_bins = (int *) malloc(nces * sizeof(int));
   for(i=0;i<nces;i++){
-    detnsweeps[i] = (int *) malloc(ndet * sizeof(int));
+    detnsweeps[i] = (int *) calloc(ndet, sizeof(int));
     for(j=0;j<ndet;j++)
       detnsweeps[i][j] = nsweeps[i];
       ces_length[i] = sweeptstamps[i][nsweeps[i]];
   }
-  int **az_binned = NULL;
+  int **az_binned;
   az_binned = bin_az(az, az_min, az_max, ces_length, ground, n_sss_bins, nces);
 
   double ***hwp_mod = (double ***) malloc(nces * sizeof(double **));

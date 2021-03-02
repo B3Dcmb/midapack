@@ -67,16 +67,16 @@ _mappraiser.MLmap.argtypes =[
     ct.c_int, #ortho_alg
     ct.c_int, #bs_red
     ct.c_int, #nside
-    wrapped_ndptr(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"), #data_size_proc
+    npc.ndpointer(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"), #data_size_proc
     ct.c_int, #nb_blocks_loc
-    wrapped_ndptr(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"), #local_blocks_sizes
+    npc.ndpointer(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"), #local_blocks_sizes
     ct.c_int, #Nnz
-    wrapped_ndptr(dtype=PIXEL_TYPE, ndim=1, flags="C_CONTIGUOUS"),
-    wrapped_ndptr(dtype=WEIGHT_TYPE, ndim=1, flags="C_CONTIGUOUS"),
-    wrapped_ndptr(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"),
-    wrapped_ndptr(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"),
+    npc.ndpointer(dtype=PIXEL_TYPE, ndim=1, flags="C_CONTIGUOUS"),
+    npc.ndpointer(dtype=WEIGHT_TYPE, ndim=1, flags="C_CONTIGUOUS"),
+    npc.ndpointer(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"),
+    npc.ndpointer(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"),
     ct.c_int, #lambda
-    wrapped_ndptr(dtype=INVTT_TYPE, ndim=1, flags="C_CONTIGUOUS"),
+    npc.ndpointer(dtype=INVTT_TYPE, ndim=1, flags="C_CONTIGUOUS"),
 ]
 
 _mappraiser.MTmap.restype = None

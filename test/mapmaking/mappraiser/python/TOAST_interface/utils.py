@@ -42,6 +42,8 @@ def add_mappraiser_args(parser):
     )
     parser.add_argument("--Lambda", required=False, default=16384, type=np.int, help="Half bandwidth (lambda) of noise covariance"
     )
+    parser.add_argument("--uniform_w", required=False, default=0, type=np.int, help="Activate for a uniform white noise model: 0->off, 1->on"
+    )
     parser.add_argument("--solver", required=False, default=0, type=np.int, help="Choose map-making solver: 0->PCG, 1->ECG"
     )
     parser.add_argument("--ptcomm_flag", required=False, default=6, type=np.int, help="Choose collective communication scheme"
@@ -122,6 +124,7 @@ def setup_mappraiser(args):
     params["sbins"] = args.sbins
     params["nside"] = args.nside
     params["Lambda"] = args.Lambda
+    params["uniform_w"] = args.uniform_w
     params["samplerate"] = args.sample_rate
     params["hwp_rpm"] = args.hwp_rpm
     params["output"] = args.outpath

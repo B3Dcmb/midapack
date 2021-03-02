@@ -774,7 +774,7 @@ int** bin_az(double **az, double *az_min, double *az_max, int *ces_length, int s
   // Build binned boresight azimuth array
   if(sss){
     for(i=0; i<nces;i++){
-      az_binned[i] = (int *) malloc(ces_length[i] * sizeof(int));
+      az_binned[i] = (int *) calloc(ces_length[i], sizeof(int));
       for(j=0;j<ces_length[i];j++){
         az_binned[i][j] = miin(n_sss_bins-1,(int)floor((az[i][j]-az_min[i])/((az_max[i]-az_min[i])/n_sss_bins)));
       }
