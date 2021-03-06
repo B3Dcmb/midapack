@@ -20,22 +20,20 @@ FFTW, SCALAPACK, LAPACK, PLASMA, etc, and high level tools needed to analyze act
 
 The library is designed to provide all essential functionality needed for the CMB data analysis.
 It will include new algorithm solutions and their implementation, capable of dealing with the 
-huge data volumes, while giving the user flexibility in constructing his/her own codes
+huge data volumes, while giving the user flexibility in constructing their own codes
 according to their preferences and instrument and data characteristics.
 
+The library comes with example codes stored in the directory 'test'. Notably, since version 2.0 
+these include a fully-fledged, massively parallel map-making code, MAPPRAISER.
 
 Getting some more information
 -----------------------------
 
-You can download the last release from the official website of the ANR-MIDAS'09 project at
-http://www.apc.univ-paris7.fr/APC_CS/Recherche/Adamis/MIDAS09/software.html
+You can download the last release from github: https://github.com/B3Dcmb/midapack 
 
-and find a online manual at
-http://www.apc.univ-paris7.fr/APC_CS/Recherche/Adamis/MIDAS09/cmbdadoc/index.html
+and find a online manual at: https://b3dcmb.github.io/midapack/
 
-Please report any bugs and relay any comments/suggestions you may have to the developers.
-Feel free to use it but do not distribute beyond the collaboration at this time yet.
-
+Please use this site to report any bugs and relay any comments/suggestions you may have to the developers.
 
 Project collaborators
 ---------------------
@@ -43,8 +41,21 @@ Project collaborators
 MIDAPACK is a product of a collaboration between members of the cosmology group at Laboratore 
 AstroParticule et Cosmologie (UMR7164), Centre Pierre Binétruy (IRL2007) and Alpines team at INRIA-Paris. 
 
-Project Team
-------------
+The full list of collaborators, including application scientists, validators, etc, can be found:
+
+2019-:   http://b3dcmb.in2p3.fr/?page_id=405
+
+2009-2012:   http://www.apc.univ-paris7.fr/APC_CS/Recherche/Adamis/MIDAS09/partners.html
+
+Development Team
+----------------
+
+2019-:
+  Hamza El Bouhargani
+  Thibault Cimic
+  Aygual Jamal
+  Laura Grigori (coordinator)
+  Radek Stompor (coordinator)
 
 2009-2012:
   Pierre Cargemel
@@ -52,15 +63,7 @@ Project Team
   Maude Le Jeune
   Antoine Rogier
   Laura Grigori (coordinator)
-  Radek Stompor (project coordinator)
-
-2019-:
-
-  Hamza El Bouhargani
-  Thibault Cimic
-  Aygual Jamal
-  Laura Grigori (coordinator)
-  Radek Stompor (project coordinator)
+  Radek Stompor (coordinator)
 
 How to use it
 -------------
