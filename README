@@ -1,9 +1,14 @@
-Midapack library, ANR MIDAS'09 - release 1.1b, July 2012.
-(http://www.apc.univ-paris7.fr/APC_CS/Recherche/Adamis/MIDAS09/index.html)
+Midapack library, 
+
+release 1.0, December 2011.
+release 1.1b, July 2012.
+release 2.0,  January 2020.
 
 ACKNOWLEDGMENT: This work has been supported in part by French National Research Agency (ANR)
-through COSINUS program (project MIDAS no. ANR-09-COSI-009).
+through COSINUS program through projects: 
 
+ANR-MIDAS09 no. ANR-09-COSI-009 : http://www.apc.univ-paris7.fr/APC_CS/Recherche/Adamis/MIDAS09/index.html
+ANR-B3DCMB no. ANR-17-C23-0002-01 : http://b3dcmb.in2p3.fr/
 
 Motivation
 ----------
@@ -35,29 +40,27 @@ Feel free to use it but do not distribute beyond the collaboration at this time 
 Project collaborators
 ---------------------
 
-Please refer to the website at
-http://www.apc.univ-paris7.fr/APC_CS/Recherche/Adamis/MIDAS09/partners.html
+MIDAPACK is a product of a collaboration between members of the cosmology group at Laboratore 
+AstroParticule et Cosmologie (UMR7164), Centre Pierre Binétruy (IRL2007) and Alpines team at INRIA-Paris. 
 
+Project Team
+------------
 
-Project Developers (Laboratoire Astroparticule et Cosmologie) 
--------------------------------------------------------------
-
+2009-2012:
   Pierre Cargemel
   Frederic Dauvergne
   Maude Le Jeune
   Antoine Rogier
+  Laura Grigori (coordinator)
   Radek Stompor (project coordinator)
 
-Please refer to the website for more details:
-http://www.apc.univ-paris7.fr/APC_CS/Recherche/Adamis/MIDAS09/partners.html
+2019-:
 
-
-Changes since last release
---------------------------
-
-Please refer to the website at
-http://www.apc.univ-paris7.fr/APC_CS/Recherche/Adamis/MIDAS09/software.html
-
+  Hamza El Bouhargani
+  Thibault Cimic
+  Aygual Jamal
+  Laura Grigori (coordinator)
+  Radek Stompor (project coordinator)
 
 How to use it
 -------------
@@ -74,3 +77,6 @@ You can directly compile theses files and link the generated binaries with your 
 - The /test directory contains some Utility/demonstration programs to show some examples of
 how to use the library fonctionnalities.
 
+The documentation can be found on this site:
+
+https://b3dcmb.github.io/midapack/
