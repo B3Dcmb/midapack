@@ -759,23 +759,40 @@ class OpMappraiser(Operator):
 
         global_offset = 0
         nces = 0
+
+        # Scan info containers
+        #sweeptstamps_list = None
+        #nsweeps_list = None
+        az_list = None
+        az_min_list = None
+        az_max_list = None
+        hwp_angle_list = None
+
         sweeptstamps_list = []
         nsweeps_list = []
-        az_list = []
-        az_min_list = []
-        az_max_list = []
-        hwp_angle_list = []
+        if self._params["sss"]:
+            az_list = []
+            az_min_list = []
+            az_max_list = []
+        if self._params["nhwp"]:
+            hwp_angle_list = []
         #hwp_sin_list = []
         for iobs, obs in enumerate(self._data.obs): #assume only one obs per process for now
             tod = obs["tod"]
 
             # commonflags = None
             nces += 1
-            sweeptstamps = [0]
             commonflags = tod.local_common_flags(self._common_flag_name)
-            for iflg, flg in enumerate(commonflags[:-1]):
-                if (flg & commonflags[iflg+1] <=1): #sweep direction changes
-                    sweeptstamps.append(iflg+1)
+            sweeptstamps = [0]
+            if self._params["fixed_polybase"]:
+                base_sup_id = int(self._params["polybaseline_length"]*self._params["samplerate"])
+                while base_sup_id < len(commonflags):
+                    sweeptstamps.append(base_sup_id)
+                    base_sup_id += int(self._params["polybaseline_length"]*self._params["samplerate"])
+            else:
+                for iflg, flg in enumerate(commonflags[:-1]):
+                    if (flg & commonflags[iflg+1] <=1): #sweep direction changes
+                        sweeptstamps.append(iflg+1)
             sweeptstamps.append(len(commonflags))
             nsweeps = len(sweeptstamps)-1
             sweeptstamps = np.array(sweeptstamps, dtype=np.int32)
@@ -783,23 +800,22 @@ class OpMappraiser(Operator):
             sweeptstamps_list.append(sweeptstamps)
             nsweeps_list.append(nsweeps)
 
-            qazel = tod.read_boresight_azel()
-            az = 180/np.pi *(2*np.pi-qa.to_position(qazel)[1])
-            az_list.append(az)
-            az_min_list.append(az.min())
-            az_max_list.append(az.max())
+            if self._params["sss"]:
+                qazel = tod.read_boresight_azel()
+                az = 180/np.pi *(2*np.pi-qa.to_position(qazel)[1])
+                az_list.append(az)
+                az_min_list.append(az.min())
+                az_max_list.append(az.max())
 
-            hwp_angle = tod.read_hwp_angle()
-            if hwp_angle is not None:
-                hwp_angle_list.append(hwp_angle)
-                # hwp_cos = np.cos(hwp_angle)
-                # hwp_cos_list.append(hwp_cos)
-                # hwp_sin = np.sin(hwp_angle)
-                # print("sum python = {}\n".format(np.sum(np.cos(hwp_angle)[:100]*np.sin(hwp_angle)[:100])))
-                # hwp_sin_list.append(hwp_sin)
-
-
-
+            if self._params["nhwp"]:
+                hwp_angle = tod.read_hwp_angle()
+                if hwp_angle is not None:
+                    hwp_angle_list.append(hwp_angle)
+                    # hwp_cos = np.cos(hwp_angle)
+                    # hwp_cos_list.append(hwp_cos)
+                    # hwp_sin = np.sin(hwp_angle)
+                    # print("sum python = {}\n".format(np.sum(np.cos(hwp_angle)[:100]*np.sin(hwp_angle)[:100])))
+                    # hwp_sin_list.append(hwp_sin)
 
             for idet, det in enumerate(detectors):
                 # Optionally get the flags, otherwise they are
@@ -867,17 +883,19 @@ class OpMappraiser(Operator):
                 tod.cache.clear(self._common_flag_name)
             global_offset = offset
 
-        # sweeptstamps_list = np.array(sweeptstamps_list, dtype=np.int32)
+        #sweeptstamps_list = np.array(sweeptstamps_list, dtype=np.int32)
         sweeptstamps_list = stack_padding(sweeptstamps_list)
         nsweeps_list = np.array(nsweeps_list, dtype=np.int32)
-        # az_list = np.array(az_list)
-        az_list = stack_padding(az_list)
-        az_min_list = np.array(az_min_list)
-        az_max_list = np.array(az_max_list)
-        # hwp_angle_list = np.array(hwp_angle_list)
-        hwp_angle_list = stack_padding(hwp_angle_list)
-        # hwp_cos_list = np.array(hwp_cos_list)
-        # hwp_sin_list = np.array(hwp_sin_list)
+        if self._params["sss"]:
+            #az_list = np.array(az_list)
+            az_list = stack_padding(az_list)
+            az_min_list = np.array(az_min_list)
+            az_max_list = np.array(az_max_list)
+        if self._params["nhwp"]:
+            #hwp_angle_list = np.array(hwp_angle_list)
+            hwp_angle_list = stack_padding(hwp_angle_list)
+            # hwp_cos_list = np.array(hwp_cos_list)
+            # hwp_sin_list = np.array(hwp_sin_list)
 
         return pixels_dtype, sweeptstamps_list, nsweeps_list, az_list, az_min_list, az_max_list, hwp_angle_list, nces
 

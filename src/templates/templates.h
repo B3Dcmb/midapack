@@ -107,6 +107,6 @@ int expandHWPSSdata(TemplateClass *X, int *bins0, double **wghts0, int *bins1,
   hwpss_w hwpss_wghts);
 
 int** bin_az(double **az, double *az_min, double *az_max, int *ces_length,
-  int n_sss_bins, int nces);
+  int sss, int n_sss_bins, int nces);
 
 int miin(int x, int y);

@@ -794,16 +794,18 @@ int expandHWPSSdata(TemplateClass *X, int *bins0, double **wghts0, int *bins1,
 }
 
 /* Bin boresight azimuth array */
-int** bin_az(double **az, double *az_min, double *az_max, int *ces_length, int n_sss_bins, int nces)
+int** bin_az(double **az, double *az_min, double *az_max, int *ces_length, int sss, int n_sss_bins, int nces)
 {
   int i,j;
   int **az_binned = (int **) malloc(nces * sizeof(int*));
 
   // Build binned boresight azimuth array
-  for(i=0; i<nces;i++){
-    az_binned[i] = (int *) calloc(ces_length[i], sizeof(int));
-    for(j=0;j<ces_length[i];j++){
-      az_binned[i][j] = miin(n_sss_bins-1,(int)floor((az[i][j]-az_min[i])/((az_max[i]-az_min[i])/n_sss_bins)));
+  if(sss){
+    for(i=0; i<nces;i++){
+      az_binned[i] = (int *) calloc(ces_length[i], sizeof(int));
+      for(j=0;j<ces_length[i];j++){
+        az_binned[i][j] = miin(n_sss_bins-1,(int)floor((az[i][j]-az_min[i])/((az_max[i]-az_min[i])/n_sss_bins)));
+      }
     }
   }
 
