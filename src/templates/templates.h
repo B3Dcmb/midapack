@@ -36,6 +36,11 @@ typedef struct hwpss_w {
   double **hwpsin; // array of sines harmonics in the HWPSS: hwpsin[order-1][t]
 } hwpss_w;
 
+// typedef struct poly_w {
+//   int ces_id; // CES local index
+//   double **poly; // array of Legenre polynomials: poly[order][t]
+// } poly_w;
+
 /******************************************************************************/
 /*                      Prototypes of Algebra routines                        */
 /******************************************************************************/

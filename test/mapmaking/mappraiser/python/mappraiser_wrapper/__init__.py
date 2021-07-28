@@ -126,6 +126,20 @@ def MTmap(comm, params, sweeptstamps, nsweeps, az, az_min, az_max, hwp_angle, nc
         raise RuntimeError("No libmappraiser available, cannot reconstruct the map")
     outpath = params["output"].encode('ascii')
     ref = params["ref"].encode('ascii')
+    # Format concatenated arrays as arrays of uintp (pointers: void*)
+    # positions = [0] # Block memory positions of CESs in the concatenated sweeps time stamps
+    # positions_bis = [0] #Block memory positions of CESs in the concatenated boresight double arrays
+    # offset = 0 #CESs offset identifier
+    # for i in np.arange(1,len(nsweeps)):
+    #     positions.append(positions[i-1] + (nsweeps[i-1]+1)*sweeptstamps.strides[0])
+    #     positions_bis.append(positions_bis[i-1] + sweeptstamps[offset + nsweeps[i-1]]*az.strides[0])
+    #     offset += nsweeps[i-1] + 1
+    # positions = np.array(positions)
+    # sweeptstamps_p = (sweeptstamps.__array_interface__['data'][0]
+    #   + positions).astype(np.uintp)
+    # az_p = (az.__array_interface__['data'][0] + positions_bis).astype(np.uintp)
+    # hwp_angle_p = (hwp_angle.__array_interface__['data'][0] + positions_bis).astype(np.uintp)
+
     # Format 2D arrays as arrays of uintp (pointers: void*)
     sweeptstamps_p = (sweeptstamps.__array_interface__['data'][0]
       + np.arange(sweeptstamps.shape[0])*sweeptstamps.strides[0]).astype(np.uintp)

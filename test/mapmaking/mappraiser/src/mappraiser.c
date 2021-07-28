@@ -554,13 +554,23 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
   int *ces_length = (int *) malloc(nces * sizeof(int));
   int *hwp_bins = (int *) malloc(nces * sizeof(int));
   for(i=0;i<nces;i++){
-    detnsweeps[i] = (int *) malloc(ndet * sizeof(int));
+    detnsweeps[i] = (int *) calloc(ndet, sizeof(int));
     for(j=0;j<ndet;j++)
       detnsweeps[i][j] = nsweeps[i];
     ces_length[i] = sweeptstamps[i][nsweeps[i]];
   }
-  int **az_binned;
+  int **az_binned,**az_binned1;
   az_binned = bin_az(az, az_min, az_max, ces_length, n_sss_bins, nces);
+  az_binned1 = bin_az(az, az_min, az_max, ces_length, 30, nces);
+  int id = 0;
+  for(i=0;i<nces;i++){
+    for(j=0;j<ndet;j++){
+      for(k=0;k<ces_length[i];k++){
+        noise[id+k] = 1+0.01*az_binned1[i][k];
+      }
+      id += ces_length[i]; 
+    }
+  }
 
   double ***hwp_mod = (double ***) malloc(nces * sizeof(double **));
   // double hwp_f = (double) hwp_rpm / 60 ;
@@ -669,7 +679,6 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
       //   // printf("B[%d] = %f\n",j,(B+i*(npoly*nsweeps)*(npoly*nsweeps))[j]);
       //   B[id_kernelblock + k*(npoly*nsweeps[i] + n_sss_bins) + k] += sigma2;
       // }
-
       // printf("[rank %d] Effective rank of local kernel block %d = %d\n",rank, i, inverse_svd(npoly*nsweeps, npoly*nsweeps, npoly*nsweeps,  B+i*(npoly*nsweeps)*(npoly*nsweeps)));
       if(rank==0)
         printf("[rank %d] Effective rank of local kernel block %d = %d\n",rank, i*ndet+j, InvKernel(B+id_kernelblock, npoly*nsweeps[i] + ground*n_sss_bins + 2*nhwp*hwp_bins[i], Binv));
@@ -681,7 +690,6 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
       // printf("af: nsamples = %d\n",(X+1)->nsamples);
       // printf("af: flagw = %s\n",(X+1)->flag_w);
       fflush(stdout);
-
       // printf("%d rank kernel = %d, access block = %f\n",i, rang, block[npoly*nsweeps*77+77]);
       // printf("%d rank kernel = %d\n",i, InvKernel(block, npoly*nsweeps, Binv));
       for(k=0;k<(npoly*nsweeps[i] + ground*n_sss_bins +  2*nhwp*hwp_bins[i])*(npoly*nsweeps[i] + ground*n_sss_bins +  2*nhwp*hwp_bins[i]);k++){
@@ -705,7 +713,7 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
    if(rank==0)
  printf("##### Start PCG ####################\n");
  fflush(stdout);
-
+  printf("noise[%d]=%f\n",0,noise[0]);
   st=MPI_Wtime();
 // Conjugate Gradient
   if(solver==0)

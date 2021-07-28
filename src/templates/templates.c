@@ -542,6 +542,34 @@ double Legendre(double x, double a, double b, int n){
   return Pn((2*x-a-b)/(b-a),n);
 }
 
+/* Build Legendre polynomial weights through recursive relations */
+// void build_poly_w(poly_w *poly_wghts, int *sweeptstamps,int size, int order, int ces_id){
+//
+//   int i,j;
+//   //Initialization of offset
+//   poly_wgths->poly = (double **) malloc((order+1) * sizeof(double*));
+//   poly_wghts->ces_id = ces_id;
+//   poly_wgths->poly[0] = (double *) calloc(size, sizeof(double));
+//   for(j=0;j<size;j++){
+//     poly_wgths->poly[0][j] = 1;
+//   }
+//   if(order == 0)
+//     return;
+//
+//   //Linear order
+//   for(i=0;i<X->nbins;i++){
+//     for(j=sweeptstamps[i];j<sweeptstamps[i+1];j++){
+//       bins[j] = X->nbinMin + i;
+//       // printf("expandpoly: bins[%d]=%d\n",j,bins[j]);
+//       //N.B: the relation is rescaled so sampling_freq shouldn't really matter
+//       wghts[j] = Legendre((double)j/sampling_freq, (double)sweeptstamps[i]/sampling_freq, (double)(sweeptstamps[i+1]-1)/sampling_freq, order);
+//       // printf("expandpoly: wghts[%d]=%f\n",j,wghts[j]);
+//
+//     }
+//   }
+//
+// }
+
 /* Build HWPSS harmonics weights through recursive computation of trig functions */
 void build_hwpss_w(hwpss_w *hwpss_wghts, double **hwp_mod, int size, int order,
   int ces_id){
@@ -773,7 +801,7 @@ int** bin_az(double **az, double *az_min, double *az_max, int *ces_length, int n
 
   // Build binned boresight azimuth array
   for(i=0; i<nces;i++){
-    az_binned[i] = (int *) malloc(ces_length[i] * sizeof(int));
+    az_binned[i] = (int *) calloc(ces_length[i], sizeof(int));
     for(j=0;j<ces_length[i];j++){
       az_binned[i][j] = miin(n_sss_bins-1,(int)floor((az[i][j]-az_min[i])/((az_max[i]-az_min[i])/n_sss_bins)));
     }

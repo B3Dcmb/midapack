@@ -1,7 +1,7 @@
 DIR = $(HOME)/midapack_bis
 MIDAPACK_ROOT=$(PREFIX)/midapack_bis
 MIDAPACK_LIB=$(MIDAPACK_ROOT)/lib
-MPICC = mpiicc
+MPICC = cc
 OPT =  -D W_MPI -D W_OPENMP -O3
 CC = $(MPICC) -qopenmp -g -Wall -fPIC $(OPT)
 INC = -I$(DIR)/include
