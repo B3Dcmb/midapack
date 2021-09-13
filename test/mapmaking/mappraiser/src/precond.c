@@ -19,7 +19,7 @@
 #include "midapack.h"
 #include "mappraiser.h"
 
-#define eps 1.0e-17
+#define eps 1.0e-15
 
 struct Precond {
   int precond; // 0 = BJ, 1 = 2lvl a priori, 2 = 2lvl a posteriori
@@ -768,7 +768,7 @@ void inverse_svd(int m, int n, int lda, double *a)
   for (i = 0; i < nsv; i++)
       b[i*n+i] = 1;
 
-  info =  LAPACKE_dgelss(LAPACK_ROW_MAJOR, m, n, n, a, n, b, n, s, -1, &rank);
+  info =  LAPACKE_dgelss(LAPACK_ROW_MAJOR, m, n, n, a, n, b, n, s, eps, &rank);
 
   if (info != 0) printf("LAPACK_dgelss does not work.\n");
   memcpy(a, b, (m*n) *sizeof(double));
@@ -799,7 +799,7 @@ void build_Z(const Mat *A, int Zn, double ***out_Z)
 
   // If number of columns of Z >= number of processes, each process
   // will compute a group of columns of Z instead of a single column
-  if (Zn >= size) {
+  if (Zn > size) {
     group = Zn / size;
     assert(group * size == Zn);
   } else {
@@ -976,24 +976,24 @@ void build_Em1(const Mat *A, double **Z, double **AZ, const double *pixpond, int
 
   inverse_svd(Zn, Zn, Zn, E);
 
-  EO = calloc(Zn * Zn, sizeof(double));
-
-  memcpy(EO, E, sizeof(double) * Zn * Zn);
-
-  /* Computes the norm of x */
-  anorm = dlange_("1", &Zn, &Zn, EO, &Zn, w);
-
-  /* Modifies x in place with a LU decomposition */
-  dgetrf_(&Zn, &Zn, EO, &Zn, iw, &info);
-  // if (info != 0) fprintf(stderr, "failure with error %d\n", info);
-
-  /* Computes the reciprocal norm */
-  dgecon_("1", &Zn, EO, &Zn, &anorm, &rcond, w, iw, &info);
-  // if (info != 0) fprintf(stderr, "failure with error %d\n", info);
-
-  //printf("condition number of Einv = %25.18e\n", rcond);
-
-  free(EO);
+  // EO = calloc(Zn * Zn, sizeof(double));
+  //
+  // memcpy(EO, E, sizeof(double) * Zn * Zn);
+  //
+  // /* Computes the norm of x */
+  // anorm = dlange_("1", &Zn, &Zn, EO, &Zn, w);
+  //
+  // /* Modifies x in place with a LU decomposition */
+  // dgetrf_(&Zn, &Zn, EO, &Zn, iw, &info);
+  // // if (info != 0) fprintf(stderr, "failure with error %d\n", info);
+  //
+  // /* Computes the reciprocal norm */
+  // dgecon_("1", &Zn, EO, &Zn, &anorm, &rcond, w, iw, &info);
+  // // if (info != 0) fprintf(stderr, "failure with error %d\n", info);
+  //
+  // //printf("condition number of Einv = %25.18e\n", rcond);
+  //
+  // free(EO);
 
   *out_E = E;
 }
@@ -1060,9 +1060,17 @@ void mul_ZQtx(double **Z, const double *Qtx, double *vec, int Zn, int n)
   int k, j;
 
   // vec = Z * Qtx (overlapped times dense);
-  for (k = 0; k < n; k++) {
+  // for (k = 0; k < n; k++) {
+  //   vec[k] = 0.0;
+  //   for (j = 0; j < Zn; j++) {
+  //     vec[k] += Z[j][k] * Qtx[j];
+  //   }
+  // }
+  for (k = 0; k < n; k++)
     vec[k] = 0.0;
-    for (j = 0; j < Zn; j++) {
+    
+  for (j = 0; j< Zn; j++) {
+    for (k = 0; k < n; k++){
       vec[k] += Z[j][k] * Qtx[j];
     }
   }
@@ -1407,7 +1415,7 @@ void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat
     }
 
     // For x initial guess is 0
-    memcpy(x, p->Z[Zn-1], p->n * sizeof(double));
+    //memcpy(x, p->Z[Zn-1], p->n * sizeof(double));
 
     // For x initial guess is not 0
     //for (i = 0; i < p->n; i++)
