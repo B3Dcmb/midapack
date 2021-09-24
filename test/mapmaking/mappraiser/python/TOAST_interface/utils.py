@@ -26,9 +26,13 @@ def add_mappraiser_args(parser):
     )
     parser.add_argument("--Lambda", required=False, default=16384, type=np.int, help="Half bandwidth (lambda) of noise covariance"
     )
+    parser.add_argument("--uniform_w", required=False, default=0, type=np.int, help="Activate for uniform white noise model: 0->off, 1->on"
+    )
     parser.add_argument("--solver", required=False, default=0, type=np.int, help="Choose map-making solver: 0->PCG, 1->ECG"
     )
     parser.add_argument("--precond", required=False, default=0, type=np.int, help="Choose map-making preconditioner: 0->BD, 1->2lvl a priori, 2->2lvl a posteriori"
+    )
+    parser.add_argument("--Z_2lvl", required=False, default=0, type=np.int, help="2lvl deflation size"
     )
     parser.add_argument("--ptcomm_flag", required=False, default=6, type=np.int, help="Choose collective communication scheme"
     )
@@ -100,11 +104,13 @@ def setup_mappraiser(args):
 
     params["nside"] = args.nside
     params["Lambda"] = args.Lambda
+    params["uniform_w"] = args.uniform_w
     params["samplerate"] = args.sample_rate
     params["output"] = args.outpath
     params["ref"] = args.ref
     params["solver"] = args.solver
     params["precond"] = args.precond
+    params["Z_2lvl"] = args.Z_2lvl
     params["pointing_commflag"] = args.ptcomm_flag
     params["tol"] = args.tol
     params["maxiter"] = args.maxiter

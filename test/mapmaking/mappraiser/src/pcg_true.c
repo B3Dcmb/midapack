@@ -16,10 +16,12 @@
 #include <time.h>
 #include <string.h>
 #include <mkl.h>
+#include <unistd.h>
+#include "fitsio.h"
 #include "midapack.h"
 #include "mappraiser.h"
 
-int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond)
+int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl)
 {
     int    i, j, k;     // some indexes
     int    m, n;        // number of local time samples, number of local pixels
@@ -49,7 +51,8 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
 
     st = MPI_Wtime();
 
-    build_precond(&p, &pixpond, &n, A, &Nm1, &x, b, noise, cond, lhits, tol, size /* Zn */, precond);
+    if (Z_2lvl == 0) Z_2lvl = size;
+    build_precond(&p, &pixpond, &n, A, &Nm1, &x, b, noise, cond, lhits, tol, Z_2lvl, precond);
 
     t = MPI_Wtime();
     if (rank == 0) {
@@ -115,12 +118,14 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
     res0 = res;
     // Test if already converged
     if (rank == 0) {
+
         res_rel = sqrt(res) / sqrt(res0);
-	printf("k = %d, res = %e, g2pix = %e, res_rel = %e, time = %lf\n", 0, res, g2pix, res_rel, t - st);
+	      printf("k = %d, res = %e, g2pix = %e, res_rel = %e, time = %lf\n", 0, res, g2pix, res_rel, t - st);
         char filename[256];
         sprintf(filename,"%s/pcg_residuals_%s.dat", outpath, ref);
         fp = fopen(filename, "wb");
         fwrite(&res_rel, sizeof(double), 1, fp);
+        fflush(stdout);
     }
 
     if (res <= tol) {
@@ -152,6 +157,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
         MPI_Allreduce(&localreduce, &coeff, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
         ro = g2pix / coeff;
+
 
         for (j = 0; j < n; j++) // x = x + ro * h
             x[j] = x[j] + ro * h[j];
@@ -194,6 +200,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
             printf("k = %d, res = %e, g2pix = %e, res_rel = %e, time = %lf\n", k, res, g2pix_polak, res_rel, t - st);
             fwrite(&res_rel, sizeof(double), 1, fp);
         }
+
         fflush(stdout);
 
         if (res <= tol2rel) {
