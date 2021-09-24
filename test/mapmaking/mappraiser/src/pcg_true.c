@@ -21,8 +21,6 @@
 #include "midapack.h"
 #include "mappraiser.h"
 
-int xmap( double *mapI, double *mapQ, double *mapU, int npix, double *x, int *lstid, int xsize);
-
 int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl)
 {
     int    i, j, k;     // some indexes
@@ -41,7 +39,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
 
     struct Precond *p = NULL;
     double *pixpond;
-    MPI_Status status;
+
     // if we want to use the true norm to compute the residual
     int TRUE_NORM = 1;  //0: No ; 1: Yes
 
@@ -118,16 +116,6 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
     double g2pixB = g2pix;
     double tol2rel = tol * tol * res; //tol*tol*g2pixB; //*g2pixB; //tol; //*tol*g2;
     res0 = res;
-    //Declarations for the sake of saving iterations maps
-    int mapsize, map_id, Nnz, nside, npix, oldsize;
-    int *lstid;
-    double *xbis, *mapI, *mapQ, *mapU;
-    char Imap_name[256];
-    char Qmap_name[256];
-    char Umap_name[256];
-    char nest = 1;
-    char *cordsys = "C";
-    int ret,w=1;
     // Test if already converged
     if (rank == 0) {
 
@@ -138,101 +126,6 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
         fp = fopen(filename, "wb");
         fwrite(&res_rel, sizeof(double), 1, fp);
         fflush(stdout);
-    }
-
-    //write output to fits files:
-
-    st=MPI_Wtime();
-    mapsize = n;
-    map_id = rank;
-    Nnz = A->nnz;
-
-    if (rank == 0)
-      xbis = (double *) calloc(mapsize, sizeof(double));
-
-    lstid = (int *) calloc(mapsize, sizeof(int));
-    for(i=0; i< mapsize; i++){
-      lstid[i] = A->lindices[i+(A->nnz)*(A->trash_pix)];
-    }
-
-
-    if (rank!=0){
-      MPI_Send(&mapsize, 1, MPI_INT, 0, 0, A->comm);
-      MPI_Send(lstid, mapsize, MPI_INT, 0, 1, A->comm);
-      MPI_Send(x, mapsize, MPI_DOUBLE, 0, 2, A->comm);
-    }
-
-    if (rank==0){
-      nside = 512;
-      npix = 12*pow(nside,2);
-      oldsize;
-
-      mapI    = (double *) calloc(npix, sizeof(double));
-      mapQ    = (double *) calloc(npix, sizeof(double));
-      mapU    = (double *) calloc(npix, sizeof(double));
-
-      for (i=0;i<size;i++){
-        if (i!=0){
-          oldsize = mapsize;
-          MPI_Recv(&mapsize, 1, MPI_INT, i, 0, A->comm, &status);
-          if (oldsize!=mapsize){
-            lstid = (int *) realloc(lstid, mapsize*sizeof(int));
-            xbis = (double *) realloc(xbis, mapsize*sizeof(double));
-          }
-          MPI_Recv(lstid, mapsize, MPI_INT, i, 1, A->comm, &status);
-          MPI_Recv(xbis, mapsize, MPI_DOUBLE, i, 2, A->comm, &status);
-        }
-        else
-          memcpy(xbis, x, mapsize*sizeof(double));
-        xmap(mapI, mapQ, mapU, npix, xbis, lstid, mapsize);
-      }
-      //printf("Checking output directory ... old files will be overwritten\n");
-
-      sprintf(Imap_name,"%s/mapI_%s_iter%d.fits", outpath, ref, 0);
-      sprintf(Qmap_name,"%s/mapQ_%s_iter%d.fits", outpath, ref, 0);
-      sprintf(Umap_name,"%s/mapU_%s_iter%d.fits", outpath, ref, 0);
-
-      if( access( Imap_name, F_OK ) != -1 ) {
-        ret = remove(Imap_name);
-        if(ret != 0){
-          printf("Error: unable to delete the file %s\n",Imap_name);
-          w = 0;
-        }
-      }
-
-      if( access( Qmap_name, F_OK ) != -1 ) {
-        ret = remove(Qmap_name);
-        if(ret != 0){
-          printf("Error: unable to delete the file %s\n",Qmap_name);
-          w = 0;
-        }
-      }
-
-      if( access( Umap_name, F_OK ) != -1 ) {
-        ret = remove(Umap_name);
-        if(ret != 0){
-          printf("Error: unable to delete the file %s\n",Umap_name);
-          w = 0;
-        }
-      }
-
-
-      if(w==1){
-        //printf("Writing HEALPix maps FITS files ...\n");
-        write_map(mapI, TDOUBLE, nside, Imap_name, nest, cordsys);
-        write_map(mapQ, TDOUBLE, nside, Qmap_name, nest, cordsys);
-        write_map(mapU, TDOUBLE, nside, Umap_name, nest, cordsys);
-      }
-      else{
-        printf("IO Error: Could not overwrite old files, map results will not be stored ;(\n");
-      }
-
-    }
-
-    t=MPI_Wtime();
-    if (rank==0) {
-      printf("[rank %d] Write output files time=%lf \n", rank, t-st);
-      fflush(stdout);
     }
 
     if (res <= tol) {
@@ -307,80 +200,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
             printf("k = %d, res = %e, g2pix = %e, res_rel = %e, time = %lf\n", k, res, g2pix_polak, res_rel, t - st);
             fwrite(&res_rel, sizeof(double), 1, fp);
         }
-        //write output to fits files:
-        st=MPI_Wtime();
 
-        if (rank!=0){
-          MPI_Send(&mapsize, 1, MPI_INT, 0, 0, A->comm);
-          MPI_Send(lstid, mapsize, MPI_INT, 0, 1, A->comm);
-          MPI_Send(x, mapsize, MPI_DOUBLE, 0, 2, A->comm);
-        }
-
-        if (rank==0){
-
-          for (i=0;i<size;i++){
-            if (i!=0){
-              oldsize = mapsize;
-              MPI_Recv(&mapsize, 1, MPI_INT, i, 0, A->comm, &status);
-              if (oldsize!=mapsize){
-                lstid = (int *) realloc(lstid, mapsize*sizeof(int));
-                xbis = (double *) realloc(xbis, mapsize*sizeof(double));
-              }
-              MPI_Recv(lstid, mapsize, MPI_INT, i, 1, A->comm, &status);
-              MPI_Recv(xbis, mapsize, MPI_DOUBLE, i, 2, A->comm, &status);
-            }
-            else
-              memcpy(xbis, x, mapsize*sizeof(double));
-            xmap(mapI, mapQ, mapU, npix, xbis, lstid, mapsize);
-          }
-          //printf("Checking output directory ... old files will be overwritten\n");
-
-          sprintf(Imap_name,"%s/mapI_%s_iter%d.fits", outpath, ref, k);
-          sprintf(Qmap_name,"%s/mapQ_%s_iter%d.fits", outpath, ref, k);
-          sprintf(Umap_name,"%s/mapU_%s_iter%d.fits", outpath, ref, k);
-
-          if( access( Imap_name, F_OK ) != -1 ) {
-            ret = remove(Imap_name);
-            if(ret != 0){
-              printf("Error: unable to delete the file %s\n",Imap_name);
-              w = 0;
-            }
-          }
-
-          if( access( Qmap_name, F_OK ) != -1 ) {
-            ret = remove(Qmap_name);
-            if(ret != 0){
-              printf("Error: unable to delete the file %s\n",Qmap_name);
-              w = 0;
-            }
-          }
-
-          if( access( Umap_name, F_OK ) != -1 ) {
-            ret = remove(Umap_name);
-            if(ret != 0){
-              printf("Error: unable to delete the file %s\n",Umap_name);
-              w = 0;
-            }
-          }
-
-
-          if(w==1){
-            //printf("Writing HEALPix maps FITS files ...\n");
-            write_map(mapI, TDOUBLE, nside, Imap_name, nest, cordsys);
-            write_map(mapQ, TDOUBLE, nside, Qmap_name, nest, cordsys);
-            write_map(mapU, TDOUBLE, nside, Umap_name, nest, cordsys);
-          }
-          else{
-            printf("IO Error: Could not overwrite old files, map results will not be stored ;(\n");
-          }
-
-        }
-
-        t=MPI_Wtime();
-        if (rank==0) {
-          printf("[rank %d] Write output files time=%lf \n", rank, t-st);
-          fflush(stdout);
-        }
         fflush(stdout);
 
         if (res <= tol2rel) {
@@ -389,13 +209,6 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
                 printf("--> i.e. \t (%e < %e) \n", res_rel, tol);
                 printf("--> solve time = %lf \n", solve_time);
                 fclose(fp);
-                //to remove when done
-                free(lstid);
-                free(xbis);
-                free(mapI);
-                free(mapQ);
-                free(mapU);
-
             }
             break;
         }
@@ -433,22 +246,4 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
     free_precond(&p);
 
     return 0;
-}
-
-int xmap( double *mapI, double *mapQ, double *mapU, int npix, double *x, int *lstid, int xsize)
-{
-
-  int i;
-
-  for(i=0; i<xsize; i++){
-    if(i%3 == 0){
-      mapI[(int)(lstid[i]/3)]= x[i];
-    }
-    else if (i%3 == 1)
-      mapQ[(int)(lstid[i]/3)]= x[i];
-    else
-      mapU[(int)(lstid[i]/3)]= x[i];
-  }
-
-  return 0;
 }

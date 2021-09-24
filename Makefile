@@ -1,9 +1,9 @@
 PROJECT = Midapack_
 VERSION = 1.1b
-DIR = $(HOME)/midapack_2lvl
+DIR = $(HOME)/midapack
 DIRTAR = export_tar
 LIBNAME = libmidapack
-MIDAPACK_ROOT=$(PREFIX)/midapack_2lvl
+MIDAPACK_ROOT=$(PREFIX)/midapack
 MIDAPACK_OBJ=$(MIDAPACK_ROOT)/obj
 MAPMAT_OBJ=$(MIDAPACK_OBJ)/mapmat
 TOEPLITZ_OBJ=$(MIDAPACK_OBJ)/toeplitz

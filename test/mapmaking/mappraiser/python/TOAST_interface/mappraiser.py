@@ -672,7 +672,7 @@ class OpMappraiser(Operator):
 
                     for idet, det in enumerate(detectors):
                         # Get the signal.
-                        noise = tod.local_signal(det, self._noise_name) * 1./np.sqrt(365)
+                        noise = tod.local_signal(det, self._noise_name)
                         # if self._rank ==0 and idet == 0:
                         #     print("|noise| = {}".format(np.sum(noise**2)))
                         noise_dtype = noise.dtype
