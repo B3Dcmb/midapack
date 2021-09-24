@@ -399,11 +399,7 @@ class OpMappraiser(Operator):
 
         # Fit the psd model to the periodogram (in log scale)
         popt,pcov = curve_fit(logpsd_model,f[1:],np.log10(psd[1:]),p0=np.array([-7, -1.0, 0.1, 0.]), bounds=([-20, -10, 0., 0.], [0., 0., 10, 0.001]), maxfev = 1000)
-        # popt = np.zeros(4)
-        # popt[0] = -10.
-        # popt[1] = -1.
-        # popt[2] = 0.05
-        # popt[3] = 0.
+
         if self._rank == 0 and idet == 0:
             print("\n[det "+str(idet)+"]: PSD fit log(sigma2) = %1.2f, alpha = %1.2f, fknee = %1.2f, fmin = %1.2f\n" % tuple(popt), flush=True)
             print("[det "+str(idet)+"]: PSD fit covariance: \n", pcov, flush=True)

@@ -51,6 +51,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
   M = 0;
   for(i=0;i<size;i++){
     M += ((int *)data_size_proc)[i];
+    fflush(stdout);
   }
   if(rank==0){
     printf("[rank %d] M=%ld\n", rank, M);
