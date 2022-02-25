@@ -78,7 +78,14 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
     for (i = 0; i < m; i++)
         _g[i] = b[i] + noise[i] - _g[i];
 
-    stbmmProd(Nm1, _g); // _g = Nm1 (Ax-b)
+    //stbmmProd(Nm1, _g); // _g = Nm1 (Ax-b)
+    int t_id = 0; //time sample index in local data
+    for(i=0;i<Nm1.nb_blocks_loc;i++){
+      for(j=0;j<Nm1.tpltzblocks[i].n;j++){
+        _g[t_id+j] = Nm1.tpltzblocks[i].T_block[0] * _g[t_id+j];
+      }
+      t_id += Nm1.tpltzblocks[i].n;
+    }
 
     TrMatVecProd(A, _g, g, 0); // g = At _g
 
@@ -116,7 +123,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
     // Test if already converged
     if (rank == 0) {
         res_rel = sqrt(res) / sqrt(res0);
-	printf("k = %d, res = %e, g2pix = %e, res_rel = %e, time = %lf\n", 0, res, g2pix, res_rel, t - st);
+	      printf("k = %d, res = %e, g2pix = %e, res_rel = %e, time = %lf\n", 0, res, g2pix, res_rel, t - st);
         char filename[256];
         sprintf(filename,"%s/pcg_residuals_%s.dat", outpath, ref);
         fp = fopen(filename, "wb");
@@ -142,7 +149,14 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
         g = gt;
 
         MatVecProd(A, h, Ah, 0);            // Ah = A h
-        stbmmProd(Nm1, Nm1Ah);              // Nm1Ah = Nm1 Ah   (Nm1Ah == Ah)
+        //stbmmProd(Nm1, Nm1Ah);              // Nm1Ah = Nm1 Ah   (Nm1Ah == Ah)
+        t_id = 0; //time sample index in local data
+        for(i=0;i<Nm1.nb_blocks_loc;i++){
+          for(j=0;j<Nm1.tpltzblocks[i].n;j++){
+            Nm1Ah[t_id+j] = Nm1.tpltzblocks[i].T_block[0] * Nm1Ah[t_id+j];
+          }
+          t_id += Nm1.tpltzblocks[i].n;
+        }
         TrMatVecProd(A, Nm1Ah, AtNm1Ah, 0); // AtNm1Ah = At Nm1Ah
 
         coeff = 0.0;

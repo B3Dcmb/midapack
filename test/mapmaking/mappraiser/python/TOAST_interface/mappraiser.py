@@ -398,7 +398,7 @@ class OpMappraiser(Operator):
 
 
         # Fit the psd model to the periodogram (in log scale)
-        popt,pcov = curve_fit(logpsd_model,f[1:],np.log10(psd[1:]),p0=np.array([-7, -1.0, 0.1, 0.]), bounds=([-20, -10, 0., 0.], [0., 0., 10, 0.001]), maxfev = 1000)
+        popt,pcov = curve_fit(logpsd_model,f[1:],np.log10(psd[1:]),p0=np.array([-7, -1.0, 0.1, 0.0001]), bounds=([-20, -10, 0., 0.], [0., 0., 10, 0.005]), maxfev = 1000)
         # popt[1] = -5.
         # popt[2] = 2.
         if self._rank == 0 and idet == 0:
@@ -410,7 +410,7 @@ class OpMappraiser(Operator):
         # Invert periodogram
         psd_sim_m1 = np.reciprocal(psd)
         # if self._rank == 0 and idet == 0:
-        #     np.save("psd_sim.npy",psd_sim_m1)
+            # np.save("psd_sim.npy",psd_sim_m1)
         # psd_sim_m1_log = np.log10(psd_sim_m1)
 
         # Invert the fit to the psd model / Fit the inverse psd model to the inverted periodogram
@@ -444,10 +444,10 @@ class OpMappraiser(Operator):
 
         #effective inverse noise power
         # if self._rank == 0 and idet == 0:
-        #     psd = np.abs(np.fft.fft(inv_tt_w,n=block_size))
-        #     np.save("freq.npy",fs[:int(block_size/2)])
-        #     np.save("psd0.npy",psdm1[:int(block_size/2)])
-        #     np.save("psd"+str(self._params["Lambda"])+".npy",psd[:int(block_size/2)])
+            # psd = np.abs(np.fft.fft(inv_tt_w,n=block_size))
+            # np.save("freq.npy",fs[:int(block_size/2)])
+            # np.save("psd0.npy",psdm1[:int(block_size/2)])
+            # np.save("psd"+str(self._params["Lambda"])+".npy",psd[:int(block_size/2)])
 
         return inv_tt_w[:self._params["Lambda"]] #, popt[0], popt[1], popt[2], popt[3]
 
@@ -562,7 +562,6 @@ class OpMappraiser(Operator):
                     for det in detectors:
                         psd = nse.psd(det) * noise_scale ** 2
                         invtt = self._psd2invtt(psdfreqs, psd)
-                        invtt_list.append(invtt)
                         # if det not in psds:
                         #     psds[det] = [(0, psd)]
                         # else:
@@ -670,6 +669,8 @@ class OpMappraiser(Operator):
                     for idet, det in enumerate(detectors):
                         # Get the signal.
                         noise = tod.local_signal(det, self._noise_name)
+                        # if self._rank == 0 and idet == 0:
+                        #     np.save("noise_tod.npy",noise)
                         noise_dtype = noise.dtype
                         offset = global_offset
                         nn = len(noise)
@@ -918,19 +919,19 @@ class OpMappraiser(Operator):
         timer = Timer()
         # THIS STEP IS SKIPPED: we do not have timestamps, nor do we build Toeplitz blocks
         # from TOAST psds which comprise detector noise only - a psd fit is done when staging noise -
-        # timer.start()
-        # invtt_list = self._stage_time(detectors, nsamp, psdfreqs)
-        # self._mappraiser_invtt = np.array([np.array(invtt_i, dtype= mappraiser.INVTT_TYPE) for invtt_i in invtt_list])
-        # del invtt_list
-        # self._mappraiser_invtt = np.concatenate(self._mappraiser_invtt)
-        # if self._verbose:
-        #     nodecomm.Barrier()
-        #     if self._rank == 0:
-        #         timer.report_clear("Stage time")
-        # memreport("after staging time", self._comm)  # DEBUG
-        # count_caches(
-        #     self._data, self._comm, nodecomm, self._cache, "after staging time"
-        # )  # DEBUG
+        #timer.start()
+        #invtt_list = self._stage_time(detectors, nsamp, psdfreqs)
+        #self._mappraiser_invtt = np.array([np.array(invtt_i, dtype= mappraiser.INVTT_TYPE) for invtt_i in invtt_list])
+        #del invtt_list
+        #self._mappraiser_invtt = np.concatenate(self._mappraiser_invtt)
+        #if self._verbose:
+        #    nodecomm.Barrier()
+        #    if self._rank == 0:
+        #        timer.report_clear("Stage time")
+        #memreport("after staging time", self._comm)  # DEBUG
+        #count_caches(
+        #    self._data, self._comm, nodecomm, self._cache, "after staging time"
+        #)  # DEBUG
 
          # Stage signal.  If signal is not being purged, staging is not stepped
         timer.start()

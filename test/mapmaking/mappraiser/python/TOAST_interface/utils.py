@@ -30,6 +30,8 @@ def add_mappraiser_args(parser):
     )
     parser.add_argument("--precond", required=False, default=0, type=np.int, help="Choose map-making preconditioner: 0->BD, 1->2lvl a priori, 2->2lvl a posteriori"
     )
+    parser.add_argument("--Z_2lvl", required=False, default=0, type=np.int, help="2lvl deflation size"
+    )
     parser.add_argument("--ptcomm_flag", required=False, default=6, type=np.int, help="Choose collective communication scheme"
     )
     parser.add_argument("--tol", required=False, default=1e-6, type=np.double, help="Tolerance parameter for convergence"
