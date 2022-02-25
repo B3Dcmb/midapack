@@ -398,9 +398,8 @@ class OpMappraiser(Operator):
 
 
         # Fit the psd model to the periodogram (in log scale)
-        popt,pcov = curve_fit(logpsd_model,f[1:],np.log10(psd[1:]),p0=np.array([-7, -1.0, 0.1, 0.0001]), bounds=([-20, -10, 0., 0.], [0., 0., 10, 0.005]), maxfev = 1000)
-        # popt[1] = -5.
-        # popt[2] = 2.
+        popt,pcov = curve_fit(logpsd_model,f[1:],np.log10(psd[1:]),p0=np.array([-7, -1.0, 0.1, 0.]), bounds=([-20, -10, 0., 0.], [0., 0., 10, 0.001]), maxfev = 1000)
+
         if self._rank == 0 and idet == 0:
             print("\n[det "+str(idet)+"]: PSD fit log(sigma2) = %1.2f, alpha = %1.2f, fknee = %1.2f, fmin = %1.2f\n" % tuple(popt), flush=True)
             print("[det "+str(idet)+"]: PSD fit covariance: \n", pcov, flush=True)
@@ -669,8 +668,8 @@ class OpMappraiser(Operator):
                     for idet, det in enumerate(detectors):
                         # Get the signal.
                         noise = tod.local_signal(det, self._noise_name)
-                        # if self._rank == 0 and idet == 0:
-                        #     np.save("noise_tod.npy",noise)
+                        # if self._rank ==0 and idet == 0:
+                        #     print("|noise| = {}".format(np.sum(noise**2)))
                         noise_dtype = noise.dtype
                         offset = global_offset
                         nn = len(noise)
@@ -955,6 +954,8 @@ class OpMappraiser(Operator):
         self._mappraiser_invtt = np.array([np.array(invtt_i, dtype= mappraiser.INVTT_TYPE) for invtt_i in invtt_list])
         del invtt_list
         self._mappraiser_invtt = np.concatenate(self._mappraiser_invtt)
+        if self._params["uniform_w"] == 1:
+            self._mappraiser_invtt = np.ones_like(self._mappraiser_invtt)
         if self._verbose:
             nodecomm.Barrier()
             if self._rank == 0:

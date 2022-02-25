@@ -10,11 +10,11 @@ TOEPLITZ_OBJ=$(MIDAPACK_OBJ)/toeplitz
 MIDAPACK_LIB=$(MIDAPACK_ROOT)/lib
 
 .PHONY: lib
-all : 
+all :
 	@echo "starts compiling ........"
 	mkdir -p $(MIDAPACK_ROOT) $(MIDAPACK_OBJ) $(MAPMAT_OBJ) $(TOEPLITZ_OBJ) $(MIDAPACK_LIB)
 	make mapmat
-	make toeplitz 
+	make toeplitz
 	make lib
 
 example :
@@ -25,7 +25,7 @@ test :
 	make mapmat_test
 	make toeplitz_test
 
-toeplitz: ./src/toeplitz/ 
+toeplitz: ./src/toeplitz/
 	make -C ./src/toeplitz/
 
 toeplitz_test: ./test/toeplitz/ ./src/toeplitz/
@@ -35,7 +35,7 @@ toeplitz_example: ./lib
 	make example -C test/toeplitz/
 
 
-mapmat: ./src/mapmat/ 
+mapmat: ./src/mapmat/
 	make -C ./src/mapmat/
 
 mapmat_test: ./test/mapmat/ ./src/mapmat/
@@ -63,7 +63,7 @@ lib:
 
 seq :
 	make mapmat
-	make toeplitz 
+	make toeplitz
 	make lib
 
 
@@ -86,6 +86,3 @@ tar :
 
 release :
 	./mkrelease
-
-
-

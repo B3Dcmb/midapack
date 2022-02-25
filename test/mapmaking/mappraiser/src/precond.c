@@ -6,7 +6,7 @@
     @author Hamza El Bouhargani
     @date   May 2019
     @credit  Adapted from work by Frederic Dauvergne
-    @Last_update June 2020 by Aygul Jamal */
+    @Last_update January 2021 by Aygul Jamal */
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -19,7 +19,7 @@
 #include "midapack.h"
 #include "mappraiser.h"
 
-#define eps 1.0e-17
+#define eps 1.0e-15
 
 struct Precond {
   int precond; // 0 = BJ, 1 = 2lvl a priori, 2 = 2lvl a posteriori
@@ -754,67 +754,33 @@ void transpose_nn(double *A, int n)
       }
 }
 
-
-//low-level routine: to be moved somwhere else
 void inverse_svd(int m, int n, int lda, double *a)
 {
-  // A = UDVt
-  // A = USVt
-  int i, j, k;
-
-  // Setup a buffer to hold the singular values:
-  int nsv = m < n ? m : n;
-  double *s = malloc(nsv * sizeof(double)); // = D
-
-  // Setup buffers to hold the matrices U and Vt:
-  double *u = malloc(m*m * sizeof(double)); // = U
-  double *vt = malloc(n*n * sizeof(double));
 
   int info = 0;
+  int i = 0;
+  int rank = 0;
+  //lapack_int LAPACKE_dgelss( int matrix_order, lapack_int m, lapack_int n, lapack_int nrhs, double* a, lapack_int lda, double* b, lapack_int ldb, double* s, double rcond, lapack_int* rank );
+    double *b = calloc(m * n, sizeof(double));
+    int nsv = m < n ? m : n;
+    double *s = malloc(nsv * sizeof(double));
 
-  transpose_nn(a, m);
-  mkl_set_num_threads(1);
+  for (i = 0; i < nsv; i++)
+      b[i*n+i] = 1;
 
-  info = LAPACKE_dgesdd(LAPACK_COL_MAJOR, 'A', m, n, a, lda, s, u, m, vt, n);
-  //info = LAPACKE_dgesvd(LAPACK_COL_MAJOR, 'A', m, n, a, lda, s, u, m, vt, n);
+  info =  LAPACKE_dgelss(LAPACK_ROW_MAJOR, m, n, n, a, n, b, n, s, eps, &rank);
 
-  if (info > 0) {
-    printf( "The algorithm computing SVD failed to converge (1).\n" );
-    exit(1);
-  }
-  if (info < 0) {
-    printf("General error .\n");
-    exit(1);
-  }
-
-  // Computing S-1
-  for (k = 0; k < nsv; ++k) {
-    if (fabs(s[k]) < 1.0e-7) s[k] = 0.0;
-    //if (fabs(s[k]) < 1.0e-12) s[k] = 0.0;
-    else s[k] = 1.0 / s[k];
-  }
-
-  // do something useful with U, S, Vt ...
-  for (i = 0; i < n; i++) {
-    for (j = 0; j < m; j++) {
-      a[i * m + j] = 0.0;
-      for (k = 0; k < n; k++) {
-	       a[i * m + j] += vt[i * m + k] * s[k] * u[k * m + j];
-      }
-    }
-  }
-
-  // and then clean them up too:
-  free(s);
-  free(u);
-  free(vt);
+  if (info != 0) printf("LAPACK_dgelss does not work.\n");
+  memcpy(a, b, (m*n) *sizeof(double));
+  free(b);
 
 }
+
 
 // Deflation subspace matrix constructor
 void build_Z(const Mat *A, int Zn, double ***out_Z)
 {
-  int i, j, e, k, rank, size;
+  int i, j, g, e, k, rank, size, group;
   int p, rp, sp, tag = 0;
   MPI_Request s_request, r_request;
   MPI_Status status;
@@ -828,22 +794,33 @@ void build_Z(const Mat *A, int Zn, double ***out_Z)
   MPI_Comm_rank(A->comm, &rank); //get rank and size of the communicator
   MPI_Comm_size(A->comm, &size);
 
-  // Calculer le lcount_max (tous proc)
+  // Compute lcount_max (all procs)
   MPI_Allreduce(&(A->lcount), &(lcount_max), 1, MPI_INT, MPI_MAX, A->comm);
 
-  // Allouer les buffers
-  count = (int *)calloc(A->lcount, sizeof(int)); //the number of appereance in local processor
+  // If number of columns of Z >= number of processes, each process
+  // will compute a group of columns of Z instead of a single column
+  if (Zn > size) {
+    group = Zn / size;
+    assert(group * size == Zn);
+  } else {
+    group = 1;
+  }
+
+  // Allocate buffers
+  count = (int *)calloc(group * A->lcount, sizeof(int)); //the number of appereance in local processor
   tcount = (int *)calloc(A->lcount, sizeof(int));
-  rcount = (int *)malloc(lcount_max * sizeof(int)); // the number of appereance in neighbor processors
+  rcount = (int *)malloc(group * lcount_max * sizeof(int)); // the number of appereance in neighbor processors
   rindices  = (int *)malloc(lcount_max * sizeof(int)); //real indices in neighbor processors
 
   // Compute local count for a given pixel
-  for (i = 0; i < A->m * A->nnz; i++)
-    count[A->indices[i]]++;
+  for (g = 0; g < group; g++)
+    for (i = 0; i < A->m / group * A->nnz; i++)
+      count[g * A->lcount + A->indices[g * (A->m / group * A->nnz) + i]]++;
 
   // Copy local count in total count
-  for (i = 0; i < A->m * A->nnz; i++)
-    tcount[A->indices[i]] = count[A->indices[i]];
+  for (g = 0; g < group; g++)
+    for (i = 0; i < A->lcount; i++)
+      tcount[i] += count[g * A->lcount + i];
 
   // Compute total counts
   for (p=1; p < size; p++) { //loop : collective global reduce in ring-like fashion
@@ -857,11 +834,12 @@ void build_Z(const Mat *A, int Zn, double ***out_Z)
     MPI_Wait(&r_request, &status);
     MPI_Wait(&s_request, &status);
     tag++;
-    MPI_Irecv(rcount, rlcount, MPI_INT, rp, tag, A->comm, &r_request); //exchange local count/rcount values
-    MPI_Isend(count, A->lcount, MPI_INT, sp, tag, A->comm, &s_request);
+    MPI_Irecv(rcount, group * rlcount, MPI_INT, rp, tag, A->comm, &r_request); //exchange local count/rcount values
+    MPI_Isend(count, group * A->lcount, MPI_INT, sp, tag, A->comm, &s_request);
     tag++;
     MPI_Wait(&r_request, &status);
-    m2m_sum_i(rcount, rindices, rlcount, tcount, A->lindices, A->lcount); //sum in the result
+    for (g = 0; g < group; g++)
+      m2m_sum_i(rcount + g * rlcount, rindices, rlcount, tcount, A->lindices, A->lcount); //sum in the result
     MPI_Wait(&s_request, &status);
   }
 
@@ -869,12 +847,15 @@ void build_Z(const Mat *A, int Zn, double ***out_Z)
   free(rcount);
 
   // Allocate Z
-  Z = calloc(size, sizeof(double *));
+  Z = calloc(group * size, sizeof(double *));
 
   // Compute the current process' Z
-  Z[rank] = calloc(A->lcount, sizeof(double));
-  for (i = 0; i < A->lcount; i += A->nnz)
-    Z[rank][i] = (double)((double)count[i] / (double)tcount[i]);
+  for (g = 0; g < group; g++) {
+    Z[rank * group + g] = calloc(A->lcount, sizeof(double));
+    for (i = 0; i < A->lcount; i += A->nnz)
+      Z[rank * group + g][i] =
+	(double)((double)count[g * group + i] / (double)tcount[i]);
+  }
 
   // Free no longer used buffers
   free(count);
@@ -895,33 +876,44 @@ void build_Z(const Mat *A, int Zn, double ***out_Z)
     MPI_Wait(&r_request, &status);
     MPI_Wait(&s_request, &status);
     tag++;
-    MPI_Irecv(rZ, rlcount, MPI_DOUBLE, rp, tag, A->comm, &r_request); //exchange local values
-    MPI_Isend(Z[rank], A->lcount, MPI_DOUBLE, sp, tag, A->comm, &s_request);
-    tag++;
-    MPI_Wait(&r_request, &status);
-    Z[rp] = calloc(A->lcount, sizeof(double));
-    m2m(rZ, rindices, rlcount, Z[rp], A->lindices, A->lcount); //copy the interesting value the corresponding Z[rp] value
+
+    for (g = 0; g < group; g++) {
+      MPI_Irecv(rZ, rlcount, MPI_DOUBLE, rp, tag, A->comm, &r_request); //exchange local values
+      MPI_Isend(Z[rank * group + g], A->lcount, MPI_DOUBLE, sp, tag, A->comm, &s_request);
+      tag++;
+      MPI_Wait(&r_request, &status);
+      Z[rp * group + g] = calloc(A->lcount, sizeof(double));
+      m2m(rZ, rindices, rlcount, Z[rp * group + g], A->lindices, A->lcount); //copy the interesting value the corresponding Z[rp] value
+    }
     MPI_Wait(&s_request, &status);
   }
 
-  int ratio = size / Zn;
-  assert(size >= Zn);
-  assert(Zn * ratio == size);
+  double **ZZ;
 
-  double **ZZ = calloc(Zn, sizeof(double *));
-  for (j=0; j < Zn; j++)
-    {
-      ZZ[j] = Z[j * ratio];
-      for (k = 1; k < ratio; k++)
-        {
-	  for (i = 0; i < A->lcount; i++)
-            {
-	      ZZ[j][i] += Z[j * ratio + k][i];
-            }
-	  free(Z[j * ratio + k]);
-        }
-    }
-  free(Z);
+  // If number of columns of Z < number of processes, shrink Z
+  if (Zn < size) {
+    int ratio = size / Zn;
+    assert(Zn * ratio == size);
+
+    ZZ = calloc(Zn, sizeof(double *));
+    for (j=0; j < Zn; j++)
+      {
+	ZZ[j] = Z[j * ratio];
+	for (k = 1; k < ratio; k++)
+	  {
+	    for (i = 0; i < A->lcount; i++)
+	      {
+		ZZ[j][i] += Z[j * ratio + k][i];
+	      }
+	    free(Z[j * ratio + k]);
+	  }
+      }
+    free(Z);
+
+  // Otherwise, the result is just Z
+  } else {
+    ZZ = Z;
+  }
 
   for (j=0; j < Zn; j++)
     {
@@ -943,7 +935,7 @@ void build_Z(const Mat *A, int Zn, double ***out_Z)
 //in vector x overlapped,
 //in P distributed among processors
 //Z should be contructed in place
-// Calculation of E, then E^{-1}, we have the algorithm
+//Calculation of E, then E^{-1}, we have the algorithm
 //Pt N^{-1} P Z (Zt Pt N^{-1} P Z)^{-1} Zt x = A Z E^{-1} Zt x = A Q x
 //v1 = P * Zi column by column
 //v2 = N^{-1} * v1
@@ -984,24 +976,24 @@ void build_Em1(const Mat *A, double **Z, double **AZ, const double *pixpond, int
 
   inverse_svd(Zn, Zn, Zn, E);
 
-  EO = calloc(Zn * Zn, sizeof(double));
-
-  memcpy(EO, E, sizeof(double) * Zn * Zn);
-
-  /* Computes the norm of x */
-  anorm = dlange_("1", &Zn, &Zn, EO, &Zn, w);
-
-  /* Modifies x in place with a LU decomposition */
-  dgetrf_(&Zn, &Zn, EO, &Zn, iw, &info);
-  // if (info != 0) fprintf(stderr, "failure with error %d\n", info);
-
-  /* Computes the reciprocal norm */
-  dgecon_("1", &Zn, EO, &Zn, &anorm, &rcond, w, iw, &info);
-  // if (info != 0) fprintf(stderr, "failure with error %d\n", info);
-
-  //printf("condition number of Einv = %25.18e\n", rcond);
-
-  free(EO);
+  // EO = calloc(Zn * Zn, sizeof(double));
+  //
+  // memcpy(EO, E, sizeof(double) * Zn * Zn);
+  //
+  // /* Computes the norm of x */
+  // anorm = dlange_("1", &Zn, &Zn, EO, &Zn, w);
+  //
+  // /* Modifies x in place with a LU decomposition */
+  // dgetrf_(&Zn, &Zn, EO, &Zn, iw, &info);
+  // // if (info != 0) fprintf(stderr, "failure with error %d\n", info);
+  //
+  // /* Computes the reciprocal norm */
+  // dgecon_("1", &Zn, EO, &Zn, &anorm, &rcond, w, iw, &info);
+  // // if (info != 0) fprintf(stderr, "failure with error %d\n", info);
+  //
+  // //printf("condition number of Einv = %25.18e\n", rcond);
+  //
+  // free(EO);
 
   *out_E = E;
 }
@@ -1068,9 +1060,17 @@ void mul_ZQtx(double **Z, const double *Qtx, double *vec, int Zn, int n)
   int k, j;
 
   // vec = Z * Qtx (overlapped times dense);
-  for (k = 0; k < n; k++) {
+  // for (k = 0; k < n; k++) {
+  //   vec[k] = 0.0;
+  //   for (j = 0; j < Zn; j++) {
+  //     vec[k] += Z[j][k] * Qtx[j];
+  //   }
+  // }
+  for (k = 0; k < n; k++)
     vec[k] = 0.0;
-    for (j = 0; j < Zn; j++) {
+    
+  for (j = 0; j< Zn; j++) {
+    for (k = 0; k < n; k++){
       vec[k] += Z[j][k] * Qtx[j];
     }
   }
@@ -1337,17 +1337,23 @@ void Lanczos_eig(Mat *A, const Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ, dou
   *out_Ritz_vectors_AZ = Ritz_vectors_AZ;
 }
 
+
+
+
 // General routine for constructing a preconditioner
 void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tpltz *Nm1, double **in_out_x, double *b, const double *noise, double *cond, int *lhits, double tol, int Zn, int precond)
 {
-  int rank, size;
+  int rank, size, i;
   double st, t;
   double *x;
+  //double *t1, *t2;
 
   struct Precond *p = calloc(1, sizeof(struct Precond));
 
   MPI_Comm_rank(A->comm, &rank);
   MPI_Comm_size(A->comm, &size);
+
+  if (rank == 0) printf("Last compiled on %s at %s\n", __DATE__, __TIME__);
 
   p->precond = precond;
   p->Zn = Zn;
@@ -1408,7 +1414,12 @@ void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat
       fflush(stdout);
     }
 
-    memcpy(x, p->Z[Zn-1], p->n * sizeof(double));
+    // For x initial guess is 0
+    //memcpy(x, p->Z[Zn-1], p->n * sizeof(double));
+
+    // For x initial guess is not 0
+    //for (i = 0; i < p->n; i++)
+    //  x[i] = x[i] +  p->Z[Zn-1][i];
   }
 
   *out_p = p;
