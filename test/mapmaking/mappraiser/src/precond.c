@@ -487,6 +487,10 @@ int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ_inv, Mat *BJ, double *b, d
   vpixBlock = (double *) malloc(n*(A->nnz) * sizeof(double));
   vpixBlock_inv = (double *) malloc(n*(A->nnz) * sizeof(double));
   hits_proc = (double *) malloc(n * sizeof(double));
+  if(indices_new == NULL || vpixBlock_loc == NULL || vpixBlock == NULL || vpixBlock_inv == NULL || hits_proc == NULL){
+    printf("Out of memory: memory allocation failed");
+    exit(1);
+  }
 
   //Compute local Atdiag(N^1)A
   getlocalW(A, Nm1, vpixBlock, lhits);
@@ -536,7 +540,8 @@ int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ_inv, Mat *BJ, double *b, d
     for(j=0;j<(A->nnz);j++)
       vpixBlock[i+j] = vpixBlock_loc[(i-6)/(A->nnz)+j];
   }
-
+  free(vpixBlock_loc);
+  
   //Compute the inverse of the global AtA blocks (beware this part is only valid for nnz = 3)
   int uncut_pixel_index = 0;
   for(i=0;i<n*(A->nnz);i+=(A->nnz)*(A->nnz)){
@@ -571,7 +576,7 @@ int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ_inv, Mat *BJ, double *b, d
       block[0][1] * (block[1][0] * block[2][2] - block[1][2] * block[2][0]) +
       block[0][2] * (block[1][0] * block[2][1] - block[1][1] * block[2][0]);
 
-    if(rcond > 1e-1){
+    if(rcond > 1e-6){
       invdet = 1 / det;
 
       //Compute the inverse coeffs
@@ -632,7 +637,11 @@ int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ_inv, Mat *BJ, double *b, d
     tmp4 = (double *) realloc(vpixBlock_inv, n*(A->nnz)*sizeof(double));
     tmp1 = (int *) realloc(lhits, (int)n/(A->nnz)*sizeof(int));
     tmp3 = (double *) realloc(cond,(int)n/(A->nnz)*sizeof(double));
-    if(tmp2 != NULL){
+    if (tmp1 == NULL || tmp2 == NULL || tmp3 == NULL || tmp4 == NULL) {
+      printf("Out of memory: reallocation of preconditioner blocks, hits or rcond maps failed");
+      exit(1);
+    }
+    else{
       vpixBlock = tmp2;
       vpixBlock_inv = tmp4;
       lhits = tmp1;

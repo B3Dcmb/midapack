@@ -21,6 +21,8 @@
 #include "midapack.h"
 #include "mappraiser.h"
 
+int apply_weights(Tpltz Nm1, double* tod);
+
 int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl)
 {
     int    i, j, k;     // some indexes
@@ -54,6 +56,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
     if (Z_2lvl == 0) Z_2lvl = size;
     build_precond(&p, &pixpond, &n, A, &Nm1, &x, b, noise, cond, lhits, tol, Z_2lvl, precond);
 
+
     t = MPI_Wtime();
     if (rank == 0) {
         printf("[rank %d] Preconditioner computation time = %lf \n", rank, t - st);
@@ -75,31 +78,24 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
 
     st = MPI_Wtime();
 
-    // Compute RHS
+    // Compute RHS - initial guess
     MatVecProd(A, x, _g, 0);
 
     for (i = 0; i < m; i++)
         _g[i] = b[i] + noise[i] - _g[i];
 
-    //stbmmProd(Nm1, _g); // _g = Nm1 (Ax-b)
-    int t_id = 0; //time sample index in local data
-    for(i=0;i<Nm1.nb_blocks_loc;i++){
-      for(j=0;j<Nm1.tpltzblocks[i].n;j++){
-        _g[t_id+j] = Nm1.tpltzblocks[i].T_block[0] * _g[t_id+j];
-      }
-      t_id += Nm1.tpltzblocks[i].n;
-    }
+    apply_weights(Nm1,_g);  // _g = Nm1 (d-Ax0)  (d = signal + noise)
 
     TrMatVecProd(A, _g, g, 0); // g = At _g
 
     apply_precond(p, A, &Nm1, g, Cg);
 
-    for (j = 0; j < n; j++) // h = -Cg
+    for (j = 0; j < n; j++) // h = Cg
         h[j] = Cg[j];
 
-    g2pix = 0.0; // g2 = "res"
+    g2pix = 0.0; // g2pix = "Cg res"
     localreduce = 0.0;
-    for (i = 0; i < n; i++) // g2 = (Cg, g)
+    for (i = 0; i < n; i++) // g2pix = (Cg, g)
         localreduce += Cg[i] * g[i] * pixpond[i];
 
     MPI_Allreduce(&localreduce, &g2pix, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -107,11 +103,10 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
     t = MPI_Wtime();
     solve_time += (t - st);
 
-    // Just to check with the true norm:
     if (TRUE_NORM == 1) {
         res = 0.0; // g2 = "res"
         localreduce = 0.0;
-        for (i = 0; i < n; i++) // g2 = (Cg, g)
+        for (i = 0; i < n; i++) // g2 = (g, g)
             localreduce += g[i] * g[i] * pixpond[i];
 
         MPI_Allreduce(&localreduce, &res, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
@@ -154,14 +149,9 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
         g = gt;
 
         MatVecProd(A, h, Ah, 0);            // Ah = A h
-        //stbmmProd(Nm1, Nm1Ah);              // Nm1Ah = Nm1 Ah   (Nm1Ah == Ah)
-        t_id = 0; //time sample index in local data
-        for(i=0;i<Nm1.nb_blocks_loc;i++){
-          for(j=0;j<Nm1.tpltzblocks[i].n;j++){
-            Nm1Ah[t_id+j] = Nm1.tpltzblocks[i].T_block[0] * Nm1Ah[t_id+j];
-          }
-          t_id += Nm1.tpltzblocks[i].n;
-        }
+        
+        apply_weights(Nm1, Nm1Ah);          // Nm1Ah = Nm1 Ah   (Nm1Ah == Ah)
+        
         TrMatVecProd(A, Nm1Ah, AtNm1Ah, 0); // AtNm1Ah = At Nm1Ah
 
         coeff = 0.0;
@@ -258,6 +248,29 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
     free(AtNm1Ah);
     free(Ah);
     free_precond(&p);
+
+    return 0;
+}
+
+/* Weights TOD data according to the adopted noise model*/
+int apply_weights(Tpltz Nm1, double* tod){
+    int t_id; //time sample index in local data
+    int i,j;
+    
+    // Use straightforward loop for white noise model
+    if (Nm1.tpltzblocks[0].lambda == 1){
+        // Here it is assumed that we use a single bandwidth for all TOD intervals, i.e. lambda is the same for all Toeplitz blocks
+        t_id = 0;
+        for(i=0;i<Nm1.nb_blocks_loc;i++){
+          for(j=0;j<Nm1.tpltzblocks[i].n;j++){
+            tod[t_id+j] = Nm1.tpltzblocks[i].T_block[0] * tod[t_id+j];
+          }
+          t_id += Nm1.tpltzblocks[i].n;
+        }
+    }
+    // Use stbmmProd routine for correlated noise model (No det-det correlations for now)
+    else
+        stbmmProd(Nm1, tod);
 
     return 0;
 }
