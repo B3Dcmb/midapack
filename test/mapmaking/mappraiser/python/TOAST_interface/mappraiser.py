@@ -9,6 +9,7 @@
 from toast.mpi import MPI, use_mpi
 
 import os
+import sys
 
 import healpy as hp
 import numpy as np
@@ -589,10 +590,13 @@ class OpMappraiser(Operator):
                 self._mappraiser_signal = self._cache.create(
                 "signal", mappraiser.SIGNAL_TYPE, (nsamp * ndet,)
                 )
+                local_blocks_sizes = self._cache.create(
+                "block_sizes", mappraiser.PIXEL_TYPE, (len(self._data.obs) * ndet,)
+                )
                 self._mappraiser_signal[:] = np.nan
 
                 global_offset = 0
-                local_blocks_sizes = []
+                gshift = 0
                 for iobs, obs in enumerate(self._data.obs):
                     tod = obs["tod"]
 
@@ -601,12 +605,13 @@ class OpMappraiser(Operator):
                         signal = tod.local_signal(det, self._name)
                         signal_dtype = signal.dtype
                         offset = global_offset
+                        shift = gshift
                         local_V_size = len(signal)
                         dslice = slice(idet * nsamp + offset, idet * nsamp + offset + local_V_size)
                         self._mappraiser_signal[dslice] = signal
                         offset += local_V_size
-                        local_blocks_sizes.append(local_V_size)
-
+                        local_blocks_sizes[idet * len(self._data.obs) + shift] = local_V_size
+                        shift += 1
 
                         del signal
                     # Purge only after all detectors are staged in case some are aliased
@@ -617,8 +622,8 @@ class OpMappraiser(Operator):
                             cachename = "{}_{}".format(self._name, det)
                             tod.cache.clear(cachename)
                     global_offset = offset
+                    gshift = shift
 
-                local_blocks_sizes = np.array(local_blocks_sizes, dtype=np.int32)
             if self._verbose and nread > 1:
                 nodecomm.Barrier()
                 if self._rank == 0:
@@ -646,18 +651,21 @@ class OpMappraiser(Operator):
                 self._mappraiser_noise = self._cache.create(
                 "noise", mappraiser.SIGNAL_TYPE, (nsamp * ndet,)
                 )
+                self._mappraiser_invtt = self._cache.create(
+                "invtt", mappraiser.INVTT_TYPE, (self._params["Lambda"] * len(self._data.obs) * ndet,)
+                )
                 if self._noise_name == None:
                     self._mappraiser_noise = np.zeros_like(self._mappraiser_noise)
-                    invtt_list = []
-                    for i in range(len(self._data.obs)*len(detectors)):
-                        invtt_list.append(np.ones(1)) #Must be used with lambda = 1
-                    return invtt_list, self._mappraiser_noise.dtype
-
+                    if self._params["Lambda"] != 1:
+                        sys.exit('Noiseless cases should be passed with half bandwidth = 1.')
+                    self._mappraiser_invtt = np.ones_like(self._mappraiser_invtt) #Must be used with lambda = 1
+                    return self._mappraiser_noise.dtype
 
                 self._mappraiser_noise[:] = np.nan
 
                 global_offset = 0
-                invtt_list = []
+                global_woffset = 0
+                wsamp = self._params["Lambda"] * len(self._data.obs)
                 # fknee_list = []
                 # fmin_list = []
                 # alpha_list = []
@@ -672,9 +680,9 @@ class OpMappraiser(Operator):
                         #     print("|noise| = {}".format(np.sum(noise**2)))
                         noise_dtype = noise.dtype
                         offset = global_offset
+                        woffset = global_woffset
                         nn = len(noise)
                         invtt = self._noise2invtt(noise, nn, idet) #, logsigma2, alpha, fknee, fmin = self._noise2invtt(noise, nn, idet)
-                        invtt_list.append(invtt)
                         # logsigma2_list.append(logsigma2)
                         # alpha_list.append(alpha)
                         # fknee_list.append(fknee)
@@ -682,9 +690,12 @@ class OpMappraiser(Operator):
                         dslice = slice(idet * nsamp + offset, idet * nsamp + offset + nn)
                         self._mappraiser_noise[dslice] = noise
                         offset += nn
-
+                        wslice = slice(idet * wsamp + woffset, idet * wsamp + woffset + self._params["Lambda"])
+                        self._mappraiser_invtt[wslice] = invtt
+                        woffset += self._params["Lambda"]
 
                         del noise
+                        del invtt
                     # Purge only after all detectors are staged in case some are aliased
                     # cache.clear() will not fail if the object was already
                     # deleted as an alias
@@ -692,7 +703,10 @@ class OpMappraiser(Operator):
                         for det in detectors:
                             cachename = "{}_{}".format(self._noise_name, det)
                             tod.cache.clear(cachename)
+                    
                     global_offset = offset
+                    global_woffset = woffset
+
             if self._verbose and nread > 1:
                 nodecomm.Barrier()
                 if self._rank == 0:
@@ -724,7 +738,7 @@ class OpMappraiser(Operator):
         #     np.save("logsigma2.npy",Logsigma2_list)
         #     np.save("alpha.npy",Alpha_list)
 
-        return invtt_list, noise_dtype
+        return noise_dtype
 
     @function_timer
     def _stage_pixels(self, detectors, nsamp, ndet, nnz, nside):
@@ -948,13 +962,12 @@ class OpMappraiser(Operator):
 
         # Stage noise.  If noise is not being purged, staging is not stepped
         timer.start()
-        invtt_list, noise_dtype = self._stage_noise(
+        noise_dtype = self._stage_noise(
            detectors, nsamp, ndet, nodecomm, nread
         )
-        self._mappraiser_invtt = np.array([np.array(invtt_i, dtype= mappraiser.INVTT_TYPE) for invtt_i in invtt_list])
-        del invtt_list
-        self._mappraiser_invtt = np.concatenate(self._mappraiser_invtt)
         if self._params["uniform_w"] == 1:
+            if self._params["lambda"] != 1:
+                sys.exit('Cannot uniform weight when half bandwidth is not 1.')
             self._mappraiser_invtt = np.ones_like(self._mappraiser_invtt)
         if self._verbose:
             nodecomm.Barrier()

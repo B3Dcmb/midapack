@@ -21,24 +21,6 @@
 
 #define eps 1.0e-15
 
-struct Precond {
-  int precond; // 0 = BJ, 1 = 2lvl a priori, 2 = 2lvl a posteriori
-  int n;
-  int Zn;
-  Mat BJ_inv;
-  Mat BJ;
-  double *pixpond;
-
-  /* 2 lvl only (NULL otherwise) */
-  double **Z;
-  double **AZ;
-  double *Em1; // size Zn*Zn
-  double *Qg; // size n
-  double *AQg; // size n
-  double *Qtx; // size Zn
-  double *w; // size Zn
-};
-
 //do the local Atdiag(Nm1)A with as output a block-diagonal matrix (stored as a vector) in the pixel domain
 int getlocalW(Mat *A, Tpltz Nm1, double *vpixBlock, int *lhits)
 {
@@ -576,7 +558,7 @@ int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ_inv, Mat *BJ, double *b, d
       block[0][1] * (block[1][0] * block[2][2] - block[1][2] * block[2][0]) +
       block[0][2] * (block[1][0] * block[2][1] - block[1][1] * block[2][0]);
 
-    if(rcond > 1e-6){
+    if(rcond > 1e-1){
       invdet = 1 / det;
 
       //Compute the inverse coeffs

@@ -35,8 +35,23 @@ void write_map (void *signal, int type, long nside, const char *filename,
   char nest, const char *coordsys);
 
 /* Preconditioner routines */
-struct Precond;
+struct Precond {
+  int precond; // 0 = BJ, 1 = 2lvl a priori, 2 = 2lvl a posteriori
+  int n;
+  int Zn;
+  Mat BJ_inv;
+  Mat BJ;
+  double *pixpond;
 
+  /* 2 lvl only (NULL otherwise) */
+  double **Z;
+  double **AZ;
+  double *Em1; // size Zn*Zn
+  double *Qg; // size n
+  double *AQg; // size n
+  double *Qtx; // size Zn
+  double *w; // size Zn
+};
 // Block-Jacobi preconditioner
 int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ_inv, Mat *BJ, double *b, double *cond, int *lhits);
 
