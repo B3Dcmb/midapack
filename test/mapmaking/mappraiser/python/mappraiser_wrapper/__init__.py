@@ -24,7 +24,7 @@ except OSError:
     path = ctu.find_library("mappraiser")
     if path is not None:
         _mappraiser = ct.CDLL(path)
-        
+
 available = _mappraiser is not None
 
 try:
@@ -43,41 +43,84 @@ def encode_comm(comm):
     comm_ptr = MPI._addressof(comm)
     return MPI_Comm.from_address(comm_ptr)
 
+
 _mappraiser.MLmap.restype = None
-_mappraiser.MLmap.argtypes =[
-    MPI_Comm, #comm
-    ct.c_char_p, #outpath
-    ct.c_char_p, #ref
-    ct.c_int, #solver
-    ct.c_int, #precond
-    ct.c_int, #Z_2lvl
-    ct.c_int, #pointing_commflag
-    ct.c_double, #tol
-    ct.c_int, #maxIter
-    ct.c_int, #enlFac
-    ct.c_int, #ortho_alg
-    ct.c_int, #bs_red
-    ct.c_int, #nside
-    npc.ndpointer(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"), #data_size_proc
-    ct.c_int, #nb_blocks_loc
-    npc.ndpointer(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"), #local_blocks_sizes
-    ct.c_int, #Nnz
+_mappraiser.MLmap.argtypes = [
+    MPI_Comm,  # comm
+    ct.c_char_p,  # outpath
+    ct.c_char_p,  # ref
+    ct.c_int,  # solver
+    ct.c_int,  # precond
+    ct.c_int,  # Z_2lvl
+    ct.c_int,  # pointing_commflag
+    ct.c_double,  # tol
+    ct.c_int,  # maxIter
+    ct.c_int,  # enlFac
+    ct.c_int,  # ortho_alg
+    ct.c_int,  # bs_red
+    ct.c_int,  # nside
+    npc.ndpointer(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"),  # data_size_proc
+    ct.c_int,  # nb_blocks_loc
+    # local_blocks_sizes
+    npc.ndpointer(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"),
+    ct.c_int,  # Nnz
     npc.ndpointer(dtype=PIXEL_TYPE, ndim=1, flags="C_CONTIGUOUS"),
     npc.ndpointer(dtype=WEIGHT_TYPE, ndim=1, flags="C_CONTIGUOUS"),
     npc.ndpointer(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"),
     npc.ndpointer(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"),
-    ct.c_int, #lambda
+    ct.c_int,  # lambda
     npc.ndpointer(dtype=INVTT_TYPE, ndim=1, flags="C_CONTIGUOUS"),
 ]
 
-def MLmap(comm, params, data_size_proc, nb_blocks_loc, local_blocks_sizes, Nnz, pixels, pixweights, signal, noise, Lambda, invtt):
+
+def MLmap(
+    comm,
+    params,
+    data_size_proc,
+    nb_blocks_loc,
+    local_blocks_sizes,
+    Nnz,
+    pixels,
+    pixweights,
+    signal,
+    noise,
+    Lambda,
+    invtt,
+):
     """
     Compute the MLMV solution of the GLS estimator, assuming uniform detector weighting and a single PSD
     For all stationary intervals. (These assumptions will be removed in future updates)
     """
     if not available:
         raise RuntimeError("No libmappraiser available, cannot reconstruct the map")
-    outpath = params["output"].encode('ascii')
-    ref = params["ref"].encode('ascii')
-    _mappraiser.MLmap(encode_comm(comm), outpath, ref, params["solver"], params["precond"], params["Z_2lvl"], params["pointing_commflag"], params["tol"], params["maxiter"], params["enlFac"], params["ortho_alg"], params["bs_red"], params["nside"], data_size_proc, nb_blocks_loc, local_blocks_sizes, Nnz, pixels, pixweights, signal, noise, Lambda, invtt)
+
+    outpath = params["output"].encode("ascii")
+    ref = params["ref"].encode("ascii")
+
+    _mappraiser.MLmap(
+        encode_comm(comm),
+        outpath,
+        ref,
+        params["solver"],
+        params["precond"],
+        params["Z_2lvl"],
+        params["pointing_commflag"],
+        params["tol"],
+        params["maxiter"],
+        params["enlFac"],
+        params["ortho_alg"],
+        params["bs_red"],
+        params["nside"],
+        data_size_proc,
+        nb_blocks_loc,
+        local_blocks_sizes,
+        Nnz,
+        pixels,
+        pixweights,
+        signal,
+        noise,
+        Lambda,
+        invtt,
+    )
+
     return

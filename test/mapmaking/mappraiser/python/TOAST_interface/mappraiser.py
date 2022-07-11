@@ -2,9 +2,9 @@
 # It contains all the routines to read TOAST data objects and run on the fly
 # map-making from TOAST simulations. The code is for the most part copied from the OpMadam model.
 
-#@author: Hamza El Bouhargani
-#@date: May 2019
-#@latest_update: January 2020
+# @author: Hamza El Bouhargani
+# @date: May 2019
+# @latest_update: January 2020
 
 from toast.mpi import MPI, use_mpi
 
@@ -33,9 +33,9 @@ if use_mpi:
     except ImportError:
         mappraiser = None
 
+
 def count_caches(data, comm, nodecomm, mappraisercache, msg=""):
-    """ Count the amount of memory in the TOD caches
-    """
+    """Count the amount of memory in the TOD caches"""
     my_todsize = 0
     for obs in data.obs:
         tod = obs["tod"]
@@ -47,25 +47,30 @@ def count_caches(data, comm, nodecomm, mappraisercache, msg=""):
         print(
             "Node has {:.3f} GB allocated in TOAST TOD caches and "
             "{:.3f} GB in Mappraiser caches ({:.3f} GB total) {}".format(
-                node_todsize / 2 ** 30,
-                node_cachesize / 2 ** 30,
-                (node_todsize + node_cachesize) / 2 ** 30,
+                node_todsize / 2**30,
+                node_cachesize / 2**30,
+                (node_todsize + node_cachesize) / 2**30,
                 msg,
             )
         )
     return
 
-def psd_model(f,sigma,alpha,f0,fmin):
-    return sigma * (1+((f+fmin)/f0)**alpha)
 
-def logpsd_model(f,a,alpha,f0,fmin):
-    return a + np.log10(1+((f+fmin)/f0)**alpha)
+def psd_model(f, sigma, alpha, f0, fmin):
+    return sigma * (1 + ((f + fmin) / f0) ** alpha)
 
-def inversepsd_model(f,sigma,alpha,f0,fmin):
-    return sigma * 1./(1+((f+fmin)/f0)**alpha)
 
-def inverselogpsd_model(f,a,alpha,f0,fmin):
-    return a - np.log10(1+((f+fmin)/f0)**alpha)
+def logpsd_model(f, a, alpha, f0, fmin):
+    return a + np.log10(1 + ((f + fmin) / f0) ** alpha)
+
+
+def inversepsd_model(f, sigma, alpha, f0, fmin):
+    return sigma * 1.0 / (1 + ((f + fmin) / f0) ** alpha)
+
+
+def inverselogpsd_model(f, a, alpha, f0, fmin):
+    return a - np.log10(1 + ((f + fmin) / f0) ** alpha)
+
 
 class OpMappraiser(Operator):
     """
@@ -212,7 +217,6 @@ class OpMappraiser(Operator):
                 "contain at least one observation"
             )
 
-
         if comm is None:
             # Use the word communicator from the distributed data.
             comm = data.comm.comm_world
@@ -231,7 +235,15 @@ class OpMappraiser(Operator):
             nside,
         ) = self._prepare()
 
-        data_size_proc, nobsloc, local_blocks_sizes, signal_type, noise_type, pixels_dtype, weight_dtype = self._stage_data(
+        (
+            data_size_proc,
+            nobsloc,
+            local_blocks_sizes,
+            signal_type,
+            noise_type,
+            pixels_dtype,
+            weight_dtype,
+        ) = self._stage_data(
             nsamp,
             ndet,
             nnz,
@@ -242,7 +254,7 @@ class OpMappraiser(Operator):
             nside,
         )
 
-        self._MLmap(data_size_proc, nobsloc*ndet, local_blocks_sizes, nnz)
+        self._MLmap(data_size_proc, nobsloc * ndet, local_blocks_sizes, nnz)
 
         self._unstage_data(
             nsamp,
@@ -260,8 +272,7 @@ class OpMappraiser(Operator):
 
     @function_timer
     def _MLmap(self, data_size_proc, nb_blocks_loc, local_blocks_sizes, nnz):
-        """ Compute the ML map
-        """
+        """Compute the ML map"""
         if self._verbose:
             memreport("just before calling libmappraiser.MLmap", self._comm)
 
@@ -280,15 +291,13 @@ class OpMappraiser(Operator):
             self._mappraiser_noise,
             self._params["Lambda"],
             self._mappraiser_invtt,
-            )
+        )
         # os.environ["OMP_NUM_THREADS"] = "4"
 
         return
 
     def _count_samples(self):
-        """ Loop over the observations and count the number of samples.
-
-        """
+        """Loop over the observations and count the number of samples."""
         if len(self._data.obs) != 1:
             nsamp = 0
             tod0 = self._data.obs[0]["tod"]
@@ -318,7 +327,7 @@ class OpMappraiser(Operator):
         return nsamp
 
     def _get_period_ranges(self, detectors):
-        """ Collect the ranges of every observation.
+        """Collect the ranges of every observation.
         (This routine taken as is from Madam has been truncated, for now it is
         only extracting the frequency binning of the PSDs)
         """
@@ -343,74 +352,92 @@ class OpMappraiser(Operator):
         return psdfreqs
 
     def _psd2invtt(self, psdfreqs, psd):
-        """ Generate the first rows of the Toeplitz blocks from the PSDs
-        """
+        """Generate the first rows of the Toeplitz blocks from the PSDs"""
         # parameters
         sampling_freq = self._params["samplerate"]
-        f_defl = sampling_freq/(np.pi*self._params["Lambda"])
-        df = f_defl/2
-        block_size = 2**(int(math.log(sampling_freq*1./df,2))+1)
+        f_defl = sampling_freq / (np.pi * self._params["Lambda"])
+        df = f_defl / 2
+        block_size = 2 ** (int(math.log(sampling_freq * 1.0 / df, 2)) + 1)
 
         # Invert PSD
         psd_sim_m1 = np.reciprocal(psd)
 
         # Initialize full size inverse PSD in frequency domain
-        fs = fftfreq(block_size, 1./sampling_freq)
+        fs = fftfreq(block_size, 1.0 / sampling_freq)
         psdm1 = np.zeros_like(fs)
 
         # Perform interpolation to get full size PSD from TOAST provided PSD
-        tck = interpolate.splrep(psdfreqs, psd_sim_m1, s=0) #s=0 : no smoothing
-        psdfit = interpolate.splev(np.abs(fs[:int(block_size/2)+1]), tck, der=0)
-        psdfit[0] = 0 #set offset noise contribution to zero
-        psdm1[:int(block_size/2)] = psdfit[:int(block_size/2)]
-        psdm1[int(block_size/2):] = np.flip(psdfit[1:],0)
+        tck = interpolate.splrep(psdfreqs, psd_sim_m1, s=0)  # s=0 : no smoothing
+        psdfit = interpolate.splev(np.abs(fs[: int(block_size / 2) + 1]), tck, der=0)
+        psdfit[0] = 0  # set offset noise contribution to zero
+        psdm1[: int(block_size / 2)] = psdfit[: int(block_size / 2)]
+        psdm1[int(block_size / 2) :] = np.flip(psdfit[1:], 0)
 
         # Compute inverse noise autocorrelation functions
         inv_tt = np.real(np.fft.ifft(psdm1, n=block_size))
 
         # Define apodization window
-        window = scipy.signal.gaussian(2*self._params["Lambda"], 1./2*self._params["Lambda"])
+        window = scipy.signal.gaussian(
+            2 * self._params["Lambda"], 1.0 / 2 * self._params["Lambda"]
+        )
         window = np.fft.ifftshift(window)
-        window = window[:self._params["Lambda"]]
-        window = np.pad(window,(0,int(block_size/2-(self._params["Lambda"]))),'constant')
+        window = window[: self._params["Lambda"]]
+        window = np.pad(
+            window, (0, int(block_size / 2 - (self._params["Lambda"]))), "constant"
+        )
         symw = np.zeros(block_size)
-        symw[:int(block_size/2)] = window
-        symw[int(block_size/2):] = np.flip(window,0)
+        symw[: int(block_size / 2)] = window
+        symw[int(block_size / 2) :] = np.flip(window, 0)
 
-        inv_tt_w = np.multiply(symw, inv_tt, dtype = mappraiser.INVTT_TYPE)
+        inv_tt_w = np.multiply(symw, inv_tt, dtype=mappraiser.INVTT_TYPE)
 
-        return inv_tt_w[:self._params["Lambda"]]
+        return inv_tt_w[: self._params["Lambda"]]
 
     def _noise2invtt(self, noise, nn, idet):
-        """ Computes a periodogram from a noise timestream, and fits a PSD model
+        """Computes a periodogram from a noise timestream, and fits a PSD model
         to it, which is then used to build the first row of a Toeplitz block.
         """
         # parameters
         sampling_freq = self._params["samplerate"]
-        Max_lambda = 2**(int(math.log(nn/4,2))) # closest power of two to 1/4 of the timestream length
-        f_defl = sampling_freq/(np.pi*Max_lambda)
-        df = f_defl/2
-        block_size = 2**(int(math.log(sampling_freq*1./df,2)))
+        # closest power of two to 1/4 of the timestream length
+        Max_lambda = 2 ** (int(math.log(nn / 4, 2)))
+        f_defl = sampling_freq / (np.pi * Max_lambda)
+        df = f_defl / 2
+        block_size = 2 ** (int(math.log(sampling_freq * 1.0 / df, 2)))
 
         # Compute periodogram
-        f, psd = scipy.signal.periodogram(noise, sampling_freq,nfft=block_size,window='blackman')
+        f, psd = scipy.signal.periodogram(
+            noise, sampling_freq, nfft=block_size, window="blackman"
+        )
         # if idet==37:
         #     print(len(f), flush=True)
 
-
         # Fit the psd model to the periodogram (in log scale)
-        popt,pcov = curve_fit(logpsd_model,f[1:],np.log10(psd[1:]),p0=np.array([-7, -1.0, 0.1, 0.]), bounds=([-20, -10, 0., 0.], [0., 0., 10, 0.001]), maxfev = 1000)
+        popt, pcov = curve_fit(
+            logpsd_model,
+            f[1:],
+            np.log10(psd[1:]),
+            p0=np.array([-7, -1.0, 0.1, 0.0]),
+            bounds=([-20, -10, 0.0, 0.0], [0.0, 0.0, 10, 0.001]),
+            maxfev=1000,
+        )
 
         if self._rank == 0 and idet == 0:
-            print("\n[det "+str(idet)+"]: PSD fit log(sigma2) = %1.2f, alpha = %1.2f, fknee = %1.2f, fmin = %1.2f\n" % tuple(popt), flush=True)
-            print("[det "+str(idet)+"]: PSD fit covariance: \n", pcov, flush=True)
+            print(
+                "\n[det "
+                + str(idet)
+                + "]: PSD fit log(sigma2) = %1.2f, alpha = %1.2f, fknee = %1.2f, fmin = %1.2f\n"
+                % tuple(popt),
+                flush=True,
+            )
+            print("[det " + str(idet) + "]: PSD fit covariance: \n", pcov, flush=True)
         # psd_fit_m1 = np.zeros_like(f)
         # psd_fit_m1[1:] = inversepsd_model(f[1:],10**popt[0],popt[1],popt[2])
 
         # Invert periodogram
         psd_sim_m1 = np.reciprocal(psd)
         # if self._rank == 0 and idet == 0:
-            # np.save("psd_sim.npy",psd_sim_m1)
+        # np.save("psd_sim.npy",psd_sim_m1)
         # psd_sim_m1_log = np.log10(psd_sim_m1)
 
         # Invert the fit to the psd model / Fit the inverse psd model to the inverted periodogram
@@ -418,44 +445,50 @@ class OpMappraiser(Operator):
         # print(popt)
         # print(pcov)
         psd_fit_m1 = np.zeros_like(f)
-        psd_fit_m1[1:] = inversepsd_model(f[1:],10**(-popt[0]),popt[1],popt[2], popt[3])
+        psd_fit_m1[1:] = inversepsd_model(
+            f[1:], 10 ** (-popt[0]), popt[1], popt[2], popt[3]
+        )
 
         # Initialize full size inverse PSD in frequency domain
-        fs = fftfreq(block_size, 1./sampling_freq)
+        fs = fftfreq(block_size, 1.0 / sampling_freq)
         psdm1 = np.zeros_like(fs)
 
         # Symmetrize inverse PSD according to fs shape
-        psdm1[:int(block_size/2)] = psd_fit_m1[:-1] #psdfit[:int(block_size/2)]
-        psdm1[int(block_size/2):] = np.flip(psd_fit_m1[1:],0)
+        # psdfit[:int(block_size/2)]
+        psdm1[: int(block_size / 2)] = psd_fit_m1[:-1]
+        psdm1[int(block_size / 2) :] = np.flip(psd_fit_m1[1:], 0)
 
         # Compute inverse noise autocorrelation functions
         inv_tt = np.real(np.fft.ifft(psdm1, n=block_size))
 
         # Define apodization window
-        window = scipy.signal.gaussian(2*self._params["Lambda"], 1./2*self._params["Lambda"])
+        window = scipy.signal.gaussian(
+            2 * self._params["Lambda"], 1.0 / 2 * self._params["Lambda"]
+        )
         window = np.fft.ifftshift(window)
-        window = window[:self._params["Lambda"]]
-        window = np.pad(window,(0,int(block_size/2-(self._params["Lambda"]))),'constant')
+        window = window[: self._params["Lambda"]]
+        window = np.pad(
+            window, (0, int(block_size / 2 - (self._params["Lambda"]))), "constant"
+        )
         symw = np.zeros(block_size)
-        symw[:int(block_size/2)] = window
-        symw[int(block_size/2):] = np.flip(window,0)
+        symw[: int(block_size / 2)] = window
+        symw[int(block_size / 2) :] = np.flip(window, 0)
 
-        inv_tt_w = np.multiply(symw, inv_tt, dtype = mappraiser.INVTT_TYPE)
+        inv_tt_w = np.multiply(symw, inv_tt, dtype=mappraiser.INVTT_TYPE)
 
-        #effective inverse noise power
+        # effective inverse noise power
         # if self._rank == 0 and idet == 0:
-            # psd = np.abs(np.fft.fft(inv_tt_w,n=block_size))
-            # np.save("freq.npy",fs[:int(block_size/2)])
-            # np.save("psd0.npy",psdm1[:int(block_size/2)])
-            # np.save("psd"+str(self._params["Lambda"])+".npy",psd[:int(block_size/2)])
+        # psd = np.abs(np.fft.fft(inv_tt_w,n=block_size))
+        # np.save("freq.npy",fs[:int(block_size/2)])
+        # np.save("psd0.npy",psdm1[:int(block_size/2)])
+        # np.save("psd"+str(self._params["Lambda"])+".npy",psd[:int(block_size/2)])
 
-        return inv_tt_w[:self._params["Lambda"]] #, popt[0], popt[1], popt[2], popt[3]
+        # , popt[0], popt[1], popt[2], popt[3]
+        return inv_tt_w[: self._params["Lambda"]]
 
     @function_timer
     def _prepare(self):
-        """ Examine the data object.
-
-        """
+        """Examine the data object."""
         log = Logger.get()
         timer = Timer()
         timer.start()
@@ -482,9 +515,9 @@ class OpMappraiser(Operator):
 
         if nnz_full != 3:
             raise RuntimeError(
-                    "OpMappraiser: Don't know how to make a map "
-                    "with nnz={}".format(nnz_full)
-                )
+                "OpMappraiser: Don't know how to make a map "
+                "with nnz={}".format(nnz_full)
+            )
             nnz = 3
             nnz_stride = 1
         else:
@@ -496,7 +529,6 @@ class OpMappraiser(Operator):
                 'OpMappraiser: "nside" must be set in the parameter dictionary'
             )
         nside = int(self._params["nside"])
-
 
         # Inspect the valid intervals across all observations to
         # determine the number of samples per detector
@@ -518,9 +550,10 @@ class OpMappraiser(Operator):
             psdfreqs,
             nside,
         )
+
     @function_timer
     def _stage_time(self, detectors, nsamp, psdfreqs):
-        """ Stage the timestamps and use them to build PSD inputs.
+        """Stage the timestamps and use them to build PSD inputs.
         N.B: timestamps are not currently used in MAPPRAISER, however, this may
         change in the future. At this stage, the routine builds the time-domain
         Toeplitz blocks inputs (first rows).
@@ -560,7 +593,7 @@ class OpMappraiser(Operator):
                     noise_scale = 1
                 if nse is not None:
                     for det in detectors:
-                        psd = nse.psd(det) * noise_scale ** 2
+                        psd = nse.psd(det) * noise_scale**2
                         invtt = self._psd2invtt(psdfreqs, psd)
                         # if det not in psds:
                         #     psds[det] = [(0, psd)]
@@ -572,8 +605,7 @@ class OpMappraiser(Operator):
 
     @function_timer
     def _stage_signal(self, detectors, nsamp, ndet, nodecomm, nread):
-        """ Stage signal
-        """
+        """Stage signal"""
         log = Logger.get()
         timer = Timer()
         # Determine if we can purge the signal and avoid keeping two
@@ -588,10 +620,10 @@ class OpMappraiser(Operator):
             timer.start()
             if nodecomm.rank % nread == iread:
                 self._mappraiser_signal = self._cache.create(
-                "signal", mappraiser.SIGNAL_TYPE, (nsamp * ndet,)
+                    "signal", mappraiser.SIGNAL_TYPE, (nsamp * ndet,)
                 )
                 local_blocks_sizes = self._cache.create(
-                "block_sizes", mappraiser.PIXEL_TYPE, (len(self._data.obs) * ndet,)
+                    "block_sizes", mappraiser.PIXEL_TYPE, (len(self._data.obs) * ndet,)
                 )
                 self._mappraiser_signal[:] = np.nan
 
@@ -607,10 +639,14 @@ class OpMappraiser(Operator):
                         offset = global_offset
                         shift = gshift
                         local_V_size = len(signal)
-                        dslice = slice(idet * nsamp + offset, idet * nsamp + offset + local_V_size)
+                        dslice = slice(
+                            idet * nsamp + offset, idet * nsamp + offset + local_V_size
+                        )
                         self._mappraiser_signal[dslice] = signal
                         offset += local_V_size
-                        local_blocks_sizes[idet * len(self._data.obs) + shift] = local_V_size
+                        local_blocks_sizes[
+                            idet * len(self._data.obs) + shift
+                        ] = local_V_size
                         shift += 1
 
                         del signal
@@ -633,8 +669,7 @@ class OpMappraiser(Operator):
 
     @function_timer
     def _stage_noise(self, detectors, nsamp, ndet, nodecomm, nread):
-        """ Stage noise timestream (detector noise + atmosphere)
-        """
+        """Stage noise timestream (detector noise + atmosphere)"""
         log = Logger.get()
         timer = Timer()
         # Determine if we can purge the signal and avoid keeping two
@@ -649,16 +684,22 @@ class OpMappraiser(Operator):
             timer.start()
             if nodecomm.rank % nread == iread:
                 self._mappraiser_noise = self._cache.create(
-                "noise", mappraiser.SIGNAL_TYPE, (nsamp * ndet,)
+                    "noise", mappraiser.SIGNAL_TYPE, (nsamp * ndet,)
                 )
                 self._mappraiser_invtt = self._cache.create(
-                "invtt", mappraiser.INVTT_TYPE, (self._params["Lambda"] * len(self._data.obs) * ndet,)
+                    "invtt",
+                    mappraiser.INVTT_TYPE,
+                    (self._params["Lambda"] * len(self._data.obs) * ndet,),
                 )
                 if self._noise_name == None:
                     self._mappraiser_noise = np.zeros_like(self._mappraiser_noise)
                     if self._params["Lambda"] != 1:
-                        sys.exit('Noiseless cases should be passed with half bandwidth = 1.')
-                    self._mappraiser_invtt = np.ones_like(self._mappraiser_invtt) #Must be used with lambda = 1
+                        sys.exit(
+                            "Noiseless cases should be passed with half bandwidth = 1."
+                        )
+                    self._mappraiser_invtt = np.ones_like(
+                        self._mappraiser_invtt
+                    )  # Must be used with lambda = 1
                     return self._mappraiser_noise.dtype
 
                 self._mappraiser_noise[:] = np.nan
@@ -682,15 +723,21 @@ class OpMappraiser(Operator):
                         offset = global_offset
                         woffset = global_woffset
                         nn = len(noise)
-                        invtt = self._noise2invtt(noise, nn, idet) #, logsigma2, alpha, fknee, fmin = self._noise2invtt(noise, nn, idet)
+                        # , logsigma2, alpha, fknee, fmin = self._noise2invtt(noise, nn, idet)
+                        invtt = self._noise2invtt(noise, nn, idet)
                         # logsigma2_list.append(logsigma2)
                         # alpha_list.append(alpha)
                         # fknee_list.append(fknee)
                         # fmin_list.append(fmin)
-                        dslice = slice(idet * nsamp + offset, idet * nsamp + offset + nn)
+                        dslice = slice(
+                            idet * nsamp + offset, idet * nsamp + offset + nn
+                        )
                         self._mappraiser_noise[dslice] = noise
                         offset += nn
-                        wslice = slice(idet * wsamp + woffset, idet * wsamp + woffset + self._params["Lambda"])
+                        wslice = slice(
+                            idet * wsamp + woffset,
+                            idet * wsamp + woffset + self._params["Lambda"],
+                        )
                         self._mappraiser_invtt[wslice] = invtt
                         woffset += self._params["Lambda"]
 
@@ -703,7 +750,7 @@ class OpMappraiser(Operator):
                         for det in detectors:
                             cachename = "{}_{}".format(self._noise_name, det)
                             tod.cache.clear(cachename)
-                    
+
                     global_offset = offset
                     global_woffset = woffset
 
@@ -730,8 +777,6 @@ class OpMappraiser(Operator):
         # self._comm.Gatherv(np.array(alpha_list),(Alpha_list, sendcounts),0)
         # self._comm.Gatherv(np.array(logsigma2_list),(Logsigma2_list, sendcounts),0)
 
-
-
         # if self._rank ==0:
         #     np.save("fknee.npy",Fknee_list)
         #     np.save("fmin.npy", Fmin_list)
@@ -742,8 +787,7 @@ class OpMappraiser(Operator):
 
     @function_timer
     def _stage_pixels(self, detectors, nsamp, ndet, nnz, nside):
-        """ Stage pixels
-        """
+        """Stage pixels"""
         self._mappraiser_pixels = self._cache.create(
             "pixels", mappraiser.PIXEL_TYPE, (nsamp * ndet * nnz,)
         )
@@ -793,7 +837,7 @@ class OpMappraiser(Operator):
                     (idet * nsamp + offset + nn) * nnz,
                 )
                 # nnz = 3 is a mandatory assumption here (could easily be generalized ...)
-                self._mappraiser_pixels[dslice] = nnz * np.repeat(pixels,nnz)
+                self._mappraiser_pixels[dslice] = nnz * np.repeat(pixels, nnz)
                 self._mappraiser_pixels[dslice][1::nnz] += 1
                 self._mappraiser_pixels[dslice][2::nnz] += 2
                 offset += nn
@@ -833,8 +877,7 @@ class OpMappraiser(Operator):
         nodecomm,
         nread,
     ):
-        """Now collect the pixel weights
-        """
+        """Now collect the pixel weights"""
         log = Logger.get()
         timer = Timer()
         # Determine if we can purge the pixel weights and avoid keeping two
@@ -848,7 +891,7 @@ class OpMappraiser(Operator):
             timer.start()
             if nodecomm.rank % nread == iread:
                 self._mappraiser_pixweights = self._cache.create(
-                "pixweights", mappraiser.WEIGHT_TYPE, (nsamp * ndet * nnz,)
+                    "pixweights", mappraiser.WEIGHT_TYPE, (nsamp * ndet * nnz,)
                 )
                 self._mappraiser_pixweights[:] = 0
 
@@ -865,11 +908,11 @@ class OpMappraiser(Operator):
                         offset = global_offset
                         nn = len(weights)
                         dwslice = slice(
-                        (idet * nsamp + offset) * nnz,
-                        (idet * nsamp + offset + nn) * nnz,
+                            (idet * nsamp + offset) * nnz,
+                            (idet * nsamp + offset + nn) * nnz,
                         )
                         self._mappraiser_pixweights[dwslice] = weights.flatten()[
-                        ::nnz_stride
+                            ::nnz_stride
                         ]
                         offset += nn
                         del weights
@@ -901,7 +944,7 @@ class OpMappraiser(Operator):
         detectors,
         nside,
     ):
-        """ create Mappraiser-compatible buffers
+        """create Mappraiser-compatible buffers
 
         Collect the TOD into Mappraiser buffers. Process pixel weights
         Separate from the rest to reduce the memory high water mark
@@ -932,21 +975,21 @@ class OpMappraiser(Operator):
         timer = Timer()
         # THIS STEP IS SKIPPED: we do not have timestamps, nor do we build Toeplitz blocks
         # from TOAST psds which comprise detector noise only - a psd fit is done when staging noise -
-        #timer.start()
-        #invtt_list = self._stage_time(detectors, nsamp, psdfreqs)
-        #self._mappraiser_invtt = np.array([np.array(invtt_i, dtype= mappraiser.INVTT_TYPE) for invtt_i in invtt_list])
-        #del invtt_list
-        #self._mappraiser_invtt = np.concatenate(self._mappraiser_invtt)
-        #if self._verbose:
+        # timer.start()
+        # invtt_list = self._stage_time(detectors, nsamp, psdfreqs)
+        # self._mappraiser_invtt = np.array([np.array(invtt_i, dtype= mappraiser.INVTT_TYPE) for invtt_i in invtt_list])
+        # del invtt_list
+        # self._mappraiser_invtt = np.concatenate(self._mappraiser_invtt)
+        # if self._verbose:
         #    nodecomm.Barrier()
         #    if self._rank == 0:
         #        timer.report_clear("Stage time")
-        #memreport("after staging time", self._comm)  # DEBUG
-        #count_caches(
+        # memreport("after staging time", self._comm)  # DEBUG
+        # count_caches(
         #    self._data, self._comm, nodecomm, self._cache, "after staging time"
-        #)  # DEBUG
+        # )  # DEBUG
 
-         # Stage signal.  If signal is not being purged, staging is not stepped
+        # Stage signal.  If signal is not being purged, staging is not stepped
         timer.start()
         signal_dtype, local_blocks_sizes = self._stage_signal(
             detectors, nsamp, ndet, nodecomm, nread
@@ -962,12 +1005,10 @@ class OpMappraiser(Operator):
 
         # Stage noise.  If noise is not being purged, staging is not stepped
         timer.start()
-        noise_dtype = self._stage_noise(
-           detectors, nsamp, ndet, nodecomm, nread
-        )
+        noise_dtype = self._stage_noise(detectors, nsamp, ndet, nodecomm, nread)
         if self._params["uniform_w"] == 1:
             if self._params["lambda"] != 1:
-                sys.exit('Cannot uniform weight when half bandwidth is not 1.')
+                sys.exit("Cannot uniform weight when half bandwidth is not 1.")
             self._mappraiser_invtt = np.ones_like(self._mappraiser_invtt)
         if self._verbose:
             nodecomm.Barrier()
@@ -985,9 +1026,7 @@ class OpMappraiser(Operator):
             nodecomm.Barrier()
             timer.start()
             if nodecomm.rank % nread == iread:
-                pixels_dtype = self._stage_pixels(
-                    detectors, nsamp, ndet, nnz, nside
-                )
+                pixels_dtype = self._stage_pixels(detectors, nsamp, ndet, nnz, nside)
             if self._verbose and nread > 1:
                 nodecomm.Barrier()
                 if self._rank == 0:
@@ -1041,11 +1080,21 @@ class OpMappraiser(Operator):
             detweights[idet] = detw[det]
 
         # Get global array of data sizes of the full communicator
-        data_size_proc = np.array(self._comm.allgather(len(self._mappraiser_signal)), dtype=np.int32)
+        data_size_proc = np.array(
+            self._comm.allgather(len(self._mappraiser_signal)), dtype=np.int32
+        )
         # Get number of local observations
         nobsloc = len(self._data.obs)
 
-        return data_size_proc, nobsloc, local_blocks_sizes, signal_dtype, noise_dtype, pixels_dtype, weight_dtype
+        return (
+            data_size_proc,
+            nobsloc,
+            local_blocks_sizes,
+            signal_dtype,
+            noise_dtype,
+            pixels_dtype,
+            weight_dtype,
+        )
 
     @function_timer
     def _unstage_signal(self, detectors, nsamp, signal_type):
@@ -1129,9 +1178,7 @@ class OpMappraiser(Operator):
         return
 
     @function_timer
-    def _unstage_pixweights(
-        self, detectors, nsamp, weight_dtype, nnz, nnz_full
-    ):
+    def _unstage_pixweights(self, detectors, nsamp, weight_dtype, nnz, nnz_full):
         # N.B: useful when we want to get back data after mapmaking, not allowed for now
         # if not self._purge_weights and nnz == nnz_full:
         #     # restore the weights from the Madam buffers
@@ -1171,8 +1218,7 @@ class OpMappraiser(Operator):
         nside,
         weight_dtype,
     ):
-        """ Clear Mappraiser buffers, [restore pointing into TOAST caches-> not done currently].
-        """
+        """Clear Mappraiser buffers, [restore pointing into TOAST caches-> not done currently]."""
         log = Logger.get()
         # self._mappraiser_timestamps = None
         # self._cache.destroy("timestamps")
@@ -1205,13 +1251,9 @@ class OpMappraiser(Operator):
             if self._verbose:
                 nodecomm.Barrier()
                 if self._rank == 0:
-                    timer.report_clear(
-                        "Unstage noise {} / {}".format(iread + 1, nread)
-                    )
+                    timer.report_clear("Unstage noise {} / {}".format(iread + 1, nread))
             if nodecomm.rank % nread == iread:
-                self._unstage_pixels(
-                    detectors, nsamp, pixels_dtype, nside
-                )
+                self._unstage_pixels(detectors, nsamp, pixels_dtype, nside)
             if self._verbose:
                 nodecomm.Barrier()
                 if self._rank == 0:
@@ -1219,9 +1261,7 @@ class OpMappraiser(Operator):
                         "Unstage pixels {} / {}".format(iread + 1, nread)
                     )
             if nodecomm.rank % nread == iread:
-                self._unstage_pixweights(
-                    detectors, nsamp, weight_dtype, nnz, nnz_full
-                )
+                self._unstage_pixweights(detectors, nsamp, weight_dtype, nnz, nnz_full)
             nodecomm.Barrier()
             if self._verbose and self._rank == 0:
                 timer.report_clear(
