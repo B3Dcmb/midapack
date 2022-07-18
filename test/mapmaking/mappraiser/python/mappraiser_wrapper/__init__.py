@@ -79,7 +79,7 @@ def MLmap(
     data_size_proc,
     nb_blocks_loc,
     local_blocks_sizes,
-    Nnz,
+    nnz,
     pixels,
     pixweights,
     signal,
@@ -88,8 +88,23 @@ def MLmap(
     invtt,
 ):
     """
-    Compute the MLMV solution of the GLS estimator, assuming uniform detector weighting and a single PSD
-    For all stationary intervals. (These assumptions will be removed in future updates)
+    Compute the MLMV solution of the GLS estimator, assuming uniform detector weighting and a single PSD for all stationary intervals.
+    (These assumptions will be removed in future updates)
+
+    Args:
+        comm: communicator over which data is distributed
+        params: parameter dictionary
+        data_size_proc: data sizes in full communicator
+        nb_blocks_loc: nbr of local observations
+        local_blocks_sizes: local data sizes
+        nnz: number of non-zero elements per row
+        pixels: pixel indices of non-zero values
+        pixweights: corresponding matrix values
+        signal: signal buffer
+        noise: noise buffer
+        Lambda: toeplitz matrix half-bandwidth
+        invtt: inverse noise weights
+
     """
     if not available:
         raise RuntimeError("No libmappraiser available, cannot reconstruct the map")
@@ -114,7 +129,7 @@ def MLmap(
         data_size_proc,
         nb_blocks_loc,
         local_blocks_sizes,
-        Nnz,
+        nnz,
         pixels,
         pixweights,
         signal,

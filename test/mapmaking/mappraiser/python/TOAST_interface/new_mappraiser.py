@@ -113,12 +113,14 @@ class Mappraiser(Operator):
 
     API = Int(0, help="Internal interface version for this operator")
 
-    params = Dict(dict(), help="Parameters to pass to madam")
+    params = Dict(dict(), help="Parameters to pass to mappraiser")
 
     paramfile = Unicode(
-        None, allow_none=True, help="Read madam parameters from this file"
+        None, allow_none=True, help="Read mappraiser parameters from this file"
     )
 
+    # N.B: timestamps are not currently used in mappraiser.
+    # However, that may change in the future.
     times = Unicode(defaults.times, help="Observation shared key for timestamps")
 
     det_data = Unicode(
@@ -162,6 +164,8 @@ class Mappraiser(Operator):
         None, allow_none=True, help="Use this view of the data in all observations"
     )
 
+    # N.B: there is not tod cleaning in mappraiser.
+    # This parameter is not used.
     det_out = Unicode(
         None,
         allow_none=True,
@@ -174,7 +178,7 @@ class Mappraiser(Operator):
 
     purge_det_data = Bool(
         False,
-        help="If True, clear all observation detector data after copying to madam buffers",
+        help="If True, clear all observation detector data after copying to mappraiser buffers",
     )
 
     restore_det_data = Bool(
@@ -182,10 +186,11 @@ class Mappraiser(Operator):
         help="If True, restore detector data to observations on completion",
     )
 
-    mcmode = Bool(
-        False,
-        help="If true, Madam will store auxiliary information such as pixel matrices and noise filter.",
-    )
+    #! Implement this later
+    # mcmode = Bool(
+    #     False,
+    #     help="If true, Madam will store auxiliary information such as pixel matrices and noise filter.",
+    # )
 
     copy_groups = Int(
         1,
@@ -289,13 +294,16 @@ class Mappraiser(Operator):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._cached = False
-        self._logprefix = "Madam:"
+        self._logprefix = "Mappraiser:"
 
     def clear(self):
         """Delete the underlying memory.
         This will forcibly delete the C-allocated memory and invalidate all python
         references to the buffers.
         """
+
+        # TODO: handle caches in toast3
+
         if self._cached:
             madam.clear_caches()
             self._cached = False
@@ -318,11 +326,11 @@ class Mappraiser(Operator):
         log = Logger.get()
 
         if not available():
-            raise RuntimeError("Madam is either not installed or MPI is disabled")
+            raise RuntimeError("Mappraiser is either not installed or MPI is disabled")
 
         if len(data.obs) == 0:
             raise RuntimeError(
-                "Madam requires every supplied data object to "
+                "Mappraiser requires every supplied data object to "
                 "contain at least one observation"
             )
 
@@ -333,37 +341,40 @@ class Mappraiser(Operator):
 
         # Combine parameters from an external file and other parameters passed in
 
-        params = dict()
-        repeat_keys = ["detset", "detset_nopol", "survey"]
+        # N.B: Currently we only use parameters passed in at initialization
 
-        if self.paramfile is not None:
-            if data.comm.world_rank == 0:
-                line_pat = re.compile(r"(\S+)\s+=\s+(\S+)")
-                comment_pat = re.compile(r"^\s*\#.*")
-                with open(self.paramfile, "r") as f:
-                    for line in f:
-                        if comment_pat.match(line) is None:
-                            line_mat = line_pat.match(line)
-                            if line_mat is not None:
-                                k = line_mat.group(1)
-                                v = line_mat.group(2)
-                                if k in repeat_keys:
-                                    if k not in params:
-                                        params[k] = [v]
-                                    else:
-                                        params[k].append(v)
-                                else:
-                                    params[k] = v
-            if data.comm.world_comm is not None:
-                params = data.comm.world_comm.bcast(params, root=0)
-            for k, v in self.params.items():
-                if k in repeat_keys:
-                    if k not in params:
-                        params[k] = [v]
-                    else:
-                        params[k].append(v)
-                else:
-                    params[k] = v
+        params = dict()
+
+        # repeat_keys = ["detset", "detset_nopol", "survey"]
+
+        # if self.paramfile is not None:
+        #     if data.comm.world_rank == 0:
+        #         line_pat = re.compile(r"(\S+)\s+=\s+(\S+)")
+        #         comment_pat = re.compile(r"^\s*\#.*")
+        #         with open(self.paramfile, "r") as f:
+        #             for line in f:
+        #                 if comment_pat.match(line) is None:
+        #                     line_mat = line_pat.match(line)
+        #                     if line_mat is not None:
+        #                         k = line_mat.group(1)
+        #                         v = line_mat.group(2)
+        #                         if k in repeat_keys:
+        #                             if k not in params:
+        #                                 params[k] = [v]
+        #                             else:
+        #                                 params[k].append(v)
+        #                         else:
+        #                             params[k] = v
+        #     if data.comm.world_comm is not None:
+        #         params = data.comm.world_comm.bcast(params, root=0)
+        #     for k, v in self.params.items():
+        #         if k in repeat_keys:
+        #             if k not in params:
+        #                 params[k] = [v]
+        #             else:
+        #                 params[k].append(v)
+        #         else:
+        #             params[k] = v
 
         if self.params is not None:
             params.update(self.params)
@@ -384,7 +395,7 @@ class Mappraiser(Operator):
         else:
             params["write_tod"] = False
 
-        # Check input parameters and compute the sizes of Madam data objects
+        # Check input parameters and compute the sizes of Mappraiser data objects
         if data.comm.world_rank == 0:
             msg = "{} Computing data sizes".format(self._logprefix)
             log.info(msg)
@@ -398,6 +409,7 @@ class Mappraiser(Operator):
             psd_freqs,
         ) = self._prepare(params, data, detectors)
 
+        # Stage data
         if data.comm.world_rank == 0:
             msg = "{} Copying toast data to buffers".format(self._logprefix)
             log.info(msg)
@@ -413,11 +425,20 @@ class Mappraiser(Operator):
             psd_freqs,
         )
 
+        # Compute the ML map
         if data.comm.world_rank == 0:
-            msg = "{} Destriping data".format(self._logprefix)
+            msg = "{} Computing the ML map".format(self._logprefix)
             log.info(msg)
-        self._destripe(params, data, all_dets, interval_starts, psdinfo)
+        self._MLmap(
+            params,
+            data,
+            data_size_proc,
+            nb_blocks_loc,
+            local_blocks_sizes,
+            nnz,
+        )
 
+        # Unstage data
         if data.comm.world_rank == 0:
             msg = "{} Copying buffers back to toast data".format(self._logprefix)
             log.info(msg)
@@ -462,7 +483,8 @@ class Mappraiser(Operator):
 
     @function_timer
     def _prepare(self, params, data, detectors):
-        """Examine the data and determine quantities needed to set up Madam buffers"""
+        """Examine the data and determine quantities needed to set up Mappraiser buffers"""
+        # TODO: adapt this function for mappraiser
         log = Logger.get()
         timer = Timer()
         timer.start()
@@ -593,7 +615,7 @@ class Mappraiser(Operator):
         data.comm.comm_world.barrier()
         timer.stop()
         if data.comm.world_rank == 0:
-            msg = "{}  Compute data dimensions: {:0.1f} s".format(
+            msg = "{} Compute data dimensions: {:0.1f} s".format(
                 self._logprefix, timer.seconds()
             )
             log.debug(msg)
@@ -625,6 +647,7 @@ class Mappraiser(Operator):
         Collect the data into Madam buffers.  If we are purging TOAST data to save
         memory, then optionally limit the number of processes that are copying at once.
         """
+        # TODO: adapt this function for mappraiser
         log = Logger.get()
         timer = Timer()
 
@@ -916,6 +939,7 @@ class Mappraiser(Operator):
         Optionally copy the signal and pointing back to TOAST if we previously
         purged it to save memory.  Also copy the destriped timestreams if desired.
         """
+        # TODO: adapt this function for mappraiser
         log = Logger.get()
         timer = Timer()
 
@@ -999,50 +1023,32 @@ class Mappraiser(Operator):
         return
 
     @function_timer
-    def _destripe(self, params, data, dets, interval_starts, psdinfo):
-        """Destripe the buffered data"""
+    def _MLmap(
+        self, params, data, data_size_proc, nb_blocks_loc, local_blocks_sizes, nnz
+    ):
+        """Compute the ML map from buffered data."""
         log_time_memory(
             data,
             prefix=self._logprefix,
-            mem_msg="Just before libmadam.destripe",
+            mem_msg="Just before libmappraiser.MLmap",
             full_mem=self.mem_report,
         )
 
-        if self._cached:
-            # destripe
-            outpath = ""
-            if "path_output" in params:
-                outpath = params["path_output"]
-            outpath = outpath.encode("ascii")
-            madam.destripe_with_cache(
-                data.comm.comm_world,
-                self._madam_timestamps,
-                self._madam_pixels,
-                self._madam_pixweights,
-                self._madam_signal,
-                outpath,
-            )
-        else:
-            (detweights, npsd, psdstarts, psd_freqs, psdvals) = psdinfo
-
-            # destripe
-            madam.destripe(
-                data.comm.comm_world,
-                params,
-                dets,
-                detweights,
-                self._madam_timestamps,
-                self._madam_pixels,
-                self._madam_pixweights,
-                self._madam_signal,
-                interval_starts,
-                npsd,
-                psdstarts,
-                psd_freqs,
-                psdvals,
-            )
-            if self.mcmode:
-                self._cached = True
+        # compute the ML map
+        mappraiser.MLmap(
+            data.comm.comm_world,
+            params,
+            data_size_proc,
+            nb_blocks_loc,
+            local_blocks_sizes,
+            nnz,
+            self._mappraiser_pixels,
+            self._mappraiser_pixweights,
+            self._mappraiser_signal,
+            self._mappraiser_noise,
+            params["Lambda"],
+            self._mappraiser_invtt,
+        )
         return
 
     def _requires(self):
