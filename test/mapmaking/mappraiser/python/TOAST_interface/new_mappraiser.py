@@ -12,7 +12,7 @@ from toast.timing import function_timer
 from toast.traits import Bool, Dict, Instance, Int, Unicode, trait_docs
 from toast.utils import Environment, GlobalTimers, Logger, Timer, dtype_to_aligned
 from toast.ops.delete import Delete
-from toast.ops.madam_utils import (
+from .utils import (
     log_time_memory,
     restore_in_turns,
     restore_local,
@@ -162,7 +162,7 @@ class Mappraiser(Operator):
         help="This must be an instance of a Stokes weights operator",
     )
 
-    # N.B: this is not supported at the moment.
+    #! N.B: this is not supported at the moment.
     view = Unicode(
         None, allow_none=True, help="Use this view of the data in all observations"
     )
@@ -305,6 +305,7 @@ class Mappraiser(Operator):
         """
 
         if self._cached:
+            # Mappraiser does not have caches to clear (no 'cached' mode implemented)
             # madam.clear_caches()
             self._cached = False
 
@@ -413,12 +414,7 @@ class Mappraiser(Operator):
         if data.comm.world_rank == 0:
             msg = "{} Copying toast data to buffers".format(self._logprefix)
             log.info(msg)
-        (
-            signal_dtype,
-            data_size_proc,
-            nb_obs_loc,
-            local_block_sizes,
-        ) = self._stage_data(
+        (signal_dtype, data_size_proc, nb_obs_loc,) = self._stage_data(
             params,
             data,
             all_dets,
@@ -439,7 +435,6 @@ class Mappraiser(Operator):
             data,
             data_size_proc,
             nb_obs_loc * len(all_dets),
-            local_block_sizes,
             nnz,
         )
 
@@ -740,12 +735,18 @@ class Mappraiser(Operator):
                 None,
                 None,
                 do_purge=False,
+                blocksizes_buffer=self._mappraiser_blocksizes,
             )
         else:
             # Signal buffers do not yet exist
             if self.purge_det_data:
                 # Allocate in a staggered way.
-                self._mappraiser_signal_raw, self._mappraiser_signal = stage_in_turns(
+                (
+                    self._mappraiser_signal_raw,
+                    self._mappraiser_signal,
+                    self._mappraiser_blocksizes_raw,
+                    self._mappraiser_blocksizes,
+                ) = stage_in_turns(
                     data,
                     nodecomm,
                     n_copy_groups,
@@ -768,6 +769,14 @@ class Mappraiser(Operator):
                 self._mappraiser_signal_raw = storage.zeros(nsamp * len(all_dets))
                 self._mappraiser_signal = self._mappraiser_signal_raw.array()
 
+                # Store local data sizes computed during signal staging
+                b_storage, _ = dtype_to_aligned(mappraiser.PIXEL_TYPE)
+                # TODO: adapt if using a specific View of the data ?
+                self._mappraiser_blocksizes_raw = b_storage.zeros(
+                    nb_obs_loc * len(all_dets)
+                )
+                self._mappraiser_blocksizes = self._mappraiser_blocksizes_raw.array()
+
                 stage_local(
                     data,
                     nsamp,
@@ -783,15 +792,13 @@ class Mappraiser(Operator):
                     None,
                     None,
                     do_purge=False,
+                    blocksizes_buffer=self._mappraiser_blocksizes,
                 )
 
         # Gather data sizes of the full communicator in global array
         data_size_proc = np.array(
             data.comm.comm_world.allgather(len(self._mappraiser_signal)), dtype=np.int32
         )
-
-        # Get local data sizes
-        # TODO: compute local_block_sizes during signal staging
 
         log_time_memory(
             data,
@@ -926,7 +933,6 @@ class Mappraiser(Operator):
             signal_dtype,
             data_size_proc,
             nb_obs_loc,
-            local_block_sizes,
         )
 
     @function_timer
@@ -946,7 +952,6 @@ class Mappraiser(Operator):
         Optionally copy the signal and pointing back to TOAST if we previously
         purged it to save memory.  Also copy the destriped timestreams if desired.
         """
-        # TODO: check this function
         log = Logger.get()
         timer = Timer()
 
@@ -1020,8 +1025,6 @@ class Mappraiser(Operator):
                 full_mem=self.mem_report,
             )
 
-        # Copy the pointing
-
         if not self.mcmode:
             # We can clear the cached pointing
             del self._mappraiser_pixels
@@ -1031,9 +1034,7 @@ class Mappraiser(Operator):
         return
 
     @function_timer
-    def _MLmap(
-        self, params, data, data_size_proc, nb_blocks_loc, local_block_sizes, nnz
-    ):
+    def _MLmap(self, params, data, data_size_proc, nb_blocks_loc, nnz):
         """Compute the ML map from buffered data."""
         log_time_memory(
             data,
@@ -1048,7 +1049,7 @@ class Mappraiser(Operator):
             params,
             data_size_proc,
             nb_blocks_loc,
-            local_block_sizes,
+            self._mappraiser_blocksizes,
             nnz,
             self._mappraiser_pixels,
             self._mappraiser_pixweights,

@@ -1,5 +1,5 @@
 # This script contains a list of routines to set mappraiser parameters, and
-# apply the OpMappraiser operator during a TOD2MAP TOAST pipeline
+# apply the Mappraiser operator during a TOD2MAP TOAST(3) pipeline
 
 # @author: Hamza El Bouhargani
 # @date: January 2020
@@ -10,10 +10,11 @@ import os
 import re
 
 import numpy as np
-from toast.timing import function_timer, Timer
-from toast.utils import Logger, Environment
+from toast.timing import function_timer
+from toast.utils import GlobalTimers, Logger, Timer, dtype_to_aligned, memreport
+from toast.ops.memory_counter import MemoryCounter
 
-from TOAST_interface import OpMappraiser
+from TOAST_interface import Mappraiser
 
 
 def add_mappraiser_args(parser):
@@ -259,4 +260,274 @@ def apply_mappraiser(
     if comm.world_rank == 0 and verbose:
         total_timer.report("Mappraiser total")
 
+    return
+
+
+# helper functions adapted from toast/src/ops/madam_utils.py
+
+
+def log_time_memory(
+    data, timer=None, timer_msg=None, mem_msg=None, full_mem=False, prefix=""
+):
+    log = Logger.get()
+    data.comm.comm_world.barrier()
+    restart = False
+
+    if timer is not None:
+        if timer.is_running():
+            timer.stop()
+            restart = True
+
+        if data.comm.world_rank == 0:
+            msg = "{} {}: {:0.1f} s".format(prefix, timer_msg, timer.seconds())
+            log.debug(msg)
+
+    if mem_msg is not None:
+        # Dump toast memory use
+        mem_count = MemoryCounter(silent=True)
+        mem_count.total_bytes = 0
+        toast_bytes = mem_count.apply(data)
+
+        if data.comm.group_rank == 0:
+            msg = "{} {} Group {} memory = {:0.2f} GB".format(
+                prefix, mem_msg, data.comm.group, toast_bytes / 1024**2
+            )
+            log.debug(msg)
+        if full_mem:
+            _ = memreport(
+                msg="{} {}".format(prefix, mem_msg), comm=data.comm.comm_world
+            )
+    if restart:
+        timer.start()
+
+
+def stage_local(
+    data,
+    nsamp,
+    view,
+    dets,
+    detdata_name,
+    mappraiser_buffer,
+    interval_starts,
+    nnz,
+    nnz_stride,
+    shared_flags,
+    shared_mask,
+    det_flags,
+    det_mask,
+    do_purge=False,
+    operator=None,
+    blocksizes_buffer=None,
+):
+    """Helper function to fill a mappraiser buffer from a local detdata key."""
+    n_det = len(dets)
+    nb_obs_loc = len(data.obs)
+    interval_offset = 0
+    do_flags = False
+    if shared_flags is not None or det_flags is not None:
+        do_flags = True
+        # Flagging should only be enabled when we are processing the pixel indices
+        # (which is how madam effectively implements flagging).  So we will set
+        # all flagged samples to "-1" below.
+        # TODO: how do we handle flagging in mappraiser?
+        if nnz != 1:
+            raise RuntimeError(
+                "Internal error on mappraiser copy.  Only pixel indices should be flagged."
+            )
+    for iobs, ob in enumerate(data.obs):
+        views = ob.view[view]
+        for idet, det in enumerate(dets):
+            if det not in ob.local_detectors:
+                continue
+            if operator is not None:
+                # Synthesize data for staging
+                obs_data = data.select(obs_uid=ob.uid)
+                operator.apply(obs_data, detectors=[det])
+            # Loop over views
+            for ivw, vw in enumerate(views):
+                view_samples = None
+                if vw.start is None:
+                    # This is a view of the whole obs
+                    view_samples = ob.n_local_samples
+                else:
+                    view_samples = vw.stop - vw.start
+                offset = interval_starts[interval_offset + ivw]
+                flags = None
+                if do_flags:
+                    # Using flags
+                    flags = np.zeros(view_samples, dtype=np.uint8)
+                if shared_flags is not None:
+                    flags |= views.shared[shared_flags][ivw] & shared_mask
+
+                slc = slice(
+                    (idet * nsamp + offset) * nnz,
+                    (idet * nsamp + offset + view_samples) * nnz,
+                    1,
+                )
+                if nnz > 1:
+                    mappraiser_buffer[slc] = views.detdata[detdata_name][ivw][
+                        det
+                    ].flatten()[::nnz_stride]
+                    if blocksizes_buffer is not None:
+                        blocksizes_buffer[idet * nb_obs_loc + iobs] = len(
+                            mappraiser_buffer[slc]
+                        )
+                else:
+                    mappraiser_buffer[slc] = views.detdata[detdata_name][ivw][
+                        det
+                    ].flatten()
+                detflags = None
+                if do_flags:
+                    if det_flags is None:
+                        detflags = flags
+                    else:
+                        detflags = np.copy(flags)
+                        detflags |= views.detdata[det_flags][ivw][det] & det_mask
+                    mappraiser_buffer[slc][detflags != 0] = -1
+        if do_purge:
+            del ob.detdata[detdata_name]
+        interval_offset += len(views)
+    return
+
+
+def stage_in_turns(
+    data,
+    nodecomm,
+    n_copy_groups,
+    nsamp,
+    view,
+    dets,
+    detdata_name,
+    mappraiser_dtype,
+    interval_starts,
+    nnz,
+    nnz_stride,
+    shared_flags,
+    shared_mask,
+    det_flags,
+    det_mask,
+    operator=None,
+):
+    """When purging data, take turns staging it."""
+    raw = None
+    wrapped = None
+    for copying in range(n_copy_groups):
+        if nodecomm.rank % n_copy_groups == copying:
+            # Our turn to copy data
+            storage, _ = dtype_to_aligned(mappraiser_dtype)
+            raw = storage.zeros(nsamp * len(dets) * nnz)
+            wrapped = raw.array()
+            if detdata_name == "signal":
+                # create buffer for local_block_sizes
+                b_storage, _ = dtype_to_aligned(np.int32)
+                # TODO: don't define this dtype explicitly
+                b_raw = b_storage.zeros(len(data.obs) * len(dets))
+                b_wrapped = b_raw.array()
+            stage_local(
+                data,
+                nsamp,
+                view,
+                dets,
+                detdata_name,
+                wrapped,
+                interval_starts,
+                nnz,
+                nnz_stride,
+                shared_flags,
+                shared_mask,
+                det_flags,
+                det_mask,
+                do_purge=True,
+                operator=operator,
+                blocksizes_buffer=b_wrapped,
+            )
+        nodecomm.barrier()
+    if detdata_name == "signal":
+        return raw, wrapped, b_raw, b_wrapped
+    else:
+        return raw, wrapped
+
+
+def restore_local(
+    data,
+    nsamp,
+    view,
+    dets,
+    detdata_name,
+    detdata_dtype,
+    mappraiser_buffer,
+    interval_starts,
+    nnz,
+):
+    """Helper function to create a detdata buffer from mappraiser data."""
+    n_det = len(dets)
+    interval = 0
+    for ob in data.obs:
+        # Create the detector data
+        if nnz == 1:
+            ob.detdata.create(detdata_name, dtype=detdata_dtype)
+        else:
+            ob.detdata.create(detdata_name, dtype=detdata_dtype, sample_shape=(nnz,))
+        # Loop over views
+        views = ob.view[view]
+        for ivw, vw in enumerate(views):
+            view_samples = None
+            if vw.start is None:
+                # This is a view of the whole obs
+                view_samples = ob.n_local_samples
+            else:
+                view_samples = vw.stop - vw.start
+            offset = interval_starts[interval]
+            ldet = 0
+            for det in dets:
+                if det not in ob.local_detectors:
+                    continue
+                idet = ob.local_detectors.index(det)
+                slc = slice(
+                    (idet * nsamp + offset) * nnz,
+                    (idet * nsamp + offset + view_samples) * nnz,
+                    1,
+                )
+                if nnz > 1:
+                    views.detdata[detdata_name][ivw][ldet] = mappraiser_buffer[
+                        slc
+                    ].reshape((-1, nnz))
+                else:
+                    views.detdata[detdata_name][ivw][ldet] = mappraiser_buffer[slc]
+                ldet += 1
+            interval += 1
+    return
+
+
+def restore_in_turns(
+    data,
+    nodecomm,
+    n_copy_groups,
+    nsamp,
+    view,
+    dets,
+    detdata_name,
+    detdata_dtype,
+    mappraiser_buffer,
+    mappraiser_buffer_raw,
+    interval_starts,
+    nnz,
+):
+    """When restoring data, take turns copying it."""
+    for copying in range(n_copy_groups):
+        if nodecomm.rank % n_copy_groups == copying:
+            # Our turn to copy data
+            restore_local(
+                data,
+                nsamp,
+                view,
+                dets,
+                detdata_name,
+                detdata_dtype,
+                mappraiser_buffer,
+                interval_starts,
+                nnz,
+            )
+            mappraiser_buffer_raw.clear()
+        nodecomm.barrier()
     return
