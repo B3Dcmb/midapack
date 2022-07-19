@@ -309,7 +309,14 @@ class Mappraiser(Operator):
             # madam.clear_caches()
             self._cached = False
 
-        for atr in ["timestamps", "noise", "signal", "pixels", "pixweights"]:
+        for atr in [
+            "timestamps",
+            "noise",
+            "signal",
+            "pixels",
+            "pixweights",
+            "blocksizes",
+        ]:
             atrname = "_mappraiser_{}".format(atr)
             rawname = "{}_raw".format(atrname)
             if hasattr(self, atrname):
@@ -1002,6 +1009,8 @@ class Mappraiser(Operator):
                 )
                 del self._mappraiser_signal
                 del self._mappraiser_signal_raw
+                del self._mappraiser_blocksizes
+                del self._mappraiser_blocksizes_raw
             else:
                 # We want to re-use the signal buffer, just copy.
                 restore_local(
