@@ -13,6 +13,7 @@ from toast.traits import Bool, Dict, Instance, Int, Unicode, trait_docs
 from toast.utils import Environment, GlobalTimers, Logger, Timer, dtype_to_aligned
 from toast.ops.delete import Delete
 from .utils import (
+    compute_local_block_sizes,
     log_time_memory,
     restore_in_turns,
     restore_local,
@@ -126,6 +127,8 @@ class Mappraiser(Operator):
     det_data = Unicode(
         defaults.det_data, help="Observation detdata key for the timestream data"
     )
+
+    noise_name = Unicode("noise", help="Observation detdata key for noise data")
 
     det_flags = Unicode(
         defaults.det_flags,
@@ -326,11 +329,12 @@ class Mappraiser(Operator):
 
         for atr in [
             "timestamps",
-            "noise",
             "signal",
+            "blocksizes",
+            "noise",
+            "invtt",
             "pixels",
             "pixweights",
-            "blocksizes",
         ]:
             atrname = "_mappraiser_{}".format(atr)
             rawname = "{}_raw".format(atrname)
@@ -436,7 +440,7 @@ class Mappraiser(Operator):
         if data.comm.world_rank == 0:
             msg = "{} Copying toast data to buffers".format(self._logprefix)
             log.info(msg)
-        (signal_dtype, data_size_proc, nb_obs_loc,) = self._stage_data(
+        signal_dtype, data_size_proc = self._stage_data(
             params,
             data,
             all_dets,
@@ -456,7 +460,7 @@ class Mappraiser(Operator):
             params,
             data,
             data_size_proc,
-            nb_obs_loc * len(all_dets),
+            len(data.obs) * len(all_dets),
             nnz,
         )
 
@@ -735,9 +739,6 @@ class Mappraiser(Operator):
 
         signal_dtype = data.obs[0].detdata[self.det_data].dtype
 
-        # Get number of local observations
-        nb_obs_loc = len(data.obs)
-
         if self._cached:
             # We have previously created the mappraiser buffers.  We just need to fill
             # them from the toast data.  Since both already exist we just copy the
@@ -757,19 +758,12 @@ class Mappraiser(Operator):
                 None,
                 None,
                 do_purge=False,
-                compute_blocksizes=True,
-                blocksizes_buffer=self._mappraiser_blocksizes,
             )
         else:
             # Signal buffers do not yet exist
             if self.purge_det_data:
                 # Allocate in a staggered way.
-                (
-                    self._mappraiser_signal_raw,
-                    self._mappraiser_signal,
-                    self._mappraiser_blocksizes_raw,
-                    self._mappraiser_blocksizes,
-                ) = stage_in_turns(
+                self._mappraiser_signal_raw, self._mappraiser_signal = stage_in_turns(
                     data,
                     nodecomm,
                     n_copy_groups,
@@ -785,20 +779,12 @@ class Mappraiser(Operator):
                     None,
                     None,
                     None,
-                    compute_blocksizes=True,
                 )
             else:
                 # Allocate and copy all at once.
                 storage, _ = dtype_to_aligned(mappraiser.SIGNAL_TYPE)
                 self._mappraiser_signal_raw = storage.zeros(nsamp * len(all_dets))
                 self._mappraiser_signal = self._mappraiser_signal_raw.array()
-
-                # Store local data sizes computed during signal staging
-                b_storage, _ = dtype_to_aligned(mappraiser.PIXEL_TYPE)
-                self._mappraiser_blocksizes_raw = b_storage.zeros(
-                    nb_obs_loc * len(all_dets)
-                )
-                self._mappraiser_blocksizes = self._mappraiser_blocksizes_raw.array()
 
                 stage_local(
                     data,
@@ -815,9 +801,21 @@ class Mappraiser(Operator):
                     None,
                     None,
                     do_purge=False,
-                    compute_blocksizes=True,
-                    blocksizes_buffer=self._mappraiser_blocksizes,
                 )
+            # Create buffer for local_block_sizes
+            b_storage, _ = dtype_to_aligned(mappraiser.PIXEL_TYPE)
+            self._mappraiser_blocksizes_raw = b_storage.zeros(
+                len(data.obs) * len(all_dets)
+            )
+            self._mappraiser_blocksizes = self._mappraiser_blocksizes_raw.array()
+
+        # Compute sizes of local data blocks
+        compute_local_block_sizes(
+            data,
+            self.view,
+            all_dets,
+            self._mappraiser_blocksizes,
+        )
 
         # Gather data sizes of the full communicator in global array
         data_size_proc = np.array(
@@ -830,6 +828,89 @@ class Mappraiser(Operator):
             timer_msg="Copy signal",
             prefix=self._logprefix,
             mem_msg="After signal staging",
+            full_mem=self.mem_report,
+        )
+
+        # Copy the noise.
+        # ? For the moment, in the absence of a gap-filling procedure in mappraiser, we separate signal and noise in the simulations
+
+        if self._cached:
+            # We have previously created the mappraiser buffers.  We just need to fill
+            # them from the toast data.  Since both already exist we just copy the
+            # contents.
+            stage_local(
+                data,
+                nsamp,
+                self.view,
+                all_dets,
+                self.noise_name,
+                self._mappraiser_noise,
+                interval_starts,
+                1,
+                1,
+                None,
+                None,
+                None,
+                None,
+                do_purge=False,
+            )
+        else:
+            # Signal buffers do not yet exist
+            if self.purge_det_data:
+                # Allocate in a staggered way.
+                (self._mappraiser_noise_raw, self._mappraiser_noise,) = stage_in_turns(
+                    data,
+                    nodecomm,
+                    n_copy_groups,
+                    nsamp,
+                    self.view,
+                    all_dets,
+                    self.noise_name,
+                    mappraiser.SIGNAL_TYPE,
+                    interval_starts,
+                    1,
+                    1,
+                    None,
+                    None,
+                    None,
+                    None,
+                )
+            else:
+                # Allocate and copy all at once.
+                storage, _ = dtype_to_aligned(mappraiser.SIGNAL_TYPE)
+                self._mappraiser_noise_raw = storage.zeros(nsamp * len(all_dets))
+                self._mappraiser_noise = self._mappraiser_signal_raw.array()
+
+                stage_local(
+                    data,
+                    nsamp,
+                    self.view,
+                    all_dets,
+                    self.noise_name,
+                    self._mappraiser_noise,
+                    interval_starts,
+                    1,
+                    1,
+                    None,
+                    None,
+                    None,
+                    None,
+                    do_purge=False,
+                )
+
+        # Compute invtt
+        compute_invtt(
+            self._mappraiser_noise,
+            self._mappraiser_blocksizes,
+            self._mappraiser_invtt,
+        )
+
+        log_time_memory(
+            data,
+            timer=timer,
+            timer_msg="Copy noise",
+            prefix=self._logprefix,
+            mem_msg="After noise staging",
             full_mem=self.mem_report,
         )
 
@@ -956,7 +1037,6 @@ class Mappraiser(Operator):
         return (
             signal_dtype,
             data_size_proc,
-            nb_obs_loc,
         )
 
     @function_timer
@@ -1010,6 +1090,7 @@ class Mappraiser(Operator):
             # We are copying some kind of signal back
             if not self.mcmode:
                 # We are not running multiple realizations, so delete as we copy.
+                # Restore signal
                 restore_in_turns(
                     data,
                     nodecomm,
@@ -1019,7 +1100,7 @@ class Mappraiser(Operator):
                     all_dets,
                     out_name,
                     signal_dtype,
-                    self._mmappraisersignal,
+                    self._mappraiser_signal,
                     self._mappraiser_signal_raw,
                     interval_starts,
                     1,
@@ -1028,6 +1109,23 @@ class Mappraiser(Operator):
                 del self._mappraiser_signal_raw
                 del self._mappraiser_blocksizes
                 del self._mappraiser_blocksizes_raw
+                # Restore noise
+                restore_in_turns(
+                    data,
+                    nodecomm,
+                    n_copy_groups,
+                    nsamp,
+                    self.view,
+                    all_dets,
+                    out_name,
+                    signal_dtype,
+                    self._mappraiser_noise,
+                    self._mappraiser_noise_raw,
+                    interval_starts,
+                    1,
+                )
+                del self._mappraiser_noise
+                del self._mappraiser_noise_raw
             else:
                 # We want to re-use the signal buffer, just copy.
                 restore_local(
@@ -1038,6 +1136,17 @@ class Mappraiser(Operator):
                     out_name,
                     signal_dtype,
                     self._mappraiser_signal,
+                    interval_starts,
+                    1,
+                )
+                restore_local(
+                    data,
+                    nsamp,
+                    self.view,
+                    all_dets,
+                    out_name,
+                    signal_dtype,
+                    self._mappraiser_noise,
                     interval_starts,
                     1,
                 )

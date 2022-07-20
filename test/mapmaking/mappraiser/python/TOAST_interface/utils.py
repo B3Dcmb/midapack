@@ -269,6 +269,7 @@ def apply_mappraiser(
 def log_time_memory(
     data, timer=None, timer_msg=None, mem_msg=None, full_mem=False, prefix=""
 ):
+    """(This function is taken from madam_utils.py)"""
     log = Logger.get()
     data.comm.comm_world.barrier()
     restart = False
@@ -317,14 +318,11 @@ def stage_local(
     det_mask,
     do_purge=False,
     operator=None,
-    compute_blocksizes=False,
-    b_buffer=None,
 ):
-    """Helper function to fill a mappraiser buffer from a local detdata key."""
+    """Helper function to fill a mappraiser buffer from a local detdata key.
+    (This function is taken from madam_utils.py)
+    """
     n_det = len(dets)
-    nb_obs_loc = len(data.obs)
-    if compute_blocksizes:
-        assert b_buffer is not None
     interval_offset = 0
     do_flags = False
     if shared_flags is not None or det_flags is not None:
@@ -337,7 +335,7 @@ def stage_local(
             raise RuntimeError(
                 "Internal error on mappraiser copy.  Only pixel indices should be flagged."
             )
-    for iobs, ob in enumerate(data.obs):
+    for ob in data.obs:
         views = ob.view[view]
         for idet, det in enumerate(dets):
             if det not in ob.local_detectors:
@@ -354,8 +352,6 @@ def stage_local(
                     view_samples = ob.n_local_samples
                 else:
                     view_samples = vw.stop - vw.start
-                if compute_blocksizes:
-                    b_buffer[idet * nb_obs_loc + iobs] += view_samples
                 offset = interval_starts[interval_offset + ivw]
                 flags = None
                 if do_flags:
@@ -408,9 +404,10 @@ def stage_in_turns(
     det_flags,
     det_mask,
     operator=None,
-    compute_blocksizes=False,
 ):
-    """When purging data, take turns staging it."""
+    """When purging data, take turns staging it.
+    (This function is taken from madam_utils.py)
+    """
     raw = None
     wrapped = None
     for copying in range(n_copy_groups):
@@ -419,14 +416,6 @@ def stage_in_turns(
             storage, _ = dtype_to_aligned(mappraiser_dtype)
             raw = storage.zeros(nsamp * len(dets) * nnz)
             wrapped = raw.array()
-            if compute_blocksizes:
-                # create buffer for local_block_sizes
-                b_storage, _ = dtype_to_aligned(np.int32)
-                # TODO: don't define this dtype explicitly
-                b_raw = b_storage.zeros(len(data.obs) * len(dets))
-                b_wrapped = b_raw.array()
-            else:
-                b_wrapped = None
             stage_local(
                 data,
                 nsamp,
@@ -443,14 +432,9 @@ def stage_in_turns(
                 det_mask,
                 do_purge=True,
                 operator=operator,
-                compute_blocksizes=compute_blocksizes,
-                blocksizes_buffer=b_wrapped,
             )
         nodecomm.barrier()
-    if compute_blocksizes:
-        return raw, wrapped, b_raw, b_wrapped
-    else:
-        return raw, wrapped
+    return raw, wrapped
 
 
 def restore_local(
@@ -464,7 +448,9 @@ def restore_local(
     interval_starts,
     nnz,
 ):
-    """Helper function to create a detdata buffer from mappraiser data."""
+    """Helper function to create a detdata buffer from mappraiser data.
+    (This function is taken from madam_utils.py)
+    """
     n_det = len(dets)
     interval = 0
     for ob in data.obs:
@@ -518,7 +504,9 @@ def restore_in_turns(
     interval_starts,
     nnz,
 ):
-    """When restoring data, take turns copying it."""
+    """When restoring data, take turns copying it.
+    (This function is taken from madam_utils.py)
+    """
     for copying in range(n_copy_groups):
         if nodecomm.rank % n_copy_groups == copying:
             # Our turn to copy data
@@ -536,3 +524,122 @@ def restore_in_turns(
             mappraiser_buffer_raw.clear()
         nodecomm.barrier()
     return
+
+
+def compute_local_block_sizes(data, view, dets, buffer):
+    """Compute the sizes of the local data blocks and store them in the provided buffer."""
+    for iobs, ob in enumerate(data.obs):
+        views = ob.view[view]
+        for idet, det in enumerate(dets):
+            if det not in ob.local_detectors:
+                continue
+            # Loop over views
+            for vw in views:
+                view_samples = None
+                if vw.start is None:
+                    # This is a view of the whole obs
+                    view_samples = ob.n_local_samples
+                else:
+                    view_samples = vw.stop - vw.start
+                buffer[idet * len(data.obs) + iobs] += view_samples
+    return
+
+
+def compute_invtt(mappraiser_noise, local_block_sizes, buffer):
+    """Compute the banded noise covariance first lines and store them in the provided buffer."""
+    # FIXME
+
+
+def _noise2invtt(self, noise, nn, idet):
+    """Computes a periodogram from a noise timestream, and fits a PSD model
+    to it, which is then used to build the first row of a Toeplitz block.
+    """
+    # FIXME
+    # parameters
+    sampling_freq = self._params["samplerate"]
+    # closest power of two to 1/4 of the timestream length
+    Max_lambda = 2 ** (int(math.log(nn / 4, 2)))
+    f_defl = sampling_freq / (np.pi * Max_lambda)
+    df = f_defl / 2
+    block_size = 2 ** (int(math.log(sampling_freq * 1.0 / df, 2)))
+
+    # Compute periodogram
+    f, psd = scipy.signal.periodogram(
+        noise, sampling_freq, nfft=block_size, window="blackman"
+    )
+    # if idet==37:
+    #     print(len(f), flush=True)
+
+    # Fit the psd model to the periodogram (in log scale)
+    popt, pcov = curve_fit(
+        logpsd_model,
+        f[1:],
+        np.log10(psd[1:]),
+        p0=np.array([-7, -1.0, 0.1, 0.0]),
+        bounds=([-20, -10, 0.0, 0.0], [0.0, 0.0, 10, 0.001]),
+        maxfev=1000,
+    )
+
+    if self._rank == 0 and idet == 0:
+        print(
+            "\n[det "
+            + str(idet)
+            + "]: PSD fit log(sigma2) = %1.2f, alpha = %1.2f, fknee = %1.2f, fmin = %1.2f\n"
+            % tuple(popt),
+            flush=True,
+        )
+        print("[det " + str(idet) + "]: PSD fit covariance: \n", pcov, flush=True)
+    # psd_fit_m1 = np.zeros_like(f)
+    # psd_fit_m1[1:] = inversepsd_model(f[1:],10**popt[0],popt[1],popt[2])
+
+    # Invert periodogram
+    psd_sim_m1 = np.reciprocal(psd)
+    # if self._rank == 0 and idet == 0:
+    # np.save("psd_sim.npy",psd_sim_m1)
+    # psd_sim_m1_log = np.log10(psd_sim_m1)
+
+    # Invert the fit to the psd model / Fit the inverse psd model to the inverted periodogram
+    # popt,pcov = curve_fit(inverselogpsd_model,f[1:],psd_sim_m1_log[1:])
+    # print(popt)
+    # print(pcov)
+    psd_fit_m1 = np.zeros_like(f)
+    psd_fit_m1[1:] = inversepsd_model(
+        f[1:], 10 ** (-popt[0]), popt[1], popt[2], popt[3]
+    )
+
+    # Initialize full size inverse PSD in frequency domain
+    fs = fftfreq(block_size, 1.0 / sampling_freq)
+    psdm1 = np.zeros_like(fs)
+
+    # Symmetrize inverse PSD according to fs shape
+    # psdfit[:int(block_size/2)]
+    psdm1[: int(block_size / 2)] = psd_fit_m1[:-1]
+    psdm1[int(block_size / 2) :] = np.flip(psd_fit_m1[1:], 0)
+
+    # Compute inverse noise autocorrelation functions
+    inv_tt = np.real(np.fft.ifft(psdm1, n=block_size))
+
+    # Define apodization window
+    window = scipy.signal.gaussian(
+        2 * self._params["Lambda"], 1.0 / 2 * self._params["Lambda"]
+    )
+    window = np.fft.ifftshift(window)
+    window = window[: self._params["Lambda"]]
+    window = np.pad(
+        window, (0, int(block_size / 2 - (self._params["Lambda"]))), "constant"
+    )
+    symw = np.zeros(block_size)
+    symw[: int(block_size / 2)] = window
+    symw[int(block_size / 2) :] = np.flip(window, 0)
+
+    inv_tt_w = np.multiply(symw, inv_tt, dtype=mappraiser.INVTT_TYPE)
+
+    # effective inverse noise power
+    # if self._rank == 0 and idet == 0:
+    # psd = np.abs(np.fft.fft(inv_tt_w,n=block_size))
+    # np.save("freq.npy",fs[:int(block_size/2)])
+    # np.save("psd0.npy",psdm1[:int(block_size/2)])
+    # np.save("psd"+str(self._params["Lambda"])+".npy",psd[:int(block_size/2)])
+
+    # , popt[0], popt[1], popt[2], popt[3]
+    return inv_tt_w[: self._params["Lambda"]]
