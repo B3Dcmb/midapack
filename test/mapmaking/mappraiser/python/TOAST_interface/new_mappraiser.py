@@ -13,6 +13,7 @@ from toast.traits import Bool, Dict, Instance, Int, Unicode, trait_docs
 from toast.utils import Environment, GlobalTimers, Logger, Timer, dtype_to_aligned
 from toast.ops.delete import Delete
 from .utils import (
+    compute_invtt,
     compute_local_block_sizes,
     log_time_memory,
     restore_in_turns,
@@ -832,7 +833,7 @@ class Mappraiser(Operator):
         )
 
         # Copy the noise.
-        # ? For the moment, in the absence of a gap-filling procedure in mappraiser, we separate signal and noise in the simulations
+        # For the moment, in the absence of a gap-filling procedure in mappraiser, we separate signal and noise in the simulations
 
         if self._cached:
             # We have previously created the mappraiser buffers.  We just need to fill
@@ -900,9 +901,14 @@ class Mappraiser(Operator):
 
         # Compute invtt
         compute_invtt(
+            len(data.obs),
+            len(all_dets),
             self._mappraiser_noise,
             self._mappraiser_blocksizes,
+            params["Lambda"],
+            params["fsample"],
             self._mappraiser_invtt,
+            mappraiser.INVTT_TYPE,
         )
 
         log_time_memory(

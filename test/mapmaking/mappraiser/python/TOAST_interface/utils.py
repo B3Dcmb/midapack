@@ -10,6 +10,10 @@ import os
 import re
 
 import numpy as np
+import math
+import scipy.signal
+from scipy.optimize import curve_fit
+
 from toast.timing import function_timer
 from toast.utils import GlobalTimers, Logger, Timer, dtype_to_aligned, memreport
 from toast.ops.memory_counter import MemoryCounter
@@ -174,7 +178,7 @@ def setup_mappraiser(args):
 
 
 @function_timer
-def apply_mappraiser(
+def apply_mappraiser(  # FIXME
     args,
     comm,
     data,
@@ -322,7 +326,6 @@ def stage_local(
     """Helper function to fill a mappraiser buffer from a local detdata key.
     (This function is taken from madam_utils.py)
     """
-    n_det = len(dets)
     interval_offset = 0
     do_flags = False
     if shared_flags is not None or det_flags is not None:
@@ -451,7 +454,6 @@ def restore_local(
     """Helper function to create a detdata buffer from mappraiser data.
     (This function is taken from madam_utils.py)
     """
-    n_det = len(dets)
     interval = 0
     for ob in data.obs:
         # Create the detector data
@@ -545,30 +547,76 @@ def compute_local_block_sizes(data, view, dets, buffer):
     return
 
 
-def compute_invtt(mappraiser_noise, local_block_sizes, buffer):
-    """Compute the banded noise covariance first lines and store them in the provided buffer."""
-    # FIXME
+def compute_invtt(
+    nobs,
+    ndet,
+    mappraiser_noise,
+    local_block_sizes,
+    Lambda,
+    fsamp,
+    buffer,
+    invtt_dtype,
+):
+    """Compute the first lines of the blocks of the banded noise covariance and store them in the provided buffer."""
+    offset = 0
+    for iobs in range(nobs):
+        for idet in range(ndet):
+            blocksize = local_block_sizes[idet * nobs + iobs]
+            nse = mappraiser_noise[offset : offset + blocksize]
+            slc = slice(
+                (idet * nobs + iobs) * Lambda,
+                (idet * nobs + iobs) * Lambda + Lambda,
+                1,
+            )
+            buffer[slc] = noise2invtt(
+                nse,
+                blocksize,
+                Lambda,
+                fsamp,
+                idet,
+                invtt_dtype,
+                verbose=(idet == 0),
+            )
+            offset += blocksize
+    return
 
 
-def _noise2invtt(self, noise, nn, idet):
+def psd_model(f, sigma, alpha, fknee, fmin):
+    return sigma * (1 + ((f + fmin) / fknee) ** alpha)
+
+
+def logpsd_model(f, a, alpha, fknee, fmin):
+    return a + np.log10(1 + ((f + fmin) / fknee) ** alpha)
+
+
+def inversepsd_model(f, sigma, alpha, fknee, fmin):
+    return sigma * 1.0 / (1 + ((f + fmin) / fknee) ** alpha)
+
+
+def inverselogpsd_model(f, a, alpha, fknee, fmin):
+    return a - np.log10(1 + ((f + fmin) / fknee) ** alpha)
+
+
+def noise2invtt(
+    nse,
+    nn,
+    Lambda,
+    fsamp,
+    idet,
+    invtt_dtype,
+    verbose=False,
+):
     """Computes a periodogram from a noise timestream, and fits a PSD model
     to it, which is then used to build the first row of a Toeplitz block.
     """
-    # FIXME
-    # parameters
-    sampling_freq = self._params["samplerate"]
     # closest power of two to 1/4 of the timestream length
-    Max_lambda = 2 ** (int(math.log(nn / 4, 2)))
-    f_defl = sampling_freq / (np.pi * Max_lambda)
+    max_Lambda = 2 ** (int(math.log(nn / 4, 2)))
+    f_defl = fsamp / (np.pi * max_Lambda)
     df = f_defl / 2
-    block_size = 2 ** (int(math.log(sampling_freq * 1.0 / df, 2)))
+    block_size = 2 ** (int(math.log(fsamp * 1.0 / df, 2)))
 
     # Compute periodogram
-    f, psd = scipy.signal.periodogram(
-        noise, sampling_freq, nfft=block_size, window="blackman"
-    )
-    # if idet==37:
-    #     print(len(f), flush=True)
+    f, psd = scipy.signal.periodogram(nse, fsamp, nfft=block_size, window="blackman")
 
     # Fit the psd model to the periodogram (in log scale)
     popt, pcov = curve_fit(
@@ -580,7 +628,7 @@ def _noise2invtt(self, noise, nn, idet):
         maxfev=1000,
     )
 
-    if self._rank == 0 and idet == 0:
+    if verbose:
         print(
             "\n[det "
             + str(idet)
@@ -588,15 +636,15 @@ def _noise2invtt(self, noise, nn, idet):
             % tuple(popt),
             flush=True,
         )
-        print("[det " + str(idet) + "]: PSD fit covariance: \n", pcov, flush=True)
+        print(f"[det {idet}]: PSD fit covariance: \n", pcov, flush=True)
     # psd_fit_m1 = np.zeros_like(f)
     # psd_fit_m1[1:] = inversepsd_model(f[1:],10**popt[0],popt[1],popt[2])
 
     # Invert periodogram
-    psd_sim_m1 = np.reciprocal(psd)
-    # if self._rank == 0 and idet == 0:
-    # np.save("psd_sim.npy",psd_sim_m1)
-    # psd_sim_m1_log = np.log10(psd_sim_m1)
+    # psd_sim_m1 = np.reciprocal(psd)
+    # if verbose:
+    #     np.save("psd_sim.npy",psd_sim_m1)
+    #     psd_sim_m1_log = np.log10(psd_sim_m1)
 
     # Invert the fit to the psd model / Fit the inverse psd model to the inverted periodogram
     # popt,pcov = curve_fit(inverselogpsd_model,f[1:],psd_sim_m1_log[1:])
@@ -608,7 +656,7 @@ def _noise2invtt(self, noise, nn, idet):
     )
 
     # Initialize full size inverse PSD in frequency domain
-    fs = fftfreq(block_size, 1.0 / sampling_freq)
+    fs = np.fft.fftfreq(block_size, 1.0 / fsamp)
     psdm1 = np.zeros_like(fs)
 
     # Symmetrize inverse PSD according to fs shape
@@ -620,26 +668,21 @@ def _noise2invtt(self, noise, nn, idet):
     inv_tt = np.real(np.fft.ifft(psdm1, n=block_size))
 
     # Define apodization window
-    window = scipy.signal.gaussian(
-        2 * self._params["Lambda"], 1.0 / 2 * self._params["Lambda"]
-    )
+    window = scipy.signal.gaussian(2 * Lambda, 1.0 / 2 * Lambda)
     window = np.fft.ifftshift(window)
-    window = window[: self._params["Lambda"]]
-    window = np.pad(
-        window, (0, int(block_size / 2 - (self._params["Lambda"]))), "constant"
-    )
+    window = window[:Lambda]
+    window = np.pad(window, (0, int(block_size / 2 - (Lambda))), "constant")
     symw = np.zeros(block_size)
     symw[: int(block_size / 2)] = window
     symw[int(block_size / 2) :] = np.flip(window, 0)
 
-    inv_tt_w = np.multiply(symw, inv_tt, dtype=mappraiser.INVTT_TYPE)
+    inv_tt_w = np.multiply(symw, inv_tt, dtype=invtt_dtype)
 
     # effective inverse noise power
-    # if self._rank == 0 and idet == 0:
-    # psd = np.abs(np.fft.fft(inv_tt_w,n=block_size))
-    # np.save("freq.npy",fs[:int(block_size/2)])
-    # np.save("psd0.npy",psdm1[:int(block_size/2)])
-    # np.save("psd"+str(self._params["Lambda"])+".npy",psd[:int(block_size/2)])
+    # if verbose:
+    #     psd = np.abs(np.fft.fft(inv_tt_w,n=block_size))
+    #     np.save("freq.npy",fs[:int(block_size/2)])
+    #     np.save("psd0.npy",psdm1[:int(block_size/2)])
+    #     np.save("psd"+str(Lambda)+".npy",psd[:int(block_size/2)])
 
-    # , popt[0], popt[1], popt[2], popt[3]
-    return inv_tt_w[: self._params["Lambda"]]
+    return inv_tt_w[:Lambda]
