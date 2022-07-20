@@ -109,7 +109,7 @@ def MLmap(
     if not available:
         raise RuntimeError("No libmappraiser available, cannot reconstruct the map")
 
-    outpath = params["output"].encode("ascii")
+    outpath = params["path_output"].encode("ascii")
     ref = params["ref"].encode("ascii")
 
     _mappraiser.MLmap(

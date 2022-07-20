@@ -515,7 +515,7 @@ class Mappraiser(Operator):
         timer = Timer()
         timer.start()
 
-        params["nside_map"] = self.pixel_pointing.nside
+        params["nside"] = self.pixel_pointing.nside
 
         # Mappraiser requires a fixed set of detectors and pointing matrix non-zeros.
         # Here we find the superset of local detectors used, and also the number
