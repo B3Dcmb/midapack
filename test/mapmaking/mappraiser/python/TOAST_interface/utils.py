@@ -317,11 +317,14 @@ def stage_local(
     det_mask,
     do_purge=False,
     operator=None,
-    blocksizes_buffer=None,
+    compute_blocksizes=False,
+    b_buffer=None,
 ):
     """Helper function to fill a mappraiser buffer from a local detdata key."""
     n_det = len(dets)
     nb_obs_loc = len(data.obs)
+    if compute_blocksizes:
+        assert b_buffer is not None
     interval_offset = 0
     do_flags = False
     if shared_flags is not None or det_flags is not None:
@@ -351,6 +354,8 @@ def stage_local(
                     view_samples = ob.n_local_samples
                 else:
                     view_samples = vw.stop - vw.start
+                if compute_blocksizes:
+                    b_buffer[idet * nb_obs_loc + iobs] += view_samples
                 offset = interval_starts[interval_offset + ivw]
                 flags = None
                 if do_flags:
@@ -368,10 +373,6 @@ def stage_local(
                     mappraiser_buffer[slc] = views.detdata[detdata_name][ivw][
                         det
                     ].flatten()[::nnz_stride]
-                    if blocksizes_buffer is not None:
-                        blocksizes_buffer[idet * nb_obs_loc + iobs] = len(
-                            mappraiser_buffer[slc]
-                        )
                 else:
                     mappraiser_buffer[slc] = views.detdata[detdata_name][ivw][
                         det
@@ -407,6 +408,7 @@ def stage_in_turns(
     det_flags,
     det_mask,
     operator=None,
+    compute_blocksizes=False,
 ):
     """When purging data, take turns staging it."""
     raw = None
@@ -417,12 +419,14 @@ def stage_in_turns(
             storage, _ = dtype_to_aligned(mappraiser_dtype)
             raw = storage.zeros(nsamp * len(dets) * nnz)
             wrapped = raw.array()
-            if detdata_name == "signal":
+            if compute_blocksizes:
                 # create buffer for local_block_sizes
                 b_storage, _ = dtype_to_aligned(np.int32)
                 # TODO: don't define this dtype explicitly
                 b_raw = b_storage.zeros(len(data.obs) * len(dets))
                 b_wrapped = b_raw.array()
+            else:
+                b_wrapped = None
             stage_local(
                 data,
                 nsamp,
@@ -439,10 +443,11 @@ def stage_in_turns(
                 det_mask,
                 do_purge=True,
                 operator=operator,
+                compute_blocksizes=compute_blocksizes,
                 blocksizes_buffer=b_wrapped,
             )
         nodecomm.barrier()
-    if detdata_name == "signal":
+    if compute_blocksizes:
         return raw, wrapped, b_raw, b_wrapped
     else:
         return raw, wrapped

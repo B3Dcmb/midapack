@@ -162,7 +162,7 @@ class Mappraiser(Operator):
         help="This must be an instance of a Stokes weights operator",
     )
 
-    #! N.B: this is not supported at the moment.
+    #! N.B: this is not supported for the moment.
     view = Unicode(
         None, allow_none=True, help="Use this view of the data in all observations"
     )
@@ -188,11 +188,11 @@ class Mappraiser(Operator):
         help="If True, restore detector data to observations on completion",
     )
 
-    # N.B: For the moment no such thing is implemented.
-    # mcmode = Bool(
-    #     False,
-    #     help="If true, Madam will store auxiliary information such as pixel matrices and noise filter.",
-    # )
+    #! N.B: not supported for the moment
+    mcmode = Bool(
+        False,
+        help="If true, Madam will store auxiliary information such as pixel matrices and noise filter.",
+    )
 
     copy_groups = Int(
         1,
@@ -291,6 +291,21 @@ class Mappraiser(Operator):
                 check["info"] = 3
             else:
                 check["info"] = 1
+        return check
+
+    # Check the traits that are not yet supported
+    @traitlets.validate("view")
+    def _check_view(self, proposal):
+        check = proposal["value"]
+        if check is not None:
+            raise traitlets.TraitError("Views of the data are currently not supported")
+        return check
+
+    @traitlets.validate("mcmode")
+    def _check_mcmode(self, proposal):
+        check = proposal["value"]
+        if check:
+            raise traitlets.TraitError("MC mode is not currently supported")
         return check
 
     def __init__(self, **kwargs):
@@ -742,6 +757,7 @@ class Mappraiser(Operator):
                 None,
                 None,
                 do_purge=False,
+                compute_blocksizes=True,
                 blocksizes_buffer=self._mappraiser_blocksizes,
             )
         else:
@@ -769,6 +785,7 @@ class Mappraiser(Operator):
                     None,
                     None,
                     None,
+                    compute_blocksizes=True,
                 )
             else:
                 # Allocate and copy all at once.
@@ -778,7 +795,6 @@ class Mappraiser(Operator):
 
                 # Store local data sizes computed during signal staging
                 b_storage, _ = dtype_to_aligned(mappraiser.PIXEL_TYPE)
-                # TODO: adapt if using a specific View of the data ?
                 self._mappraiser_blocksizes_raw = b_storage.zeros(
                     nb_obs_loc * len(all_dets)
                 )
@@ -799,6 +815,7 @@ class Mappraiser(Operator):
                     None,
                     None,
                     do_purge=False,
+                    compute_blocksizes=True,
                     blocksizes_buffer=self._mappraiser_blocksizes,
                 )
 
@@ -1052,7 +1069,13 @@ class Mappraiser(Operator):
             full_mem=self.mem_report,
         )
 
-        # compute the ML map
+        # ? how to use mcmode (not yet supported)
+        # if self._cached:
+        # -> call mappraiser in "cached" mode
+        # else:
+        # -> call mappraiser in normal mode
+        # -> if self.mcmode: self._cached=True
+
         mappraiser.MLmap(
             data.comm.comm_world,
             params,
@@ -1067,6 +1090,7 @@ class Mappraiser(Operator):
             params["Lambda"],
             self._mappraiser_invtt,
         )
+
         return
 
     def _requires(self):
