@@ -898,6 +898,12 @@ class Mappraiser(Operator):
                     None,
                     do_purge=False,
                 )
+            # Create buffer for invtt
+            tt_storage, _ = dtype_to_aligned(mappraiser.INVTT_TYPE)
+            self._mappraiser_invtt_raw = tt_storage.zeros(
+                len(data.obs) * len(all_dets) * params["Lambda"]
+            )
+            self._mappraiser_invtt = self._mappraiser_invtt_raw.array()
 
         # Compute invtt
         compute_invtt(
@@ -1132,6 +1138,8 @@ class Mappraiser(Operator):
                 )
                 del self._mappraiser_noise
                 del self._mappraiser_noise_raw
+                del self._mappraiser_invtt
+                del self._mappraiser_invtt_raw
             else:
                 # We want to re-use the signal buffer, just copy.
                 restore_local(
