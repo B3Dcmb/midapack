@@ -61,7 +61,7 @@ $(MAPPRAISER_OBJ)/precond.o: precond.c
 	$(CC) -c $< $(INC) $(LIB) -o $@
 
 $(MAPPRAISER_OBJ)/pcg_true.o: pcg_true.c
-	$(CC) -c $< $(INC) $(LIB) -o $@
+	$(CC) -c $< $(INC) $(LIB) $(CFITSIO_INC) $(CFITSIO_LIB) -o $@
 
 $(MAPPRAISER_OBJ)/ecg.o: ecg.c
 	$(CC) -c $< $(INC) $(LIB) $(INCpreAlps) $(LIBpreAlps) -o $@
