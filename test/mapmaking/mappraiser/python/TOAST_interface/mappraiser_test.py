@@ -95,8 +95,10 @@ class MappraiserTest(MPITestCase):
         default_model = ops.DefaultNoiseModel(noise_model="noise_model")
         default_model.apply(data)
 
+        # print(f"psd unit = {data.obs[0]['noise_model'].psd(data.obs[0].local_detectors[0]).unit}", flush=True)
+
         # Simulate noise from this model
-        sim_noise = ops.SimNoise(noise_model="noise_model", out="noise")
+        sim_noise = ops.SimNoise(noise_model="noise_model", det_data="noise")
         sim_noise.apply(data)
 
         # Make fake flags
@@ -190,7 +192,7 @@ class MappraiserTest(MPITestCase):
         pars["enlFac"] = 1
         pars["ortho_alg"] = 1
         pars["bs_red"] = 0
-        pars["Lambda"] = 4096
+        pars["Lambda"] = 16
         pars["ref"] = "run0"
 
         # FIXME: add a view here once our test data includes it
@@ -205,6 +207,7 @@ class MappraiserTest(MPITestCase):
             copy_groups=2,
             purge_det_data=False,
             restore_det_data=False,
+            mem_report=True,
         )
         mappraiser.apply(data)
 

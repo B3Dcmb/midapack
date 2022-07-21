@@ -13,13 +13,11 @@ import numpy as np
 import math
 import scipy.signal
 from scipy.optimize import curve_fit
+from astropy import units as u
 
 from toast.timing import function_timer
 from toast.utils import GlobalTimers, Logger, Timer, dtype_to_aligned, memreport
 from toast.ops.memory_counter import MemoryCounter
-
-from TOAST_interface import Mappraiser
-
 
 def add_mappraiser_args(parser):
     """Add libmappraiser arguments"""
@@ -189,14 +187,16 @@ def apply_mappraiser(  # FIXME
     telescope_data=None,
     verbose=True,
 ):
-    """Use libmappraiser to run the ML map-making
+    """Use libmappraiser to run the ML map-making.
 
-    Args:
-        time_comms (iterable) :  Series of disjoint communicators that
-            map, e.g., seasons and days.  Each entry is a tuple of
-            the form (`name`, `communicator`)
-        telescope_data (iterable) : series of disjoint TOAST data
-            objects.  Each entry is tuple of the form (`name`, `data`).
+    Parameters
+    ----------
+    time_comms: iterable
+        Series of disjoint communicators that map, e.g., seasons and days.
+        Each entry is a tuple of the form (`name`, `communicator`)
+    telescope_data: iterable
+        Series of disjoint TOAST data objects.
+        Each entry is tuple of the form (`name`, `data`).
     """
     if comm.comm_world is None:
         raise RuntimeError("Mappraiser requires MPI")
@@ -562,14 +562,14 @@ def compute_invtt(
     for iobs in range(nobs):
         for idet in range(ndet):
             blocksize = local_block_sizes[idet * nobs + iobs]
-            nse = mappraiser_noise[offset : offset + blocksize]
+            nsetod = mappraiser_noise[offset : offset + blocksize]
             slc = slice(
                 (idet * nobs + iobs) * Lambda,
                 (idet * nobs + iobs) * Lambda + Lambda,
                 1,
             )
             buffer[slc] = noise2invtt(
-                nse,
+                nsetod,
                 blocksize,
                 Lambda,
                 fsamp,
@@ -598,7 +598,7 @@ def inverselogpsd_model(f, a, alpha, fknee, fmin):
 
 
 def noise2invtt(
-    nse,
+    nsetod,
     nn,
     Lambda,
     fsamp,
@@ -609,14 +609,21 @@ def noise2invtt(
     """Computes a periodogram from a noise timestream, and fits a PSD model
     to it, which is then used to build the first row of a Toeplitz block.
     """
+    # remove unit of fsamp to avoid problems when computing periodogram
+    try:
+        f_unit = fsamp.unit
+        fsamp = float(fsamp / (1.0 * f_unit))
+    except AttributeError:
+        pass
+    
     # closest power of two to 1/4 of the timestream length
     max_Lambda = 2 ** (int(math.log(nn / 4, 2)))
     f_defl = fsamp / (np.pi * max_Lambda)
     df = f_defl / 2
     block_size = 2 ** (int(math.log(fsamp * 1.0 / df, 2)))
 
-    # Compute periodogram
-    f, psd = scipy.signal.periodogram(nse, fsamp, nfft=block_size, window="blackman")
+    # Compute periodogram    
+    f, psd = scipy.signal.periodogram(nsetod, fsamp, nfft=block_size, window="blackman")
 
     # Fit the psd model to the periodogram (in log scale)
     popt, pcov = curve_fit(

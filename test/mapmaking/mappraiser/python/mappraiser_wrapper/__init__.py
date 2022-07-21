@@ -91,19 +91,32 @@ def MLmap(
     Compute the MLMV solution of the GLS estimator, assuming uniform detector weighting and a single PSD for all stationary intervals.
     (These assumptions will be removed in future updates)
 
-    Args:
-        comm: communicator over which data is distributed
-        params: parameter dictionary
-        data_size_proc: data sizes in full communicator
-        nb_blocks_loc: nbr of local observations
-        local_blocks_sizes: local data sizes
-        nnz: number of non-zero elements per row
-        pixels: pixel indices of non-zero values
-        pixweights: corresponding matrix values
-        signal: signal buffer
-        noise: noise buffer
-        Lambda: toeplitz matrix half-bandwidth
-        invtt: inverse noise weights
+    Parameters
+    ----------
+    comm: 
+        Communicator over which data is distributed
+    params: 
+        Parameter dictionary
+    data_size_proc: 
+        Data sizes in full communicator
+    nb_blocks_loc: 
+        Number of local observations
+    local_blocks_sizes: 
+        Local data sizes
+    nnz: 
+        Number of non-zero elements per row
+    pixels: 
+        Pixel indices of non-zero values
+    pixweights: 
+        Corresponding matrix values
+    signal: 
+        Signal buffer
+    noise: 
+        Noise buffer
+    Lambda: 
+        Toeplitz matrix half-bandwidth
+    invtt: 
+        Inverse noise weights
 
     """
     if not available:
