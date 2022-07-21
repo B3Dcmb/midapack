@@ -124,6 +124,11 @@ def MLmap(
 
     outpath = params["path_output"].encode("ascii")
     ref = params["ref"].encode("ascii")
+    
+    # DEBUG
+    print("MPI.Is_initialized()\n", MPI.Is_initialized(), flush=True)
+    print("MPI.Get_library_version()\n", MPI.Get_library_version(), flush=True)
+    # DEBUG
 
     _mappraiser.MLmap(
         encode_comm(comm),
