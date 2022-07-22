@@ -121,7 +121,7 @@ class Mappraiser(Operator):
         None, allow_none=True, help="Read mappraiser parameters from this file"
     )
 
-    # N.B: timestamps are not currently used in mappraiser.
+    # N.B: timestamps are not currently used in MAPPRAISER.
     # However, that may change in the future.
     times = Unicode(defaults.times, help="Observation shared key for timestamps")
 
@@ -171,7 +171,7 @@ class Mappraiser(Operator):
         None, allow_none=True, help="Use this view of the data in all observations"
     )
 
-    # There is not tod cleaning in Mappraiser.
+    # There is not tod cleaning in MAPPRAISER.
     # det_out = Unicode(
     #     None,
     #     allow_none=True,
@@ -324,7 +324,7 @@ class Mappraiser(Operator):
         """
 
         if self._cached:
-            # Mappraiser does not have caches to clear (no 'cached' mode implemented)
+            # MAPPRAISER does not have caches to clear (no 'cached' mode implemented)
             # madam.clear_caches()
             self._cached = False
 
@@ -517,13 +517,13 @@ class Mappraiser(Operator):
 
         params["nside"] = self.pixel_pointing.nside
 
-        # Mappraiser requires a fixed set of detectors and pointing matrix non-zeros.
+        # MAPPRAISER requires a fixed set of detectors and pointing matrix non-zeros.
         # Here we find the superset of local detectors used, and also the number
         # of pointing matrix elements.
 
         nsamp = 0
 
-        # Mappraiser uses monolithic data buffers and specifies contiguous data intervals
+        # MAPPRAISER uses monolithic data buffers and specifies contiguous data intervals
         # in that buffer.  The starting sample index is used to mark the transition
         # between data intervals.
         interval_starts = list()
@@ -531,7 +531,7 @@ class Mappraiser(Operator):
         # This quantity is only used for printing the fraction of samples in valid
         # ranges specified by the View.  Only samples actually in the view are copied
         # to Mappraiser buffers.
-        # N.B: For the moment this is useless since mappraiser does not use data views
+        # N.B: For the moment this is useless since MAPPRAISER does not use data views
         nsamp_valid = 0
 
         all_dets = set()
@@ -611,10 +611,10 @@ class Mappraiser(Operator):
         all_dets = sorted(all_dets)
 
         nnz_full = len(self.stokes_weights.mode)
-        nnz_stride = None
+        nnz_stride = None  # N.B: not used, useful for temperature-only maps
 
         if nnz_full != 3:
-            msg = f"Mappraiser cannot make a temperature map with nnz = {nnz_full}"
+            msg = f"Mappraiser cannot make maps with nnz = {nnz_full}"
             raise RuntimeError(msg)
         else:
             nnz = nnz_full
@@ -833,7 +833,7 @@ class Mappraiser(Operator):
         )
 
         # Copy the noise.
-        # For the moment, in the absence of a gap-filling procedure in mappraiser, we separate signal and noise in the simulations
+        # For the moment, in the absence of a gap-filling procedure in MAPPRAISER, we separate signal and noise in the simulations
 
         if self._cached:
             # We have previously created the mappraiser buffers.  We just need to fill
@@ -937,7 +937,7 @@ class Mappraiser(Operator):
         if not self._cached:
             # We do not have the pointing yet.
             storage, _ = dtype_to_aligned(mappraiser.PIXEL_TYPE)
-            self._mappraiser_pixels_raw = storage.zeros(nsamp * len(all_dets))
+            self._mappraiser_pixels_raw = storage.zeros(nsamp * len(all_dets) * nnz)
             self._mappraiser_pixels = self._mappraiser_pixels_raw.array()
 
             stage_local(
@@ -948,7 +948,7 @@ class Mappraiser(Operator):
                 self.pixel_pointing.pixels,
                 self._mappraiser_pixels,
                 interval_starts,
-                1,
+                3,
                 1,
                 self.shared_flags,
                 self.shared_flag_mask,
@@ -956,7 +956,12 @@ class Mappraiser(Operator):
                 self.det_flag_mask,
                 do_purge=True,
                 operator=self.pixel_pointing,
+                n_repeat=nnz,
             )
+            
+            # Arrange pixel indices for MAPPRAISER
+            for i in range(nnz):
+                self._mappraiser_pixels[i::nnz] += i
 
             storage, _ = dtype_to_aligned(mappraiser.WEIGHT_TYPE)
             self._mappraiser_pixweights_raw = storage.zeros(nsamp * len(all_dets) * nnz)

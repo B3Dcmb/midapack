@@ -4,10 +4,7 @@
 # @author: Hamza El Bouhargani
 # @date: January 2020
 
-import argparse
-import copy
-import os
-import re
+import argparse, warnings
 
 import numpy as np
 import math
@@ -322,6 +319,7 @@ def stage_local(
     det_mask,
     do_purge=False,
     operator=None,
+    n_repeat=1,
 ):
     """Helper function to fill a mappraiser buffer from a local detdata key.
     (This function is taken from madam_utils.py)
@@ -333,11 +331,17 @@ def stage_local(
         # Flagging should only be enabled when we are processing the pixel indices
         # (which is how madam effectively implements flagging).  So we will set
         # all flagged samples to "-1" below.
-        # TODO: how do we handle flagging in mappraiser?
+        # N.B: MAPPRAISER does not use flags for now.
         if nnz != 1:
-            raise RuntimeError(
-                "Internal error on mappraiser copy.  Only pixel indices should be flagged."
-            )
+            # raise RuntimeError(
+            #     "Internal error on mappraiser copy.  Only pixel indices should be flagged."
+            # )
+            if data.comm.world_rank == 0:
+                warnings.warn(
+                    "Trying to use pixel flagging with nnz != 1.  Mappraiser does not use flags yet, but this may change in the future.",
+                    RuntimeWarning,
+                )
+
     for ob in data.obs:
         views = ob.view[view]
         for idet, det in enumerate(dets):
@@ -369,21 +373,24 @@ def stage_local(
                     1,
                 )
                 if nnz > 1:
-                    mappraiser_buffer[slc] = views.detdata[detdata_name][ivw][
-                        det
-                    ].flatten()[::nnz_stride]
+                    mappraiser_buffer[slc] = np.repeat(
+                        views.detdata[detdata_name][ivw][det].flatten()[::nnz_stride],
+                        n_repeat,
+                    )
                 else:
-                    mappraiser_buffer[slc] = views.detdata[detdata_name][ivw][
-                        det
-                    ].flatten()
-                detflags = None
-                if do_flags:
-                    if det_flags is None:
-                        detflags = flags
-                    else:
-                        detflags = np.copy(flags)
-                        detflags |= views.detdata[det_flags][ivw][det] & det_mask
-                    mappraiser_buffer[slc][detflags != 0] = -1
+                    mappraiser_buffer[slc] = np.repeat(
+                        views.detdata[detdata_name][ivw][det].flatten(),
+                        n_repeat,
+                    )
+                # FIXME MAPPRAISER's pixels buffer has nnz=3, not nnz=1.
+                # detflags = None
+                # if do_flags:
+                #     if det_flags is None:
+                #         detflags = flags
+                #     else:
+                #         detflags = np.copy(flags)
+                #         detflags |= views.detdata[det_flags][ivw][det] & det_mask
+                #     mappraiser_buffer[slc][detflags != 0] = -1
         if do_purge:
             del ob.detdata[detdata_name]
         interval_offset += len(views)
