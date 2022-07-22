@@ -960,6 +960,7 @@ class Mappraiser(Operator):
             )
             
             # Arrange pixel indices for MAPPRAISER
+            self._mappraiser_pixels *= nnz
             for i in range(nnz):
                 self._mappraiser_pixels[i::nnz] += i
 
