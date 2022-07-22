@@ -126,8 +126,19 @@ def MLmap(
     ref = params["ref"].encode("ascii")
     
     # DEBUG
-    print("MPI.Is_initialized()\n", MPI.Is_initialized(), flush=True)
-    print("MPI.Get_library_version()\n", MPI.Get_library_version(), flush=True)
+    # if comm.rank == 0:
+    #     print("[rank 0] arguments passed to libmappraiser")
+    #     print("  data_size_proc     = ", data_size_proc)
+    #     print("  nb_blocks_loc      = ", nb_blocks_loc)
+    #     print("  local_blocks_sizes = ", local_blocks_sizes)
+    #     print("  nnz                = ", nnz)
+    #     print("  length(pixels)     = ", len(pixels))
+    #     print("  length(pixweights) = ", len(pixweights))
+    #     print("  length(signal)     = ", len(signal))
+    #     print("  length(noise)      = ", len(noise))
+    #     print("  lambda             = ", Lambda)
+    #     print("  length(invtt)      = ", len(invtt), flush=True)
+    # comm.Barrier()
     # DEBUG
 
     _mappraiser.MLmap(
