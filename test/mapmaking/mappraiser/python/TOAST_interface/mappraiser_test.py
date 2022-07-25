@@ -1,5 +1,5 @@
-# Unit test for the toast3 / mappraiser interface
-# This code is mostly taken from toast/tests/ops_madam.py
+# Unit test for the toast3 / mappraiser interface.
+# This code was taken from toast/tests/ops_madam.py and adapated for MAPPRAISER.
 
 import os
 
@@ -7,7 +7,6 @@ import numpy as np
 import numpy.testing as nt
 from astropy import units as u
 
-from . import new_mappraiser
 from toast import ops as ops
 from toast.noise import Noise
 from toast.observation import default_values as defaults
@@ -15,11 +14,39 @@ from toast.pixels import PixelData, PixelDistribution
 from toast.vis import set_matplotlib_backend
 from toast.tests._helpers import (
     create_fake_sky,
-    create_outdir,
     create_satellite_data,
     fake_flags,
 )
 from toast.tests.mpi import MPITestCase
+
+from . import new_mappraiser
+
+def create_outdir(mpicomm, subdir=None):
+    """Create the top level output directory and per-test subdir.
+
+    Parameters:
+    -----------
+    * `mpicomm` (MPI.Comm): the MPI communicator (or None).
+    * `subdir` (str): the sub directory for this test.
+
+    Returns:
+    --------
+    (str): full path to the test subdir if specified, else the top dir.
+
+    """
+    pwd = os.path.abspath(".")
+    testdir = os.path.join(pwd, "mappraiser_test_output")
+    retdir = testdir
+    if subdir is not None:
+        retdir = os.path.join(testdir, subdir)
+    if (mpicomm is None) or (mpicomm.rank == 0):
+        if not os.path.isdir(testdir):
+            os.mkdir(testdir)
+        if not os.path.isdir(retdir):
+            os.mkdir(retdir)
+    if mpicomm is not None:
+        mpicomm.barrier()
+    return retdir
 
 
 class MappraiserTest(MPITestCase):

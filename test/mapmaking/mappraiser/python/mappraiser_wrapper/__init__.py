@@ -93,30 +93,18 @@ def MLmap(
 
     Parameters
     ----------
-    comm: 
-        Communicator over which data is distributed
-    params: 
-        Parameter dictionary
-    data_size_proc: 
-        Data sizes in full communicator
-    nb_blocks_loc: 
-        Number of local observations
-    local_blocks_sizes: 
-        Local data sizes
-    nnz: 
-        Number of non-zero elements per row
-    pixels: 
-        Pixel indices of non-zero values
-    pixweights: 
-        Corresponding matrix values
-    signal: 
-        Signal buffer
-    noise: 
-        Noise buffer
-    Lambda: 
-        Toeplitz matrix half-bandwidth
-    invtt: 
-        Inverse noise weights
+    * `comm`: Communicator over which data is distributed
+    * `params`: Parameter dictionary
+    * `data_size_proc`: Data sizes in full communicator
+    * `nb_blocks_loc`: Number of local observations
+    * `local_blocks_sizes`: Local data sizes
+    * `nnz`: Number of non-zero elements per row
+    * `pixels`: Pixel indices of non-zero values
+    * `pixweights`: Corresponding matrix values
+    * `signal`: Signal buffer
+    * `noise`: Noise buffer
+    * `Lambda`: Toeplitz matrix half-bandwidth
+    * `invtt`: Inverse noise weights
 
     """
     if not available:

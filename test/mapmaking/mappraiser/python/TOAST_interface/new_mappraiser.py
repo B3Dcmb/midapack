@@ -12,6 +12,11 @@ from toast.timing import function_timer
 from toast.traits import Bool, Dict, Instance, Int, Unicode, trait_docs
 from toast.utils import Environment, GlobalTimers, Logger, Timer, dtype_to_aligned
 from toast.ops.delete import Delete
+from toast.ops.mapmaker import MapMaker
+from toast.ops.memory_counter import MemoryCounter
+from toast.ops.operator import Operator
+
+# local imports
 from .utils import (
     compute_invtt,
     compute_local_block_sizes,
@@ -21,9 +26,6 @@ from .utils import (
     stage_in_turns,
     stage_local,
 )
-from toast.ops.mapmaker import MapMaker
-from toast.ops.memory_counter import MemoryCounter
-from toast.ops.operator import Operator
 
 mappraiser = None
 if use_mpi:

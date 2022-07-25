@@ -17,12 +17,15 @@ from toast.utils import GlobalTimers, Logger, Timer, dtype_to_aligned, memreport
 from toast.ops.memory_counter import MemoryCounter
 
 def add_mappraiser_args(parser):
-    """Add libmappraiser arguments"""
+    """Add mappraiser specific arguments."""
 
-    parser.add_argument("--outpath", required=False, default="./", help="Output path")
     parser.add_argument(
-        "--ref", required=False, default="run0", help="Output maps references"
+        "--ref",
+        required=False,
+        default="run0",
+        help="Reference that is added to the name of the output maps. Can be used to store multiple runs of the same configuration in a common folder (which will be specified to the parser under the name 'out_dir').",
     )
+
     parser.add_argument(
         "--Lambda",
         required=False,
@@ -30,6 +33,8 @@ def add_mappraiser_args(parser):
         type=np.int,
         help="Half bandwidth (lambda) of noise covariance",
     )
+
+    # FIXME : is uniform_w still useful ?
     parser.add_argument(
         "--uniform_w",
         required=False,
@@ -37,6 +42,7 @@ def add_mappraiser_args(parser):
         type=np.int,
         help="Activate for uniform white noise model: 0->off, 1->on",
     )
+
     parser.add_argument(
         "--solver",
         required=False,
@@ -44,6 +50,7 @@ def add_mappraiser_args(parser):
         type=np.int,
         help="Choose map-making solver: 0->PCG, 1->ECG",
     )
+
     parser.add_argument(
         "--precond",
         required=False,
@@ -51,9 +58,15 @@ def add_mappraiser_args(parser):
         type=np.int,
         help="Choose map-making preconditioner: 0->BD, 1->2lvl a priori, 2->2lvl a posteriori",
     )
+
     parser.add_argument(
-        "--Z_2lvl", required=False, default=0, type=np.int, help="2lvl deflation size"
+        "--Z_2lvl",
+        required=False,
+        default=0,
+        type=np.int,
+        help="2lvl deflation size",
     )
+
     parser.add_argument(
         "--ptcomm_flag",
         required=False,
@@ -61,6 +74,7 @@ def add_mappraiser_args(parser):
         type=np.int,
         help="Choose collective communication scheme",
     )
+
     parser.add_argument(
         "--tol",
         required=False,
@@ -68,6 +82,7 @@ def add_mappraiser_args(parser):
         type=np.double,
         help="Tolerance parameter for convergence",
     )
+
     parser.add_argument(
         "--maxiter",
         required=False,
@@ -75,6 +90,7 @@ def add_mappraiser_args(parser):
         type=np.int,
         help="Maximum number of iterations in Mappraiser",
     )
+
     parser.add_argument(
         "--enlFac",
         required=False,
@@ -82,6 +98,7 @@ def add_mappraiser_args(parser):
         type=np.int,
         help="Enlargement factor for ECG",
     )
+
     parser.add_argument(
         "--ortho_alg",
         required=False,
@@ -89,6 +106,7 @@ def add_mappraiser_args(parser):
         type=np.int,
         help="Orthogonalization scheme for ECG. O:odir, 1:omin",
     )
+
     parser.add_argument(
         "--bs_red",
         required=False,
@@ -96,51 +114,7 @@ def add_mappraiser_args(parser):
         type=np.int,
         help="Use dynamic search reduction",
     )
-    parser.add_argument(
-        "--conserve-memory",
-        dest="conserve_memory",
-        required=False,
-        action="store_true",
-        help="Conserve memory when staging libMappraiser buffers [default]",
-    )
-    parser.add_argument(
-        "--no-conserve-memory",
-        dest="conserve_memory",
-        required=False,
-        action="store_false",
-        help="Do not conserve memory when staging libMappraiser buffers",
-    )
-    parser.set_defaults(conserve_memory=True)
-
-    # `nside` may already be added
-    try:
-        parser.add_argument(
-            "--nside", required=False, default=512, type=np.int, help="Healpix NSIDE"
-        )
-    except argparse.ArgumentError:
-        pass
-    # Common flag mask may already be added
-    try:
-        parser.add_argument(
-            "--common-flag-mask",
-            required=False,
-            default=1,
-            type=np.uint8,
-            help="Common flag mask",
-        )
-    except argparse.ArgumentError:
-        pass
-    # `sample-rate` may be already added
-    try:
-        parser.add_argument(
-            "--sample-rate",
-            required=False,
-            default=100.0,
-            type=np.float,
-            help="Detector sample rate (Hz)",
-        )
-    except argparse.ArgumentError:
-        pass
+    
     return
 
 
@@ -264,9 +238,7 @@ def apply_mappraiser(  # FIXME
     return
 
 
-# helper functions adapted from toast/src/ops/madam_utils.py
-
-
+# Here are some helper functions adapted from toast/src/ops/madam_utils.py
 def log_time_memory(
     data, timer=None, timer_msg=None, mem_msg=None, full_mem=False, prefix=""
 ):

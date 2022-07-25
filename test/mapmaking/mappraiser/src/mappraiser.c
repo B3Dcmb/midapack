@@ -86,9 +86,6 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     if (rank == 0)
     {
         printf("[rank %d] Initializing pointing matrix time=%lf \n", rank, t - st);
-        printf("    A.m      = %d \n", A.m);
-        printf("    A.nnz    = %d \n", A.nnz);
-        printf("    A.lcount = %d \n", A.lcount);
         fflush(stdout);
     }
 
@@ -337,7 +334,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
 
         if (w == 1)
         {
-            printf("Writing HEALPix maps FITS files ...\n");
+            printf("Writing HEALPix maps FITS files to %s...\n", outpath);
             write_map(mapI, TDOUBLE, nside, Imap_name, nest, cordsys);
             write_map(mapQ, TDOUBLE, nside, Qmap_name, nest, cordsys);
             write_map(mapU, TDOUBLE, nside, Umap_name, nest, cordsys);
