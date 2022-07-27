@@ -942,6 +942,7 @@ class Mappraiser(Operator):
             params["fsample"],
             self._mappraiser_invtt,
             mappraiser.INVTT_TYPE,
+            print_info=(data.comm.world_rank == 0),
         )
 
         log_time_memory(

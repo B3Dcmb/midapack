@@ -506,6 +506,7 @@ def compute_invtt(
     fsamp,
     buffer,
     invtt_dtype,
+    print_info=False,
 ):
     """Compute the first lines of the blocks of the banded noise covariance and store them in the provided buffer."""
     offset = 0
@@ -525,7 +526,7 @@ def compute_invtt(
                 fsamp,
                 idet,
                 invtt_dtype,
-                verbose=(idet == 0) and (iobs == 0),
+                verbose=(print_info and (idet == 0) and (iobs == 0)),
             )
             offset += blocksize
     return
@@ -587,13 +588,13 @@ def noise2invtt(
 
     if verbose:
         print(
-            "\n[det "
+            "[det "
             + str(idet)
             + "]: PSD fit log(sigma2) = %1.2f, alpha = %1.2f, fknee = %1.2f, fmin = %1.2f\n"
             % tuple(popt),
             flush=True,
         )
-        print(f"[det {idet}]: PSD fit covariance: \n", pcov, flush=True)
+        print("[det {}]: PSD fit covariance: \n{}\n".format(idet, pcov), flush=True)
     # psd_fit_m1 = np.zeros_like(f)
     # psd_fit_m1[1:] = inversepsd_model(f[1:],10**popt[0],popt[1],popt[2])
 
