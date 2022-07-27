@@ -34,7 +34,7 @@ import pixell.fft
 pixell.fft.engine = "fftw"
 
 from .utils import add_mappraiser_args
-from . import new_mappraiser
+from . import mappraiser
 
 
 def parse_config(operators, templates, comm):
@@ -193,7 +193,7 @@ def use_full_pointing(job):
     # used in the solve has full pointing enabled and also whether madam (which
     # requires full pointing) is enabled.
     full_pointing = False
-    if new_mappraiser.available() and job.operators.mappraiser.enabled:
+    if mappraiser.available() and job.operators.mappraiser.enabled:
         full_pointing = True
     if job.operators.binner.full_pointing:
         full_pointing = True
@@ -632,7 +632,7 @@ def reduce_data(job, args, data):
 
     # Optionally run Mappraiser
 
-    if new_mappraiser.available() and ops.mappraiser.enabled:
+    if mappraiser.available() and ops.mappraiser.enabled:
         # ops.madam.params = toast.ops.madam_params_from_mapmaker(ops.mapmaker)
         ops.mappraiser.pixel_pointing = args.pixels_final
         ops.mappraiser.stokes_weights = ops.weights_radec
@@ -784,8 +784,8 @@ def main():
         so_ops.MLMapmaker(name="mlmapmaker", enabled=False, comps="TQU"),
         toast.ops.MemoryCounter(name="mem_count", enabled=False),
     ]
-    if new_mappraiser.available():
-        operators.append(new_mappraiser.Mappraiser(name="mappraiser", enabled=False))
+    if mappraiser.available():
+        operators.append(mappraiser.Mappraiser(name="mappraiser", enabled=False))
 
     # Templates we want to configure from the command line or a parameter file.
     templates = [toast.templates.Offset(name="baselines")]

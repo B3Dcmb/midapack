@@ -19,7 +19,7 @@ from toast.tests._helpers import (
 )
 from toast.tests.mpi import MPITestCase
 
-from . import new_mappraiser
+from . import mappraiser
 
 def create_outdir(mpicomm, subdir=None):
     """Create the top level output directory and per-test subdir.
@@ -56,7 +56,7 @@ class MappraiserTest(MPITestCase):
         np.random.seed(123456)
 
     def test_mappraiser_interface(self):
-        if not new_mappraiser.available():
+        if not mappraiser.available():
             print("libmappraiser not available, skipping tests")
             return
 
@@ -224,7 +224,7 @@ class MappraiserTest(MPITestCase):
 
         # FIXME: add a view here once our test data includes it
 
-        mappraiser = new_mappraiser.Mappraiser(
+        op_mappraiser = mappraiser.Mappraiser(
             params=pars,
             det_data=defaults.det_data,
             pixel_pointing=pixels,
@@ -236,7 +236,7 @@ class MappraiserTest(MPITestCase):
             restore_det_data=False,
             mem_report=True,
         )
-        mappraiser.apply(data)
+        op_mappraiser.apply(data)
 
         # if data.comm.world_rank == 0:
         #     set_matplotlib_backend()

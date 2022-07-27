@@ -1,30 +1,31 @@
-# This is the interface code of MAPPRAISER with TOAST.
-# It contains all the routines to read TOAST data objects and run on the fly
-# map-making from TOAST simulations. The code is for the most part copied from the OpMadam model.
+import os
+import re
 
-# @author: Hamza El Bouhargani
-# @date: May 2019
-# @latest_update: January 2020
+import numpy as np
+import traitlets
+from astropy import units as u
 
 from toast.mpi import MPI, use_mpi
+from toast.observation import default_values as defaults
+from toast.templates import Offset
+from toast.timing import function_timer
+from toast.traits import Bool, Dict, Instance, Int, Unicode, trait_docs
+from toast.utils import Environment, GlobalTimers, Logger, Timer, dtype_to_aligned
+from toast.ops.delete import Delete
+from toast.ops.mapmaker import MapMaker
+from toast.ops.memory_counter import MemoryCounter
+from toast.ops.operator import Operator
 
-import os
-import sys
-
-import healpy as hp
-import numpy as np
-
-from toast.cache import Cache
-from toast.op import Operator
-from toast.timing import function_timer, Timer
-from toast.utils import Logger, memreport
-
-from numpy.fft import fft, fftfreq, fftshift
-from scipy import interpolate
-from scipy.optimize import curve_fit
-import scipy.signal
-import math
-
+# local imports
+from .utils import (
+    compute_invtt,
+    compute_local_block_sizes,
+    log_time_memory,
+    restore_in_turns,
+    restore_local,
+    stage_in_turns,
+    stage_local,
+)
 
 mappraiser = None
 if use_mpi:
@@ -34,1244 +35,1230 @@ if use_mpi:
         mappraiser = None
 
 
-def count_caches(data, comm, nodecomm, mappraisercache, msg=""):
-    """Count the amount of memory in the TOD caches"""
-    my_todsize = 0
-    for obs in data.obs:
-        tod = obs["tod"]
-        my_todsize += tod.cache.report(silent=True)
-    my_cachesize = mappraisercache.report(silent=True)
-    node_todsize = nodecomm.allreduce(my_todsize, MPI.SUM)
-    node_cachesize = nodecomm.allreduce(my_cachesize, MPI.SUM)
-    if comm.rank == 0:
-        print(
-            "Node has {:.3f} GB allocated in TOAST TOD caches and "
-            "{:.3f} GB in Mappraiser caches ({:.3f} GB total) {}".format(
-                node_todsize / 2**30,
-                node_cachesize / 2**30,
-                (node_todsize + node_cachesize) / 2**30,
-                msg,
-            )
+def available():
+    """(bool): True if libmappraiser is found in the library search path."""
+    global mappraiser
+    return (mappraiser is not None) and mappraiser.available
+
+
+def madam_params_from_mapmaker(mapmaker):
+    """Utility function that configures Madam to match the TOAST mapmaker"""
+
+    if not isinstance(mapmaker, MapMaker):
+        raise RuntimeError("Need an instance of MapMaker to configure from")
+
+    destripe_pixels = mapmaker.binning.pixel_pointing
+    map_pixels = mapmaker.map_binning.pixel_pointing
+
+    params = {
+        "nside_cross": destripe_pixels.nside,
+        "nside_map": map_pixels.nside,
+        "nside_submap": map_pixels.nside_submap,
+        "path_output": mapmaker.output_dir,
+        "write_hits": mapmaker.write_hits,
+        "write_matrix": mapmaker.write_invcov,
+        "write_wcov": mapmaker.write_cov,
+        "write_mask": mapmaker.write_rcond,
+        "info": 3,
+        "iter_max": mapmaker.iter_max,
+        "pixlim_cross": mapmaker.solve_rcond_threshold,
+        "pixlim_map": mapmaker.map_rcond_threshold,
+        "cglimit": mapmaker.convergence,
+    }
+    sync_type = mapmaker.map_binning.sync_type
+    if sync_type == "allreduce":
+        params["allreduce"] = True
+    elif sync_type == "alltoallv":
+        params["concatenate_messages"] = True
+        params["reassign_submaps"] = True
+    else:
+        msg = f"Unknown sync_type: {sync_type}"
+        raise RuntimeError(msg)
+
+    # Destriping parameters
+
+    for template in mapmaker.template_matrix.templates:
+        if isinstance(template, Offset):
+            baselines = template
+            break
+    else:
+        baselines = None
+
+    if baselines is None or not baselines.enabled:
+        params.update(
+            {
+                "write_binmap": True,
+                "write_map": False,
+                "kfirst": False,
+            }
         )
-    return
+    else:
+        params.update(
+            {
+                "write_binmap": False,
+                "write_map": True,
+                "kfilter": baselines.use_noise_prior,
+                "kfirst": True,
+                "base_first": baselines.step_time.to_value(u.s),
+                "precond_width_min": baselines.precond_width,
+                "precond_width_max": baselines.precond_width,
+                "good_baseline_fraction": baselines.good_fraction,
+            }
+        )
+
+    return params
 
 
-def psd_model(f, sigma, alpha, f0, fmin):
-    return sigma * (1 + ((f + fmin) / f0) ** alpha)
+@trait_docs
+class Mappraiser(Operator):
+    """Operator which passes data to libmappraiser for map-making."""
 
+    # Class traits
 
-def logpsd_model(f, a, alpha, f0, fmin):
-    return a + np.log10(1 + ((f + fmin) / f0) ** alpha)
+    API = Int(0, help="Internal interface version for this operator")
 
+    params = Dict(dict(), help="Parameters to pass to mappraiser")
 
-def inversepsd_model(f, sigma, alpha, f0, fmin):
-    return sigma * 1.0 / (1 + ((f + fmin) / f0) ** alpha)
+    paramfile = Unicode(
+        None, allow_none=True, help="Read mappraiser parameters from this file"
+    )
 
+    # N.B: timestamps are not currently used in MAPPRAISER.
+    # However, that may change in the future.
+    times = Unicode(defaults.times, help="Observation shared key for timestamps")
 
-def inverselogpsd_model(f, a, alpha, f0, fmin):
-    return a - np.log10(1 + ((f + fmin) / f0) ** alpha)
+    det_data = Unicode(
+        defaults.det_data, help="Observation detdata key for the timestream data"
+    )
 
+    noise_name = Unicode("noise", help="Observation detdata key for noise data")
 
-class OpMappraiser(Operator):
-    """
-    Operator which passes data to libmappraiser for map-making.
-    Args:
-        params (dictionary): parameters to mappraiser
-        detweights (dictionary): individual noise weights to use for each
-            detector.
-        pixels (str): the name of the cache object (<pixels>_<detector>)
-            containing the pixel indices to use.
-        pixels_nested (bool): Set to False if the pixel numbers are in
-            ring ordering. Default is True.
-        weights (str): the name of the cache object (<weights>_<detector>)
-            containing the pointing weights to use.
-        name (str): the name of the cache object (<name>_<detector>) to
-            use for the detector timestream.  If None, use the TOD.
-        noise_name (str) : the name of the cache object (<name>_<detector>) to
-            use for the noise timestream. If None, skip.
-        flag_name (str): the name of the cache object
-            (<flag_name>_<detector>) to use for the detector flags.
-            If None, use the TOD.
-        flag_mask (int): the integer bit mask (0-255) that should be
-            used with the detector flags in a bitwise AND.
-        common_flag_name (str): the name of the cache object
-            to use for the common flags.  If None, use the TOD.
-        common_flag_mask (int): the integer bit mask (0-255) that should
-            be used with the common flags in a bitwise AND.
-        apply_flags (bool): whether to apply flags to the pixel numbers.
-        purge (bool): if True, clear any cached data that is copied into
-            the Mappraiser buffers.
-        purge_tod (bool): if True, clear any cached signal that is
-            copied into the Mappraiser buffers.
-        purge_pixels (bool): if True, clear any cached pixels that are
-            copied into the Mappraiser buffers.
-        purge_weights (bool): if True, clear any cached weights that are
-            copied into the Mappraiser buffers.
-        purge_flags (bool): if True, clear any cached flags that are
-            copied into the Mappraiser buffers.
-        dets (iterable):  List of detectors to map. If left as None, all
-            available detectors are mapped.
-        noise (str): Keyword to use when retrieving the noise object
-            from the observation.
-        conserve_memory(bool/int): Stagger the Mappraiser buffer staging on node.
-        translate_timestamps(bool): Translate timestamps to enforce
-            monotonity.
-    """
+    det_flags = Unicode(
+        defaults.det_flags,
+        allow_none=True,
+        help="Observation detdata key for flags to use",
+    )
 
-    def __init__(
-        self,
-        params={},
-        detweights=None,
-        pixels="pixels",
-        pixels_nested=True,
-        weights="weights",
-        name="signal",
-        noise_name=None,
-        flag_name=None,
-        flag_mask=255,
-        common_flag_name=None,
-        common_flag_mask=255,
-        apply_flags=False,
-        purge=False,
-        dets=None,
-        purge_tod=False,
-        purge_pixels=False,
-        purge_weights=False,
-        purge_flags=False,
-        noise="noise",
-        intervals="intervals",
-        conserve_memory=False,
-        translate_timestamps=True,
-    ):
-        # Call the parent class constructor
-        super().__init__()
+    det_flag_mask = Int(
+        defaults.det_mask_invalid, help="Bit mask value for optional detector flagging"
+    )
 
-        # mappraiser uses time-based distribution
-        self._name = name
-        self._noise_name = noise_name
-        self._flag_name = flag_name
-        self._flag_mask = flag_mask
-        self._common_flag_name = common_flag_name
-        self._common_flag_mask = common_flag_mask
-        self._pixels = pixels
-        self._pixels_nested = pixels_nested
-        self._weights = weights
-        self._detw = detweights
-        self._purge = purge
-        if self._purge:
-            self._purge_tod = True
-            self._purge_pixels = True
-            self._purge_weights = True
-            self._purge_flags = True
-        else:
-            self._purge_tod = purge_tod
-            self._purge_pixels = purge_pixels
-            self._purge_weights = purge_weights
-            self._purge_flags = purge_flags
-        self._apply_flags = apply_flags
-        self._params = params
-        if dets is not None:
-            self._dets = set(dets)
-        else:
-            self._dets = None
-        self._noisekey = noise
-        self._intervals = intervals
-        self._cache = Cache()
-        self._mappraiser_timestamps = None
-        self._mappraiser_noise = None
-        self._mappraiser_pixels = None
-        self._mappraiser_pixweights = None
-        self._mappraiser_signal = None
-        self._mappraiser_invtt = None
-        self._conserve_memory = int(conserve_memory)
-        self._translate_timestamps = translate_timestamps
-        self._verbose = True
+    shared_flags = Unicode(
+        defaults.shared_flags,
+        allow_none=True,
+        help="Observation shared key for telescope flags to use",
+    )
+
+    shared_flag_mask = Int(
+        defaults.shared_mask_invalid,
+        help="Bit mask value for optional shared flagging",
+    )
+
+    # instance of PixelsHealpix, operator which generates healpix pixel numbers
+    pixel_pointing = Instance(
+        klass=Operator,
+        allow_none=True,
+        help="This must be an instance of a pixel pointing operator",
+    )
+
+    # instance of StokesWeights, operator which generates I/Q/U pointing weights
+    stokes_weights = Instance(
+        klass=Operator,
+        allow_none=True,
+        help="This must be an instance of a Stokes weights operator",
+    )
+
+    #! N.B: this is not supported for the moment.
+    view = Unicode(
+        None, allow_none=True, help="Use this view of the data in all observations"
+    )
+
+    # There is not tod cleaning in MAPPRAISER.
+    # det_out = Unicode(
+    #     None,
+    #     allow_none=True,
+    #     help="Observation detdata key for output destriped timestreams",
+    # )
+
+    noise_model = Unicode(
+        "noise_model", help="Observation key containing the noise model"
+    )
+
+    purge_det_data = Bool(
+        False,
+        help="If True, clear all observation detector data after copying to mappraiser buffers",
+    )
+
+    restore_det_data = Bool(
+        False,
+        help="If True, restore detector data to observations on completion",
+    )
+
+    #! N.B: not supported for the moment
+    mcmode = Bool(
+        False,
+        help="If true, Madam will store auxiliary information such as pixel matrices and noise filter.",
+    )
+
+    copy_groups = Int(
+        1,
+        help="The processes on each node are split into this number of groups to copy data in turns",
+    )
+
+    translate_timestamps = Bool(
+        False, help="Translate timestamps to enforce monotonity."
+    )
+
+    noise_scale = Unicode(
+        "noise_scale",
+        help="Observation key with optional scaling factor for noise PSDs",
+    )
+
+    mem_report = Bool(
+        False, help="Print system memory use while staging / unstaging data."
+    )
+
+    @traitlets.validate("shared_flag_mask")
+    def _check_shared_flag_mask(self, proposal):
+        check = proposal["value"]
+        if check < 0:
+            raise traitlets.TraitError("Shared flag mask should be a positive integer")
+        return check
+
+    @traitlets.validate("det_flag_mask")
+    def _check_det_flag_mask(self, proposal):
+        check = proposal["value"]
+        if check < 0:
+            raise traitlets.TraitError("Det flag mask should be a positive integer")
+        return check
+
+    @traitlets.validate("restore_det_data")
+    def _check_restore_det_data(self, proposal):
+        check = proposal["value"]
+        if check and not self.purge_det_data:
+            raise traitlets.TraitError(
+                "Cannot set restore_det_data since purge_det_data is False"
+            )
+        # if check and self.det_out is not None:
+        #     raise traitlets.TraitError(
+        #         "Cannot set restore_det_data since det_out is not None"
+        #     )
+        return check
+
+    # @traitlets.validate("det_out")
+    # def _check_det_out(self, proposal):
+    #     check = proposal["value"]
+    #     if check is not None and self.restore_det_data:
+    #         raise traitlets.TraitError(
+    #             "If det_out is not None, restore_det_data should be False"
+    #         )
+    #     return check
+
+    @traitlets.validate("pixel_pointing")
+    def _check_pixel_pointing(self, proposal):
+        pixels = proposal["value"]
+        if pixels is not None:
+            if not isinstance(pixels, Operator):
+                raise traitlets.TraitError(
+                    "pixel_pointing should be an Operator instance"
+                )
+            # Check that this operator has the traits we expect
+            for trt in ["pixels", "create_dist", "view"]:
+                if not pixels.has_trait(trt):
+                    msg = f"pixel_pointing operator should have a '{trt}' trait"
+                    raise traitlets.TraitError(msg)
+        return pixels
+
+    @traitlets.validate("stokes_weights")
+    def _check_stokes_weights(self, proposal):
+        weights = proposal["value"]
+        if weights is not None:
+            if not isinstance(weights, Operator):
+                raise traitlets.TraitError(
+                    "stokes_weights should be an Operator instance"
+                )
+            # Check that this operator has the traits we expect
+            for trt in ["weights", "view"]:
+                if not weights.has_trait(trt):
+                    msg = f"stokes_weights operator should have a '{trt}' trait"
+                    raise traitlets.TraitError(msg)
+        return weights
+
+    @traitlets.validate("params")
+    def _check_params(self, proposal):
+        check = proposal["value"]
+        if "info" not in check:
+            # The user did not specify the info level- set it from the toast loglevel
+            env = Environment.get()
+            level = env.log_level()
+            if level == "DEBUG":
+                check["info"] = 2
+            elif level == "VERBOSE":
+                check["info"] = 3
+            else:
+                check["info"] = 1
+        return check
+
+    # Check the traits that are not yet supported
+    @traitlets.validate("view")
+    def _check_view(self, proposal):
+        check = proposal["value"]
+        if check is not None:
+            raise traitlets.TraitError("Views of the data are currently not supported")
+        return check
+
+    @traitlets.validate("mcmode")
+    def _check_mcmode(self, proposal):
+        check = proposal["value"]
+        if check:
+            raise traitlets.TraitError("MC mode is not currently supported")
+        return check
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._cached = False
+        self._logprefix = "Mappraiser:"
+
+    def clear(self):
+        """Delete the underlying memory.
+        This will forcibly delete the C-allocated memory and invalidate all python
+        references to the buffers.
+        """
+
+        if self._cached:
+            # MAPPRAISER does not have caches to clear (no 'cached' mode implemented)
+            # madam.clear_caches()
+            self._cached = False
+
+        for atr in [
+            "timestamps",
+            "signal",
+            "blocksizes",
+            "noise",
+            "invtt",
+            "pixels",
+            "pixweights",
+        ]:
+            atrname = "_mappraiser_{}".format(atr)
+            rawname = "{}_raw".format(atrname)
+            if hasattr(self, atrname):
+                delattr(self, atrname)
+                raw = getattr(self, rawname)
+                if raw is not None:
+                    raw.clear()
+                setattr(self, rawname, None)
+                setattr(self, atrname, None)
 
     def __del__(self):
-        self._cache.clear()
-
-    @property
-    def available(self):
-        """
-        (bool): True if libmappraiser is found in the library search path.
-        """
-        return mappraiser is not None and mappraiser.available
+        self.clear()
 
     @function_timer
-    def exec(self, data, comm=None):
-        """
-        Copy data to Mappraiser-compatible buffers and make a map.
+    def _exec(self, data, detectors=None, **kwargs):
+        log = Logger.get()
 
-        Args:
-            data (toast.Data): The distributed data.
-
-        Returns:
-            None
-        """
-        if not self.available:
-            raise RuntimeError("libmappraiser is not available")
+        if not available():
+            raise RuntimeError("Mappraiser is either not installed or MPI is disabled")
 
         if len(data.obs) == 0:
             raise RuntimeError(
-                "OpMappraiser requires every supplied data object to "
+                "Mappraiser requires every supplied data object to "
                 "contain at least one observation"
             )
 
-        if comm is None:
-            # Use the word communicator from the distributed data.
-            comm = data.comm.comm_world
-        self._data = data
-        self._comm = comm
-        self._rank = comm.rank
+        for trait in "det_data", "pixel_pointing", "stokes_weights":
+            if getattr(self, trait) is None:
+                msg = f"You must set the '{trait}' trait before calling exec()"
+                raise RuntimeError(msg)
 
+        # Combine parameters from an external file and other parameters passed in
+
+        params = dict()
+
+        # repeat_keys = ["detset", "detset_nopol", "survey"]
+
+        if self.paramfile is not None:
+            if data.comm.world_rank == 0:
+                line_pat = re.compile(r"(\S+)\s+=\s+(\S+)")
+                comment_pat = re.compile(r"^\s*\#.*")
+                with open(self.paramfile, "r") as f:
+                    for line in f:
+                        if comment_pat.match(line) is None:
+                            line_mat = line_pat.match(line)
+                            if line_mat is not None:
+                                k = line_mat.group(1)
+                                v = line_mat.group(2)
+                                # if k in repeat_keys:
+                                #     if k not in params:
+                                #         params[k] = [v]
+                                #     else:
+                                #         params[k].append(v)
+                                # else:
+                                #     params[k] = v
+                                params[k] = v
+            if data.comm.comm_world is not None:
+                params = data.comm.comm_world.bcast(params, root=0)
+            for k, v in self.params.items():
+                # if k in repeat_keys:
+                #     if k not in params:
+                #         params[k] = [v]
+                #     else:
+                #         params[k].append(v)
+                # else:
+                #     params[k] = v
+                params[k] = v
+
+        if self.params is not None:
+            params.update(self.params)
+
+        if "fsample" not in params:
+            params["fsample"] = data.obs[0].telescope.focalplane.sample_rate.to_value(
+                u.Hz
+            )
+
+        # Set mappraiser parameters that depend on our traits
+        if self.mcmode:
+            params["mcmode"] = True
+        else:
+            params["mcmode"] = False
+
+        # if self.det_out is not None:
+        #     params["write_tod"] = True
+        # else:
+        #     params["write_tod"] = False
+
+        # Check input parameters and compute the sizes of Mappraiser data objects
+        if data.comm.world_rank == 0:
+            msg = "{} Computing data sizes".format(self._logprefix)
+            log.info(msg)
         (
-            dets,
+            all_dets,
             nsamp,
-            ndet,
             nnz,
             nnz_full,
             nnz_stride,
-            psdfreqs,
-            nside,
-        ) = self._prepare()
+            interval_starts,
+            psd_freqs,
+        ) = self._prepare(params, data, detectors)
 
-        (
-            data_size_proc,
-            nobsloc,
-            local_blocks_sizes,
-            signal_type,
-            noise_type,
-            pixels_dtype,
-            weight_dtype,
-        ) = self._stage_data(
+        # Stage data
+        if data.comm.world_rank == 0:
+            msg = "{} Copying toast data to buffers".format(self._logprefix)
+            log.info(msg)
+        signal_dtype, data_size_proc = self._stage_data(
+            params,
+            data,
+            all_dets,
             nsamp,
-            ndet,
             nnz,
             nnz_full,
             nnz_stride,
-            psdfreqs,
-            dets,
-            nside,
+            interval_starts,
+            psd_freqs,
         )
 
-        self._MLmap(data_size_proc, nobsloc * ndet, local_blocks_sizes, nnz)
+        # Compute the ML map
+        if data.comm.world_rank == 0:
+            msg = "{} Computing the ML map".format(self._logprefix)
+            log.info(msg)
+        self._MLmap(
+            params,
+            data,
+            data_size_proc,
+            len(data.obs) * len(all_dets),
+            nnz,
+        )
 
+        # Unstage data
+        if data.comm.world_rank == 0:
+            msg = "{} Copying buffers back to toast data".format(self._logprefix)
+            log.info(msg)
         self._unstage_data(
+            params,
+            data,
+            all_dets,
             nsamp,
             nnz,
             nnz_full,
-            dets,
-            signal_type,
-            noise_type,
-            pixels_dtype,
-            nside,
-            weight_dtype,
+            interval_starts,
+            signal_dtype,
         )
 
         return
 
-    @function_timer
-    def _MLmap(self, data_size_proc, nb_blocks_loc, local_blocks_sizes, nnz):
-        """Compute the ML map"""
-        if self._verbose:
-            memreport("just before calling libmappraiser.MLmap", self._comm)
+    def _finalize(self, data, **kwargs):
+        return
 
-        # Compute the Maximum Likelihood map
-        # os.environ["OMP_NUM_THREADS"] = "1"
+    def _requires(self):
+        req = {
+            "meta": [self.noise_model],
+            "shared": [
+                self.times,
+            ],
+            "detdata": [self.det_data],
+            "intervals": list(),
+        }
+        if self.view is not None:
+            req["intervals"].append(self.view)
+        if self.shared_flags is not None:
+            req["shared"].append(self.shared_flags)
+        if self.det_flags is not None:
+            req["detdata"].append(self.det_flags)
+        return req
+
+    def _provides(self):
+        prov = {"detdata": list()}
+        # if self.det_out is not None:
+        #     prov["detdata"].append(self.det_out)
+        return prov
+
+    @function_timer
+    def _prepare(self, params, data, detectors):
+        """Examine the data and determine quantities needed to set up Mappraiser buffers"""
+        log = Logger.get()
+        timer = Timer()
+        timer.start()
+
+        params["nside"] = self.pixel_pointing.nside
+        
+        # Check that libmappraiser arguments have been provided 
+        # and convert them to the correct data type.
+        # FIXME : use tomlkit to parse a .toml parameter file properly ?
+        libmappraiser_argtypes = {
+            "path_output": str,
+            "ref": str,
+            "Lambda": int,
+            "solver": int,
+            "precond": int,
+            "Z_2lvl": int,
+            "ptcomm_flag": int,
+            "tol": np.double,
+            "maxiter": int,
+            "enlFac": int,
+            "ortho_alg": int,
+            "bs_red": int,
+        }
+        for key in libmappraiser_argtypes.keys():
+            if key not in params:
+                msg = "Please set the parameter {}, which is necessary for libmappraiser.".format(key)
+                raise RuntimeError(msg)
+            else:
+                params[key] = libmappraiser_argtypes[key](params[key])
+
+        # MAPPRAISER requires a fixed set of detectors and pointing matrix non-zeros.
+        # Here we find the superset of local detectors used, and also the number
+        # of pointing matrix elements.
+
+        nsamp = 0
+
+        # MAPPRAISER uses monolithic data buffers and specifies contiguous data intervals
+        # in that buffer.  The starting sample index is used to mark the transition
+        # between data intervals.
+        interval_starts = list()
+
+        # This quantity is only used for printing the fraction of samples in valid
+        # ranges specified by the View.  Only samples actually in the view are copied
+        # to Mappraiser buffers.
+        # N.B: For the moment this is useless since MAPPRAISER does not use data views
+        nsamp_valid = 0
+
+        all_dets = set()
+        nnz_full = None
+        psd_freqs = None
+
+        for ob in data.obs:
+            # Get the detectors we are using for this observation
+            dets = ob.select_local_detectors(detectors)
+            all_dets.update(dets)
+
+            # Check that the timestamps exist.
+            if self.times not in ob.shared:
+                msg = (
+                    "Shared timestamps '{}' does not exist in observation '{}'".format(
+                        self.times, ob.name
+                    )
+                )
+                raise RuntimeError(msg)
+
+            # Check that the detector data and pointing exists in the observation
+            if self.det_data not in ob.detdata:
+                msg = "Detector data '{}' does not exist in observation '{}'".format(
+                    self.det_data, ob.name
+                )
+                raise RuntimeError(msg)
+
+            # Check that the noise model exists, and that the PSD frequencies are the
+            # same across all observations (required by Mappraiser).
+            if self.noise_model not in ob:
+                msg = "Noise model '{}' not in observation '{}'".format(
+                    self.noise_model, ob.name
+                )
+                raise RuntimeError(msg)
+            if psd_freqs is None:
+                psd_freqs = np.array(
+                    ob[self.noise_model].freq(ob.local_detectors[0]).to_value(u.Hz),
+                    dtype=np.float64,
+                )
+            else:
+                check_freqs = (
+                    ob[self.noise_model].freq(ob.local_detectors[0]).to_value(u.Hz)
+                )
+                if not np.allclose(psd_freqs, check_freqs):
+                    raise RuntimeError(
+                        "All PSDs passed to Mappraiser must have the same frequency binning."
+                    )
+
+            # Are we using a view of the data?  If so, we will only be copying data in
+            # those valid intervals.
+            if self.view is not None:
+                if self.view not in ob.intervals:
+                    msg = "View '{}' does not exist in observation {}".format(
+                        self.view, ob.name
+                    )
+                    raise RuntimeError(msg)
+                # Go through all the intervals that will be used for our data view
+                # and accumulate the number of samples.
+                for intvw in ob.intervals[self.view]:
+                    interval_starts.append(nsamp_valid)
+                    nsamp_valid += intvw.last - intvw.first + 1
+            else:
+                interval_starts.append(nsamp_valid)
+                nsamp_valid += ob.n_local_samples
+            nsamp += ob.n_local_samples
+
+        if data.comm.world_rank == 0:
+            log.info(
+                "{} {:.2f} % of samples are included in valid intervals.".format(
+                    self._logprefix, nsamp_valid * 100.0 / nsamp
+                )
+            )
+
+        nsamp = nsamp_valid
+
+        interval_starts = np.array(interval_starts, dtype=np.int64)
+        all_dets = sorted(all_dets)
+
+        nnz_full = len(self.stokes_weights.mode)
+        nnz_stride = None  # N.B: not used, useful for temperature-only maps
+
+        if nnz_full != 3:
+            msg = f"Mappraiser cannot make maps with nnz = {nnz_full}"
+            raise RuntimeError(msg)
+        else:
+            nnz = nnz_full
+            nnz_stride = 1
+
+        if data.comm.world_rank == 0 and "path_output" in params:
+            os.makedirs(params["path_output"], exist_ok=True)
+
+        data.comm.comm_world.barrier()
+        timer.stop()
+        if data.comm.world_rank == 0:
+            msg = "{} Compute data dimensions: {:0.1f} s".format(
+                self._logprefix, timer.seconds()
+            )
+            log.debug(msg)
+
+        return (
+            all_dets,
+            nsamp,
+            nnz,
+            nnz_full,
+            nnz_stride,
+            interval_starts,
+            psd_freqs,
+        )
+
+    @function_timer
+    def _stage_data(
+        self,
+        params,
+        data,
+        all_dets,
+        nsamp,
+        nnz,
+        nnz_full,
+        nnz_stride,
+        interval_starts,
+        psd_freqs,
+    ):
+        """Create mappraiser-compatible buffers.
+        Collect the data into Mappraiser buffers.  If we are purging TOAST data to save
+        memory, then optionally limit the number of processes that are copying at once.
+        """
+        log = Logger.get()
+        timer = Timer()
+
+        nodecomm = data.comm.comm_group_node
+
+        # Determine how many processes per node should copy at once.
+        n_copy_groups = 1
+        if self.purge_det_data:
+            # We will be purging some data- see if we should reduce the number of
+            # processes copying in parallel (if we are not purging data, there
+            # is no benefit to staggering the copy).
+            if self.copy_groups > 0:
+                n_copy_groups = min(self.copy_groups, nodecomm.size)
+
+        if not self._cached:
+            # Only do this if we have not cached the data yet.
+            log_time_memory(
+                data,
+                prefix=self._logprefix,
+                mem_msg="Before staging",
+                full_mem=self.mem_report,
+            )
+
+        # Copy timestamps and PSDs all at once, since they are never purged.
+
+        psds = dict()
+
+        timer.start()
+
+        # if not self._cached:
+        #     timestamp_storage, _ = dtype_to_aligned(mappraiser.TIMESTAMP_TYPE)
+        #     self._mappraiser_timestamps_raw = timestamp_storage.zeros(nsamp)
+        #     self._mappraiser_timestamps = self_mappraiser_timestamps_raw.array()
+
+        #     interval = 0
+        #     time_offset = 0.0
+
+        #     for ob in data.obs:
+        #         for vw in ob.view[self.view].shared[self.times]:
+        #             offset = interval_starts[interval]
+        #             slc = slice(offset, offset + len(vw), 1)
+        #             self._mappraiser_timestamps[slc] = vw
+        #             if self.translate_timestamps:
+        #                 off = self._mappraiser_timestamps[offset] - time_offset
+        #                 self._mappraiser_timestamps[slc] -= off
+        #                 time_offset = self._mappraiser_timestamps[slc][-1] + 1.0
+        #             interval += 1
+
+        #         # Get the noise object for this observation and create new
+        #         # entries in the dictionary when the PSD actually changes.  The detector
+        #         # weights are obtained from the noise model.
+
+        #         nse = ob[self.noise_model]
+        #         nse_scale = 1.0
+        #         if self.noise_scale is not None:
+        #             if self.noise_scale in ob:
+        #                 nse_scale = float(ob[self.noise_scale])
+
+        #         for det in all_dets:
+        #             if det not in ob.local_detectors:
+        #                 continue
+        #             psd = nse.psd(det).to_value(u.K**2 * u.second) * nse_scale**2
+        #             detw = nse.detector_weight(det)
+        #             if det not in psds:
+        #                 psds[det] = [(0.0, psd, detw)]
+        #             else:
+        #                 if not np.allclose(psds[det][-1][1], psd):
+        #                     psds[det] += [(ob.shared[self.times][0], psd, detw)]
+
+        #     log_time_memory(
+        #         data,
+        #         timer=timer,
+        #         timer_msg="Copy timestamps and PSDs",
+        #         prefix=self._logprefix,
+        #         mem_msg="After timestamp staging",
+        #         full_mem=self.mem_report,
+        #     )
+
+        # Copy the signal.  We always need to do this, even if we are running MCs.
+
+        signal_dtype = data.obs[0].detdata[self.det_data].dtype
+
+        if self._cached:
+            # We have previously created the mappraiser buffers.  We just need to fill
+            # them from the toast data.  Since both already exist we just copy the
+            # contents.
+            stage_local(
+                data,
+                nsamp,
+                self.view,
+                all_dets,
+                self.det_data,
+                self._mappraiser_signal,
+                interval_starts,
+                1,
+                1,
+                None,
+                None,
+                None,
+                None,
+                do_purge=False,
+            )
+        else:
+            # Signal buffers do not yet exist
+            if self.purge_det_data:
+                # Allocate in a staggered way.
+                self._mappraiser_signal_raw, self._mappraiser_signal = stage_in_turns(
+                    data,
+                    nodecomm,
+                    n_copy_groups,
+                    nsamp,
+                    self.view,
+                    all_dets,
+                    self.det_data,
+                    mappraiser.SIGNAL_TYPE,
+                    interval_starts,
+                    1,
+                    1,
+                    None,
+                    None,
+                    None,
+                    None,
+                )
+            else:
+                # Allocate and copy all at once.
+                storage, _ = dtype_to_aligned(mappraiser.SIGNAL_TYPE)
+                self._mappraiser_signal_raw = storage.zeros(nsamp * len(all_dets))
+                self._mappraiser_signal = self._mappraiser_signal_raw.array()
+
+                stage_local(
+                    data,
+                    nsamp,
+                    self.view,
+                    all_dets,
+                    self.det_data,
+                    self._mappraiser_signal,
+                    interval_starts,
+                    1,
+                    1,
+                    None,
+                    None,
+                    None,
+                    None,
+                    do_purge=False,
+                )
+            # Create buffer for local_block_sizes
+            b_storage, _ = dtype_to_aligned(mappraiser.PIXEL_TYPE)
+            self._mappraiser_blocksizes_raw = b_storage.zeros(
+                len(data.obs) * len(all_dets)
+            )
+            self._mappraiser_blocksizes = self._mappraiser_blocksizes_raw.array()
+
+        # Compute sizes of local data blocks
+        compute_local_block_sizes(
+            data,
+            self.view,
+            all_dets,
+            self._mappraiser_blocksizes,
+        )
+
+        # Gather data sizes of the full communicator in global array
+        data_size_proc = np.array(
+            data.comm.comm_world.allgather(len(self._mappraiser_signal)), dtype=np.int32
+        )
+
+        log_time_memory(
+            data,
+            timer=timer,
+            timer_msg="Copy signal",
+            prefix=self._logprefix,
+            mem_msg="After signal staging",
+            full_mem=self.mem_report,
+        )
+
+        # Copy the noise.
+        # For the moment, in the absence of a gap-filling procedure in MAPPRAISER, we separate signal and noise in the simulations
+
+        if self._cached:
+            # We have previously created the mappraiser buffers.  We just need to fill
+            # them from the toast data.  Since both already exist we just copy the
+            # contents.
+            stage_local(
+                data,
+                nsamp,
+                self.view,
+                all_dets,
+                self.noise_name,
+                self._mappraiser_noise,
+                interval_starts,
+                1,
+                1,
+                None,
+                None,
+                None,
+                None,
+                do_purge=False,
+            )
+        else:
+            # Signal buffers do not yet exist
+            if self.purge_det_data:
+                # Allocate in a staggered way.
+                (self._mappraiser_noise_raw, self._mappraiser_noise,) = stage_in_turns(
+                    data,
+                    nodecomm,
+                    n_copy_groups,
+                    nsamp,
+                    self.view,
+                    all_dets,
+                    self.noise_name,
+                    mappraiser.SIGNAL_TYPE,
+                    interval_starts,
+                    1,
+                    1,
+                    None,
+                    None,
+                    None,
+                    None,
+                )
+            else:
+                # Allocate and copy all at once.
+                storage, _ = dtype_to_aligned(mappraiser.SIGNAL_TYPE)
+                self._mappraiser_noise_raw = storage.zeros(nsamp * len(all_dets))
+                self._mappraiser_noise = self._mappraiser_signal_raw.array()
+
+                stage_local(
+                    data,
+                    nsamp,
+                    self.view,
+                    all_dets,
+                    self.noise_name,
+                    self._mappraiser_noise,
+                    interval_starts,
+                    1,
+                    1,
+                    None,
+                    None,
+                    None,
+                    None,
+                    do_purge=False,
+                )
+            # Create buffer for invtt
+            tt_storage, _ = dtype_to_aligned(mappraiser.INVTT_TYPE)
+            self._mappraiser_invtt_raw = tt_storage.zeros(
+                len(data.obs) * len(all_dets) * params["Lambda"]
+            )
+            self._mappraiser_invtt = self._mappraiser_invtt_raw.array()
+
+        # Compute invtt
+        compute_invtt(
+            len(data.obs),
+            len(all_dets),
+            self._mappraiser_noise,
+            self._mappraiser_blocksizes,
+            params["Lambda"],
+            params["fsample"],
+            self._mappraiser_invtt,
+            mappraiser.INVTT_TYPE,
+        )
+
+        log_time_memory(
+            data,
+            timer=timer,
+            timer_msg="Copy noise",
+            prefix=self._logprefix,
+            mem_msg="After noise staging",
+            full_mem=self.mem_report,
+        )
+
+        # Copy the pointing
+
+        nested_pointing = self.pixel_pointing.nest
+        if not nested_pointing:
+            # Any existing pixel numbers are in the wrong ordering
+            Delete(detdata=[self.pixel_pointing.pixels]).apply(data)
+            self.pixel_pointing.nest = True
+
+        if not self._cached:
+            # We do not have the pointing yet.
+            storage, _ = dtype_to_aligned(mappraiser.PIXEL_TYPE)
+            self._mappraiser_pixels_raw = storage.zeros(nsamp * len(all_dets) * nnz)
+            self._mappraiser_pixels = self._mappraiser_pixels_raw.array()
+
+            stage_local(
+                data,
+                nsamp,
+                self.view,
+                all_dets,
+                self.pixel_pointing.pixels,
+                self._mappraiser_pixels,
+                interval_starts,
+                3,
+                1,
+                self.shared_flags,
+                self.shared_flag_mask,
+                self.det_flags,
+                self.det_flag_mask,
+                do_purge=True,
+                operator=self.pixel_pointing,
+                n_repeat=nnz,
+            )
+            
+            # Arrange pixel indices for MAPPRAISER
+            self._mappraiser_pixels *= nnz
+            for i in range(nnz):
+                self._mappraiser_pixels[i::nnz] += i
+
+            storage, _ = dtype_to_aligned(mappraiser.WEIGHT_TYPE)
+            self._mappraiser_pixweights_raw = storage.zeros(nsamp * len(all_dets) * nnz)
+            self._mappraiser_pixweights = self._mappraiser_pixweights_raw.array()
+
+            stage_local(
+                data,
+                nsamp,
+                self.view,
+                all_dets,
+                self.stokes_weights.weights,
+                self._mappraiser_pixweights,
+                interval_starts,
+                nnz,
+                nnz_stride,
+                None,
+                None,
+                None,
+                None,
+                do_purge=True,
+                operator=self.stokes_weights,
+            )
+
+            log_time_memory(
+                data,
+                timer=timer,
+                timer_msg="Copy pointing",
+                prefix=self._logprefix,
+                mem_msg="After pointing staging",
+                full_mem=self.mem_report,
+            )
+
+        if not nested_pointing:
+            # Any existing pixel numbers are in the wrong ordering
+            Delete(detdata=[self.pixel_pointing.pixels]).apply(data)
+            self.pixel_pointing.nest = False
+
+        # The following is basically useless for Mappraiser.
+
+        # psdinfo = None
+
+        # if not self._cached:
+        #     # Detectors weights.  Madam assumes a single noise weight for each detector
+        #     # that is constant.  We set this based on the first observation or else use
+        #     # uniform weighting.
+
+        #     ndet = len(all_dets)
+        #     detweights = np.ones(ndet, dtype=np.float64)
+
+        #     if len(psds) > 0:
+        #         npsdbin = len(psd_freqs)
+        #         npsd = np.zeros(ndet, dtype=np.int64)
+        #         psdstarts = []
+        #         psdvals = []
+        #         for idet, det in enumerate(all_dets):
+        #             if det not in psds:
+        #                 raise RuntimeError("Every detector must have at least one PSD")
+        #             psdlist = psds[det]
+        #             npsd[idet] = len(psdlist)
+        #             for psdstart, psd, detw in psdlist:
+        #                 psdstarts.append(psdstart)
+        #                 psdvals.append(psd)
+        #             detweights[idet] = psdlist[0][2]
+        #         npsdtot = np.sum(npsd)
+        #         psdstarts = np.array(psdstarts, dtype=np.float64)
+        #         psdvals = np.hstack(psdvals).astype(mappraiser.PSD_TYPE)
+        #         npsdval = psdvals.size
+        #     else:
+        #         # Uniform weighting
+        #         npsd = np.ones(ndet, dtype=np.int64)
+        #         npsdtot = np.sum(npsd)
+        #         psdstarts = np.zeros(npsdtot)
+        #         npsdbin = 10
+        #         fsample = 10.0
+        #         psd_freqs = np.arange(npsdbin) * fsample / npsdbin
+        #         npsdval = npsdbin * npsdtot
+        #         psdvals = np.ones(npsdval)
+
+        #     psdinfo = (detweights, npsd, psdstarts, psd_freqs, psdvals)
+
+        #     log_time_memory(
+        #         data,
+        #         timer=timer,
+        #         timer_msg="Collect PSD info",
+        #         prefix=self._logprefix,
+        #     )
+        timer.stop()
+
+        # return signal_dtype and info on size of distributed data
+        return (
+            signal_dtype,
+            data_size_proc,
+        )
+
+    @function_timer
+    def _unstage_data(
+        self,
+        params,
+        data,
+        all_dets,
+        nsamp,
+        nnz,
+        nnz_full,
+        interval_starts,
+        signal_dtype,
+    ):
+        """
+        Restore data to TOAST observations.
+        Optionally copy the signal and pointing back to TOAST if we previously
+        purged it to save memory.  Also copy the destriped timestreams if desired.
+        """
+        log = Logger.get()
+        timer = Timer()
+
+        nodecomm = data.comm.comm_group_node
+
+        # Determine how many processes per node should copy at once.
+        n_copy_groups = 1
+        if self.purge_det_data:
+            # We MAY be restoring some data- see if we should reduce the number of
+            # processes copying in parallel (if we are not purging data, there
+            # is no benefit to staggering the copy).
+            if self.copy_groups > 0:
+                n_copy_groups = min(self.copy_groups, nodecomm.size)
+
+        log_time_memory(
+            data,
+            prefix=self._logprefix,
+            mem_msg="Before un-staging",
+            full_mem=self.mem_report,
+        )
+
+        # Copy the signal
+
+        timer.start()
+
+        out_name = self.det_data
+        # if self.det_out is not None:
+        #     out_name = self.det_out
+
+        # if self.det_out is not None or (self.purge_det_data and self.restore_det_data):
+        if self.purge_det_data and self.restore_det_data:
+            # We are copying some kind of signal back
+            if not self.mcmode:
+                # We are not running multiple realizations, so delete as we copy.
+                # Restore signal
+                restore_in_turns(
+                    data,
+                    nodecomm,
+                    n_copy_groups,
+                    nsamp,
+                    self.view,
+                    all_dets,
+                    out_name,
+                    signal_dtype,
+                    self._mappraiser_signal,
+                    self._mappraiser_signal_raw,
+                    interval_starts,
+                    1,
+                )
+                del self._mappraiser_signal
+                del self._mappraiser_signal_raw
+                del self._mappraiser_blocksizes
+                del self._mappraiser_blocksizes_raw
+                # Restore noise
+                restore_in_turns(
+                    data,
+                    nodecomm,
+                    n_copy_groups,
+                    nsamp,
+                    self.view,
+                    all_dets,
+                    out_name,
+                    signal_dtype,
+                    self._mappraiser_noise,
+                    self._mappraiser_noise_raw,
+                    interval_starts,
+                    1,
+                )
+                del self._mappraiser_noise
+                del self._mappraiser_noise_raw
+                del self._mappraiser_invtt
+                del self._mappraiser_invtt_raw
+            else:
+                # We want to re-use the signal buffer, just copy.
+                restore_local(
+                    data,
+                    nsamp,
+                    self.view,
+                    all_dets,
+                    out_name,
+                    signal_dtype,
+                    self._mappraiser_signal,
+                    interval_starts,
+                    1,
+                )
+                restore_local(
+                    data,
+                    nsamp,
+                    self.view,
+                    all_dets,
+                    out_name,
+                    signal_dtype,
+                    self._mappraiser_noise,
+                    interval_starts,
+                    1,
+                )
+
+            log_time_memory(
+                data,
+                timer=timer,
+                timer_msg="Copy signal",
+                prefix=self._logprefix,
+                mem_msg="After restoring signal",
+                full_mem=self.mem_report,
+            )
+
+        if not self.mcmode:
+            # We can clear the cached pointing
+            del self._mappraiser_pixels
+            del self._mappraiser_pixels_raw
+            del self._mappraiser_pixweights
+            del self._mappraiser_pixweights_raw
+        return
+
+    @function_timer
+    def _MLmap(self, params, data, data_size_proc, nb_blocks_loc, nnz):
+        """Compute the ML map from buffered data."""
+        log_time_memory(
+            data,
+            prefix=self._logprefix,
+            mem_msg="Just before libmappraiser.MLmap",
+            full_mem=self.mem_report,
+        )
+
+        # ? how to use mcmode (not yet supported)
+        # if self._cached:
+        # -> call mappraiser in "cached" mode
+        # else:
+        # -> call mappraiser in normal mode
+        # -> if self.mcmode: self._cached=True
+
         mappraiser.MLmap(
-            self._comm,
-            self._params,
+            data.comm.comm_world,
+            params,
             data_size_proc,
             nb_blocks_loc,
-            local_blocks_sizes,
+            self._mappraiser_blocksizes,
             nnz,
             self._mappraiser_pixels,
             self._mappraiser_pixweights,
             self._mappraiser_signal,
             self._mappraiser_noise,
-            self._params["Lambda"],
+            params["Lambda"],
             self._mappraiser_invtt,
         )
-        # os.environ["OMP_NUM_THREADS"] = "4"
 
         return
 
-    def _count_samples(self):
-        """Loop over the observations and count the number of samples."""
-        if len(self._data.obs) != 1:
-            nsamp = 0
-            tod0 = self._data.obs[0]["tod"]
-            detectors0 = tod0.local_dets
-            for obs in self._data.obs:
-                tod = obs["tod"]
-                # For the moment, we require that all observations have
-                # the same set of detectors
-                detectors = tod.local_dets
-                dets_are_same = True
-                if len(detectors0) != len(detectors):
-                    dets_are_same = False
-                else:
-                    for det1, det2 in zip(detectors0, detectors):
-                        if det1 != det2:
-                            dets_are_same = False
-                            break
-                if not dets_are_same:
-                    raise RuntimeError(
-                        "When calling Mappraiser, all TOD assigned to a process "
-                        "must have the same local detectors."
-                    )
-                nsamp += tod.local_samples[1]
-        else:
-            tod = self._data.obs[0]["tod"]
-            nsamp = tod.local_samples[1]
-        return nsamp
-
-    def _get_period_ranges(self, detectors):
-        """Collect the ranges of every observation.
-        (This routine taken as is from Madam has been truncated, for now it is
-        only extracting the frequency binning of the PSDs)
-        """
-        psdfreqs = None
-
-        for obs in self._data.obs:
-            tod = obs["tod"]
-            # Check that all noise objects have the same binning
-            if self._noisekey in obs.keys():
-                nse = obs[self._noisekey]
-                if nse is not None:
-                    if psdfreqs is None:
-                        psdfreqs = nse.freq(detectors[0]).astype(np.float64).copy()
-                    for det in detectors:
-                        check_psdfreqs = nse.freq(det)
-                        if not np.allclose(psdfreqs, check_psdfreqs):
-                            raise RuntimeError(
-                                "All PSDs passed to Mappraiser must have"
-                                " the same frequency binning."
-                            )
-
-        return psdfreqs
-
-    def _psd2invtt(self, psdfreqs, psd):
-        """Generate the first rows of the Toeplitz blocks from the PSDs"""
-        # parameters
-        sampling_freq = self._params["samplerate"]
-        f_defl = sampling_freq / (np.pi * self._params["Lambda"])
-        df = f_defl / 2
-        block_size = 2 ** (int(math.log(sampling_freq * 1.0 / df, 2)) + 1)
-
-        # Invert PSD
-        psd_sim_m1 = np.reciprocal(psd)
-
-        # Initialize full size inverse PSD in frequency domain
-        fs = fftfreq(block_size, 1.0 / sampling_freq)
-        psdm1 = np.zeros_like(fs)
-
-        # Perform interpolation to get full size PSD from TOAST provided PSD
-        tck = interpolate.splrep(psdfreqs, psd_sim_m1, s=0)  # s=0 : no smoothing
-        psdfit = interpolate.splev(np.abs(fs[: int(block_size / 2) + 1]), tck, der=0)
-        psdfit[0] = 0  # set offset noise contribution to zero
-        psdm1[: int(block_size / 2)] = psdfit[: int(block_size / 2)]
-        psdm1[int(block_size / 2) :] = np.flip(psdfit[1:], 0)
-
-        # Compute inverse noise autocorrelation functions
-        inv_tt = np.real(np.fft.ifft(psdm1, n=block_size))
-
-        # Define apodization window
-        window = scipy.signal.gaussian(
-            2 * self._params["Lambda"], 1.0 / 2 * self._params["Lambda"]
-        )
-        window = np.fft.ifftshift(window)
-        window = window[: self._params["Lambda"]]
-        window = np.pad(
-            window, (0, int(block_size / 2 - (self._params["Lambda"]))), "constant"
-        )
-        symw = np.zeros(block_size)
-        symw[: int(block_size / 2)] = window
-        symw[int(block_size / 2) :] = np.flip(window, 0)
-
-        inv_tt_w = np.multiply(symw, inv_tt, dtype=mappraiser.INVTT_TYPE)
-
-        return inv_tt_w[: self._params["Lambda"]]
-
-    def _noise2invtt(self, noise, nn, idet):
-        """Computes a periodogram from a noise timestream, and fits a PSD model
-        to it, which is then used to build the first row of a Toeplitz block.
-        """
-        # parameters
-        sampling_freq = self._params["samplerate"]
-        # closest power of two to 1/4 of the timestream length
-        Max_lambda = 2 ** (int(math.log(nn / 4, 2)))
-        f_defl = sampling_freq / (np.pi * Max_lambda)
-        df = f_defl / 2
-        block_size = 2 ** (int(math.log(sampling_freq * 1.0 / df, 2)))
-
-        # Compute periodogram
-        f, psd = scipy.signal.periodogram(
-            noise, sampling_freq, nfft=block_size, window="blackman"
-        )
-        # if idet==37:
-        #     print(len(f), flush=True)
-
-        # Fit the psd model to the periodogram (in log scale)
-        popt, pcov = curve_fit(
-            logpsd_model,
-            f[1:],
-            np.log10(psd[1:]),
-            p0=np.array([-7, -1.0, 0.1, 0.0]),
-            bounds=([-20, -10, 0.0, 0.0], [0.0, 0.0, 10, 0.001]),
-            maxfev=1000,
-        )
-
-        if self._rank == 0 and idet == 0:
-            print(
-                "\n[det "
-                + str(idet)
-                + "]: PSD fit log(sigma2) = %1.2f, alpha = %1.2f, fknee = %1.2f, fmin = %1.2f\n"
-                % tuple(popt),
-                flush=True,
-            )
-            print("[det " + str(idet) + "]: PSD fit covariance: \n", pcov, flush=True)
-        # psd_fit_m1 = np.zeros_like(f)
-        # psd_fit_m1[1:] = inversepsd_model(f[1:],10**popt[0],popt[1],popt[2])
-
-        # Invert periodogram
-        psd_sim_m1 = np.reciprocal(psd)
-        # if self._rank == 0 and idet == 0:
-        # np.save("psd_sim.npy",psd_sim_m1)
-        # psd_sim_m1_log = np.log10(psd_sim_m1)
-
-        # Invert the fit to the psd model / Fit the inverse psd model to the inverted periodogram
-        # popt,pcov = curve_fit(inverselogpsd_model,f[1:],psd_sim_m1_log[1:])
-        # print(popt)
-        # print(pcov)
-        psd_fit_m1 = np.zeros_like(f)
-        psd_fit_m1[1:] = inversepsd_model(
-            f[1:], 10 ** (-popt[0]), popt[1], popt[2], popt[3]
-        )
-
-        # Initialize full size inverse PSD in frequency domain
-        fs = fftfreq(block_size, 1.0 / sampling_freq)
-        psdm1 = np.zeros_like(fs)
-
-        # Symmetrize inverse PSD according to fs shape
-        # psdfit[:int(block_size/2)]
-        psdm1[: int(block_size / 2)] = psd_fit_m1[:-1]
-        psdm1[int(block_size / 2) :] = np.flip(psd_fit_m1[1:], 0)
-
-        # Compute inverse noise autocorrelation functions
-        inv_tt = np.real(np.fft.ifft(psdm1, n=block_size))
-
-        # Define apodization window
-        window = scipy.signal.gaussian(
-            2 * self._params["Lambda"], 1.0 / 2 * self._params["Lambda"]
-        )
-        window = np.fft.ifftshift(window)
-        window = window[: self._params["Lambda"]]
-        window = np.pad(
-            window, (0, int(block_size / 2 - (self._params["Lambda"]))), "constant"
-        )
-        symw = np.zeros(block_size)
-        symw[: int(block_size / 2)] = window
-        symw[int(block_size / 2) :] = np.flip(window, 0)
-
-        inv_tt_w = np.multiply(symw, inv_tt, dtype=mappraiser.INVTT_TYPE)
-
-        # effective inverse noise power
-        # if self._rank == 0 and idet == 0:
-        # psd = np.abs(np.fft.fft(inv_tt_w,n=block_size))
-        # np.save("freq.npy",fs[:int(block_size/2)])
-        # np.save("psd0.npy",psdm1[:int(block_size/2)])
-        # np.save("psd"+str(self._params["Lambda"])+".npy",psd[:int(block_size/2)])
-
-        # , popt[0], popt[1], popt[2], popt[3]
-        return inv_tt_w[: self._params["Lambda"]]
-
-    @function_timer
-    def _prepare(self):
-        """Examine the data object."""
-        log = Logger.get()
-        timer = Timer()
-        timer.start()
-
-        nsamp = self._count_samples()
-
-        # Determine the detectors and the pointing matrix non-zeros
-        # from the first observation. Mappraiser will expect these to remain
-        # unchanged across observations.
-
-        tod = self._data.obs[0]["tod"]
-
-        if self._dets is None:
-            dets = tod.local_dets
-        else:
-            dets = [det for det in tod.local_dets if det in self._dets]
-        ndet = len(dets)
-
-        # We get the number of Non-zero pointing weights per pixel, from the
-        # shape of the data from the first detector
-
-        nnzname = "{}_{}".format(self._weights, dets[0])
-        nnz_full = tod.cache.reference(nnzname).shape[1]
-
-        if nnz_full != 3:
-            raise RuntimeError(
-                "OpMappraiser: Don't know how to make a map "
-                "with nnz={}".format(nnz_full)
-            )
-            nnz = 3
-            nnz_stride = 1
-        else:
-            nnz = nnz_full
-            nnz_stride = 1
-
-        if "nside" not in self._params:
-            raise RuntimeError(
-                'OpMappraiser: "nside" must be set in the parameter dictionary'
-            )
-        nside = int(self._params["nside"])
-
-        # Inspect the valid intervals across all observations to
-        # determine the number of samples per detector
-        # N.B: Above comment is from OpMadam, for now
-        # it only gives frequency binning of the PSDs
-        psdfreqs = self._get_period_ranges(dets)
-
-        self._comm.Barrier()
-        if self._rank == 0 and self._verbose:
-            timer.report_clear("Collect dataset dimensions")
-
-        return (
-            dets,
-            nsamp,
-            ndet,
-            nnz,
-            nnz_full,
-            nnz_stride,
-            psdfreqs,
-            nside,
-        )
-
-    @function_timer
-    def _stage_time(self, detectors, nsamp, psdfreqs):
-        """Stage the timestamps and use them to build PSD inputs.
-        N.B: timestamps are not currently used in MAPPRAISER, however, this may
-        change in the future. At this stage, the routine builds the time-domain
-        Toeplitz blocks inputs (first rows).
-        """
-        # self._mappraiser_timestamps = self._cache.create(
-        #     "timestamps", mappraiser.TIMESTAMP_TYPE, (nsamp,)
-        # )
-
-        # offset = 0
-        # time_offset = 0
-        # psds = {}
-        invtt_list = []
-        for iobs, obs in enumerate(self._data.obs):
-            tod = obs["tod"]
-            # period_ranges = obs_period_ranges[iobs]
-
-            # # Collect the timestamps for the valid intervals
-            # timestamps = tod.local_times().copy()
-            # if self._translate_timestamps:
-            #     # Translate the time stamps to be monotonous
-            #     timestamps -= timestamps[0] - time_offset
-            #     time_offset = timestamps[-1] + 1
-            #
-            # for istart, istop in period_ranges:
-            #     nn = istop - istart
-            #     ind = slice(offset, offset + nn)
-            #     self._mappraiser_timestamps[ind] = timestamps[istart:istop]
-            #     offset += nn
-
-            # get the noise object for this observation and create new
-            # entries in the dictionary when the PSD actually changes
-            if self._noisekey in obs.keys():
-                nse = obs[self._noisekey]
-                if "noise_scale" in obs:
-                    noise_scale = obs["noise_scale"]
-                else:
-                    noise_scale = 1
-                if nse is not None:
-                    for det in detectors:
-                        psd = nse.psd(det) * noise_scale**2
-                        invtt = self._psd2invtt(psdfreqs, psd)
-                        # if det not in psds:
-                        #     psds[det] = [(0, psd)]
-                        # else:
-                        #     if not np.allclose(psds[det][-1][1], psd):
-                        #         psds[det] += [(timestamps[0], psd)]
-
-        return invtt_list
-
-    @function_timer
-    def _stage_signal(self, detectors, nsamp, ndet, nodecomm, nread):
-        """Stage signal"""
-        log = Logger.get()
-        timer = Timer()
-        # Determine if we can purge the signal and avoid keeping two
-        # copies in memory
-        purge = self._name is not None and self._purge_tod
-        if not purge:
-            nread = 1
-            nodecomm = MPI.COMM_SELF
-
-        for iread in range(nread):
-            nodecomm.Barrier()
-            timer.start()
-            if nodecomm.rank % nread == iread:
-                self._mappraiser_signal = self._cache.create(
-                    "signal", mappraiser.SIGNAL_TYPE, (nsamp * ndet,)
-                )
-                local_blocks_sizes = self._cache.create(
-                    "block_sizes", mappraiser.PIXEL_TYPE, (len(self._data.obs) * ndet,)
-                )
-                self._mappraiser_signal[:] = np.nan
-
-                global_offset = 0
-                gshift = 0
-                for iobs, obs in enumerate(self._data.obs):
-                    tod = obs["tod"]
-
-                    for idet, det in enumerate(detectors):
-                        # Get the signal.
-                        signal = tod.local_signal(det, self._name)
-                        signal_dtype = signal.dtype
-                        offset = global_offset
-                        shift = gshift
-                        local_V_size = len(signal)
-                        dslice = slice(
-                            idet * nsamp + offset, idet * nsamp + offset + local_V_size
-                        )
-                        self._mappraiser_signal[dslice] = signal
-                        offset += local_V_size
-                        local_blocks_sizes[
-                            idet * len(self._data.obs) + shift
-                        ] = local_V_size
-                        shift += 1
-
-                        del signal
-                    # Purge only after all detectors are staged in case some are aliased
-                    # cache.clear() will not fail if the object was already
-                    # deleted as an alias
-                    if purge:
-                        for det in detectors:
-                            cachename = "{}_{}".format(self._name, det)
-                            tod.cache.clear(cachename)
-                    global_offset = offset
-                    gshift = shift
-
-            if self._verbose and nread > 1:
-                nodecomm.Barrier()
-                if self._rank == 0:
-                    timer.report_clear("Stage signal {} / {}".format(iread + 1, nread))
-
-        return signal_dtype, local_blocks_sizes
-
-    @function_timer
-    def _stage_noise(self, detectors, nsamp, ndet, nodecomm, nread):
-        """Stage noise timestream (detector noise + atmosphere)"""
-        log = Logger.get()
-        timer = Timer()
-        # Determine if we can purge the signal and avoid keeping two
-        # copies in memory
-        purge = self._noise_name is not None and self._purge_tod
-        if not purge:
-            nread = 1
-            nodecomm = MPI.COMM_SELF
-
-        for iread in range(nread):
-            nodecomm.Barrier()
-            timer.start()
-            if nodecomm.rank % nread == iread:
-                self._mappraiser_noise = self._cache.create(
-                    "noise", mappraiser.SIGNAL_TYPE, (nsamp * ndet,)
-                )
-                self._mappraiser_invtt = self._cache.create(
-                    "invtt",
-                    mappraiser.INVTT_TYPE,
-                    (self._params["Lambda"] * len(self._data.obs) * ndet,),
-                )
-                if self._noise_name == None:
-                    self._mappraiser_noise = np.zeros_like(self._mappraiser_noise)
-                    if self._params["Lambda"] != 1:
-                        sys.exit(
-                            "Noiseless cases should be passed with half bandwidth = 1."
-                        )
-                    self._mappraiser_invtt = np.ones_like(
-                        self._mappraiser_invtt
-                    )  # Must be used with lambda = 1
-                    return self._mappraiser_noise.dtype
-
-                self._mappraiser_noise[:] = np.nan
-
-                global_offset = 0
-                global_woffset = 0
-                wsamp = self._params["Lambda"] * len(self._data.obs)
-                # fknee_list = []
-                # fmin_list = []
-                # alpha_list = []
-                # logsigma2_list = []
-                for iobs, obs in enumerate(self._data.obs):
-                    tod = obs["tod"]
-
-                    for idet, det in enumerate(detectors):
-                        # Get the signal.
-                        noise = tod.local_signal(det, self._noise_name)
-                        # if self._rank ==0 and idet == 0:
-                        #     print("|noise| = {}".format(np.sum(noise**2)))
-                        noise_dtype = noise.dtype
-                        offset = global_offset
-                        woffset = global_woffset
-                        nn = len(noise)
-                        # , logsigma2, alpha, fknee, fmin = self._noise2invtt(noise, nn, idet)
-                        invtt = self._noise2invtt(noise, nn, idet)
-                        # logsigma2_list.append(logsigma2)
-                        # alpha_list.append(alpha)
-                        # fknee_list.append(fknee)
-                        # fmin_list.append(fmin)
-                        dslice = slice(
-                            idet * nsamp + offset, idet * nsamp + offset + nn
-                        )
-                        self._mappraiser_noise[dslice] = noise
-                        offset += nn
-                        wslice = slice(
-                            idet * wsamp + woffset,
-                            idet * wsamp + woffset + self._params["Lambda"],
-                        )
-                        self._mappraiser_invtt[wslice] = invtt
-                        woffset += self._params["Lambda"]
-
-                        del noise
-                        del invtt
-                    # Purge only after all detectors are staged in case some are aliased
-                    # cache.clear() will not fail if the object was already
-                    # deleted as an alias
-                    if purge:
-                        for det in detectors:
-                            cachename = "{}_{}".format(self._noise_name, det)
-                            tod.cache.clear(cachename)
-
-                    global_offset = offset
-                    global_woffset = woffset
-
-            if self._verbose and nread > 1:
-                nodecomm.Barrier()
-                if self._rank == 0:
-                    timer.report_clear("Stage noise {} / {}".format(iread + 1, nread))
-
-        # sendcounts = np.array(self._comm.gather(len(fknee_list), 0))
-        #
-        # Fknee_list = None
-        # Fmin_list = None
-        # Alpha_list = None
-        # Logsigma2_list = None
-        #
-        # if self._rank ==0:
-        #     Fknee_list = np.empty(sum(sendcounts))
-        #     Fmin_list = np.empty(sum(sendcounts))
-        #     Alpha_list = np.empty(sum(sendcounts))
-        #     Logsigma2_list = np.empty(sum(sendcounts))
-        #
-        # self._comm.Gatherv(np.array(fknee_list),(Fknee_list,sendcounts),0)
-        # self._comm.Gatherv(np.array(fmin_list),(Fmin_list, sendcounts),0)
-        # self._comm.Gatherv(np.array(alpha_list),(Alpha_list, sendcounts),0)
-        # self._comm.Gatherv(np.array(logsigma2_list),(Logsigma2_list, sendcounts),0)
-
-        # if self._rank ==0:
-        #     np.save("fknee.npy",Fknee_list)
-        #     np.save("fmin.npy", Fmin_list)
-        #     np.save("logsigma2.npy",Logsigma2_list)
-        #     np.save("alpha.npy",Alpha_list)
-
-        return noise_dtype
-
-    @function_timer
-    def _stage_pixels(self, detectors, nsamp, ndet, nnz, nside):
-        """Stage pixels"""
-        self._mappraiser_pixels = self._cache.create(
-            "pixels", mappraiser.PIXEL_TYPE, (nsamp * ndet * nnz,)
-        )
-        self._mappraiser_pixels[:] = -1
-
-        global_offset = 0
-        for iobs, obs in enumerate(self._data.obs):
-            tod = obs["tod"]
-
-            commonflags = None
-            for idet, det in enumerate(detectors):
-                # Optionally get the flags, otherwise they are
-                # assumed to have been applied to the pixel numbers.
-                # N.B: MAPPRAISER doesn't use flags for now but might be useful for
-                # future updates.
-
-                if self._apply_flags:
-                    detflags = tod.local_flags(det, self._flag_name)
-                    commonflags = tod.local_common_flags(self._common_flag_name)
-                    flags = np.logical_or(
-                        (detflags & self._flag_mask) != 0,
-                        (commonflags & self._common_flag_mask) != 0,
-                    )
-                    del detflags
-
-                # get the pixels for the valid intervals from the cache
-
-                pixelsname = "{}_{}".format(self._pixels, det)
-                pixels = tod.cache.reference(pixelsname)
-                pixels_dtype = pixels.dtype
-
-                if not self._pixels_nested:
-                    # Madam expects the pixels to be in nested ordering.
-                    # This is not the case for Mappraiser but keeping it for now
-                    pixels = pixels.copy()
-                    good = pixels >= 0
-                    pixels[good] = hp.ring2nest(nside, pixels[good])
-
-                if self._apply_flags:
-                    pixels = pixels.copy()
-                    pixels[flags] = -1
-
-                offset = global_offset
-                nn = len(pixels)
-                dslice = slice(
-                    (idet * nsamp + offset) * nnz,
-                    (idet * nsamp + offset + nn) * nnz,
-                )
-                # nnz = 3 is a mandatory assumption here (could easily be generalized ...)
-                self._mappraiser_pixels[dslice] = nnz * np.repeat(pixels, nnz)
-                self._mappraiser_pixels[dslice][1::nnz] += 1
-                self._mappraiser_pixels[dslice][2::nnz] += 2
-                offset += nn
-
-                del pixels
-                if self._apply_flags:
-                    del flags
-
-            # Always purge the pixels but restore them from the Mappraiser
-            # buffers when purge_pixels = False
-            # Purging MUST happen after all detectors are staged because
-            # some the pixel numbers may be aliased between detectors
-            for det in detectors:
-                pixelsname = "{}_{}".format(self._pixels, det)
-                # cache.clear() will not fail if the object was already
-                # deleted as an alias
-                tod.cache.clear(pixelsname)
-                if self._purge_flags and self._flag_name is not None:
-                    cacheflagname = "{}_{}".format(self._flag_name, det)
-                    tod.cache.clear(cacheflagname)
-
-            del commonflags
-            if self._purge_flags and self._common_flag_name is not None:
-                tod.cache.clear(self._common_flag_name)
-            global_offset = offset
-        return pixels_dtype
-
-    @function_timer
-    def _stage_pixweights(
-        self,
-        detectors,
-        nsamp,
-        ndet,
-        nnz,
-        nnz_full,
-        nnz_stride,
-        nodecomm,
-        nread,
-    ):
-        """Now collect the pixel weights"""
-        log = Logger.get()
-        timer = Timer()
-        # Determine if we can purge the pixel weights and avoid keeping two
-        # copies of the weights in memory
-        purge = self._purge_weights or (nnz == nnz_full)
-        if not purge:
-            nread = 1
-            nodecomm = MPI.COMM_SELF
-        for iread in range(nread):
-            nodecomm.Barrier()
-            timer.start()
-            if nodecomm.rank % nread == iread:
-                self._mappraiser_pixweights = self._cache.create(
-                    "pixweights", mappraiser.WEIGHT_TYPE, (nsamp * ndet * nnz,)
-                )
-                self._mappraiser_pixweights[:] = 0
-
-                global_offset = 0
-                for iobs, obs in enumerate(self._data.obs):
-                    tod = obs["tod"]
-
-                    for idet, det in enumerate(detectors):
-                        # get the pixels and weights for the valid intervals
-                        # from the cache
-                        weightsname = "{}_{}".format(self._weights, det)
-                        weights = tod.cache.reference(weightsname)
-                        weight_dtype = weights.dtype
-                        offset = global_offset
-                        nn = len(weights)
-                        dwslice = slice(
-                            (idet * nsamp + offset) * nnz,
-                            (idet * nsamp + offset + nn) * nnz,
-                        )
-                        self._mappraiser_pixweights[dwslice] = weights.flatten()[
-                            ::nnz_stride
-                        ]
-                        offset += nn
-                        del weights
-                    # Purge the weights but restore them from the Mappraiser
-                    # buffers when purge_weights=False.
-                    if purge:
-                        for idet, det in enumerate(detectors):
-                            weightsname = "{}_{}".format(self._weights, det)
-                            tod.cache.clear(pattern=weightsname)
-
-                    global_offset = offset
-            if self._verbose and nread > 1:
-                nodecomm.Barrier()
-                if self._rank == 0:
-                    timer.report_clear(
-                        "Stage pixel weights {} / {}".format(iread + 1, nread)
-                    )
-        return weight_dtype
-
-    @function_timer
-    def _stage_data(
-        self,
-        nsamp,
-        ndet,
-        nnz,
-        nnz_full,
-        nnz_stride,
-        psdfreqs,
-        detectors,
-        nside,
-    ):
-        """create Mappraiser-compatible buffers
-
-        Collect the TOD into Mappraiser buffers. Process pixel weights
-        Separate from the rest to reduce the memory high water mark
-        When the user has set purge=True
-
-        Moving data between toast and Mappraiser buffers has an overhead.
-        We perform the operation in a staggered fashion to have the
-        overhead only once per node.
-        """
-        log = Logger.get()
-        nodecomm = self._comm.Split_type(MPI.COMM_TYPE_SHARED, self._rank)
-        # Check if the user has elected to stagger staging the data on each
-        # node to avoid exhausting memory
-        if self._conserve_memory:
-            if self._conserve_memory == 1:
-                nread = nodecomm.size
-            else:
-                nread = min(self._conserve_memory, nodecomm.size)
-        else:
-            nread = 1
-
-        self._comm.Barrier()
-        timer_tot = Timer()
-        timer_tot.start()
-
-        # Stage time (Tpltz blocks in Mappraiser), it is never purged
-        # so the staging is never stepped
-        timer = Timer()
-        # THIS STEP IS SKIPPED: we do not have timestamps, nor do we build Toeplitz blocks
-        # from TOAST psds which comprise detector noise only - a psd fit is done when staging noise -
-        # timer.start()
-        # invtt_list = self._stage_time(detectors, nsamp, psdfreqs)
-        # self._mappraiser_invtt = np.array([np.array(invtt_i, dtype= mappraiser.INVTT_TYPE) for invtt_i in invtt_list])
-        # del invtt_list
-        # self._mappraiser_invtt = np.concatenate(self._mappraiser_invtt)
-        # if self._verbose:
-        #    nodecomm.Barrier()
-        #    if self._rank == 0:
-        #        timer.report_clear("Stage time")
-        # memreport("after staging time", self._comm)  # DEBUG
-        # count_caches(
-        #    self._data, self._comm, nodecomm, self._cache, "after staging time"
-        # )  # DEBUG
-
-        # Stage signal.  If signal is not being purged, staging is not stepped
-        timer.start()
-        signal_dtype, local_blocks_sizes = self._stage_signal(
-            detectors, nsamp, ndet, nodecomm, nread
-        )
-        if self._verbose:
-            nodecomm.Barrier()
-            if self._rank == 0:
-                timer.report_clear("Stage signal")
-        memreport("after staging signal", self._comm)  # DEBUG
-        count_caches(
-            self._data, self._comm, nodecomm, self._cache, "after staging signal"
-        )  # DEBUG
-
-        # Stage noise.  If noise is not being purged, staging is not stepped
-        timer.start()
-        noise_dtype = self._stage_noise(detectors, nsamp, ndet, nodecomm, nread)
-        if self._params["uniform_w"] == 1:
-            if self._params["lambda"] != 1:
-                sys.exit("Cannot uniform weight when half bandwidth is not 1.")
-            self._mappraiser_invtt = np.ones_like(self._mappraiser_invtt)
-        if self._verbose:
-            nodecomm.Barrier()
-            if self._rank == 0:
-                timer.report_clear("Stage noise")
-        memreport("after staging noise", self._comm)  # DEBUG
-        count_caches(
-            self._data, self._comm, nodecomm, self._cache, "after staging noise"
-        )  # DEBUG
-
-        # Stage pixels
-        timer_step = Timer()
-        timer_step.start()
-        for iread in range(nread):
-            nodecomm.Barrier()
-            timer.start()
-            if nodecomm.rank % nread == iread:
-                pixels_dtype = self._stage_pixels(detectors, nsamp, ndet, nnz, nside)
-            if self._verbose and nread > 1:
-                nodecomm.Barrier()
-                if self._rank == 0:
-                    timer.report_clear("Stage pixels {} / {}".format(iread + 1, nread))
-        if self._verbose:
-            nodecomm.Barrier()
-            if self._rank == 0:
-                timer_step.report_clear("Stage pixels")
-        memreport("after staging pixels", self._comm)  # DEBUG
-        count_caches(
-            self._data, self._comm, nodecomm, self._cache, "after staging pixels"
-        )  # DEBUG
-
-        # Stage pixel weights
-        timer_step.start()
-        weight_dtype = self._stage_pixweights(
-            detectors,
-            nsamp,
-            ndet,
-            nnz,
-            nnz_full,
-            nnz_stride,
-            nodecomm,
-            nread,
-        )
-        if self._verbose:
-            nodecomm.Barrier()
-            if self._rank == 0:
-                timer_step.report_clear("Stage pixel weights")
-        memreport("after staging pixel weights", self._comm)  # DEBUG
-        count_caches(
-            self._data, self._comm, nodecomm, self._cache, "after staging pixel weights"
-        )  # DEBUG
-
-        del nodecomm
-        if self._rank == 0 and self._verbose:
-            timer_tot.report_clear("Stage all data")
-
-        # detweights is either a dictionary of weights specified at
-        # construction time, or else we use uniform weighting.
-        # N.B: This is essentially useless in current implementation
-        detw = {}
-        if self._detw is None:
-            for idet, det in enumerate(detectors):
-                detw[det] = 1.0
-        else:
-            detw = self._detw
-
-        detweights = np.zeros(ndet, dtype=np.float64)
-        for idet, det in enumerate(detectors):
-            detweights[idet] = detw[det]
-
-        # Get global array of data sizes of the full communicator
-        data_size_proc = np.array(
-            self._comm.allgather(len(self._mappraiser_signal)), dtype=np.int32
-        )
-        # Get number of local observations
-        nobsloc = len(self._data.obs)
-
-        return (
-            data_size_proc,
-            nobsloc,
-            local_blocks_sizes,
-            signal_dtype,
-            noise_dtype,
-            pixels_dtype,
-            weight_dtype,
-        )
-
-    @function_timer
-    def _unstage_signal(self, detectors, nsamp, signal_type):
-        # N.B: useful when we want to get back data after mapmaking, not allowed for now
-        # if self._name_out is not None:
-        #     global_offset = 0
-        #     for obs, period_ranges in zip(self._data.obs, obs_period_ranges):
-        #         tod = obs["tod"]
-        #         nlocal = tod.local_samples[1]
-        #         for idet, det in enumerate(detectors):
-        #             signal = np.ones(nlocal, dtype=signal_type) * np.nan
-        #             offset = global_offset
-        #             for istart, istop in period_ranges:
-        #                 nn = istop - istart
-        #                 dslice = slice(
-        #                     idet * nsamp + offset, idet * nsamp + offset + nn
-        #                 )
-        #                 signal[istart:istop] = self._madam_signal[dslice]
-        #                 offset += nn
-        #             cachename = "{}_{}".format(self._name_out, det)
-        #             tod.cache.put(cachename, signal, replace=True)
-        #         global_offset = offset
-        self._mappraiser_signal = None
-        self._cache.destroy("signal")
-        return
-
-    @function_timer
-    def _unstage_noise(self, detectors, nsamp, noise_type):
-        # N.B: useful when we want to get back data after mapmaking, not allowed for now
-        # if self._name_out is not None:
-        #     global_offset = 0
-        #     for obs, period_ranges in zip(self._data.obs, obs_period_ranges):
-        #         tod = obs["tod"]
-        #         nlocal = tod.local_samples[1]
-        #         for idet, det in enumerate(detectors):
-        #             signal = np.ones(nlocal, dtype=signal_type) * np.nan
-        #             offset = global_offset
-        #             for istart, istop in period_ranges:
-        #                 nn = istop - istart
-        #                 dslice = slice(
-        #                     idet * nsamp + offset, idet * nsamp + offset + nn
-        #                 )
-        #                 signal[istart:istop] = self._madam_signal[dslice]
-        #                 offset += nn
-        #             cachename = "{}_{}".format(self._name_out, det)
-        #             tod.cache.put(cachename, signal, replace=True)
-        #         global_offset = offset
-        self._mappraiser_noise = None
-        self._cache.destroy("noise")
-        return
-
-    @function_timer
-    def _unstage_pixels(self, detectors, nsamp, pixels_dtype, nside):
-        # N.B: useful when we want to get back data after mapmaking, not allowed for now
-        # if not self._purge_pixels:
-        #     # restore the pixels from the Madam buffers
-        #     global_offset = 0
-        #     for obs, period_ranges in zip(self._data.obs, obs_period_ranges):
-        #         tod = obs["tod"]
-        #         nlocal = tod.local_samples[1]
-        #         for idet, det in enumerate(detectors):
-        #             pixels = -(np.ones(nlocal, dtype=pixels_dtype))
-        #             offset = global_offset
-        #             for istart, istop in period_ranges:
-        #                 nn = istop - istart
-        #                 dslice = slice(
-        #                     idet * nsamp + offset, idet * nsamp + offset + nn
-        #                 )
-        #                 pixels[istart:istop] = self._madam_pixels[dslice]
-        #                 offset += nn
-        #             npix = 12 * nside ** 2
-        #             good = np.logical_and(pixels >= 0, pixels < npix)
-        #             if not self._pixels_nested:
-        #                 pixels[good] = hp.nest2ring(nside, pixels[good])
-        #             pixels[np.logical_not(good)] = -1
-        #             cachename = "{}_{}".format(self._pixels, det)
-        #             tod.cache.put(cachename, pixels, replace=True)
-        #         global_offset = offset
-        self._mappraiser_pixels = None
-        self._cache.destroy("pixels")
-        return
-
-    @function_timer
-    def _unstage_pixweights(self, detectors, nsamp, weight_dtype, nnz, nnz_full):
-        # N.B: useful when we want to get back data after mapmaking, not allowed for now
-        # if not self._purge_weights and nnz == nnz_full:
-        #     # restore the weights from the Madam buffers
-        #     global_offset = 0
-        #     for obs, period_ranges in zip(self._data.obs, obs_period_ranges):
-        #         tod = obs["tod"]
-        #         nlocal = tod.local_samples[1]
-        #         for idet, det in enumerate(detectors):
-        #             weights = np.zeros([nlocal, nnz], dtype=weight_dtype)
-        #             offset = global_offset
-        #             for istart, istop in period_ranges:
-        #                 nn = istop - istart
-        #                 dwslice = slice(
-        #                     (idet * nsamp + offset) * nnz,
-        #                     (idet * nsamp + offset + nn) * nnz,
-        #                 )
-        #                 weights[istart:istop] = self._madam_pixweights[dwslice].reshape(
-        #                     [-1, nnz]
-        #                 )
-        #                 offset += nn
-        #             cachename = "{}_{}".format(self._weights, det)
-        #             tod.cache.put(cachename, weights, replace=True)
-        #         global_offset = offset
-        self._mappraiser_pixweights = None
-        self._cache.destroy("pixweights")
-        return
-
-    def _unstage_data(
-        self,
-        nsamp,
-        nnz,
-        nnz_full,
-        detectors,
-        signal_type,
-        noise_type,
-        pixels_dtype,
-        nside,
-        weight_dtype,
-    ):
-        """Clear Mappraiser buffers, [restore pointing into TOAST caches-> not done currently]."""
-        log = Logger.get()
-        # self._mappraiser_timestamps = None
-        # self._cache.destroy("timestamps")
-
-        if self._conserve_memory:
-            nodecomm = self._comm.Split_type(MPI.COMM_TYPE_SHARED, self._rank)
-            nread = nodecomm.size
-        else:
-            nodecomm = MPI.COMM_SELF
-            nread = 1
-
-        self._comm.Barrier()
-        timer_tot = Timer()
-        timer_tot.start()
-        for iread in range(nread):
-            timer_step = Timer()
-            timer_step.start()
-            timer = Timer()
-            timer.start()
-            if nodecomm.rank % nread == iread:
-                self._unstage_signal(detectors, nsamp, signal_type)
-            if self._verbose:
-                nodecomm.Barrier()
-                if self._rank == 0:
-                    timer.report_clear(
-                        "Unstage signal {} / {}".format(iread + 1, nread)
-                    )
-            if nodecomm.rank % nread == iread:
-                self._unstage_noise(detectors, nsamp, noise_type)
-            if self._verbose:
-                nodecomm.Barrier()
-                if self._rank == 0:
-                    timer.report_clear("Unstage noise {} / {}".format(iread + 1, nread))
-            if nodecomm.rank % nread == iread:
-                self._unstage_pixels(detectors, nsamp, pixels_dtype, nside)
-            if self._verbose:
-                nodecomm.Barrier()
-                if self._rank == 0:
-                    timer.report_clear(
-                        "Unstage pixels {} / {}".format(iread + 1, nread)
-                    )
-            if nodecomm.rank % nread == iread:
-                self._unstage_pixweights(detectors, nsamp, weight_dtype, nnz, nnz_full)
-            nodecomm.Barrier()
-            if self._verbose and self._rank == 0:
-                timer.report_clear(
-                    "Unstage pixel weights {} / {}".format(iread + 1, nread)
-                )
-            if self._rank == 0 and self._verbose and nread > 1:
-                timer_step.report_clear("Unstage data {} / {}".format(iread + 1, nread))
-        self._comm.Barrier()
-        if self._rank == 0 and self._verbose:
-            timer_tot.report_clear("Unstage all data")
-
-        del nodecomm
-        return
+    def _requires(self):
+        req = self.pixel_pointing.requires()
+        req.update(self.stokes_weights.requires())
+        req["meta"].extend([self.noise_model])
+        req["detdata"].extend([self.det_data])
+        if self.shared_flags is not None:
+            req["shared"].append(self.shared_flags)
+        if self.det_flags is not None:
+            req["detdata"].append(self.det_flags)
+        return req
+
+    def _provides(self):
+        return dict()

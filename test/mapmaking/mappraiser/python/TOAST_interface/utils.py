@@ -118,122 +118,95 @@ def add_mappraiser_args(parser):
     return
 
 
-def setup_mappraiser(args):  # FIXME : this function should not be useful any longer
-    """Create a Mappraiser parameter dictionary.
+# def apply_mappraiser(
+#     args,
+#     comm,
+#     data,
+#     params,
+#     signalname,
+#     noisename,
+#     time_comms=None,
+#     telescope_data=None,
+#     verbose=True,
+# ):
+#     """Use libmappraiser to run the ML map-making.
 
-    Initialize the Mappraiser parameters from the command line arguments.
+#     Parameters
+#     ----------
+#     time_comms: iterable
+#         Series of disjoint communicators that map, e.g., seasons and days.
+#         Each entry is a tuple of the form (`name`, `communicator`)
+#     telescope_data: iterable
+#         Series of disjoint TOAST data objects.
+#         Each entry is tuple of the form (`name`, `data`).
+#     """
+#     if comm.comm_world is None:
+#         raise RuntimeError("Mappraiser requires MPI")
 
-    """
-    params = {}
+#     log = Logger.get()
+#     total_timer = Timer()
+#     total_timer.start()
+#     if comm.world_rank == 0 and verbose:
+#         log.info("Making maps")
 
-    params["nside"] = args.nside
-    params["Lambda"] = args.Lambda
-    params["uniform_w"] = args.uniform_w
-    params["samplerate"] = args.sample_rate
-    params["output"] = args.outpath
-    params["ref"] = args.ref
-    params["solver"] = args.solver
-    params["precond"] = args.precond
-    params["Z_2lvl"] = args.Z_2lvl
-    params["pointing_commflag"] = args.ptcomm_flag
-    params["tol"] = args.tol
-    params["maxiter"] = args.maxiter
-    params["enlFac"] = args.enlFac
-    params["ortho_alg"] = args.ortho_alg
-    params["bs_red"] = args.bs_red
+#     mappraiser = OpMappraiser(
+#         params=params,
+#         purge=True,
+#         name=signalname,
+#         noise_name=noisename,
+#         conserve_memory=args.conserve_memory,
+#     )
 
-    return params
+#     if time_comms is None:
+#         time_comms = [("all", comm.comm_world)]
 
+#     if telescope_data is None:
+#         telescope_data = [("all", data)]
 
-def apply_mappraiser(  # FIXME : how does this integrate in the new toast_so_sim ?
-    args,
-    comm,
-    data,
-    params,
-    signalname,
-    noisename,
-    time_comms=None,
-    telescope_data=None,
-    verbose=True,
-):
-    """Use libmappraiser to run the ML map-making.
+#     timer = Timer()
+#     for time_name, time_comm in time_comms:
+#         for tele_name, tele_data in telescope_data:
+#             if len(time_name.split("-")) == 3:
+#                 # Special rules for daily maps
+#                 if args.do_daymaps:
+#                     continue
+#                 if len(telescope_data) > 1 and tele_name == "all":
+#                     # Skip daily maps over multiple telescopes
+#                     continue
 
-    Parameters
-    ----------
-    time_comms: iterable
-        Series of disjoint communicators that map, e.g., seasons and days.
-        Each entry is a tuple of the form (`name`, `communicator`)
-    telescope_data: iterable
-        Series of disjoint TOAST data objects.
-        Each entry is tuple of the form (`name`, `data`).
-    """
-    if comm.comm_world is None:
-        raise RuntimeError("Mappraiser requires MPI")
+#             timer.start()
+#             # N.B: code below is for Madam but may be useful to copy in Mappraiser
+#             # once we start doing multiple maps in one run
+#             # madam.params["file_root"] = "{}_telescope_{}_time_{}".format(
+#             #     file_root, tele_name, time_name
+#             # )
+#             # if time_comm == comm.comm_world:
+#             #     madam.params["info"] = info
+#             # else:
+#             #     # Cannot have verbose output from concurrent mapmaking
+#             #     madam.params["info"] = 0
+#             # if (time_comm is None or time_comm.rank == 0) and verbose:
+#             #     log.info("Mapping {}".format(madam.params["file_root"]))
+#             mappraiser.exec(tele_data, time_comm)
 
-    log = Logger.get()
-    total_timer = Timer()
-    total_timer.start()
-    if comm.world_rank == 0 and verbose:
-        log.info("Making maps")
+#             if time_comm is not None:
+#                 time_comm.barrier()
+#             if comm.world_rank == 0 and verbose:
+#                 timer.report_clear(
+#                     "Mapping {}_telescope_{}_time_{}".format(
+#                         args.outpath,
+#                         tele_name,
+#                         time_name,
+#                     )
+#                 )
 
-    mappraiser = OpMappraiser(
-        params=params,
-        purge=True,
-        name=signalname,
-        noise_name=noisename,
-        conserve_memory=args.conserve_memory,
-    )
+#     if comm.comm_world is not None:
+#         comm.comm_world.barrier()
+#     total_timer.stop()
+#     if comm.world_rank == 0 and verbose:
+#         total_timer.report("Mappraiser total")
 
-    if time_comms is None:
-        time_comms = [("all", comm.comm_world)]
-
-    if telescope_data is None:
-        telescope_data = [("all", data)]
-
-    timer = Timer()
-    for time_name, time_comm in time_comms:
-        for tele_name, tele_data in telescope_data:
-            if len(time_name.split("-")) == 3:
-                # Special rules for daily maps
-                if args.do_daymaps:
-                    continue
-                if len(telescope_data) > 1 and tele_name == "all":
-                    # Skip daily maps over multiple telescopes
-                    continue
-
-            timer.start()
-            # N.B: code below is for Madam but may be useful to copy in Mappraiser
-            # once we start doing multiple maps in one run
-            # madam.params["file_root"] = "{}_telescope_{}_time_{}".format(
-            #     file_root, tele_name, time_name
-            # )
-            # if time_comm == comm.comm_world:
-            #     madam.params["info"] = info
-            # else:
-            #     # Cannot have verbose output from concurrent mapmaking
-            #     madam.params["info"] = 0
-            # if (time_comm is None or time_comm.rank == 0) and verbose:
-            #     log.info("Mapping {}".format(madam.params["file_root"]))
-            mappraiser.exec(tele_data, time_comm)
-
-            if time_comm is not None:
-                time_comm.barrier()
-            if comm.world_rank == 0 and verbose:
-                timer.report_clear(
-                    "Mapping {}_telescope_{}_time_{}".format(
-                        args.outpath,
-                        tele_name,
-                        time_name,
-                    )
-                )
-
-    if comm.comm_world is not None:
-        comm.comm_world.barrier()
-    total_timer.stop()
-    if comm.world_rank == 0 and verbose:
-        total_timer.report("Mappraiser total")
-
-    return
+#     return
 
 
 # Here are some helper functions adapted from toast/src/ops/madam_utils.py
@@ -352,7 +325,7 @@ def stage_local(
                         views.detdata[detdata_name][ivw][det].flatten(),
                         n_repeat,
                     )
-                # FIXME MAPPRAISER's pixels buffer has nnz=3, not nnz=1.
+                # FIXME : MAPPRAISER's pixels buffer has nnz=3, not nnz=1.
                 # detflags = None
                 # if do_flags:
                 #     if det_flags is None:
