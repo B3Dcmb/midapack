@@ -210,17 +210,17 @@ class MappraiserTest(MPITestCase):
         pars["fsample"] = sample_rate
         pars["nside"] = pixels.nside
         pars["path_output"] = self.outdir
+        pars["ref"] = "run0"
+        pars["Lambda"] = 16
         pars["solver"] = 0
         pars["precond"] = 0
         pars["Z_2lvl"] = 0
-        pars["pointing_commflag"] = 6
+        pars["ptcomm_flag"] = 6
         pars["tol"] = 1e-6
         pars["maxiter"] = 500
         pars["enlFac"] = 1
         pars["ortho_alg"] = 1
         pars["bs_red"] = 0
-        pars["Lambda"] = 16
-        pars["ref"] = "run0"
 
         # FIXME: add a view here once our test data includes it
 
