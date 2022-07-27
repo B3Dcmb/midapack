@@ -33,8 +33,8 @@ import pixell.fft
 
 pixell.fft.engine = "fftw"
 
-from .utils import add_mappraiser_args
-from . import mappraiser
+from TOAST_interface.utils import add_mappraiser_args
+from TOAST_interface import mappraiser
 
 
 def parse_config(operators, templates, comm):
