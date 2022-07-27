@@ -371,11 +371,10 @@ class Mappraiser(Operator):
                 raise RuntimeError(msg)
 
         # Combine parameters from an external file and other parameters passed in
-        # N.B: Currently we only use parameters passed in at initialization
 
         params = dict()
 
-        repeat_keys = ["detset", "detset_nopol", "survey"]
+        # repeat_keys = ["detset", "detset_nopol", "survey"]
 
         if self.paramfile is not None:
             if data.comm.world_rank == 0:
@@ -388,23 +387,25 @@ class Mappraiser(Operator):
                             if line_mat is not None:
                                 k = line_mat.group(1)
                                 v = line_mat.group(2)
-                                if k in repeat_keys:
-                                    if k not in params:
-                                        params[k] = [v]
-                                    else:
-                                        params[k].append(v)
-                                else:
-                                    params[k] = v
-            if data.comm.world_comm is not None:
-                params = data.comm.world_comm.bcast(params, root=0)
+                                # if k in repeat_keys:
+                                #     if k not in params:
+                                #         params[k] = [v]
+                                #     else:
+                                #         params[k].append(v)
+                                # else:
+                                #     params[k] = v
+                                params[k] = v
+            if data.comm.comm_world is not None:
+                params = data.comm.comm_world.bcast(params, root=0)
             for k, v in self.params.items():
-                if k in repeat_keys:
-                    if k not in params:
-                        params[k] = [v]
-                    else:
-                        params[k].append(v)
-                else:
-                    params[k] = v
+                # if k in repeat_keys:
+                #     if k not in params:
+                #         params[k] = [v]
+                #     else:
+                #         params[k].append(v)
+                # else:
+                #     params[k] = v
+                params[k] = v
 
         if self.params is not None:
             params.update(self.params)
@@ -518,6 +519,30 @@ class Mappraiser(Operator):
         timer.start()
 
         params["nside"] = self.pixel_pointing.nside
+        
+        # Check that libmappraiser arguments have been provided 
+        # and convert them to the correct data type.
+        # FIXME : use tomlkit to parse a .toml parameter file properly ?
+        libmappraiser_argtypes = {
+            "path_output": str,
+            "ref": str,
+            "Lambda": int,
+            "solver": int,
+            "precond": int,
+            "Z_2lvl": int,
+            "ptcomm_flag": int,
+            "tol": np.double,
+            "maxiter": int,
+            "enlFac": int,
+            "ortho_alg": int,
+            "bs_red": int,
+        }
+        for key in libmappraiser_argtypes.keys():
+            if key not in params:
+                msg = "Please set the parameter {}, which is necessary for libmappraiser.".format(key)
+                raise RuntimeError(msg)
+            else:
+                params[key] = libmappraiser_argtypes[key](params[key])
 
         # MAPPRAISER requires a fixed set of detectors and pointing matrix non-zeros.
         # Here we find the superset of local detectors used, and also the number

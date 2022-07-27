@@ -30,10 +30,12 @@ import sotodlib.mapmaking
 
 # Make sure pixell uses a reliable FFT engine
 import pixell.fft
+
 pixell.fft.engine = "fftw"
 
 from .utils import add_mappraiser_args
 from . import new_mappraiser
+
 
 def parse_config(operators, templates, comm):
     """Parse command line arguments and load any config files.
@@ -63,7 +65,7 @@ def parse_config(operators, templates, comm):
         "LAT_f230 (225GHz), LAT_f290 (285GHz), "
         "SAT_f030 (27GHz), SAT_f040 (39GHz), "
         "SAT_f090 (93GHz), SAT_f150 (145GHz), "
-        "SAT_f230 (225GHz), SAT_f290 (285GHz). "
+        "SAT_f230 (225GHz), SAT_f290 (285GHz). ",
     )
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument(
@@ -74,15 +76,18 @@ def parse_config(operators, templates, comm):
         "--tube_slots",
         help="Comma-separated list of optics tube slots: c1 (LAT_UHF), i5 (LAT_UHF), "
         " i6 (LAT_MF), i1 (LAT_MF), i3 (LAT_MF), i4 (LAT_MF), o6 (LAT_LF),"
-        " ST1 (SAT_MF), ST2 (SAT_MF), ST3 (SAT_UHF), ST4 (SAT_LF)."
+        " ST1 (SAT_MF), ST2 (SAT_MF), ST3 (SAT_UHF), ST4 (SAT_LF).",
     )
     group.add_argument(
-        "--wafer_slots",
-        help="Comma-separated list of optics tube slots. "
+        "--wafer_slots", help="Comma-separated list of optics tube slots. "
     )
 
     parser.add_argument(
-        "--sample_rate", required=False, default=10, help="Sampling rate", type=float,
+        "--sample_rate",
+        required=False,
+        default=10,
+        help="Sampling rate",
+        type=float,
     )
 
     parser.add_argument(
@@ -93,7 +98,7 @@ def parse_config(operators, templates, comm):
         "--out_dir",
         required=False,
         type=str,
-        default="mappraiser_out",
+        default="so_sim_out",
         help="The output directory",
     )
 
@@ -106,12 +111,20 @@ def parse_config(operators, templates, comm):
     )
 
     parser.add_argument(
-        "--realization", required=False, help="Realization index", type=int,
+        "--realization",
+        required=False,
+        help="Realization index",
+        type=int,
     )
-    
-    # Add arguments for MAPPRAISER
-    add_mappraiser_args(parser)
-    # FIXME : 
+
+    # Add arguments for MAPPRAISER (ref, Lambda, solver, ...)
+    parser.add_argument(
+        "--ref",
+        required=False,
+        default="run0",
+        help="Reference that is added to the name of the output maps. Can be used to store multiple runs of the same configuration in a common folder (which will be specified to the parser under the name 'out_dir').",
+    )
+    # N.B: use Mappraiser's trait "paramfile" to pass the rest of libmappraiser parameters
 
     # Build a config dictionary starting from the operator defaults, overriding with any
     # config files specified with the '--config' commandline option, followed by any
@@ -180,7 +193,7 @@ def use_full_pointing(job):
     # used in the solve has full pointing enabled and also whether madam (which
     # requires full pointing) is enabled.
     full_pointing = False
-    if toast.ops.madam.available() and job.operators.madam.enabled:
+    if new_mappraiser.available() and job.operators.mappraiser.enabled:
         full_pointing = True
     if job.operators.binner.full_pointing:
         full_pointing = True
@@ -219,7 +232,9 @@ def select_pixelization(job, args):
     else:
         if ops.pixels_healpix_radec.enabled:
             if ops.pixels_wcs_radec.enabled:
-                raise RuntimeError("Only one solver pixelization scheme should be enabled")
+                raise RuntimeError(
+                    "Only one solver pixelization scheme should be enabled"
+                )
             else:
                 args.pixels_solve = ops.pixels_healpix_radec
         else:
@@ -615,16 +630,19 @@ def reduce_data(job, args, data):
     ops.mlmapmaker.apply(data)
     log.info_rank("Finished ML map-making in", comm=world_comm, timer=timer)
 
-    # Optionally run Madam
+    # Optionally run Mappraiser
 
-    if toast.ops.madam.available() and ops.madam.enabled:
-        ops.madam.params = toast.ops.madam_params_from_mapmaker(ops.mapmaker)
-        ops.madam.pixel_pointing = args.pixels_final
-        ops.madam.stokes_weights = ops.weights_radec
-        ops.madam.apply(data)
-        log.info_rank("Finished Madam in", comm=world_comm, timer=timer)
+    if new_mappraiser.available() and ops.mappraiser.enabled:
+        # ops.madam.params = toast.ops.madam_params_from_mapmaker(ops.mapmaker)
+        ops.mappraiser.pixel_pointing = args.pixels_final
+        ops.mappraiser.stokes_weights = ops.weights_radec
+        # override output path and ref by command line args
+        ops.mappraiser.params["path_output"] = args.out_dir
+        ops.mappraiser.params["ref"] = args.ref
+        ops.mappraiser.apply(data)
+        log.info_rank("Finished Mappraiser in", comm=world_comm, timer=timer)
 
-        ops.mem_count.prefix = "After Madam"
+        ops.mem_count.prefix = "After Mappraiser"
         ops.mem_count.apply(data)
 
     # Collect signal statistics after filtering/destriping
@@ -681,7 +699,7 @@ def main():
         toast.ops.PointingDetectorSimple(
             name="det_pointing_radec", quats="quats_radec"
         ),
-        toast.ops.ScanHealpixMap(name="scan_map", enabled=False),
+        toast.ops.ScanHealpixMap(name="scan_map", enabled=True),
         toast.ops.SimAtmosphere(
             name="sim_atmosphere_coarse",
             add_loading=False,
@@ -751,16 +769,16 @@ def main():
             name="deconvolve_time_constant", deconvolve=True, enabled=False
         ),
         toast.ops.GroundFilter(name="groundfilter", enabled=False),
-        toast.ops.PolyFilter(name="polyfilter1D"),
+        toast.ops.PolyFilter(name="polyfilter1D", enabled=False),
         toast.ops.PolyFilter2D(name="polyfilter2D", enabled=False),
         toast.ops.CommonModeFilter(name="common_mode_filter", enabled=False),
         toast.ops.Statistics(name="filtered_statistics", enabled=False),
-        toast.ops.BinMap(name="binner", pixel_dist="pix_dist"),
-        toast.ops.MapMaker(name="mapmaker"),
+        toast.ops.BinMap(name="binner", pixel_dist="pix_dist", enabled=False),
+        toast.ops.MapMaker(name="mapmaker", enabled=False),
         toast.ops.PixelsHealpix(name="pixels_healpix_radec_final", enabled=False),
         toast.ops.PixelsWCS(name="pixels_wcs_radec_final", enabled=False),
         toast.ops.BinMap(
-            name="binner_final", enabled=False, pixel_dist="pix_dist_final"
+            name="binner_final", pixel_dist="pix_dist_final", enabled=False
         ),
         toast.ops.FilterBin(name="filterbin", enabled=False),
         so_ops.MLMapmaker(name="mlmapmaker", enabled=False, comps="TQU"),

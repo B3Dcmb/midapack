@@ -30,16 +30,16 @@ def add_mappraiser_args(parser):
         "--Lambda",
         required=False,
         default=16384,
-        type=np.int,
+        type=int,
         help="Half bandwidth (lambda) of noise covariance",
     )
 
-    # FIXME : is uniform_w still useful ?
+    # FIXME : is uniform_w useful ?
     parser.add_argument(
         "--uniform_w",
         required=False,
         default=0,
-        type=np.int,
+        type=int,
         help="Activate for uniform white noise model: 0->off, 1->on",
     )
 
@@ -47,7 +47,7 @@ def add_mappraiser_args(parser):
         "--solver",
         required=False,
         default=0,
-        type=np.int,
+        type=int,
         help="Choose map-making solver: 0->PCG, 1->ECG",
     )
 
@@ -55,7 +55,7 @@ def add_mappraiser_args(parser):
         "--precond",
         required=False,
         default=0,
-        type=np.int,
+        type=int,
         help="Choose map-making preconditioner: 0->BD, 1->2lvl a priori, 2->2lvl a posteriori",
     )
 
@@ -63,7 +63,7 @@ def add_mappraiser_args(parser):
         "--Z_2lvl",
         required=False,
         default=0,
-        type=np.int,
+        type=int,
         help="2lvl deflation size",
     )
 
@@ -71,7 +71,7 @@ def add_mappraiser_args(parser):
         "--ptcomm_flag",
         required=False,
         default=6,
-        type=np.int,
+        type=int,
         help="Choose collective communication scheme",
     )
 
@@ -87,7 +87,7 @@ def add_mappraiser_args(parser):
         "--maxiter",
         required=False,
         default=500,
-        type=np.int,
+        type=int,
         help="Maximum number of iterations in Mappraiser",
     )
 
@@ -95,7 +95,7 @@ def add_mappraiser_args(parser):
         "--enlFac",
         required=False,
         default=1,
-        type=np.int,
+        type=int,
         help="Enlargement factor for ECG",
     )
 
@@ -103,7 +103,7 @@ def add_mappraiser_args(parser):
         "--ortho_alg",
         required=False,
         default=1,
-        type=np.int,
+        type=int,
         help="Orthogonalization scheme for ECG. O:odir, 1:omin",
     )
 
@@ -111,15 +111,14 @@ def add_mappraiser_args(parser):
         "--bs_red",
         required=False,
         default=0,
-        type=np.int,
+        type=int,
         help="Use dynamic search reduction",
     )
     
     return
 
 
-@function_timer
-def setup_mappraiser(args):
+def setup_mappraiser(args):  # FIXME : this function should not be useful any longer
     """Create a Mappraiser parameter dictionary.
 
     Initialize the Mappraiser parameters from the command line arguments.
@@ -146,8 +145,7 @@ def setup_mappraiser(args):
     return params
 
 
-@function_timer
-def apply_mappraiser(  # FIXME
+def apply_mappraiser(  # FIXME : how does this integrate in the new toast_so_sim ?
     args,
     comm,
     data,
@@ -554,7 +552,7 @@ def compute_invtt(
                 fsamp,
                 idet,
                 invtt_dtype,
-                verbose=(idet == 0),
+                verbose=(idet == 0) and (iobs == 0),
             )
             offset += blocksize
     return

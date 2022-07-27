@@ -136,7 +136,7 @@ def MLmap(
         params["solver"],
         params["precond"],
         params["Z_2lvl"],
-        params["pointing_commflag"],
+        params["ptcomm_flag"],
         params["tol"],
         params["maxiter"],
         params["enlFac"],
