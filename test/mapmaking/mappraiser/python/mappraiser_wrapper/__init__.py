@@ -117,6 +117,7 @@ def MLmap(
     # if comm.rank == 0:
     #     print("[rank 0] arguments passed to libmappraiser")
     #     print("  data_size_proc     = ", data_size_proc)
+    #     print("  total data size    = ", np.sum(data_size_proc))
     #     print("  nb_blocks_loc      = ", nb_blocks_loc)
     #     print("  local_blocks_sizes = ", local_blocks_sizes)
     #     print("  nnz                = ", nnz)
@@ -125,7 +126,9 @@ def MLmap(
     #     print("  length(signal)     = ", len(signal))
     #     print("  length(noise)      = ", len(noise))
     #     print("  lambda             = ", Lambda)
-    #     print("  length(invtt)      = ", len(invtt), flush=True)
+    #     print("  length(invtt)      = ", len(invtt))
+    #     print("  min of pixels      = ", np.min(pixels))
+    #     print("  min of pixels      = ", np.max(pixels), flush=True)
     # comm.Barrier()
     # DEBUG
 

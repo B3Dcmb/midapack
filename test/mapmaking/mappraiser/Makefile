@@ -53,7 +53,7 @@ map: ./src/
 	make -C ./src/
 
 library:
-	cc -qopenmp -shared $(MAPPRAISER_OBJ)/createToeplitz.o $(MAPPRAISER_OBJ)/precond.o $(MAPPRAISER_OBJ)/pcg_true.o $(MAPPRAISER_OBJ)/ecg.o $(MAPPRAISER_OBJ)/iofiles.o $(MAPPRAISER_OBJ)/mappraiser.o $(LIB) $(CFITSIO_LIB) $(LIBpreAlps) -o $(MAPPRAISER_LIB)/libmappraiser.so
+	$(CC) -qopenmp -shared $(MAPPRAISER_OBJ)/createToeplitz.o $(MAPPRAISER_OBJ)/precond.o $(MAPPRAISER_OBJ)/pcg_true.o $(MAPPRAISER_OBJ)/ecg.o $(MAPPRAISER_OBJ)/iofiles.o $(MAPPRAISER_OBJ)/mappraiser.o $(LIB) $(CFITSIO_LIB) $(LIBpreAlps) -o $(MAPPRAISER_LIB)/libmappraiser.so
 
 ##############   u t i l s   #############
 

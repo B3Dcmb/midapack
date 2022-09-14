@@ -588,7 +588,7 @@ def noise2invtt(
 
     if verbose:
         print(
-            "[det "
+            "\n[det "
             + str(idet)
             + "]: PSD fit log(sigma2) = %1.2f, alpha = %1.2f, fknee = %1.2f, fmin = %1.2f\n"
             % tuple(popt),
