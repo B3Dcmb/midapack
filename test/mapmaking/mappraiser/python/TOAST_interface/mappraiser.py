@@ -16,6 +16,8 @@ from toast.ops.mapmaker import MapMaker
 from toast.ops.memory_counter import MemoryCounter
 from toast.ops.operator import Operator
 
+import toml
+
 # local imports
 from .utils import (
     compute_invtt,
@@ -220,6 +222,10 @@ class Mappraiser(Operator):
 
     mem_report = Bool(
         False, help="Print system memory use while staging / unstaging data."
+    )
+    
+    save_psd = Bool(
+        False, help="Save noise PSD information during inv_tt computation."
     )
 
     @traitlets.validate("shared_flag_mask")
@@ -548,6 +554,14 @@ class Mappraiser(Operator):
             else:
                 params[key] = libmappraiser_argtypes[key](params[key])
 
+        # Log the libmappraiser parameters that were used.
+        if data.comm.world_rank == 0:
+            with open(
+                os.path.join(params["path_output"], "mappraiser_args_log.toml"),
+                'w',
+            ) as param_logfile:
+                toml.dump(params, param_logfile)
+
         # Check if noise_name is specified or not.
         if self.noise_name is None and params["Lambda"] != 1:
             raise RuntimeError("Lambda = 1 must be used with noiseless cases")
@@ -657,6 +671,9 @@ class Mappraiser(Operator):
 
         if data.comm.world_rank == 0 and "path_output" in params:
             os.makedirs(params["path_output"], exist_ok=True)
+            if self.save_psd:
+                psdout = os.path.join(params["path_output"], "psd")
+                os.makedirs(psdout, exist_ok=True)
 
         data.comm.comm_world.barrier()
         timer.stop()
@@ -962,6 +979,8 @@ class Mappraiser(Operator):
                 self._mappraiser_invtt,
                 mappraiser.INVTT_TYPE,
                 print_info=(data.comm.world_rank == 0),
+                save_psd=(self.save_psd and data.comm.world_rank == 0),
+                save_dir=params["path_output"]+"/psd",
             )
         else:
             self._mappraiser_invtt[:] = 1.

@@ -512,6 +512,8 @@ def compute_invtt(
     buffer,
     invtt_dtype,
     print_info=False,
+    save_psd=False,
+    save_dir=None,
 ):
     """Compute the first lines of the blocks of the banded noise covariance and store them in the provided buffer."""
     offset = 0
@@ -532,6 +534,8 @@ def compute_invtt(
                 idet,
                 invtt_dtype,
                 verbose=(print_info and (idet == 0) and (iobs == 0)),
+                save_psd=(save_psd and (idet == 0) and (iobs == 0)),
+                save_dir=save_dir,
             )
             offset += blocksize
     return
@@ -561,6 +565,8 @@ def noise2invtt(
     idet,
     invtt_dtype,
     verbose=False,
+    save_psd=False,
+    save_dir=None,
 ):
     """Computes a periodogram from a noise timestream, and fits a PSD model
     to it, which is then used to build the first row of a Toeplitz block.
@@ -600,19 +606,8 @@ def noise2invtt(
             flush=True,
         )
         print("[det {}]: PSD fit covariance: \n{}\n".format(idet, pcov), flush=True)
-    # psd_fit_m1 = np.zeros_like(f)
-    # psd_fit_m1[1:] = inversepsd_model(f[1:],10**popt[0],popt[1],popt[2])
 
-    # Invert periodogram
-    # psd_sim_m1 = np.reciprocal(psd)
-    # if verbose:
-    #     np.save("psd_sim.npy",psd_sim_m1)
-    #     psd_sim_m1_log = np.log10(psd_sim_m1)
-
-    # Invert the fit to the psd model / Fit the inverse psd model to the inverted periodogram
-    # popt,pcov = curve_fit(inverselogpsd_model,f[1:],psd_sim_m1_log[1:])
-    # print(popt)
-    # print(pcov)
+    #  Fit the inverse psd model to the inverted periodogram
     psd_fit_m1 = np.zeros_like(f)
     psd_fit_m1[1:] = inversepsd_model(
         f[1:], 10 ** (-popt[0]), popt[1], popt[2], popt[3]
@@ -623,7 +618,6 @@ def noise2invtt(
     psdm1 = np.zeros_like(fs)
 
     # Symmetrize inverse PSD according to fs shape
-    # psdfit[:int(block_size/2)]
     psdm1[: int(block_size / 2)] = psd_fit_m1[:-1]
     psdm1[int(block_size / 2) :] = np.flip(psd_fit_m1[1:], 0)
 
@@ -641,11 +635,19 @@ def noise2invtt(
 
     inv_tt_w = np.multiply(symw, inv_tt, dtype=invtt_dtype)
 
-    # effective inverse noise power
-    # if verbose:
-    #     psd = np.abs(np.fft.fft(inv_tt_w,n=block_size))
-    #     np.save("freq.npy",fs[:int(block_size/2)])
-    #     np.save("psd0.npy",psdm1[:int(block_size/2)])
-    #     np.save("psd"+str(Lambda)+".npy",psd[:int(block_size/2)])
+    # Optionnally save some PSDs for plots
+    if save_psd:
+        
+        # simulated inverse psd
+        psd_sim_m1 = np.reciprocal(psd)
+        np.save(save_dir+"/psd_sim.npy",psd_sim_m1)
+        
+        # fit of the inverse psd
+        np.save(save_dir+"/freq.npy",fs[:int(block_size/2)])
+        np.save(save_dir+"/psd_fit.npy",psdm1[:int(block_size/2)])
+        
+        # "effective" inverse psd
+        psd = np.abs(np.fft.fft(inv_tt_w,n=block_size))
+        np.save(save_dir+"/psd_eff"+str(Lambda)+".npy",psd[:int(block_size/2)])
 
     return inv_tt_w[:Lambda]
