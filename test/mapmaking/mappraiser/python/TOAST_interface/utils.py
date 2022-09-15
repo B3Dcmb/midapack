@@ -315,16 +315,21 @@ def stage_local(
                     (idet * nsamp + offset + view_samples) * nnz,
                     1,
                 )
-                if nnz > 1:
-                    mappraiser_buffer[slc] = np.repeat(
-                        views.detdata[detdata_name][ivw][det].flatten()[::nnz_stride],
-                        n_repeat,
-                    )
+                if detdata_name is not None:
+                    if nnz > 1:
+                        mappraiser_buffer[slc] = np.repeat(
+                            views.detdata[detdata_name][ivw][det].flatten()[::nnz_stride],
+                            n_repeat,
+                        )
+                    else:
+                        mappraiser_buffer[slc] = np.repeat(
+                            views.detdata[detdata_name][ivw][det].flatten(),
+                            n_repeat,
+                        )
                 else:
-                    mappraiser_buffer[slc] = np.repeat(
-                        views.detdata[detdata_name][ivw][det].flatten(),
-                        n_repeat,
-                    )
+                    # Noiseless cases (noise_name=None).
+                    mappraiser_buffer[slc] = 0.
+                    
                 # FIXME : MAPPRAISER's pixels buffer has nnz=3, not nnz=1.
                 # detflags = None
                 # if do_flags:

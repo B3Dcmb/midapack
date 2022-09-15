@@ -131,7 +131,11 @@ class Mappraiser(Operator):
         defaults.det_data, help="Observation detdata key for the timestream data"
     )
 
-    noise_name = Unicode("noise", help="Observation detdata key for noise data")
+    noise_name = Unicode(
+        "noise",
+        allow_none=True,
+        help="Observation detdata key for noise data",
+    )
 
     det_flags = Unicode(
         defaults.det_flags,
@@ -409,7 +413,7 @@ class Mappraiser(Operator):
 
         if self.params is not None:
             params.update(self.params)
-
+        
         if "fsample" not in params:
             params["fsample"] = data.obs[0].telescope.focalplane.sample_rate.to_value(
                 u.Hz
@@ -543,6 +547,10 @@ class Mappraiser(Operator):
                 raise RuntimeError(msg)
             else:
                 params[key] = libmappraiser_argtypes[key](params[key])
+
+        # Check if noise_name is specified or not.
+        if self.noise_name is None and params["Lambda"] != 1:
+            raise RuntimeError("Lambda = 1 must be used with noiseless cases")
 
         # MAPPRAISER requires a fixed set of detectors and pointing matrix non-zeros.
         # Here we find the superset of local detectors used, and also the number
@@ -861,6 +869,16 @@ class Mappraiser(Operator):
 
         # Copy the noise.
         # For the moment, in the absence of a gap-filling procedure in MAPPRAISER, we separate signal and noise in the simulations
+        
+        # Check if the simulation contains any noise at all.
+        if self.noise_name is None:
+            log.info_rank(
+                "#####\n"
+                "Data staging: noise_name = None\n"
+                "The noise buffer will be filled with zeros.\n"
+                "#####",
+                data.comm.comm_world,
+            )
 
         if self._cached:
             # We have previously created the mappraiser buffers.  We just need to fill
@@ -907,7 +925,7 @@ class Mappraiser(Operator):
                 # Allocate and copy all at once.
                 storage, _ = dtype_to_aligned(mappraiser.SIGNAL_TYPE)
                 self._mappraiser_noise_raw = storage.zeros(nsamp * len(all_dets))
-                self._mappraiser_noise = self._mappraiser_signal_raw.array()
+                self._mappraiser_noise = self._mappraiser_noise_raw.array()
 
                 stage_local(
                     data,
@@ -933,17 +951,20 @@ class Mappraiser(Operator):
             self._mappraiser_invtt = self._mappraiser_invtt_raw.array()
 
         # Compute invtt
-        compute_invtt(
-            len(data.obs),
-            len(all_dets),
-            self._mappraiser_noise,
-            self._mappraiser_blocksizes,
-            params["Lambda"],
-            params["fsample"],
-            self._mappraiser_invtt,
-            mappraiser.INVTT_TYPE,
-            print_info=(data.comm.world_rank == 0),
-        )
+        if self.noise_name is not None:
+            compute_invtt(
+                len(data.obs),
+                len(all_dets),
+                self._mappraiser_noise,
+                self._mappraiser_blocksizes,
+                params["Lambda"],
+                params["fsample"],
+                self._mappraiser_invtt,
+                mappraiser.INVTT_TYPE,
+                print_info=(data.comm.world_rank == 0),
+            )
+        else:
+            self._mappraiser_invtt[:] = 1.
 
         log_time_memory(
             data,
