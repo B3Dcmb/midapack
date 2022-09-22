@@ -1,0 +1,71 @@
+#DIR = $(HOME)/midapack
+DIR = $(MIDADIR)
+MIDAPACK_ROOT=$(PREFIX)/midapack
+MIDAPACK_LIB=$(MIDAPACK_ROOT)/lib
+MPICC = cc
+OPT =  -D W_MPI -D W_OPENMP -O3
+CC = $(MPICC) -qopenmp -g -Wall -fPIC $(OPT)
+INC = -I$(DIR)/include
+LIB = -L$(MIDAPACK_LIB) -lmidapack
+MAPPRAISER_ROOT=$(PREFIX)/mappraiser
+MAPPRAISER_OBJ=$(MAPPRAISER_ROOT)/obj
+MAPPRAISER_LIB=$(MAPPRAISER_ROOT)/lib
+
+#! move to configure script (in fact, those should be defined in environment globally)
+
+preAlpsDIR = $(HOME)/preAlps
+METIS_DIR = /global/common/cori/software/metis/5.1.0
+MKL_DIR = /opt/intel/mkl
+CFITSIO_DIR = /usr/common/software/cfitsio/3.47
+
+
+######################
+
+# Linking preAlps library for ECG solver utilities
+
+CPLM_CORE = utils/cplm_core
+CPLMDIR = utils/cplm_light
+CPLM_V0_DIR = utils/cplm_v0
+
+LIBpreAlps = -L$(preAlpsDIR)/lib/ -lpreAlps_release -lcplm_light -lcplm_v0 -lcplm_core
+INCpreAlps = -I$(preAlpsDIR)/$(CPLM_CORE) -I$(preAlpsDIR)/$(CPLMDIR) -I$(preAlpsDIR)/$(CPLM_V0_DIR) -I$(preAlpsDIR)/utils -I$(preAlpsDIR)/src/preconditioners -I$(preAlpsDIR)/src/solvers
+
+# Linking metis library needed by preAlps
+
+METIS_INC = $(METIS_DIR)/include
+METIS_LIB = $(METIS_DIR)/lib
+INCpreAlps += $(addprefix -I,$(METIS_INC))
+LIBpreAlps += -L$(METIS_LIB) -lmetis
+
+# linking MKL library
+
+MKL_INC = $(MKL_DIR)/include
+MKL_LIB = $(MKL_DIR)/lib/intel64
+INCpreAlps += $(addprefix -I,$(MKL_INC))
+LIBpreAlps += -L$(MKL_LIB) -lmkl_rt
+
+# supplementary libraries
+
+CFITSIO_INC = -I$(CFITSIO_DIR)/include
+CFITSIO_LIB = -L$(CFITSIO_DIR)/lib -lcfitsio
+
+##############   t e s t s   ############
+
+all:
+	mkdir -p $(MAPPRAISER_ROOT) $(MAPPRAISER_OBJ) $(MAPPRAISER_LIB)
+	cp -r $(DIR)/test/mapmaking/mappraiser/python $(MAPPRAISER_ROOT)
+	make map
+	make library
+
+map: ./src/
+	make -C ./src/
+
+library:
+	$(CC) -qopenmp -shared $(MAPPRAISER_OBJ)/createToeplitz.o $(MAPPRAISER_OBJ)/precond.o $(MAPPRAISER_OBJ)/pcg_true.o $(MAPPRAISER_OBJ)/ecg.o $(MAPPRAISER_OBJ)/iofiles.o $(MAPPRAISER_OBJ)/mappraiser.o $(LIB) $(CFITSIO_LIB) $(LIBpreAlps) -o $(MAPPRAISER_LIB)/libmappraiser.so
+
+##############   u t i l s   #############
+
+clean:
+	make clean -C ./src/
+	rm -f $(MAPPRAISER_LIB)/*midapack.so
+	rm -r $(MAPPRAISER_ROOT)
