@@ -1,103 +1,104 @@
-#!/bin/bash        
+#!/bin/bash
 #title           : configure
 #description     : This script will generate several Makefiles in src/toeplitz/ src/mapmat test/toeplitz test/mapmat.
 #                  input specify option as mpi, openmp, debug ...
 #authors	 : Pierre Cargemel, Frederic Dauvergne
 #date            : 17/07/2012
-#version         : 0.1    
+#version         : 0.1
 #usage		 : ./configure [options]
-#notes           : 
+#notes           :
 #######################################
+
 #print help
 function chelp {
-       echo 'usage : ./configure [--option [expression]]' 
-       echo ' ' 
-       echo 'options :' 
-       echo '  --with [expression] (or --without)' 
-       echo '    mpi ; to use Message Passing Interface' 
-       echo '    openmp ; to multithreading via openmp' 
-       echo '    debug ; to generate a debug version' 
-       echo '    example for using mpi and openmp : ./configure --with mpi --with openmp' 
-       echo '  --cc [compiler] ' 
-       echo '    specify compiler to use' 
-       echo '    example for using : ./configure -cc mpicc' 
-       echo '  --fc [compiler] ' 
-       echo '    specify a fortran compiler' 
-       echo '    example for using gfortran : ./configure --fc gfortran' 
-       echo ' '
-} 
+    echo 'usage : ./configure [--option [expression]]'
+    echo ' '
+    echo 'options :'
+    echo '  --with [expression] (or --without)'
+    echo '    mpi ; to use Message Passing Interface'
+    echo '    openmp ; to multithreading via openmp'
+    echo '    debug ; to generate a debug version'
+    echo '    example for using mpi and openmp : ./configure --with mpi --with openmp'
+    echo '  --cc [compiler] '
+    echo '    specify compiler to use'
+    echo '    example for using : ./configure --cc mpicc'
+    echo '  --fc [compiler] '
+    echo '    specify a fortran compiler'
+    echo '    example for using gfortran : ./configure --fc gfortran'
+    echo ' '
+}
 
-function searchincpath { 
-found=0
-file=$1 
-path='/usr/include'
-echo 'searching '$file' in '$path
-if [ -f $path'/'$file ]
-  then
-  found=1
-  echo 'found'
-else
-  path='/usr/local/include'
-  echo 'searching '$file' in '$path
-  if [ -f $path'/'$file ]
-    then
-    found=1
-    echo 'found'
-  else 
-    path='/opt/local/include'
+function searchincpath {
+    found=0
+    file=$1
+    path='/usr/include'
     echo 'searching '$file' in '$path
     if [ -f $path'/'$file ]
-      then
-      found=1
-      echo 'found'
-    else
-      echo 'cannot find '$file
-      echo 'please enter the path for'$file
-      read path
-      if [ -f $path'/'$file ]
-        then
+    then
         found=1
         echo 'found'
-      else 
-        echo 'error : cannot find '$file' in '$path
-        path=''
-        exit
-      fi
+    else
+        path='/usr/local/include'
+        echo 'searching '$file' in '$path
+        if [ -f $path'/'$file ]
+        then
+            found=1
+            echo 'found'
+        else
+            path='/opt/local/include'
+            echo 'searching '$file' in '$path
+            if [ -f $path'/'$file ]
+            then
+                found=1
+                echo 'found'
+            else
+                echo 'cannot find '$file
+                echo 'please enter the path for'$file
+                read path
+                if [ -f $path'/'$file ]
+                then
+                    found=1
+                    echo 'found'
+                else
+                    echo 'error : cannot find '$file' in '$path
+                    path=''
+                    exit
+                fi
+            fi
+        fi
     fi
-  fi
-fi
 }
 
 
-function searchlibpath { 
-found=0
-file=$1 
-path='/usr/lib'
-echo 'searching '$file' in '$path
-if [ -f $path'/'$file ]
-  then
-  found=1
-  echo 'found'
-else
-  path='/usr/local/lib'
-  echo 'searching '$file' in '$path
-  if [ -f $path'/'$file ]
-    then
-    found=1
-    echo 'found'
-  else 
-    path='/opt/local/lib'
+function searchlibpath {
+    found=0
+    file=$1
+    path='/usr/lib'
     echo 'searching '$file' in '$path
     if [ -f $path'/'$file ]
-      then
-      found=1
-      echo 'found'
+    then
+        found=1
+        echo 'found'
     else
-      echo $file' not found'
-      path=''
+        path='/usr/local/lib'
+        echo 'searching '$file' in '$path
+        if [ -f $path'/'$file ]
+        then
+            found=1
+            echo 'found'
+        else
+            path='/opt/local/lib'
+            echo 'searching '$file' in '$path
+            if [ -f $path'/'$file ]
+            then
+                found=1
+                echo 'found'
+            else
+                echo $file' not found'
+                path=''
+            fi
+        fi
     fi
-  fi
-fi
 }
 
 
@@ -111,95 +112,106 @@ ERROR=0
 
 PROJECT='Midapack_'
 VERSION='1.1b'
+
 CC=0
+MPICC=$MPICC
 GCC='gcc'
-MPICC='mpicc'
+
+# CXX='icpc'
+# F77='ifort'
+# FC='ifort'
+# MPIFC='ftn'
+# MPICXX='CC'
+
 NVCC='nvcc'
 F90='gfortran'
-OPT=''
+
+OPT='-Wall -Werror -fPIC'
 DIR=$(pwd)
 DIRTAR='export_tar'
 
 #######################################
+
 #read parameters
 while [ $# -ne 0 ]
-  do
-   case $1 in
-   --with)
-     if [ $2 == mpi ]
-       then 
-       MPI=1
-       shift
-     elif [ $2 == openmp ]
-       then 
-       OPENMP=1
-       shift
-     elif [ $2 == debug ] 
-       then
-       DEBUG=1
-       shift
-     elif [ $2 == gpu ] 
-       then
-       GPU=1
-       shift
-     else 
-       echo 'bad parameter for --with'
-       ERROR=1
-     fi
-     ;;
-   --without)
-     if [ $2 == mpi ]
-       then 
-       MPI=0
-       shift
-     elif [ $2 == openmp ]
-       then 
-       OPENMP=0
-       shift
-     elif [ $2 == debug ] 
-       then
-       DEBUG=0
-       shift
-     else 
-       echo 'bad parameter for --without'
-       ERROR=1
-     fi
-     ;;
-   --help)
-       chelp
-       exit
-     ;;
-    --cc)
-       CC=' '$2' '
-       shift
-     ;;
-    --fc)
-       F90=' '$2' '
-       shift
-     ;;
+do
+    case $1 in
+        --with)
+            if [ $2 == mpi ]
+            then
+                MPI=1
+                shift
+            elif [ $2 == openmp ]
+            then
+                OPENMP=1
+                shift
+            elif [ $2 == debug ]
+            then
+                DEBUG=1
+                shift
+            elif [ $2 == gpu ]
+            then
+                GPU=1
+                shift
+            else
+                echo 'bad parameter for --with'
+                ERROR=1
+            fi
+        ;;
+        --without)
+            if [ $2 == mpi ]
+            then
+                MPI=0
+                shift
+            elif [ $2 == openmp ]
+            then
+                OPENMP=0
+                shift
+            elif [ $2 == debug ]
+            then
+                DEBUG=0
+                shift
+            else
+                echo 'bad parameter for --without'
+                ERROR=1
+            fi
+        ;;
+        --help)
+            chelp
+            exit
+        ;;
+        --cc)
+            CC=' '$2' '
+            shift
+        ;;
+        --fc)
+            F90=' '$2' '
+            shift
+        ;;
         *)
-     echo 'bad argument' 
-     echo 'try ./configure --help' 
-     ERROR=1
-     ;;
-  esac    
-  shift
+            echo 'bad argument'
+            echo 'try ./configure --help'
+            ERROR=1
+        ;;
+    esac
+    shift
 done
 
 if [ $ERROR == 1 ]
-  then
-  echo 'configure FAILED' 
-  exit
+then
+    echo 'configure FAILED'
+    exit
 fi
 
 
 
 ######### paths ############################
+
 if [ $MPI -eq 1 ]
-  then
-  LIBNAME='libmidapack'
+then
+    LIBNAME='libmidapack'
 else
-  LIBNAME='libseqmidapack'
+    LIBNAME='libseqmidapack'
 fi
 echo 'PROJECT = '$PROJECT > Makefile
 echo 'VERSION = '$VERSION >> Makefile
@@ -207,65 +219,98 @@ echo 'DIR = '$DIR >> Makefile
 echo 'DIRTAR = '$DIRTAR >> Makefile
 echo 'LIBNAME = '$LIBNAME >> Makefile
 
-echo 'DIR = '$DIR > ./test/mapmat/Makefile
-echo 'MAPMAT = $(DIR)/src/mapmat/' >> ./test/mapmat/Makefile
+# check if an install prefix has been defined
+if [ -z "$PREFIX" ]
+then
+    echo '\$PREFIX is not set'
+    ERROR=1
+else
+    echo 'PREFIX = '$PREFIX >> Makefile
+fi
 
-echo 'DIR = '$DIR > ./test/toeplitz/Makefile
-echo 'TOEPLITZ = $(DIR)/src/toeplitz/' >> ./test/toeplitz/Makefile
+if [ $ERROR == 1 ]
+then
+    echo 'configure FAILED'
+    exit
+fi
+
+echo 'MIDAPACK_ROOT = $(PREFIX)/midapack' >> Makefile
+echo 'MIDAPACK_OBJ = $(MIDAPACK_ROOT)/obj' >> Makefile
+echo 'MAPMAT_OBJ = $(MIDAPACK_OBJ)/mapmat' >> Makefile
+echo 'TOEPLIZT_OBJ = $(MIDAPACK_OBJ)/toeplitz' >> Makefile
+echo 'MIDAPACK_LIB = $(MIDAPACK_ROOT)/lib' >> Makefile
+
+echo 'MIDAPACK_ROOT = $(PREFIX)/midapack' >> ./src/mapmat/Makefile
+echo 'MATMAP_OBJ = $(MIDAPACK_ROOT)/obj/mapmat' >> ./src/mapmat/Makefile
+
+echo 'MIDAPACK_ROOT = $(PREFIX)/midapack' >> ./src/mapmat/Makefile
+echo 'TOEPLITZ_OBJ = $(MIDAPACK_ROOT)/obj/toeplitz' >> ./src/mapmat/Makefile
+
+# echo 'DIR = '$DIR > ./test/mapmat/Makefile
+# echo 'MAPMAT = $(DIR)/src/mapmat/' >> ./test/mapmat/Makefile
+
+# echo 'DIR = '$DIR > ./test/toeplitz/Makefile
+# echo 'TOEPLITZ = $(DIR)/src/toeplitz/' >> ./test/toeplitz/Makefile
 
 ####### compilers ###########################
+
 #fortran
 if [ $F90 == 0 ]
-  then
-  echo 'setting fortran compiler (gfortran) : '
-  path=$(which gfortran)
-  F90=$path
-  echo 'F90 = '$F90 
+then
+    echo 'setting fortran compiler (gfortran) : '
+    path=$(which gfortran)
+    F90=$path
+    echo 'F90 = '$F90
 fi
 
 # c + mpi
 if [ $MPI -eq 1 ]
-  then
-  OPT=$OPT' -D W_MPI'
-  if [ $CC == 0 ]
+then
+    OPT=$OPT' -D W_MPI'
+    if [ $CC == 0 ]
     then
-    echo 'setting MPI compiler (mpicc) : '
-    path=$(which mpicc)
-    MPICC=$path
-    CC='$(MPICC)'
-  fi 
-  echo 'MPICC = '$MPICC 
+        if [ -z "$MPICC" ]
+        then
+            echo 'setting MPI compiler (mpicc) : '
+            path=$(which mpicc)
+            MPICC=$path
+        fi
+        CC='$(MPICC)'
+    fi
+    echo 'MPICC = '$MPICC
 else
-  if [ $CC == 0 ]
+    if [ $CC == 0 ]
     then
-    echo 'setting C compiler (gcc) : '
-    path=$(which gcc)
-    GCC=$path
-    CC='$(GCC)'
-  fi
-  echo 'GCC = '$GCC 
+        if [ -z "$GCC" ]
+        then
+            echo 'setting C compiler (gcc) : '
+            path=$(which gcc)
+            GCC=$path
+        fi
+        CC='$(GCC)'
+    fi
+    echo 'GCC = '$GCC
 fi
-  
+
 
 #openmp
 if [ $OPENMP -eq 1 ]
-  then
-  echo 'setting openmp flag'
-  OPT=$OPT' -D W_OPENMP'
-  CC=$CC' -fopenmp'
+then
+    echo 'setting openmp flag'
+    OPT=$OPT' -D W_OPENMP'
+    CC=$CC' -fopenmp' # -qopenmp ?
 fi
 
 
 #optimisations
 if [ $DEBUG -eq 1 ]
-  then
-  echo 'setting mode debug'
-  OPT=$OPT' -g' 
+then
+    echo 'setting mode debug'
+    OPT=$OPT' -g -O0'
 else
-  OPT=$OPT' -O3' 
-fi  
+    OPT=$OPT' -O3'
+fi
 CC=$CC' $(OPT)'
-
 
 echo 'GCC = '$GCC  > ./src/mapmat/Makefile
 echo 'MPICC = '$MPICC  >> ./src/mapmat/Makefile
@@ -277,58 +322,61 @@ echo 'MPICC = '$MPICC  >> ./src/toeplitz/Makefile
 echo 'OPT = '$OPT >> ./src/toeplitz/Makefile
 echo 'CC = '$CC  >> ./src/toeplitz/Makefile
 
-echo 'F90 = '$F90 >> ./test/mapmat/Makefile
-echo 'GCC = '$GCC  >> ./test/mapmat/Makefile
-echo 'MPICC = '$MPICC  >> ./test/mapmat/Makefile
-echo 'OPT = '$OPT >> ./test/mapmat/Makefile
-echo 'CC = '$CC  >> ./test/mapmat/Makefile
+# echo 'F90 = '$F90 >> ./test/mapmat/Makefile
+# echo 'GCC = '$GCC  >> ./test/mapmat/Makefile
+# echo 'MPICC = '$MPICC  >> ./test/mapmat/Makefile
+# echo 'OPT = '$OPT >> ./test/mapmat/Makefile
+# echo 'CC = '$CC  >> ./test/mapmat/Makefile
 
-echo 'GCC = '$GCC  >> ./test/toeplitz/Makefile
-echo 'MPICC = '$MPICC  >> ./test/toeplitz/Makefile
-echo 'CC = '$CC  >> ./test/toeplitz/Makefile
+# echo 'GCC = '$GCC  >> ./test/toeplitz/Makefile
+# echo 'MPICC = '$MPICC  >> ./test/toeplitz/Makefile
+# echo 'CC = '$CC  >> ./test/toeplitz/Makefile
 
 
 ######## include  ##########################
-searchincpath fftw3.h
-FFTW_INC=$path
-echo 'FFTW_INC = -I'$FFTW_INC >> src/mapmat/Makefile
-echo 'FFTW_INC = -I'$FFTW_INC >> src/toeplitz/Makefile
 
-echo 'INC = -I$(DIR)/include -I'$FFTW_INC >> ./test/mapmat/Makefile
-echo 'INC = -I$(DIR)/include -I'$FFTW_INC >> ./test/toeplitz/Makefile
+# searchincpath fftw3.h
+# FFTW_INC=$path
+# echo 'FFTW_INC = -I'$FFTW_INC >> src/mapmat/Makefile
+# echo 'FFTW_INC = -I'$FFTW_INC >> src/toeplitz/Makefile
+
+# echo 'INC = -I$(DIR)/include -I'$FFTW_INC >> ./test/mapmat/Makefile
+# echo 'INC = -I$(DIR)/include -I'$FFTW_INC >> ./test/toeplitz/Makefile
+
+
 ######## libraries (for tests) #############
-if [ $MPI -eq 1 ]
-  then
-  echo 'LIB = -L$(DIR)/lib -lmidapack' >> ./test/mapmat/Makefile
-  echo 'LIB = -L$(DIR)/lib -lmidapack' >> ./test/toeplitz/Makefile
-else
-  echo 'LIB = -L$(DIR)/lib -lseqmidapack' >> ./test/mapmat/Makefile
-  echo 'LIB = -L$(DIR)/lib -lseqmidapack' >> ./test/toeplitz/Makefile
-fi
+
+# if [ $MPI -eq 1 ]
+# then
+#     echo 'LIB = -L$(DIR)/lib -lmidapack' >> ./test/mapmat/Makefile
+#     echo 'LIB = -L$(DIR)/lib -lmidapack' >> ./test/toeplitz/Makefile
+# else
+#     echo 'LIB = -L$(DIR)/lib -lseqmidapack' >> ./test/mapmat/Makefile
+#     echo 'LIB = -L$(DIR)/lib -lseqmidapack' >> ./test/toeplitz/Makefile
+# fi
 
 #searchlibpath libfftw3.a
 #FFTW_LIB=$path
 #echo 'FFTW_LIB = -L'$FFTW_LIB -lfftw3 >> ./test/toeplitz/Makefile
-echo 'FFTW_LIB = -lfftw3 -lfftw3_threads' >> ./test/toeplitz/Makefile
+# echo 'FFTW_LIB = -lfftw3 -lfftw3_threads' >> ./test/toeplitz/Makefile
 
 #############################################
 
- 
+
 cat Makefile.in >> Makefile
 
 cat src/mapmat/Makefile.in >> src/mapmat/Makefile
 
-cat test/mapmat/Makefile.in >> test/mapmat/Makefile
+# cat test/mapmat/Makefile.in >> test/mapmat/Makefile
 
 cat src/toeplitz/Makefile.in >> src/toeplitz/Makefile
 
-cat test/toeplitz/Makefile.in >> test/toeplitz/Makefile
+# cat test/toeplitz/Makefile.in >> test/toeplitz/Makefile
 
 if [ $ERROR == 1 ]
-  then
-  echo 'configure FAILED' 
-  exit
+then
+    echo 'configure FAILED'
+    exit
 else
-  echo 'Makefile has been successfully generated' 
+    echo 'Makefile has been successfully generated'
 fi
-    
