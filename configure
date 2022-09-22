@@ -237,14 +237,14 @@ fi
 echo 'MIDAPACK_ROOT = $(PREFIX)/midapack' >> Makefile
 echo 'MIDAPACK_OBJ = $(MIDAPACK_ROOT)/obj' >> Makefile
 echo 'MAPMAT_OBJ = $(MIDAPACK_OBJ)/mapmat' >> Makefile
-echo 'TOEPLIZT_OBJ = $(MIDAPACK_OBJ)/toeplitz' >> Makefile
+echo 'TOEPLITZ_OBJ = $(MIDAPACK_OBJ)/toeplitz' >> Makefile
 echo 'MIDAPACK_LIB = $(MIDAPACK_ROOT)/lib' >> Makefile
 
-echo 'MIDAPACK_ROOT = $(PREFIX)/midapack' >> ./src/mapmat/Makefile
-echo 'MATMAP_OBJ = $(MIDAPACK_ROOT)/obj/mapmat' >> ./src/mapmat/Makefile
+echo 'MIDAPACK_ROOT = $(PREFIX)/midapack' > ./src/mapmat/Makefile
+echo 'MAPMAT_OBJ = $(MIDAPACK_ROOT)/obj/mapmat' >> ./src/mapmat/Makefile
 
-echo 'MIDAPACK_ROOT = $(PREFIX)/midapack' >> ./src/mapmat/Makefile
-echo 'TOEPLITZ_OBJ = $(MIDAPACK_ROOT)/obj/toeplitz' >> ./src/mapmat/Makefile
+echo 'MIDAPACK_ROOT = $(PREFIX)/midapack' > ./src/toeplitz/Makefile
+echo 'TOEPLITZ_OBJ = $(MIDAPACK_ROOT)/obj/toeplitz' >> ./src/toeplitz/Makefile
 
 # echo 'DIR = '$DIR > ./test/mapmat/Makefile
 # echo 'MAPMAT = $(DIR)/src/mapmat/' >> ./test/mapmat/Makefile
@@ -312,12 +312,12 @@ else
 fi
 CC=$CC' $(OPT)'
 
-echo 'GCC = '$GCC  > ./src/mapmat/Makefile
+echo 'GCC = '$GCC  >> ./src/mapmat/Makefile
 echo 'MPICC = '$MPICC  >> ./src/mapmat/Makefile
 echo 'OPT = '$OPT >> ./src/mapmat/Makefile
 echo 'CC = '$CC  >> ./src/mapmat/Makefile
 
-echo 'GCC = '$GCC  > ./src/toeplitz/Makefile
+echo 'GCC = '$GCC  >> ./src/toeplitz/Makefile
 echo 'MPICC = '$MPICC  >> ./src/toeplitz/Makefile
 echo 'OPT = '$OPT >> ./src/toeplitz/Makefile
 echo 'CC = '$CC  >> ./src/toeplitz/Makefile
