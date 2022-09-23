@@ -235,12 +235,6 @@ else
     echo 'PREFIX = '$PREFIX >> ./test/mapmaking/mappraiser/src/Makefile
 fi
 
-if [ $ERROR == 1 ]
-then
-    echo 'configure FAILED'
-    exit
-fi
-
 echo 'MIDAPACK_ROOT = $(PREFIX)/midapack' >> Makefile
 echo 'MIDAPACK_OBJ = $(MIDAPACK_ROOT)/obj' >> Makefile
 echo 'MAPMAT_OBJ = $(MIDAPACK_OBJ)/mapmat' >> Makefile
@@ -260,6 +254,52 @@ echo 'LIB = -L$(MIDAPACK_LIB) -lmidapack' >> ./test/mapmaking/mappraiser/Makefil
 echo 'MIDAPACK_LIB = $(PREFIX)/midapack/lib' >> ./test/mapmaking/mappraiser/src/Makefile
 echo 'INC = -I$(DIR)/include' >> ./test/mapmaking/mappraiser/src/Makefile
 echo 'LIB = -L$(MIDAPACK_LIB) -lmidapack' >> ./test/mapmaking/mappraiser/src/Makefile
+
+# check if a path for preAlps library has been defined
+if [ -z "$PREALPS_DIR" ]
+then
+    echo '\$PREALPS_DIR is not set'
+    ERROR=1
+else
+    echo 'PREALPS_DIR = '$PREALPS_DIR >> ./test/mapmaking/mappraiser/Makefile
+    echo 'PREALPS_DIR = '$PREALPS_DIR >> ./test/mapmaking/mappraiser/src/Makefile
+fi
+
+# check if a path for metis library has been defined
+if [ -z "$METIS_DIR" ]
+then
+    echo '\$METIS_DIR is not set'
+    ERROR=1
+else
+    echo 'METIS_DIR = '$METIS_DIR >> ./test/mapmaking/mappraiser/Makefile
+    echo 'METIS_DIR = '$METIS_DIR >> ./test/mapmaking/mappraiser/src/Makefile
+fi
+
+# check if a path for mkl library has been defined
+if [ -z "$MKL_DIR" ]
+then
+    echo '\$MKL_DIR is not set'
+    ERROR=1
+else
+    echo 'MKL_DIR = '$MKL_DIR >> ./test/mapmaking/mappraiser/Makefile
+    echo 'MKL_DIR = '$MKL_DIR >> ./test/mapmaking/mappraiser/src/Makefile
+fi
+
+# check if a path for cfitsio library has been defined
+if [ -z "$CFITSIO_DIR" ]
+then
+    echo '\$CFITSIO_DIR is not set'
+    ERROR=1
+else
+    echo 'CFITSIO_DIR = '$CFITSIO_DIR >> ./test/mapmaking/mappraiser/Makefile
+    echo 'CFITSIO_DIR = '$CFITSIO_DIR >> ./test/mapmaking/mappraiser/src/Makefile
+fi
+
+if [ $ERROR == 1 ]
+then
+    echo 'configure FAILED'
+    exit
+fi
 
 # echo 'DIR = '$DIR > ./test/mapmat/Makefile
 # echo 'MAPMAT = $(DIR)/src/mapmat/' >> ./test/mapmat/Makefile
@@ -347,22 +387,11 @@ echo 'MAPPRAISER_ROOT = $(PREFIX)/mappraiser' >> ./test/mapmaking/mappraiser/Mak
 echo 'MAPPRAISER_OBJ = $(MAPPRAISER_ROOT)/obj' >> ./test/mapmaking/mappraiser/Makefile
 echo 'MAPPRAISER_LIB = $(MAPPRAISER_ROOT)/lib' >> ./test/mapmaking/mappraiser/Makefile
 
-# TODO: use value of environment variables
-echo 'PREALPS_DIR = $(HOME)/preAlps' >> ./test/mapmaking/mappraiser/Makefile
-echo 'METIS_DIR = /global/common/cori/software/metis/5.1.0' >> ./test/mapmaking/mappraiser/Makefile
-echo 'MKL_DIR = /opt/intel/mkl' >> ./test/mapmaking/mappraiser/Makefile
-echo 'CFITSIO_DIR = /usr/common/software/cfitsio/3.47' >> ./test/mapmaking/mappraiser/Makefile
-
 echo 'OPT = '$OPT >> ./test/mapmaking/mappraiser/src/Makefile
 echo 'CC = '$CC >> ./test/mapmaking/mappraiser/src/Makefile
 echo 'MAPPRAISER_ROOT = $(PREFIX)/mappraiser' >> ./test/mapmaking/mappraiser/src/Makefile
 echo 'MAPPRAISER_OBJ = $(MAPPRAISER_ROOT)/obj' >> ./test/mapmaking/mappraiser/src/Makefile
 echo 'MAPPRAISER_LIB = $(MAPPRAISER_ROOT)/lib' >> ./test/mapmaking/mappraiser/src/Makefile
-
-echo 'PREALPS_DIR = $(HOME)/preAlps' >> ./test/mapmaking/mappraiser/src/Makefile
-echo 'METIS_DIR = /global/common/cori/software/metis/5.1.0' >> ./test/mapmaking/mappraiser/src/Makefile
-echo 'MKL_DIR = /opt/intel/mkl' >> ./test/mapmaking/mappraiser/src/Makefile
-echo 'CFITSIO_DIR = /usr/common/software/cfitsio/3.47' >> ./test/mapmaking/mappraiser/src/Makefile
 
 # echo 'F90 = '$F90 >> ./test/mapmat/Makefile
 # echo 'GCC = '$GCC  >> ./test/mapmat/Makefile
