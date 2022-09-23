@@ -129,6 +129,7 @@ F90='gfortran'
 OPT='-Wall -Werror -fPIC'
 DIR=$(pwd)
 DIRTAR='export_tar'
+LDFLAGS='-shared'
 
 #######################################
 
@@ -219,6 +220,10 @@ echo 'DIR = '$DIR >> Makefile
 echo 'DIRTAR = '$DIRTAR >> Makefile
 echo 'LIBNAME = '$LIBNAME >> Makefile
 
+echo 'DIR = '$DIR > ./test/mapmaking/mappraiser/Makefile
+
+echo 'DIR = '$DIR > ./test/mapmaking/mappraiser/src/Makefile
+
 # check if an install prefix has been defined
 if [ -z "$PREFIX" ]
 then
@@ -226,6 +231,8 @@ then
     ERROR=1
 else
     echo 'PREFIX = '$PREFIX >> Makefile
+    echo 'PREFIX = '$PREFIX >> ./test/mapmaking/mappraiser/Makefile
+    echo 'PREFIX = '$PREFIX >> ./test/mapmaking/mappraiser/src/Makefile
 fi
 
 if [ $ERROR == 1 ]
@@ -245,6 +252,20 @@ echo 'MAPMAT_OBJ = $(MIDAPACK_ROOT)/obj/mapmat' >> ./src/mapmat/Makefile
 
 echo 'MIDAPACK_ROOT = $(PREFIX)/midapack' > ./src/toeplitz/Makefile
 echo 'TOEPLITZ_OBJ = $(MIDAPACK_ROOT)/obj/toeplitz' >> ./src/toeplitz/Makefile
+
+echo 'MIDAPACK_LIB = $(PREFIX)/midapack/lib' \
+>> ./test/mapmaking/mappraiser/Makefile
+echo 'INC = -I$(DIR)/include' \
+>> ./test/mapmaking/mappraiser/Makefile
+echo 'LIB = -L$(MIDAPACK_LIB) -lmidapack' \
+>> ./test/mapmaking/mappraiser/Makefile
+
+echo 'MIDAPACK_LIB = $(PREFIX)/midapack/lib' \
+>> ./test/mapmaking/mappraiser/src/Makefile
+echo 'INC = -I$(DIR)/include' \
+>> ./test/mapmaking/mappraiser/src/Makefile
+echo 'LIB = -L$(MIDAPACK_LIB) -lmidapack' \
+>> ./test/mapmaking/mappraiser/src/Makefile
 
 # echo 'DIR = '$DIR > ./test/mapmat/Makefile
 # echo 'MAPMAT = $(DIR)/src/mapmat/' >> ./test/mapmat/Makefile
@@ -298,7 +319,8 @@ if [ $OPENMP -eq 1 ]
 then
     echo 'setting openmp flag'
     OPT=$OPT' -D W_OPENMP'
-    CC=$CC' -fopenmp' # -qopenmp ?
+    CC=$CC' -qopenmp' # -fopenmp ?
+    LDFLAGS=$LDFLAGS' -qopenmp'
 fi
 
 
@@ -312,6 +334,9 @@ else
 fi
 CC=$CC' $(OPT)'
 
+echo 'MPICC = '$MPICC >> Makefile
+echo 'LDFLAGS = '$LDFLAGS >> Makefile
+
 echo 'GCC = '$GCC  >> ./src/mapmat/Makefile
 echo 'MPICC = '$MPICC  >> ./src/mapmat/Makefile
 echo 'OPT = '$OPT >> ./src/mapmat/Makefile
@@ -321,6 +346,47 @@ echo 'GCC = '$GCC  >> ./src/toeplitz/Makefile
 echo 'MPICC = '$MPICC  >> ./src/toeplitz/Makefile
 echo 'OPT = '$OPT >> ./src/toeplitz/Makefile
 echo 'CC = '$CC  >> ./src/toeplitz/Makefile
+
+echo 'MPICC = '$MPICC \
+>> ./test/mapmaking/mappraiser/Makefile
+echo 'LDFLAGS = '$LDFLAGS \
+>> ./test/mapmaking/mappraiser/Makefile
+echo 'MAPPRAISER_ROOT = $(PREFIX)/mappraiser' \
+>> ./test/mapmaking/mappraiser/Makefile
+echo 'MAPPRAISER_OBJ = $(MAPPRAISER_ROOT)/obj' \
+>> ./test/mapmaking/mappraiser/Makefile
+echo 'MAPPRAISER_LIB = $(MAPPRAISER_ROOT)/lib' \
+>> ./test/mapmaking/mappraiser/Makefile
+
+# TODO: use value of environment variables
+echo 'PREALPS_DIR = $(HOME)/preAlps' \
+>> ./test/mapmaking/mappraiser/Makefile
+echo 'METIS_DIR = /global/common/cori/software/metis/5.1.0' \
+>> ./test/mapmaking/mappraiser/Makefile
+echo 'MKL_DIR = /opt/intel/mkl' \
+>> ./test/mapmaking/mappraiser/Makefile
+echo 'CFITSIO_DIR = /usr/common/software/cfitsio/3.47' \
+>> ./test/mapmaking/mappraiser/Makefile
+
+echo 'OPT = '$OPT \
+>> ./test/mapmaking/mappraiser/src/Makefile
+echo 'CC = '$CC \
+>> ./test/mapmaking/mappraiser/src/Makefile
+echo 'MAPPRAISER_ROOT = $(PREFIX)/mappraiser' \
+>> ./test/mapmaking/mappraiser/src/Makefile
+echo 'MAPPRAISER_OBJ = $(MAPPRAISER_ROOT)/obj' \
+>> ./test/mapmaking/mappraiser/src/Makefile
+echo 'MAPPRAISER_LIB = $(MAPPRAISER_ROOT)/lib' \
+>> ./test/mapmaking/mappraiser/src/Makefile
+
+echo 'PREALPS_DIR = $(HOME)/preAlps' \
+>> ./test/mapmaking/mappraiser/src/Makefile
+echo 'METIS_DIR = /global/common/cori/software/metis/5.1.0' \
+>> ./test/mapmaking/mappraiser/src/Makefile
+echo 'MKL_DIR = /opt/intel/mkl' \
+>> ./test/mapmaking/mappraiser/src/Makefile
+echo 'CFITSIO_DIR = /usr/common/software/cfitsio/3.47' \
+>> ./test/mapmaking/mappraiser/src/Makefile
 
 # echo 'F90 = '$F90 >> ./test/mapmat/Makefile
 # echo 'GCC = '$GCC  >> ./test/mapmat/Makefile
@@ -373,10 +439,16 @@ cat src/toeplitz/Makefile.in >> src/toeplitz/Makefile
 
 # cat test/toeplitz/Makefile.in >> test/toeplitz/Makefile
 
+cat test/mapmaking/mappraiser/Makefile.in \
+>> test/mapmaking/mappraiser/Makefile
+
+cat test/mapmaking/mappraiser/src/Makefile.in \
+>> test/mapmaking/mappraiser/src/Makefile
+
 if [ $ERROR == 1 ]
 then
     echo 'configure FAILED'
     exit
 else
-    echo 'Makefile has been successfully generated'
+    echo 'Makefiles have been successfully generated'
 fi
