@@ -1016,7 +1016,7 @@ class Mappraiser(Operator):
                 self.pixel_pointing.pixels,
                 self._mappraiser_pixels,
                 interval_starts,
-                3,
+                nnz,
                 1,
                 self.shared_flags,
                 self.shared_flag_mask,
