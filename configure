@@ -18,6 +18,8 @@ function chelp {
     echo '    mpi ; to use Message Passing Interface'
     echo '    openmp ; to multithreading via openmp'
     echo '    debug ; to generate a debug version'
+    echo '    intel ; to compile using Intel compiler suite'
+    echo '    gnu ; to compile using GNU compiler suite'
     echo '    example for using mpi and openmp : ./configure --with mpi --with openmp'
     echo '  --cc [compiler] '
     echo '    specify compiler to use'
@@ -109,6 +111,7 @@ OPENMP=1
 GPU=0
 DEBUG=0
 ERROR=0
+INTEL=1  # intel or gnu compiler suite
 
 PROJECT='Midapack_'
 VERSION='1.1b'
@@ -116,13 +119,6 @@ VERSION='1.1b'
 CC=0
 MPICC=$MPICC
 GCC='gcc'
-
-# CXX='icpc'
-# F77='ifort'
-# FC='ifort'
-# MPIFC='ftn'
-# MPICXX='CC'
-
 NVCC='nvcc'
 F90='gfortran'
 
@@ -153,6 +149,14 @@ do
             elif [ $2 == gpu ]
             then
                 GPU=1
+                shift
+            elif [ $2 == intel ]
+            then
+                INTEL=1
+                shift
+            elif [ $2 == gnu ]
+            then
+                INTEL=0
                 shift
             else
                 echo 'bad parameter for --with'
@@ -204,6 +208,14 @@ then
     exit
 fi
 
+if [ $INTEL == 1 ]
+then
+    MAPPRAISER_IN="test/mapmaking/mappraiser/Makefile-intel.in"
+    MAPPRAISER_SRC_IN="test/mapmaking/mappraiser/src/Makefile-intel.in"
+else
+    MAPPRAISER_IN="test/mapmaking/mappraiser/Makefile-gnu.in"
+    MAPPRAISER_SRC_IN="test/mapmaking/mappraiser/src/Makefile-gnu.in"
+fi
 
 
 ######### paths ############################
@@ -255,34 +267,47 @@ echo 'MIDAPACK_LIB = $(PREFIX)/midapack/lib' >> ./test/mapmaking/mappraiser/src/
 echo 'INC = -I$(DIR)/include' >> ./test/mapmaking/mappraiser/src/Makefile
 echo 'LIB = -L$(MIDAPACK_LIB) -lmidapack' >> ./test/mapmaking/mappraiser/src/Makefile
 
-# check if a path for preAlps library has been defined
-if [ -z "$PREALPS_DIR" ]
+if [ $INTEL == 1 ]
 then
-    echo '\$PREALPS_DIR is not set'
-    ERROR=1
-else
-    echo 'PREALPS_DIR = '$PREALPS_DIR >> ./test/mapmaking/mappraiser/Makefile
-    echo 'PREALPS_DIR = '$PREALPS_DIR >> ./test/mapmaking/mappraiser/src/Makefile
-fi
+    # check if a path for preAlps library has been defined
+    if [ -z "$PREALPS_DIR" ]
+    then
+        echo '\$PREALPS_DIR is not set'
+        ERROR=1
+    else
+        echo 'PREALPS_DIR = '$PREALPS_DIR >> ./test/mapmaking/mappraiser/Makefile
+        echo 'PREALPS_DIR = '$PREALPS_DIR >> ./test/mapmaking/mappraiser/src/Makefile
+    fi
 
-# check if a path for metis library has been defined
-if [ -z "$METIS_DIR" ]
-then
-    echo '\$METIS_DIR is not set'
-    ERROR=1
-else
-    echo 'METIS_DIR = '$METIS_DIR >> ./test/mapmaking/mappraiser/Makefile
-    echo 'METIS_DIR = '$METIS_DIR >> ./test/mapmaking/mappraiser/src/Makefile
-fi
+    # check if a path for metis library has been defined
+    if [ -z "$METIS_DIR" ]
+    then
+        echo '\$METIS_DIR is not set'
+        ERROR=1
+    else
+        echo 'METIS_DIR = '$METIS_DIR >> ./test/mapmaking/mappraiser/Makefile
+        echo 'METIS_DIR = '$METIS_DIR >> ./test/mapmaking/mappraiser/src/Makefile
+    fi
 
-# check if a path for mkl library has been defined
-if [ -z "$MKL_DIR" ]
-then
-    echo '\$MKL_DIR is not set'
-    ERROR=1
+    # check if a path for mkl library has been defined
+    if [ -z "$MKL_DIR" ]
+    then
+        echo '\$MKL_DIR is not set'
+        ERROR=1
+    else
+        echo 'MKL_DIR = '$MKL_DIR >> ./test/mapmaking/mappraiser/Makefile
+        echo 'MKL_DIR = '$MKL_DIR >> ./test/mapmaking/mappraiser/src/Makefile
+    fi
 else
-    echo 'MKL_DIR = '$MKL_DIR >> ./test/mapmaking/mappraiser/Makefile
-    echo 'MKL_DIR = '$MKL_DIR >> ./test/mapmaking/mappraiser/src/Makefile
+    # check if a path for openblas library has been defined
+    if [ -z "$OPENBLAS_DIR" ]
+    then
+        echo '\$OPENBLAS_DIR is not set'
+        ERROR=1
+    else
+        echo 'OPENBLAS_DIR = '$OPENBLAS_DIR >> ./test/mapmaking/mappraiser/Makefile
+        echo 'OPENBLAS_DIR = '$OPENBLAS_DIR >> ./test/mapmaking/mappraiser/src/Makefile
+    fi
 fi
 
 # check if a path for cfitsio library has been defined
@@ -353,8 +378,8 @@ if [ $OPENMP -eq 1 ]
 then
     echo 'setting openmp flag'
     OPT=$OPT' -D W_OPENMP'
-    CC=$CC' -qopenmp' # -fopenmp ?
-    LDFLAGS=$LDFLAGS' -qopenmp'
+    CC=$CC' '$OPENMP_CFLAGS
+    LDFLAGS=$LDFLAGS' '$OPENMP_CFLAGS
 fi
 
 
@@ -444,9 +469,9 @@ cat src/toeplitz/Makefile.in >> src/toeplitz/Makefile
 
 # cat test/toeplitz/Makefile.in >> test/toeplitz/Makefile
 
-cat test/mapmaking/mappraiser/Makefile.in >> test/mapmaking/mappraiser/Makefile
+cat $MAPPRAISER_IN >> test/mapmaking/mappraiser/Makefile
 
-cat test/mapmaking/mappraiser/src/Makefile.in >> test/mapmaking/mappraiser/src/Makefile
+cat $MAPPRAISER_SRC_IN >> test/mapmaking/mappraiser/src/Makefile
 
 if [ $ERROR == 1 ]
 then

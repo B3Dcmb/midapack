@@ -1,0 +1,30 @@
+
+# link openBLAS library
+OPENBLAS_INC = -I$(OPENBLAS_DIR)/include
+OPENBLAS_LIB = -L$(OPENBLAS_DIR)/lib -lopenblas -lpthread -lgfortran
+
+# supplementary libraries
+
+CFITSIO_INC = -I$(CFITSIO_DIR)/include
+CFITSIO_LIB = -L$(CFITSIO_DIR)/lib -lcfitsio
+
+##############   t e s t s   ############
+
+all:
+	mkdir -p $(MAPPRAISER_ROOT) $(MAPPRAISER_OBJ) $(MAPPRAISER_LIB)
+	cp -r $(DIR)/test/mapmaking/mappraiser/python $(MAPPRAISER_ROOT)
+	make map
+	make library
+
+map: ./src/
+	make -C ./src/
+
+library:
+	$(MPICC) $(LDFLAGS) $(MAPPRAISER_OBJ)/createToeplitz.o $(MAPPRAISER_OBJ)/precond.o $(MAPPRAISER_OBJ)/pcg_true.o $(MAPPRAISER_OBJ)/iofiles.o $(MAPPRAISER_OBJ)/mappraiser.o $(LIB) $(CFITSIO_LIB) $(OPENBLAS_LIB) -lfftw3 -lfftw3_threads -o $(MAPPRAISER_LIB)/libmappraiser.so
+
+##############   u t i l s   #############
+
+clean:
+	make clean -C ./src/
+	rm -f $(MAPPRAISER_LIB)/*midapack.so
+	rm -r $(MAPPRAISER_ROOT)
