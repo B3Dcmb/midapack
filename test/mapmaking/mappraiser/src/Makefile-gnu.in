@@ -1,10 +1,4 @@
 
-# link openBLAS library
-OPENBLAS_INC = -I$(OPENBLAS_DIR)/include
-OPENBLAS_LIB = -L$(OPENBLAS_DIR)/lib -lopenblas -lpthread -lgfortran
-
-# supplementary libraries
-
 CFITSIO_INC = -I$(CFITSIO_DIR)/include
 CFITSIO_LIB = -L$(CFITSIO_DIR)/lib -lcfitsio
 

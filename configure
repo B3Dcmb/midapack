@@ -111,7 +111,8 @@ OPENMP=1
 GPU=0
 DEBUG=0
 ERROR=0
-INTEL=1  # intel or gnu compiler suite
+INTEL=1
+DOCKER=0
 
 PROJECT='Midapack_'
 VERSION='1.1b'
@@ -122,7 +123,8 @@ GCC='gcc'
 NVCC='nvcc'
 F90='gfortran'
 
-OPT='-Wall -Werror -fPIC'
+# OPT='-Wall -Werror -fPIC'
+OPT='-fPIC'
 DIR=$(pwd)
 DIRTAR='export_tar'
 LDFLAGS='-shared'
@@ -158,6 +160,10 @@ do
             then
                 INTEL=0
                 shift
+            elif [ $2 == docker ]
+            then
+                DOCKER=1
+                shift
             else
                 echo 'bad parameter for --with'
                 ERROR=1
@@ -175,6 +181,10 @@ do
             elif [ $2 == debug ]
             then
                 DEBUG=0
+                shift
+            elif [ $2 == docker ]
+            then
+                DOCKER=0
                 shift
             else
                 echo 'bad parameter for --without'
@@ -207,6 +217,17 @@ then
     echo 'configure FAILED'
     exit
 fi
+
+
+echo 'MPI = '$MPI
+echo 'OPENMP = '$OPENMP
+echo 'GPU = '$GPU
+echo 'DEBUG = '$DEBUG
+echo 'ERROR = '$ERROR
+echo 'INTEL = '$INTEL
+echo 'DOCKER = '$DOCKER
+
+
 
 if [ $INTEL == 1 ]
 then
@@ -299,14 +320,22 @@ then
         echo 'MKL_DIR = '$MKL_DIR >> ./test/mapmaking/mappraiser/src/Makefile
     fi
 else
-    # check if a path for openblas library has been defined
-    if [ -z "$OPENBLAS_DIR" ]
+    # check path for openblas library in the case of build in Docker image
+    if [ $DOCKER == 1 ]
     then
-        echo '\$OPENBLAS_DIR is not set'
-        ERROR=1
-    else
-        echo 'OPENBLAS_DIR = '$OPENBLAS_DIR >> ./test/mapmaking/mappraiser/Makefile
-        echo 'OPENBLAS_DIR = '$OPENBLAS_DIR >> ./test/mapmaking/mappraiser/src/Makefile
+        if [ -z "$OPENBLAS_DIR" ]
+        then
+            echo '\$OPENBLAS_DIR is not set'
+            ERROR=1
+        else
+            echo 'OPENBLAS_DIR = '$OPENBLAS_DIR >> ./test/mapmaking/mappraiser/Makefile
+            echo 'OPENBLAS_INC = -I$(OPENBLAS_DIR)/include' >> ./test/mapmaking/mappraiser/Makefile
+            echo 'OPENBLAS_LIB = -L$(OPENBLAS_DIR)/lib -lopenblas -lpthread -lgfortran' >> ./test/mapmaking/mappraiser/Makefile
+
+            echo 'OPENBLAS_DIR = '$OPENBLAS_DIR >> ./test/mapmaking/mappraiser/src/Makefile
+            echo 'OPENBLAS_INC = -I$(OPENBLAS_DIR)/include' >> ./test/mapmaking/mappraiser/src/Makefile
+            echo 'OPENBLAS_LIB = -L$(OPENBLAS_DIR)/lib -lopenblas -lpthread -lgfortran' >> ./test/mapmaking/mappraiser/src/Makefile
+        fi
     fi
 fi
 
