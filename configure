@@ -238,52 +238,52 @@ then
     fi
     
     # check path to preAlps
-    if [ -z "$PREALPS_DIR" ]
+    if [ -z "$PREALPSROOT" ]
     then
-        echo 'ECG solver requires preAlps library. Please set the environment variable \$PREALPS_DIR.'
+        echo 'ECG solver requires preAlps library. Make sure the environment variable \$PREALPSROOT is set.'
         ERROR=1
     else
         # CPLM_CORE=utils/cplm_core
         # CPLMDIR=utils/cplm_light
         # CPLM_V0_DIR=utils/cplm_v0
-        LIBpreAlps='-L$(PREALPS_DIR)/lib/ -lpreAlps_release -lcplm_light -lcplm_v0 -lcplm_core'
-        INCpreAlps='-I$(PREALPS_DIR)/utils/cplm_core'
-        INCpreAlps+=' -I$(PREALPS_DIR)/utils/cplm_light'
-        INCpreAlps+=' -I$(PREALPS_DIR)/utils/cplm_v0'
-        INCpreAlps+=' -I$(PREALPS_DIR)/utils'
-        INCpreAlps+=' -I$(PREALPS_DIR)/src/preconditioners'
-        INCpreAlps+=' -I$(PREALPS_DIR)/src/solvers'
+        LIBpreAlps='-L${PREALPSROOT}/lib/ -lpreAlps_release -lcplm_light -lcplm_v0 -lcplm_core'
+        INCpreAlps='-I${PREALPSROOT}/utils/cplm_core'
+        INCpreAlps+=' -I${PREALPSROOT}/utils/cplm_light'
+        INCpreAlps+=' -I${PREALPSROOT}/utils/cplm_v0'
+        INCpreAlps+=' -I${PREALPSROOT}/utils'
+        INCpreAlps+=' -I${PREALPSROOT}/src/preconditioners'
+        INCpreAlps+=' -I${PREALPSROOT}/src/solvers'
     fi
 
     # check path to metis
-    if [ -z "$METIS_DIR" ]
+    if [ -z "$METISROOT" ]
     then
-        echo 'ECG solver requires metis library. Please set the environment variable \$METIS_DIR.'
+        echo 'ECG solver requires metis library. Make sure the environment variable \$METISROOT is set.'
         ERROR=1
     else
-        METIS_INC='-I$(METIS_DIR)/include'
-        METIS_LIB='-L$(METIS_DIR)/lib -lmetis'
+        METIS_INC='-I${METISROOT}/include'
+        METIS_LIB='-L${METISROOT}/lib -lmetis'
     fi
 fi
 
 # Check path to mkl library
-if [[ $MKL -eq 1 ]] && [[ -z "$MKL_DIR" ]]
+if [[ $MKL -eq 1 ]] && [[ -z "$MKLROOT" ]]
 then
-    echo 'Option --with mkl is used. Please set the environment variable \$MKL_DIR.'
+    echo 'Option --with mkl is used. Make sure the environment variable \$MKLROOT is set.'
     ERROR=1
 else
-    MKL_INC='-I$(MKL_DIR)/include'
-    MKL_LIB='-L$(MKL_DIR)/lib/intel64 -lmkl_rt'
+    MKL_INC='-I${MKLROOT}/include'
+    MKL_LIB='-L${MKLROOT}/lib/intel64 -lmkl_rt'
 fi
 
 # Check path to cfitsio library
-if [ -z "$CFITSIO_DIR" ]
+if [ -z "$CFITSIOROOT" ]
 then
-    echo 'Mappraiser requires cfitsio library. Please set the environment variable \$CFITSIO_DIR.'
+    echo 'Mappraiser requires cfitsio library. Make sure the environment variable \$CFITSIOROOT is set.'
     ERROR=1
 else
-    CFITSIO_INC='-I$(CFITSIO_DIR)/include'
-    CFITSIO_LIB='-L$(CFITSIO_DIR)/lib -lcfitsio'
+    CFITSIO_INC='-I${CFITSIOROOT}/include'
+    CFITSIO_LIB='-L${CFITSIOROOT}/lib -lcfitsio'
 fi
 
 # Check if an install prefix has been defined
@@ -340,7 +340,7 @@ then
             path=$(which mpicc)
             MPICC=$path
         fi
-        CC='$(MPICC)'
+        CC='${MPICC}'
     fi
     echo 'MPICC = '$MPICC
 else
@@ -352,7 +352,7 @@ else
             path=$(which gcc)
             GCC=$path
         fi
-        CC='$(GCC)'
+        CC='${GCC}'
     fi
     echo 'GCC = '$GCC
 fi
@@ -395,7 +395,7 @@ fi
 
 # Add all the options to CC variable
 
-CC=$CC' $(OPT)'
+CC=$CC' ${OPT}'
 
 
 ################################################
@@ -419,17 +419,17 @@ echo 'LIBNAME = '$LIBNAME >> Makefile
 
 echo 'PREFIX = '$PREFIX >> Makefile
 
-echo 'MIDAPACK_ROOT = $(PREFIX)/midapack' >> Makefile
-echo 'MIDAPACK_OBJ = $(MIDAPACK_ROOT)/obj' >> Makefile
-echo 'MAPMAT_OBJ = $(MIDAPACK_OBJ)/mapmat' >> Makefile
-echo 'TOEPLITZ_OBJ = $(MIDAPACK_OBJ)/toeplitz' >> Makefile
-echo 'MIDAPACK_LIB = $(MIDAPACK_ROOT)/lib' >> Makefile
+echo 'MIDAPACK_ROOT = ${PREFIX}/midapack' >> Makefile
+echo 'MIDAPACK_OBJ = ${MIDAPACK_ROOT}/obj' >> Makefile
+echo 'MAPMAT_OBJ = ${MIDAPACK_OBJ}/mapmat' >> Makefile
+echo 'TOEPLITZ_OBJ = ${MIDAPACK_OBJ}/toeplitz' >> Makefile
+echo 'MIDAPACK_LIB = ${MIDAPACK_ROOT}/lib' >> Makefile
 
-echo 'MIDAPACK_ROOT = $(PREFIX)/midapack' > src/mapmat/Makefile
-echo 'MAPMAT_OBJ = $(MIDAPACK_ROOT)/obj/mapmat' >> src/mapmat/Makefile
+echo 'MIDAPACK_ROOT = ${PREFIX}/midapack' > src/mapmat/Makefile
+echo 'MAPMAT_OBJ = ${MIDAPACK_ROOT}/obj/mapmat' >> src/mapmat/Makefile
 
-echo 'MIDAPACK_ROOT = $(PREFIX)/midapack' > src/toeplitz/Makefile
-echo 'TOEPLITZ_OBJ = $(MIDAPACK_ROOT)/obj/toeplitz' >> src/toeplitz/Makefile
+echo 'MIDAPACK_ROOT = ${PREFIX}/midapack' > src/toeplitz/Makefile
+echo 'TOEPLITZ_OBJ = ${MIDAPACK_ROOT}/obj/toeplitz' >> src/toeplitz/Makefile
 
 echo 'MPICC = '$MPICC >> Makefile
 echo 'LDFLAGS = '$LDFLAGS >> Makefile
@@ -447,10 +447,10 @@ echo 'CC = '$CC  >> src/toeplitz/Makefile
 ### old: test/matmap and test/toeplitz ###
 
 # echo 'DIR = '$DIR > test/mapmat/Makefile
-# echo 'MAPMAT = $(DIR)/src/mapmat/' >> test/mapmat/Makefile
+# echo 'MAPMAT = ${DIR}/src/mapmat/' >> test/mapmat/Makefile
 
 # echo 'DIR = '$DIR > test/toeplitz/Makefile
-# echo 'TOEPLITZ = $(DIR)/src/toeplitz/' >> test/toeplitz/Makefile
+# echo 'TOEPLITZ = ${DIR}/src/toeplitz/' >> test/toeplitz/Makefile
 
 # echo 'F90 = '$F90 >> test/mapmat/Makefile
 # echo 'GCC = '$GCC  >> test/mapmat/Makefile
@@ -470,64 +470,64 @@ echo 'DIR = '$DIR > test/mapmaking/mappraiser/src/Makefile
 echo 'PREFIX = '$PREFIX >> test/mapmaking/mappraiser/Makefile
 echo 'PREFIX = '$PREFIX >> test/mapmaking/mappraiser/src/Makefile
 
-echo 'MIDAPACK_LIB = $(PREFIX)/midapack/lib' >> test/mapmaking/mappraiser/Makefile
-echo 'MIDAPACK_LIB = $(PREFIX)/midapack/lib' >> test/mapmaking/mappraiser/src/Makefile
+echo 'MIDAPACK_LIB = ${PREFIX}/midapack/lib' >> test/mapmaking/mappraiser/Makefile
+echo 'MIDAPACK_LIB = ${PREFIX}/midapack/lib' >> test/mapmaking/mappraiser/src/Makefile
 
 if [ $MKL == 1 ]
 then
-    echo 'MKL_DIR = '$MKL_DIR >> test/mapmaking/mappraiser/Makefile
-    echo 'MKL_DIR = '$MKL_DIR >> test/mapmaking/mappraiser/src/Makefile
+    echo 'MKLROOT = '$MKLROOT >> test/mapmaking/mappraiser/Makefile
+    echo 'MKLROOT = '$MKLROOT >> test/mapmaking/mappraiser/src/Makefile
 fi
 
 if [ $ECG == 1 ]
 then
-    echo 'PREALPS_DIR = '$PREALPS_DIR >> test/mapmaking/mappraiser/Makefile
-    echo 'PREALPS_DIR = '$PREALPS_DIR >> test/mapmaking/mappraiser/src/Makefile
+    echo 'PREALPSROOT = '$PREALPSROOT >> test/mapmaking/mappraiser/Makefile
+    echo 'PREALPSROOT = '$PREALPSROOT >> test/mapmaking/mappraiser/src/Makefile
     
-    echo 'METIS_DIR = '$METIS_DIR >> test/mapmaking/mappraiser/Makefile
-    echo 'METIS_DIR = '$METIS_DIR >> test/mapmaking/mappraiser/src/Makefile
+    echo 'METISROOT = '$METISROOT >> test/mapmaking/mappraiser/Makefile
+    echo 'METISROOT = '$METISROOT >> test/mapmaking/mappraiser/src/Makefile
 fi
 
-echo 'CFITSIO_DIR = '$CFITSIO_DIR >> test/mapmaking/mappraiser/Makefile
-echo 'CFITSIO_DIR = '$CFITSIO_DIR >> test/mapmaking/mappraiser/src/Makefile
+echo 'CFITSIOROOT = '$CFITSIOROOT >> test/mapmaking/mappraiser/Makefile
+echo 'CFITSIOROOT = '$CFITSIOROOT >> test/mapmaking/mappraiser/src/Makefile
 
 #FIXME: check path for openblas library in the case of build in Docker image ?
 # if [ $DOCKER == 1 ]
 # then
-#     if [ -z "$OPENBLAS_DIR" ]
+#     if [ -z "$OPENBLASROOT" ]
 #     then
-#         echo '\$OPENBLAS_DIR is not set'
+#         echo '\$OPENBLASROOT is not set'
 #         ERROR=1
 #     else
-#         echo 'OPENBLAS_DIR = '$OPENBLAS_DIR >> test/mapmaking/mappraiser/Makefile
-#         echo 'OPENBLAS_INC = -I$(OPENBLAS_DIR)/include' >> test/mapmaking/mappraiser/Makefile
-#         echo 'OPENBLAS_LIB = -L$(OPENBLAS_DIR)/lib -lopenblas -lpthread -lgfortran' >> test/mapmaking/mappraiser/Makefile
+#         echo 'OPENBLASROOT = '$OPENBLASROOT >> test/mapmaking/mappraiser/Makefile
+#         echo 'OPENBLAS_INC = -I${OPENBLASROOT}/include' >> test/mapmaking/mappraiser/Makefile
+#         echo 'OPENBLAS_LIB = -L${OPENBLASROOT}/lib -lopenblas -lpthread -lgfortran' >> test/mapmaking/mappraiser/Makefile
 
-#         echo 'OPENBLAS_DIR = '$OPENBLAS_DIR >> test/mapmaking/mappraiser/src/Makefile
-#         echo 'OPENBLAS_INC = -I$(OPENBLAS_DIR)/include' >> test/mapmaking/mappraiser/src/Makefile
-#         echo 'OPENBLAS_LIB = -L$(OPENBLAS_DIR)/lib -lopenblas -lpthread -lgfortran' >> test/mapmaking/mappraiser/src/Makefile
+#         echo 'OPENBLASROOT = '$OPENBLASROOT >> test/mapmaking/mappraiser/src/Makefile
+#         echo 'OPENBLAS_INC = -I${OPENBLASROOT}/include' >> test/mapmaking/mappraiser/src/Makefile
+#         echo 'OPENBLAS_LIB = -L${OPENBLASROOT}/lib -lopenblas -lpthread -lgfortran' >> test/mapmaking/mappraiser/src/Makefile
 #     fi
 # fi
 
 echo 'MPICC = '$MPICC >> test/mapmaking/mappraiser/Makefile
 echo 'LDFLAGS = '$LDFLAGS >> test/mapmaking/mappraiser/Makefile
-echo 'MAPPRAISER_ROOT = $(PREFIX)/mappraiser' >> test/mapmaking/mappraiser/Makefile
-echo 'MAPPRAISER_OBJ = $(MAPPRAISER_ROOT)/obj' >> test/mapmaking/mappraiser/Makefile
-echo 'MAPPRAISER_LIB = $(MAPPRAISER_ROOT)/lib' >> test/mapmaking/mappraiser/Makefile
+echo 'MAPPRAISER_ROOT = ${PREFIX}/mappraiser' >> test/mapmaking/mappraiser/Makefile
+echo 'MAPPRAISER_OBJ = ${MAPPRAISER_ROOT}/obj' >> test/mapmaking/mappraiser/Makefile
+echo 'MAPPRAISER_LIB = ${MAPPRAISER_ROOT}/lib' >> test/mapmaking/mappraiser/Makefile
 
 echo 'OPT = '$OPT >> test/mapmaking/mappraiser/src/Makefile
 echo 'CC = '$CC >> test/mapmaking/mappraiser/src/Makefile
-echo 'MAPPRAISER_ROOT = $(PREFIX)/mappraiser' >> test/mapmaking/mappraiser/src/Makefile
-echo 'MAPPRAISER_OBJ = $(MAPPRAISER_ROOT)/obj' >> test/mapmaking/mappraiser/src/Makefile
-echo 'MAPPRAISER_LIB = $(MAPPRAISER_ROOT)/lib' >> test/mapmaking/mappraiser/src/Makefile
+echo 'MAPPRAISER_ROOT = ${PREFIX}/mappraiser' >> test/mapmaking/mappraiser/src/Makefile
+echo 'MAPPRAISER_OBJ = ${MAPPRAISER_ROOT}/obj' >> test/mapmaking/mappraiser/src/Makefile
+echo 'MAPPRAISER_LIB = ${MAPPRAISER_ROOT}/lib' >> test/mapmaking/mappraiser/src/Makefile
 
 
 ################################################
 ### INC and LIB ################################
 ################################################
 
-INC='-I$(DIR)/include'
-LIB='-L$(MIDAPACK_LIB) -lmidapack'
+INC='-I${DIR}/include'
+LIB='-L${MIDAPACK_LIB} -lmidapack'
 
 # link MKL library (if needed)
 
@@ -566,16 +566,16 @@ fi
 # echo 'FFTW_INC = -I'$FFTW_INC >> src/mapmat/Makefile
 # echo 'FFTW_INC = -I'$FFTW_INC >> src/toeplitz/Makefile
 
-# echo 'INC = -I$(DIR)/include -I'$FFTW_INC >> test/mapmat/Makefile
-# echo 'INC = -I$(DIR)/include -I'$FFTW_INC >> test/toeplitz/Makefile
+# echo 'INC = -I${DIR}/include -I'$FFTW_INC >> test/mapmat/Makefile
+# echo 'INC = -I${DIR}/include -I'$FFTW_INC >> test/toeplitz/Makefile
 
 # if [ $MPI -eq 1 ]
 # then
-#     echo 'LIB = -L$(DIR)/lib -lmidapack' >> test/mapmat/Makefile
-#     echo 'LIB = -L$(DIR)/lib -lmidapack' >> test/toeplitz/Makefile
+#     echo 'LIB = -L${DIR}/lib -lmidapack' >> test/mapmat/Makefile
+#     echo 'LIB = -L${DIR}/lib -lmidapack' >> test/toeplitz/Makefile
 # else
-#     echo 'LIB = -L$(DIR)/lib -lseqmidapack' >> test/mapmat/Makefile
-#     echo 'LIB = -L$(DIR)/lib -lseqmidapack' >> test/toeplitz/Makefile
+#     echo 'LIB = -L${DIR}/lib -lseqmidapack' >> test/mapmat/Makefile
+#     echo 'LIB = -L${DIR}/lib -lseqmidapack' >> test/toeplitz/Makefile
 # fi
 
 # searchlibpath libfftw3.a
