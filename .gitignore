@@ -1,6 +1,3 @@
-.vscode/*
-*.code-workspace
-
 # Prerequisites
 *.d
 
@@ -34,20 +31,24 @@
 *.out
 *.app
 
-#Python
+# Python
 *.pyc
 
-#Old directories to ignore
+# Old directories to ignore
 test/mapmaking/test/*
 test/mapmat/*
 test/toeplitz/*
 
-#ignore Makefiles (manually configured in each platform for now)
+# ignore Makefiles (manually configured in each platform for now)
 Makefile
 src/mapmat/Makefile
 src/toeplitz/Makefile
 test/mapmaking/mappraiser/Makefile
 test/mapmaking/mappraiser/src/Makefile
 
-#System files
+# System files
 .DS_Store
+
+# VSCode stuff
+.vscode/*
+*.code-workspace

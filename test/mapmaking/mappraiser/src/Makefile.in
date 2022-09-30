@@ -1,0 +1,34 @@
+
+##############   t e s t s   ############
+
+all:
+	make mappraiser
+
+mappraiser:
+	@echo "start compiling MAPPRAISER ........"
+	make $(MAPPRAISER_OBJ)/createToeplitz.o \
+	$(MAPPRAISER_OBJ)/precond.o \
+	$(MAPPRAISER_OBJ)/pcg_true.o \
+	$(MAPPRAISER_OBJ)/iofiles.o \
+	$(MAPPRAISER_OBJ)/mappraiser.o \
+
+$(MAPPRAISER_OBJ)/createToeplitz.o: createToeplitz.c
+	$(CC) -c $< $(INC) $(LIB) -o $@
+
+$(MAPPRAISER_OBJ)/precond.o: precond.c
+	$(CC) -c $< $(INC) $(LIB) -o $@
+
+$(MAPPRAISER_OBJ)/pcg_true.o: pcg_true.c
+	$(CC) -c $< $(INC) $(LIB) -o $@
+
+$(MAPPRAISER_OBJ)/iofiles.o: iofiles.c
+	$(CC) -c $< $(INC) $(LIB) $(CFITSIO_INC) $(CFITSIO_LIB) -o $@
+
+$(MAPPRAISER_OBJ)/mappraiser.o: mappraiser.c
+	$(CC) -c $< $(INC) $(LIB) $(CFITSIO_INC) $(CFITSIO_LIB) -o $@
+
+
+##############   u t i l s   #############
+
+clean:
+	rm -f $(MAPPRAISER_OBJ)/*.o ;
