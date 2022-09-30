@@ -64,6 +64,8 @@ clean:
 	rm $(MIDAPACK_LIB)/*midapack.*
 	rm -r $(MIDAPACK_ROOT)
 
+	make clean -C ./test/mapmaking/mappraiser
+
 doc : ./src ./src/mapmat ./src/toeplitz ./doc/mkdoc.dox
 	pushd ./doc ; doxygen mkdoc.dox ; popd
 
