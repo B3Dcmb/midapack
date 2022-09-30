@@ -7,9 +7,10 @@
 #version         : 0.1
 #usage		 : ./configure [options]
 #notes           :
-#######################################
+################################################
 
-#print help
+
+# Print help
 function chelp {
     echo 'usage : ./configure [--option [expression]]'
     echo ' '
@@ -18,8 +19,9 @@ function chelp {
     echo '    mpi ; to use Message Passing Interface'
     echo '    openmp ; to multithreading via openmp'
     echo '    debug ; to generate a debug version'
-    echo '    intel ; to compile using Intel compiler suite'
-    echo '    gnu ; to compile using GNU compiler suite'
+    echo '    mkl ; use MKL optimized routines'
+    echo '    ecg ; compile ECG solver (requires preAlps, metis and MKL)'
+    # echo '    docker ; compilation inside Docker image'
     echo '    example for using mpi and openmp : ./configure --with mpi --with openmp'
     echo '  --cc [compiler] '
     echo '    specify compiler to use'
@@ -71,7 +73,6 @@ function searchincpath {
     fi
 }
 
-
 function searchlibpath {
     found=0
     file=$1
@@ -104,15 +105,19 @@ function searchlibpath {
 }
 
 
+################################################
+### Read parameters and check options ##########
+################################################
 
-#default variable values
+# Default variable values
 MPI=1
 OPENMP=1
 GPU=0
 DEBUG=0
 ERROR=0
-INTEL=1
-DOCKER=0
+MKL=1
+ECG=1
+# DOCKER=0
 
 PROJECT='Midapack_'
 VERSION='1.1b'
@@ -129,9 +134,7 @@ DIR=$(pwd)
 DIRTAR='export_tar'
 LDFLAGS='-shared'
 
-#######################################
-
-#read parameters
+# Read script parameters
 while [ $# -ne 0 ]
 do
     case $1 in
@@ -152,18 +155,18 @@ do
             then
                 GPU=1
                 shift
-            elif [ $2 == intel ]
+            elif [ $2 == mkl ]
             then
-                INTEL=1
+                MKL=1
                 shift
-            elif [ $2 == gnu ]
+            elif [ $2 == ecg ]
             then
-                INTEL=0
+                ECG=1
                 shift
-            elif [ $2 == docker ]
-            then
-                DOCKER=1
-                shift
+            # elif [ $2 == docker ]
+            # then
+            #     DOCKER=1
+            #     shift
             else
                 echo 'bad parameter for --with'
                 ERROR=1
@@ -182,10 +185,22 @@ do
             then
                 DEBUG=0
                 shift
-            elif [ $2 == docker ]
+            elif [ $2 == gpu ]
             then
-                DOCKER=0
+                GPU=0
                 shift
+            elif [ $2 == mkl ]
+            then
+                MKL=0
+                shift
+            elif [ $2 == ecg ]
+            then
+                ECG=0
+                shift
+            # elif [ $2 == docker ]
+            # then
+            #     DOCKER=0
+            #     shift
             else
                 echo 'bad parameter for --without'
                 ERROR=1
@@ -212,158 +227,97 @@ do
     shift
 done
 
-if [ $ERROR == 1 ]
+# Check ECG requirements
+if [ $ECG == 1 ]
 then
-    echo 'configure FAILED'
-    exit
-fi
-
-
-echo 'MPI = '$MPI
-echo 'OPENMP = '$OPENMP
-echo 'GPU = '$GPU
-echo 'DEBUG = '$DEBUG
-echo 'ERROR = '$ERROR
-echo 'INTEL = '$INTEL
-echo 'DOCKER = '$DOCKER
-
-
-
-if [ $INTEL == 1 ]
-then
-    MAPPRAISER_IN="test/mapmaking/mappraiser/Makefile-intel.in"
-    MAPPRAISER_SRC_IN="test/mapmaking/mappraiser/src/Makefile-intel.in"
-else
-    MAPPRAISER_IN="test/mapmaking/mappraiser/Makefile-gnu.in"
-    MAPPRAISER_SRC_IN="test/mapmaking/mappraiser/src/Makefile-gnu.in"
-fi
-
-
-######### paths ############################
-
-if [ $MPI -eq 1 ]
-then
-    LIBNAME='libmidapack'
-else
-    LIBNAME='libseqmidapack'
-fi
-echo 'PROJECT = '$PROJECT > Makefile
-echo 'VERSION = '$VERSION >> Makefile
-echo 'DIR = '$DIR >> Makefile
-echo 'DIRTAR = '$DIRTAR >> Makefile
-echo 'LIBNAME = '$LIBNAME >> Makefile
-
-echo 'DIR = '$DIR > ./test/mapmaking/mappraiser/Makefile
-
-echo 'DIR = '$DIR > ./test/mapmaking/mappraiser/src/Makefile
-
-# check if an install prefix has been defined
-if [ -z "$PREFIX" ]
-then
-    echo '\$PREFIX is not set'
-    ERROR=1
-else
-    echo 'PREFIX = '$PREFIX >> Makefile
-    echo 'PREFIX = '$PREFIX >> ./test/mapmaking/mappraiser/Makefile
-    echo 'PREFIX = '$PREFIX >> ./test/mapmaking/mappraiser/src/Makefile
-fi
-
-echo 'MIDAPACK_ROOT = $(PREFIX)/midapack' >> Makefile
-echo 'MIDAPACK_OBJ = $(MIDAPACK_ROOT)/obj' >> Makefile
-echo 'MAPMAT_OBJ = $(MIDAPACK_OBJ)/mapmat' >> Makefile
-echo 'TOEPLITZ_OBJ = $(MIDAPACK_OBJ)/toeplitz' >> Makefile
-echo 'MIDAPACK_LIB = $(MIDAPACK_ROOT)/lib' >> Makefile
-
-echo 'MIDAPACK_ROOT = $(PREFIX)/midapack' > ./src/mapmat/Makefile
-echo 'MAPMAT_OBJ = $(MIDAPACK_ROOT)/obj/mapmat' >> ./src/mapmat/Makefile
-
-echo 'MIDAPACK_ROOT = $(PREFIX)/midapack' > ./src/toeplitz/Makefile
-echo 'TOEPLITZ_OBJ = $(MIDAPACK_ROOT)/obj/toeplitz' >> ./src/toeplitz/Makefile
-
-echo 'MIDAPACK_LIB = $(PREFIX)/midapack/lib' >> ./test/mapmaking/mappraiser/Makefile
-echo 'INC = -I$(DIR)/include' >> ./test/mapmaking/mappraiser/Makefile
-echo 'LIB = -L$(MIDAPACK_LIB) -lmidapack' >> ./test/mapmaking/mappraiser/Makefile
-
-echo 'MIDAPACK_LIB = $(PREFIX)/midapack/lib' >> ./test/mapmaking/mappraiser/src/Makefile
-echo 'INC = -I$(DIR)/include' >> ./test/mapmaking/mappraiser/src/Makefile
-echo 'LIB = -L$(MIDAPACK_LIB) -lmidapack' >> ./test/mapmaking/mappraiser/src/Makefile
-
-if [ $INTEL == 1 ]
-then
-    # check if a path for preAlps library has been defined
+    # MKL option must be activated
+    if [ $MKL == 0 ]
+    then
+        echo 'ECG solver requires preAlps, therefore MKL. Please configure with option --with mkl'
+        ERROR=1
+    fi
+    
+    # check path to preAlps
     if [ -z "$PREALPS_DIR" ]
     then
-        echo '\$PREALPS_DIR is not set'
+        echo 'ECG solver requires preAlps library. Please set the environment variable \$PREALPS_DIR.'
         ERROR=1
     else
-        echo 'PREALPS_DIR = '$PREALPS_DIR >> ./test/mapmaking/mappraiser/Makefile
-        echo 'PREALPS_DIR = '$PREALPS_DIR >> ./test/mapmaking/mappraiser/src/Makefile
+        # CPLM_CORE=utils/cplm_core
+        # CPLMDIR=utils/cplm_light
+        # CPLM_V0_DIR=utils/cplm_v0
+        LIBpreAlps='-L$(PREALPS_DIR)/lib/ -lpreAlps_release -lcplm_light -lcplm_v0 -lcplm_core'
+        INCpreAlps='-I$(PREALPS_DIR)/utils/cplm_core'
+        INCpreAlps+=' -I$(PREALPS_DIR)/utils/cplm_light'
+        INCpreAlps+=' -I$(PREALPS_DIR)/utils/cplm_v0'
+        INCpreAlps+=' -I$(PREALPS_DIR)/utils'
+        INCpreAlps+=' -I$(PREALPS_DIR)/src/preconditioners'
+        INCpreAlps+=' -I$(PREALPS_DIR)/src/solvers'
     fi
 
-    # check if a path for metis library has been defined
+    # check path to metis
     if [ -z "$METIS_DIR" ]
     then
-        echo '\$METIS_DIR is not set'
+        echo 'ECG solver requires metis library. Please set the environment variable \$METIS_DIR.'
         ERROR=1
     else
-        echo 'METIS_DIR = '$METIS_DIR >> ./test/mapmaking/mappraiser/Makefile
-        echo 'METIS_DIR = '$METIS_DIR >> ./test/mapmaking/mappraiser/src/Makefile
-    fi
-
-    # check if a path for mkl library has been defined
-    if [ -z "$MKL_DIR" ]
-    then
-        echo '\$MKL_DIR is not set'
-        ERROR=1
-    else
-        echo 'MKL_DIR = '$MKL_DIR >> ./test/mapmaking/mappraiser/Makefile
-        echo 'MKL_DIR = '$MKL_DIR >> ./test/mapmaking/mappraiser/src/Makefile
-    fi
-else
-    # check path for openblas library in the case of build in Docker image
-    if [ $DOCKER == 1 ]
-    then
-        if [ -z "$OPENBLAS_DIR" ]
-        then
-            echo '\$OPENBLAS_DIR is not set'
-            ERROR=1
-        else
-            echo 'OPENBLAS_DIR = '$OPENBLAS_DIR >> ./test/mapmaking/mappraiser/Makefile
-            echo 'OPENBLAS_INC = -I$(OPENBLAS_DIR)/include' >> ./test/mapmaking/mappraiser/Makefile
-            echo 'OPENBLAS_LIB = -L$(OPENBLAS_DIR)/lib -lopenblas -lpthread -lgfortran' >> ./test/mapmaking/mappraiser/Makefile
-
-            echo 'OPENBLAS_DIR = '$OPENBLAS_DIR >> ./test/mapmaking/mappraiser/src/Makefile
-            echo 'OPENBLAS_INC = -I$(OPENBLAS_DIR)/include' >> ./test/mapmaking/mappraiser/src/Makefile
-            echo 'OPENBLAS_LIB = -L$(OPENBLAS_DIR)/lib -lopenblas -lpthread -lgfortran' >> ./test/mapmaking/mappraiser/src/Makefile
-        fi
+        METIS_INC='-I$(METIS_DIR)/include'
+        METIS_LIB='-L$(METIS_DIR)/lib -lmetis'
     fi
 fi
 
-# check if a path for cfitsio library has been defined
-if [ -z "$CFITSIO_DIR" ]
+# Check path to mkl library
+if [[ $MKL -eq 1 ]] && [[ -z "$MKL_DIR" ]]
 then
-    echo '\$CFITSIO_DIR is not set'
+    echo 'Option --with mkl is used. Please set the environment variable \$MKL_DIR.'
     ERROR=1
 else
-    echo 'CFITSIO_DIR = '$CFITSIO_DIR >> ./test/mapmaking/mappraiser/Makefile
-    echo 'CFITSIO_DIR = '$CFITSIO_DIR >> ./test/mapmaking/mappraiser/src/Makefile
+    MKL_INC='-I$(MKL_DIR)/include'
+    MKL_LIB='-L$(MKL_DIR)/lib/intel64 -lmkl_rt'
 fi
 
+# Check path to cfitsio library
+if [ -z "$CFITSIO_DIR" ]
+then
+    echo 'Mappraiser requires cfitsio library. Please set the environment variable \$CFITSIO_DIR.'
+    ERROR=1
+else
+    CFITSIO_INC='-I$(CFITSIO_DIR)/include'
+    CFITSIO_LIB='-L$(CFITSIO_DIR)/lib -lcfitsio'
+fi
+
+# Check if an install prefix has been defined
+if [ -z "$PREFIX" ]
+then
+    echo 'Please specify the installation directory through the environment variable \$PREFIX.'
+    ERROR=1
+fi
+
+# Exit in case of any error
 if [ $ERROR == 1 ]
 then
     echo 'configure FAILED'
     exit
 fi
 
-# echo 'DIR = '$DIR > ./test/mapmat/Makefile
-# echo 'MAPMAT = $(DIR)/src/mapmat/' >> ./test/mapmat/Makefile
+echo 'Final configuration options:'
+echo ' > MPI    = '$MPI
+echo ' > OPENMP = '$OPENMP
+echo ' > GPU    = '$GPU
+echo ' > DEBUG  = '$DEBUG
+echo ' > MKL    = '$MKL
+echo ' > ECG    = '$ECG
+# echo '  DOCKER = '$DOCKER
 
-# echo 'DIR = '$DIR > ./test/toeplitz/Makefile
-# echo 'TOEPLITZ = $(DIR)/src/toeplitz/' >> ./test/toeplitz/Makefile
 
-####### compilers ###########################
+################################################
+### Compilers, compilation flags, ... ##########
+################################################
 
-#fortran
+#FIXME: fix this section
+
+# Fortran
+
 if [ $F90 == 0 ]
 then
     echo 'setting fortran compiler (gfortran) : '
@@ -372,9 +326,11 @@ then
     echo 'F90 = '$F90
 fi
 
-# c + mpi
+# C + MPI
+
 if [ $MPI -eq 1 ]
 then
+    echo 'setting mpi flag'
     OPT=$OPT' -D W_MPI'
     if [ $CC == 0 ]
     then
@@ -401,8 +357,8 @@ else
     echo 'GCC = '$GCC
 fi
 
+# OpenMP
 
-#openmp
 if [ $OPENMP -eq 1 ]
 then
     echo 'setting openmp flag'
@@ -411,8 +367,8 @@ then
     LDFLAGS=$LDFLAGS' '$OPENMP_CFLAGS
 fi
 
+# Optimisations
 
-#optimisations
 if [ $DEBUG -eq 1 ]
 then
     echo 'setting mode debug'
@@ -420,92 +376,242 @@ then
 else
     OPT=$OPT' -O3'
 fi
+
+# MKL
+
+if [ $MKL -eq 1 ]
+then
+    echo 'setting mkl flag'
+    OPT=$OPT' -D W_MKL'
+fi
+
+# ECG
+
+if [ $ECG -eq 1 ]
+then
+    echo 'setting ecg flag'
+    OPT=$OPT' -D W_ECG'
+fi
+
+# Add all the options to CC variable
+
 CC=$CC' $(OPT)'
+
+
+################################################
+### Paths ######################################
+################################################
+
+### Midapack ###
+
+if [ $MPI -eq 1 ]
+then
+    LIBNAME='libmidapack'
+else
+    LIBNAME='libseqmidapack'
+fi
+
+echo 'PROJECT = '$PROJECT > Makefile
+echo 'VERSION = '$VERSION >> Makefile
+echo 'DIR = '$DIR >> Makefile
+echo 'DIRTAR = '$DIRTAR >> Makefile
+echo 'LIBNAME = '$LIBNAME >> Makefile
+
+echo 'PREFIX = '$PREFIX >> Makefile
+
+echo 'MIDAPACK_ROOT = $(PREFIX)/midapack' >> Makefile
+echo 'MIDAPACK_OBJ = $(MIDAPACK_ROOT)/obj' >> Makefile
+echo 'MAPMAT_OBJ = $(MIDAPACK_OBJ)/mapmat' >> Makefile
+echo 'TOEPLITZ_OBJ = $(MIDAPACK_OBJ)/toeplitz' >> Makefile
+echo 'MIDAPACK_LIB = $(MIDAPACK_ROOT)/lib' >> Makefile
+
+echo 'MIDAPACK_ROOT = $(PREFIX)/midapack' > src/mapmat/Makefile
+echo 'MAPMAT_OBJ = $(MIDAPACK_ROOT)/obj/mapmat' >> src/mapmat/Makefile
+
+echo 'MIDAPACK_ROOT = $(PREFIX)/midapack' > src/toeplitz/Makefile
+echo 'TOEPLITZ_OBJ = $(MIDAPACK_ROOT)/obj/toeplitz' >> src/toeplitz/Makefile
 
 echo 'MPICC = '$MPICC >> Makefile
 echo 'LDFLAGS = '$LDFLAGS >> Makefile
 
-echo 'GCC = '$GCC  >> ./src/mapmat/Makefile
-echo 'MPICC = '$MPICC  >> ./src/mapmat/Makefile
-echo 'OPT = '$OPT >> ./src/mapmat/Makefile
-echo 'CC = '$CC  >> ./src/mapmat/Makefile
+echo 'GCC = '$GCC  >> src/mapmat/Makefile
+echo 'MPICC = '$MPICC  >> src/mapmat/Makefile
+echo 'OPT = '$OPT >> src/mapmat/Makefile
+echo 'CC = '$CC  >> src/mapmat/Makefile
 
-echo 'GCC = '$GCC  >> ./src/toeplitz/Makefile
-echo 'MPICC = '$MPICC  >> ./src/toeplitz/Makefile
-echo 'OPT = '$OPT >> ./src/toeplitz/Makefile
-echo 'CC = '$CC  >> ./src/toeplitz/Makefile
+echo 'GCC = '$GCC  >> src/toeplitz/Makefile
+echo 'MPICC = '$MPICC  >> src/toeplitz/Makefile
+echo 'OPT = '$OPT >> src/toeplitz/Makefile
+echo 'CC = '$CC  >> src/toeplitz/Makefile
 
-echo 'MPICC = '$MPICC >> ./test/mapmaking/mappraiser/Makefile
-echo 'LDFLAGS = '$LDFLAGS >> ./test/mapmaking/mappraiser/Makefile
-echo 'MAPPRAISER_ROOT = $(PREFIX)/mappraiser' >> ./test/mapmaking/mappraiser/Makefile
-echo 'MAPPRAISER_OBJ = $(MAPPRAISER_ROOT)/obj' >> ./test/mapmaking/mappraiser/Makefile
-echo 'MAPPRAISER_LIB = $(MAPPRAISER_ROOT)/lib' >> ./test/mapmaking/mappraiser/Makefile
+### old: test/matmap and test/toeplitz ###
 
-echo 'OPT = '$OPT >> ./test/mapmaking/mappraiser/src/Makefile
-echo 'CC = '$CC >> ./test/mapmaking/mappraiser/src/Makefile
-echo 'MAPPRAISER_ROOT = $(PREFIX)/mappraiser' >> ./test/mapmaking/mappraiser/src/Makefile
-echo 'MAPPRAISER_OBJ = $(MAPPRAISER_ROOT)/obj' >> ./test/mapmaking/mappraiser/src/Makefile
-echo 'MAPPRAISER_LIB = $(MAPPRAISER_ROOT)/lib' >> ./test/mapmaking/mappraiser/src/Makefile
+# echo 'DIR = '$DIR > test/mapmat/Makefile
+# echo 'MAPMAT = $(DIR)/src/mapmat/' >> test/mapmat/Makefile
 
-# echo 'F90 = '$F90 >> ./test/mapmat/Makefile
-# echo 'GCC = '$GCC  >> ./test/mapmat/Makefile
-# echo 'MPICC = '$MPICC  >> ./test/mapmat/Makefile
-# echo 'OPT = '$OPT >> ./test/mapmat/Makefile
-# echo 'CC = '$CC  >> ./test/mapmat/Makefile
+# echo 'DIR = '$DIR > test/toeplitz/Makefile
+# echo 'TOEPLITZ = $(DIR)/src/toeplitz/' >> test/toeplitz/Makefile
 
-# echo 'GCC = '$GCC  >> ./test/toeplitz/Makefile
-# echo 'MPICC = '$MPICC  >> ./test/toeplitz/Makefile
-# echo 'CC = '$CC  >> ./test/toeplitz/Makefile
+# echo 'F90 = '$F90 >> test/mapmat/Makefile
+# echo 'GCC = '$GCC  >> test/mapmat/Makefile
+# echo 'MPICC = '$MPICC  >> test/mapmat/Makefile
+# echo 'OPT = '$OPT >> test/mapmat/Makefile
+# echo 'CC = '$CC  >> test/mapmat/Makefile
+
+# echo 'GCC = '$GCC  >> test/toeplitz/Makefile
+# echo 'MPICC = '$MPICC  >> test/toeplitz/Makefile
+# echo 'CC = '$CC  >> test/toeplitz/Makefile
+
+### Mappraiser ###
+
+echo 'DIR = '$DIR > test/mapmaking/mappraiser/Makefile
+echo 'DIR = '$DIR > test/mapmaking/mappraiser/src/Makefile
+
+echo 'PREFIX = '$PREFIX >> test/mapmaking/mappraiser/Makefile
+echo 'PREFIX = '$PREFIX >> test/mapmaking/mappraiser/src/Makefile
+
+echo 'MIDAPACK_LIB = $(PREFIX)/midapack/lib' >> test/mapmaking/mappraiser/Makefile
+echo 'MIDAPACK_LIB = $(PREFIX)/midapack/lib' >> test/mapmaking/mappraiser/src/Makefile
+
+if [ $MKL == 1 ]
+then
+    echo 'MKL_DIR = '$MKL_DIR >> test/mapmaking/mappraiser/Makefile
+    echo 'MKL_DIR = '$MKL_DIR >> test/mapmaking/mappraiser/src/Makefile
+fi
+
+if [ $ECG == 1 ]
+then
+    echo 'PREALPS_DIR = '$PREALPS_DIR >> test/mapmaking/mappraiser/Makefile
+    echo 'PREALPS_DIR = '$PREALPS_DIR >> test/mapmaking/mappraiser/src/Makefile
+    
+    echo 'METIS_DIR = '$METIS_DIR >> test/mapmaking/mappraiser/Makefile
+    echo 'METIS_DIR = '$METIS_DIR >> test/mapmaking/mappraiser/src/Makefile
+fi
+
+echo 'CFITSIO_DIR = '$CFITSIO_DIR >> test/mapmaking/mappraiser/Makefile
+echo 'CFITSIO_DIR = '$CFITSIO_DIR >> test/mapmaking/mappraiser/src/Makefile
+
+#FIXME: check path for openblas library in the case of build in Docker image ?
+# if [ $DOCKER == 1 ]
+# then
+#     if [ -z "$OPENBLAS_DIR" ]
+#     then
+#         echo '\$OPENBLAS_DIR is not set'
+#         ERROR=1
+#     else
+#         echo 'OPENBLAS_DIR = '$OPENBLAS_DIR >> test/mapmaking/mappraiser/Makefile
+#         echo 'OPENBLAS_INC = -I$(OPENBLAS_DIR)/include' >> test/mapmaking/mappraiser/Makefile
+#         echo 'OPENBLAS_LIB = -L$(OPENBLAS_DIR)/lib -lopenblas -lpthread -lgfortran' >> test/mapmaking/mappraiser/Makefile
+
+#         echo 'OPENBLAS_DIR = '$OPENBLAS_DIR >> test/mapmaking/mappraiser/src/Makefile
+#         echo 'OPENBLAS_INC = -I$(OPENBLAS_DIR)/include' >> test/mapmaking/mappraiser/src/Makefile
+#         echo 'OPENBLAS_LIB = -L$(OPENBLAS_DIR)/lib -lopenblas -lpthread -lgfortran' >> test/mapmaking/mappraiser/src/Makefile
+#     fi
+# fi
+
+echo 'MPICC = '$MPICC >> test/mapmaking/mappraiser/Makefile
+echo 'LDFLAGS = '$LDFLAGS >> test/mapmaking/mappraiser/Makefile
+echo 'MAPPRAISER_ROOT = $(PREFIX)/mappraiser' >> test/mapmaking/mappraiser/Makefile
+echo 'MAPPRAISER_OBJ = $(MAPPRAISER_ROOT)/obj' >> test/mapmaking/mappraiser/Makefile
+echo 'MAPPRAISER_LIB = $(MAPPRAISER_ROOT)/lib' >> test/mapmaking/mappraiser/Makefile
+
+echo 'OPT = '$OPT >> test/mapmaking/mappraiser/src/Makefile
+echo 'CC = '$CC >> test/mapmaking/mappraiser/src/Makefile
+echo 'MAPPRAISER_ROOT = $(PREFIX)/mappraiser' >> test/mapmaking/mappraiser/src/Makefile
+echo 'MAPPRAISER_OBJ = $(MAPPRAISER_ROOT)/obj' >> test/mapmaking/mappraiser/src/Makefile
+echo 'MAPPRAISER_LIB = $(MAPPRAISER_ROOT)/lib' >> test/mapmaking/mappraiser/src/Makefile
 
 
-######## include  ##########################
+################################################
+### INC and LIB ################################
+################################################
+
+INC='-I$(DIR)/include'
+LIB='-L$(MIDAPACK_LIB) -lmidapack'
+
+# link MKL library (if needed)
+
+if [ $MKL -eq 1 ]
+then
+    INC+=' '$MKL_INC
+    LIB+=' '$MKL_LIB
+fi
+
+echo 'INC = '$INC >> test/mapmaking/mappraiser/Makefile
+echo 'LIB = '$LIB >> test/mapmaking/mappraiser/Makefile
+echo 'CFITSIO_INC = '$CFITSIO_INC >> test/mapmaking/mappraiser/Makefile
+echo 'CFITSIO_LIB = '$CFITSIO_LIB >> test/mapmaking/mappraiser/Makefile
+
+echo 'INC = '$INC >> test/mapmaking/mappraiser/src/Makefile
+echo 'LIB = '$LIB >> test/mapmaking/mappraiser/src/Makefile
+echo 'CFITSIO_INC = '$CFITSIO_INC >> test/mapmaking/mappraiser/src/Makefile
+echo 'CFITSIO_LIB = '$CFITSIO_LIB >> test/mapmaking/mappraiser/src/Makefile
+
+# link preAlps and metis
+
+if [ $ECG -eq 1 ]
+then
+    INCpreAlps+=' '$METIS_INC
+    LIBpreAlps+=' '$METIS_LIB
+
+    echo 'INCpreAlps = '$INCpreAlps >> test/mapmaking/mappraiser/Makefile
+    echo 'LIBpreAlps = '$LIBpreAlps >> test/mapmaking/mappraiser/Makefile
+
+    echo 'INCpreAlps = '$INCpreAlps >> test/mapmaking/mappraiser/src/Makefile
+    echo 'LIBpreAlps = '$LIBpreAlps >> test/mapmaking/mappraiser/src/Makefile
+fi
 
 # searchincpath fftw3.h
 # FFTW_INC=$path
 # echo 'FFTW_INC = -I'$FFTW_INC >> src/mapmat/Makefile
 # echo 'FFTW_INC = -I'$FFTW_INC >> src/toeplitz/Makefile
 
-# echo 'INC = -I$(DIR)/include -I'$FFTW_INC >> ./test/mapmat/Makefile
-# echo 'INC = -I$(DIR)/include -I'$FFTW_INC >> ./test/toeplitz/Makefile
-
-
-######## libraries (for tests) #############
+# echo 'INC = -I$(DIR)/include -I'$FFTW_INC >> test/mapmat/Makefile
+# echo 'INC = -I$(DIR)/include -I'$FFTW_INC >> test/toeplitz/Makefile
 
 # if [ $MPI -eq 1 ]
 # then
-#     echo 'LIB = -L$(DIR)/lib -lmidapack' >> ./test/mapmat/Makefile
-#     echo 'LIB = -L$(DIR)/lib -lmidapack' >> ./test/toeplitz/Makefile
+#     echo 'LIB = -L$(DIR)/lib -lmidapack' >> test/mapmat/Makefile
+#     echo 'LIB = -L$(DIR)/lib -lmidapack' >> test/toeplitz/Makefile
 # else
-#     echo 'LIB = -L$(DIR)/lib -lseqmidapack' >> ./test/mapmat/Makefile
-#     echo 'LIB = -L$(DIR)/lib -lseqmidapack' >> ./test/toeplitz/Makefile
+#     echo 'LIB = -L$(DIR)/lib -lseqmidapack' >> test/mapmat/Makefile
+#     echo 'LIB = -L$(DIR)/lib -lseqmidapack' >> test/toeplitz/Makefile
 # fi
 
-#searchlibpath libfftw3.a
-#FFTW_LIB=$path
-#echo 'FFTW_LIB = -L'$FFTW_LIB -lfftw3 >> ./test/toeplitz/Makefile
-# echo 'FFTW_LIB = -lfftw3 -lfftw3_threads' >> ./test/toeplitz/Makefile
+# searchlibpath libfftw3.a
+# FFTW_LIB=$path
+# echo 'FFTW_LIB = -L'$FFTW_LIB -lfftw3 >> test/toeplitz/Makefile
+# echo 'FFTW_LIB = -lfftw3 -lfftw3_threads' >> test/toeplitz/Makefile
 
-#############################################
 
+################################################
+### Write final Makefiles ######################
+################################################
 
 cat Makefile.in >> Makefile
-
 cat src/mapmat/Makefile.in >> src/mapmat/Makefile
-
-# cat test/mapmat/Makefile.in >> test/mapmat/Makefile
-
 cat src/toeplitz/Makefile.in >> src/toeplitz/Makefile
 
-# cat test/toeplitz/Makefile.in >> test/toeplitz/Makefile
+# Choose Mappraiser input Makefiles
+if [ $ECG == 1 ]
+then
+    MAPPRAISER_IN="test/mapmaking/mappraiser/Makefile-ecg.in"
+    MAPPRAISER_SRC_IN="test/mapmaking/mappraiser/src/Makefile-ecg.in"
+else
+    MAPPRAISER_IN="test/mapmaking/mappraiser/Makefile.in"
+    MAPPRAISER_SRC_IN="test/mapmaking/mappraiser/src/Makefile.in"
+fi
 
 cat $MAPPRAISER_IN >> test/mapmaking/mappraiser/Makefile
-
 cat $MAPPRAISER_SRC_IN >> test/mapmaking/mappraiser/src/Makefile
+
+# cat test/mapmat/Makefile.in >> test/mapmat/Makefile
+# cat test/toeplitz/Makefile.in >> test/toeplitz/Makefile
 
 if [ $ERROR == 1 ]
 then
     echo 'configure FAILED'
     exit
 else
-    echo 'Makefiles have been successfully generated'
+    echo 'Makefiles have been successfully generated.'
 fi
