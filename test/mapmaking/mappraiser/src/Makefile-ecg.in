@@ -1,32 +1,4 @@
 
-# Linking preAlps library for ECG solver utilities
-
-CPLM_CORE = utils/cplm_core
-CPLMDIR = utils/cplm_light
-CPLM_V0_DIR = utils/cplm_v0
-
-LIBpreAlps = -L$(PREALPS_DIR)/lib/ -lpreAlps_release -lcplm_light -lcplm_v0 -lcplm_core
-INCpreAlps = -I$(PREALPS_DIR)/$(CPLM_CORE) -I$(PREALPS_DIR)/$(CPLMDIR) -I$(PREALPS_DIR)/$(CPLM_V0_DIR) -I$(PREALPS_DIR)/utils -I$(PREALPS_DIR)/src/preconditioners -I$(PREALPS_DIR)/src/solvers
-
-# Linking metis library needed by preAlps
-
-METIS_INC = $(METIS_DIR)/include
-METIS_LIB = $(METIS_DIR)/lib
-INCpreAlps += $(addprefix -I,$(METIS_INC))
-LIBpreAlps += -L$(METIS_LIB) -lmetis
-
-# linking MKL library
-
-MKL_INC = $(MKL_DIR)/include
-MKL_LIB = $(MKL_DIR)/lib/intel64
-INCpreAlps += $(addprefix -I,$(MKL_INC))
-LIBpreAlps += -L$(MKL_LIB) -lmkl_rt
-
-# supplementary libraries
-
-CFITSIO_INC = -I$(CFITSIO_DIR)/include
-CFITSIO_LIB = -L$(CFITSIO_DIR)/lib -lcfitsio
-
 ##############   t e s t s   ############
 
 all:
@@ -48,7 +20,7 @@ $(MAPPRAISER_OBJ)/precond.o: precond.c
 	$(CC) -c $< $(INC) $(LIB) -o $@
 
 $(MAPPRAISER_OBJ)/pcg_true.o: pcg_true.c
-	$(CC) -c $< $(INC) $(LIB) $(CFITSIO_INC) $(CFITSIO_LIB) -o $@
+	$(CC) -c $< $(INC) $(LIB) -o $@
 
 $(MAPPRAISER_OBJ)/ecg.o: ecg.c
 	$(CC) -c $< $(INC) $(LIB) $(INCpreAlps) $(LIBpreAlps) -o $@
@@ -57,7 +29,7 @@ $(MAPPRAISER_OBJ)/iofiles.o: iofiles.c
 	$(CC) -c $< $(INC) $(LIB) $(CFITSIO_INC) $(CFITSIO_LIB) -o $@
 
 $(MAPPRAISER_OBJ)/mappraiser.o: mappraiser.c
-	$(CC) -c $< $(INC) $(LIB) $(CFITSIO_INC) $(INCpreAlps) $(LIBpreAlps) -o $@
+	$(CC) -c $< $(INC) $(LIB) $(CFITSIO_INC) $(CFITSIO_LIB) -o $@
 
 # s4cmb_pipeline: createToeplitz.o precond.o s4cmb_pipeline.c iofiles.o pcg_true.o
 # 	$(CC) s4cmb_pipeline.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(LIB) $(FFTW_LIB) -lm -o s4cmb_pcg -Wl,@/global/homes/t/tcimic/midapack/test/mapmaking/allinea-profiler.ld
