@@ -15,9 +15,9 @@
 #include <mpi.h>
 #include <time.h>
 #include <string.h>
-#include <mkl.h>
+// #include <mkl.h>
+// #include "fitsio.h"
 #include <unistd.h>
-#include "fitsio.h"
 #include "midapack.h"
 #include "mappraiser.h"
 

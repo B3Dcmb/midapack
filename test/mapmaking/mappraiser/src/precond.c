@@ -15,7 +15,14 @@
 #include <time.h>
 #include <string.h>
 #include <assert.h>
+
+// choose header based on compilation option
+#ifdef W_MKL
 #include <mkl.h>
+#else
+#include <lapacke.h>
+#endif
+
 #include "midapack.h"
 #include "mappraiser.h"
 
