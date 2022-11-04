@@ -577,23 +577,18 @@ def noise2invtt(
         fsamp = float(fsamp / (1.0 * f_unit))
     except AttributeError:
         pass
-    
-    # closest power of two to 1/4 of the timestream length
-    max_Lambda = 2 ** (int(math.log(nn / 4, 2)))
-    f_defl = fsamp / (np.pi * max_Lambda)
-    df = f_defl / 2
-    block_size = 2 ** (int(math.log(fsamp * 1.0 / df, 2)))
 
-    # Compute periodogram    
-    f, psd = scipy.signal.periodogram(nsetod, fsamp, nfft=block_size, window="blackman")
+    # Estimate psd from noise timestream 
+    nperseg = nn # Length of segments used to estimate PSD (defines the lowest frequency we can estimate)
+    f, psd = scipy.signal.welch(nsetod, fsamp, window='hann', nperseg=nperseg, detrend='linear')
 
     # Fit the psd model to the periodogram (in log scale)
     popt, pcov = curve_fit(
         logpsd_model,
         f[1:],
         np.log10(psd[1:]),
-        p0=np.array([-7, -1.0, 0.1, 0.0]),
-        bounds=([-20, -10, 0.0, 0.0], [0.0, 0.0, 10, 0.001]),
+        p0=np.array([-7, -1.0, 0.1, 1e-6]),
+        bounds=([-20, -10, 0.0, 0.0], [0.0, 0.0, 20, 1]),
         maxfev=1000,
     )
 
@@ -601,53 +596,52 @@ def noise2invtt(
         print(
             "\n[det "
             + str(idet)
-            + "]: PSD fit log(sigma2) = %1.2f, alpha = %1.2f, fknee = %1.2f, fmin = %1.2f\n"
+            + "]: PSD fit log(sigma2) = %1.2f, alpha = %1.2f, fknee = %1.2f, fmin = %1.2e\n"
             % tuple(popt),
             flush=True,
         )
         print("[det {}]: PSD fit covariance: \n{}\n".format(idet, pcov), flush=True)
 
-    #  Fit the inverse psd model to the inverted periodogram
-    psd_fit_m1 = np.zeros_like(f)
-    psd_fit_m1[1:] = inversepsd_model(
-        f[1:], 10 ** (-popt[0]), popt[1], popt[2], popt[3]
-    )
-
     # Initialize full size inverse PSD in frequency domain
-    fs = np.fft.fftfreq(block_size, 1.0 / fsamp)
-    psdm1 = np.zeros_like(fs)
+    f_full = np.fft.rfftfreq(nn, 1.0 / fsamp)
 
-    # Symmetrize inverse PSD according to fs shape
-    psdm1[: int(block_size / 2)] = psd_fit_m1[:-1]
-    psdm1[int(block_size / 2) :] = np.flip(psd_fit_m1[1:], 0)
+    # Compute inverse noise psd from fit and extrapolate (if needed) to lowest frequencies
+    psdm1 = inversepsd_model(f_full, 10 ** (-popt[0]), *popt[1:])
 
     # Compute inverse noise autocorrelation functions
-    inv_tt = np.real(np.fft.ifft(psdm1, n=block_size))
+    inv_tt = np.fft.irfft(psdm1, n=nn)
 
     # Define apodization window
-    window = scipy.signal.gaussian(2 * Lambda, 1.0 / 2 * Lambda)
+    # Only allow max lambda = nn//2
+    if Lambda > nn//2:
+        raise RuntimeError("Bandwidth cannot be larger than timestream.")
+    q_apo = 3 # Apodization factor: cut happens at q_apo * sigma in the Gaussian window 
+    window = scipy.signal.get_window(('general_gaussian', 1, 1/q_apo * Lambda), 2 * Lambda)
     window = np.fft.ifftshift(window)
     window = window[:Lambda]
-    window = np.pad(window, (0, int(block_size / 2 - (Lambda))), "constant")
-    symw = np.zeros(block_size)
-    symw[: int(block_size / 2)] = window
-    symw[int(block_size / 2) :] = np.flip(window, 0)
-
-    inv_tt_w = np.multiply(symw, inv_tt, dtype=invtt_dtype)
+    
+    # Apply window
+    inv_tt_w = np.multiply(window, inv_tt[:Lambda], dtype=invtt_dtype)
 
     # Optionnally save some PSDs for plots
     if save_psd:
+
+        # Save TOD
+        np.save(save_dir+"/tod.npy", nsetod)
         
         # simulated inverse psd
         psd_sim_m1 = np.reciprocal(psd)
         np.save(save_dir+"/psd_sim.npy",psd_sim_m1)
         
         # fit of the inverse psd
-        np.save(save_dir+"/freq.npy",fs[:int(block_size/2)])
-        np.save(save_dir+"/psd_fit.npy",psdm1[:int(block_size/2)])
+        np.save(save_dir+"/freq.npy",f_full[:nn//2])
+        np.save(save_dir+"/psd_fit.npy",psdm1[:nn//2])
         
         # "effective" inverse psd
-        psd = np.abs(np.fft.fft(inv_tt_w,n=block_size))
-        np.save(save_dir+"/psd_eff"+str(Lambda)+".npy",psd[:int(block_size/2)])
+        circ_invtt_w = np.pad(inv_tt_w, (0,nn-Lambda), 'constant')
+        if Lambda > 1:
+            circ_invtt_w[-Lambda+1:] = np.flip(inv_tt_w[1:],0)
+        ipsd = np.abs(np.fft.fft(circ_invtt_w, n=nn))
+        np.save(save_dir+"/psd_eff"+str(Lambda)+".npy",ipsd[:nn//2])
 
-    return inv_tt_w[:Lambda]
+    return inv_tt_w
