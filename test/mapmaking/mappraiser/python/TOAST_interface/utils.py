@@ -16,6 +16,7 @@ from toast.timing import function_timer
 from toast.utils import GlobalTimers, Logger, Timer, dtype_to_aligned, memreport
 from toast.ops.memory_counter import MemoryCounter
 
+
 def add_mappraiser_args(parser):
     """Add mappraiser specific arguments."""
 
@@ -114,7 +115,7 @@ def add_mappraiser_args(parser):
         type=int,
         help="Use dynamic search reduction",
     )
-    
+
     return
 
 
@@ -263,6 +264,7 @@ def stage_local(
     do_purge=False,
     operator=None,
     n_repeat=1,
+    pair_diff=False,
 ):
     """Helper function to fill a mappraiser buffer from a local detdata key.
     (This function is taken from madam_utils.py)
@@ -287,58 +289,140 @@ def stage_local(
 
     for ob in data.obs:
         views = ob.view[view]
-        for idet, det in enumerate(dets):
-            if det not in ob.local_detectors:
-                continue
-            if operator is not None:
-                # Synthesize data for staging
-                obs_data = data.select(obs_uid=ob.uid)
-                operator.apply(obs_data, detectors=[det])
-            # Loop over views
-            for ivw, vw in enumerate(views):
-                view_samples = None
-                if vw.start is None:
-                    # This is a view of the whole obs
-                    view_samples = ob.n_local_samples
-                else:
-                    view_samples = vw.stop - vw.start
-                offset = interval_starts[interval_offset + ivw]
-                flags = None
-                if do_flags:
-                    # Using flags
-                    flags = np.zeros(view_samples, dtype=np.uint8)
-                if shared_flags is not None:
-                    flags |= views.shared[shared_flags][ivw] & shared_mask
-
-                slc = slice(
-                    (idet * nsamp + offset) * nnz,
-                    (idet * nsamp + offset + view_samples) * nnz,
-                    1,
-                )
-                if detdata_name is not None:
-                    if nnz > 1:
-                        mappraiser_buffer[slc] = np.repeat(
-                            views.detdata[detdata_name][ivw][det].flatten()[::nnz_stride],
-                            n_repeat,
-                        )
+        if pair_diff:
+            # # Check that local detectors come in even count.
+            # try:
+            #     assert len(ob.local_detectors) % 2 == 0
+            # except AssertionError as e:
+            #     msg = f"Pair-diff is activated. Detectors must come in pairs.\n\
+            #         ob = {ob}\n\
+            #         #(local dets) = {len(ob.local_detectors)}"
+            #     raise e(msg)
+            # Loop through detectors
+            for idet in range(0, len(dets) - 1, 2):
+                det_0 = dets[idet]
+                det_1 = dets[idet + 1]
+                if not((det_0 in ob.local_detectors) and (det_1 in ob.local_detectors)):
+                    if (det_0 in ob.local_detectors):
+                        msg = f"det_0 is not part of ob.local_detectors\n\
+                            ob = {ob}\n\
+                            idet = {idet}\n\
+                            det_0 = {det_0} ({det_0 in ob.local_detectors})\n\
+                            det_1 = {det_1} ({det_1 in ob.local_detectors})"
+                        raise RuntimeError(msg)
+                    elif (det_1 in ob.local_detectors):
+                        msg = f"det_1 is not part of ob.local_detectors\n\
+                            ob = {ob}\n\
+                            idet = {idet}\n\
+                            det_0 = {det_0} ({det_0 in ob.local_detectors})\n\
+                            det_1 = {det_1} ({det_1 in ob.local_detectors})"
+                        raise RuntimeError(msg)
+                    continue
+                if operator is not None:
+                    # Synthesize data for staging
+                    obs_data = data.select(obs_uid=ob.uid)
+                    operator.apply(obs_data, detectors=[det_0])
+                    operator.apply(obs_data, detectors=[det_1])
+                # Loop over views
+                for ivw, vw in enumerate(views):
+                    view_samples = None
+                    if vw.start is None:
+                        # This is a view of the whole obs
+                        view_samples = ob.n_local_samples
                     else:
-                        mappraiser_buffer[slc] = np.repeat(
-                            views.detdata[detdata_name][ivw][det].flatten(),
-                            n_repeat,
-                        )
-                else:
-                    # Noiseless cases (noise_name=None).
-                    mappraiser_buffer[slc] = 0.
-                    
-                # FIXME : MAPPRAISER's pixels buffer has nnz=3, not nnz=1.
-                # detflags = None
-                # if do_flags:
-                #     if det_flags is None:
-                #         detflags = flags
-                #     else:
-                #         detflags = np.copy(flags)
-                #         detflags |= views.detdata[det_flags][ivw][det] & det_mask
-                #     mappraiser_buffer[slc][detflags != 0] = -1
+                        view_samples = vw.stop - vw.start
+                    offset = interval_starts[interval_offset + ivw]
+                    flags = None
+                    if do_flags:
+                        # Using flags
+                        flags = np.zeros(view_samples, dtype=np.uint8)
+                    if shared_flags is not None:
+                        flags |= views.shared[shared_flags][ivw] & shared_mask
+
+                    slc = slice(
+                        ((idet // 2) * nsamp + offset) * nnz,
+                        ((idet // 2) * nsamp + offset + view_samples) * nnz,
+                        1,
+                    )
+                    if detdata_name is not None:
+                        if nnz > 1:
+                            mappraiser_buffer[slc] = np.repeat(
+                                views.detdata[detdata_name][ivw][det_0].flatten()[
+                                    ::nnz_stride
+                                ],
+                                n_repeat,
+                            ) - np.repeat(
+                                views.detdata[detdata_name][ivw][det_1].flatten()[
+                                    ::nnz_stride
+                                ],
+                                n_repeat,
+                            )
+                        else:
+                            mappraiser_buffer[slc] = np.repeat(
+                                views.detdata[detdata_name][ivw][det_0].flatten(),
+                                n_repeat,
+                            ) - np.repeat(
+                                views.detdata[detdata_name][ivw][det_1].flatten(),
+                                n_repeat,
+                            )
+                    else:
+                        # Noiseless cases (noise_name=None).
+                        mappraiser_buffer[slc] = 0.0
+        else:
+            for idet, det in enumerate(dets):
+                if det not in ob.local_detectors:
+                    continue
+                if operator is not None:
+                    # Synthesize data for staging
+                    obs_data = data.select(obs_uid=ob.uid)
+                    operator.apply(obs_data, detectors=[det])
+                # Loop over views
+                for ivw, vw in enumerate(views):
+                    view_samples = None
+                    if vw.start is None:
+                        # This is a view of the whole obs
+                        view_samples = ob.n_local_samples
+                    else:
+                        view_samples = vw.stop - vw.start
+                    offset = interval_starts[interval_offset + ivw]
+                    flags = None
+                    if do_flags:
+                        # Using flags
+                        flags = np.zeros(view_samples, dtype=np.uint8)
+                    if shared_flags is not None:
+                        flags |= views.shared[shared_flags][ivw] & shared_mask
+
+                    slc = slice(
+                        (idet * nsamp + offset) * nnz,
+                        (idet * nsamp + offset + view_samples) * nnz,
+                        1,
+                    )
+                    if detdata_name is not None:
+                        if nnz > 1:
+                            mappraiser_buffer[slc] = np.repeat(
+                                views.detdata[detdata_name][ivw][det].flatten()[
+                                    ::nnz_stride
+                                ],
+                                n_repeat,
+                            )
+                        else:
+                            mappraiser_buffer[slc] = np.repeat(
+                                views.detdata[detdata_name][ivw][det].flatten(),
+                                n_repeat,
+                            )
+                    else:
+                        # Noiseless cases (noise_name=None).
+                        mappraiser_buffer[slc] = 0.0
+
+                    # FIXME : MAPPRAISER's pixels buffer has nnz=3, not nnz=1.
+                    # detflags = None
+                    # if do_flags:
+                    #     if det_flags is None:
+                    #         detflags = flags
+                    #     else:
+                    #         detflags = np.copy(flags)
+                    #         detflags |= views.detdata[det_flags][ivw][det] & det_mask
+                    #     mappraiser_buffer[slc][detflags != 0] = -1
         if do_purge:
             del ob.detdata[detdata_name]
         interval_offset += len(views)
@@ -362,6 +446,7 @@ def stage_in_turns(
     det_flags,
     det_mask,
     operator=None,
+    pair_diff=False,
 ):
     """When purging data, take turns staging it.
     (This function is taken from madam_utils.py)
@@ -372,7 +457,10 @@ def stage_in_turns(
         if nodecomm.rank % n_copy_groups == copying:
             # Our turn to copy data
             storage, _ = dtype_to_aligned(mappraiser_dtype)
-            raw = storage.zeros(nsamp * len(dets) * nnz)
+            if pair_diff:
+                raw = storage.zeros(nsamp * (len(dets) // 2) * nnz)
+            else:
+                raw = storage.zeros(nsamp * len(dets) * nnz)
             wrapped = raw.array()
             stage_local(
                 data,
@@ -390,6 +478,7 @@ def stage_in_turns(
                 det_mask,
                 do_purge=True,
                 operator=operator,
+                pair_diff=pair_diff,
             )
         nodecomm.barrier()
     return raw, wrapped
@@ -578,9 +667,11 @@ def noise2invtt(
     except AttributeError:
         pass
 
-    # Estimate psd from noise timestream 
-    nperseg = nn # Length of segments used to estimate PSD (defines the lowest frequency we can estimate)
-    f, psd = scipy.signal.welch(nsetod, fsamp, window='hann', nperseg=nperseg, detrend='linear')
+    # Estimate psd from noise timestream
+    nperseg = nn  # Length of segments used to estimate PSD (defines the lowest frequency we can estimate)
+    f, psd = scipy.signal.welch(
+        nsetod, fsamp, window="hann", nperseg=nperseg, detrend="linear"
+    )
 
     # Fit the psd model to the periodogram (in log scale)
     popt, pcov = curve_fit(
@@ -613,13 +704,15 @@ def noise2invtt(
 
     # Define apodization window
     # Only allow max lambda = nn//2
-    if Lambda > nn//2:
+    if Lambda > nn // 2:
         raise RuntimeError("Bandwidth cannot be larger than timestream.")
-    q_apo = 3 # Apodization factor: cut happens at q_apo * sigma in the Gaussian window 
-    window = scipy.signal.get_window(('general_gaussian', 1, 1/q_apo * Lambda), 2 * Lambda)
+    q_apo = 3  # Apodization factor: cut happens at q_apo * sigma in the Gaussian window
+    window = scipy.signal.get_window(
+        ("general_gaussian", 1, 1 / q_apo * Lambda), 2 * Lambda
+    )
     window = np.fft.ifftshift(window)
     window = window[:Lambda]
-    
+
     # Apply window
     inv_tt_w = np.multiply(window, inv_tt[:Lambda], dtype=invtt_dtype)
 
@@ -627,21 +720,21 @@ def noise2invtt(
     if save_psd:
 
         # Save TOD
-        np.save(save_dir+"/tod.npy", nsetod)
-        
+        np.save(save_dir + "/tod.npy", nsetod)
+
         # simulated inverse psd
         psd_sim_m1 = np.reciprocal(psd)
-        np.save(save_dir+"/psd_sim.npy",psd_sim_m1)
-        
+        np.save(save_dir + "/psd_sim.npy", psd_sim_m1)
+
         # fit of the inverse psd
-        np.save(save_dir+"/freq.npy",f_full[:nn//2])
-        np.save(save_dir+"/psd_fit.npy",psdm1[:nn//2])
-        
+        np.save(save_dir + "/freq.npy", f_full[: nn // 2])
+        np.save(save_dir + "/psd_fit.npy", psdm1[: nn // 2])
+
         # "effective" inverse psd
-        circ_invtt_w = np.pad(inv_tt_w, (0,nn-Lambda), 'constant')
+        circ_invtt_w = np.pad(inv_tt_w, (0, nn - Lambda), "constant")
         if Lambda > 1:
-            circ_invtt_w[-Lambda+1:] = np.flip(inv_tt_w[1:],0)
+            circ_invtt_w[-Lambda + 1 :] = np.flip(inv_tt_w[1:], 0)
         ipsd = np.abs(np.fft.fft(circ_invtt_w, n=nn))
-        np.save(save_dir+"/psd_eff"+str(Lambda)+".npy",ipsd[:nn//2])
+        np.save(save_dir + "/psd_eff" + str(Lambda) + ".npy", ipsd[: nn // 2])
 
     return inv_tt_w
