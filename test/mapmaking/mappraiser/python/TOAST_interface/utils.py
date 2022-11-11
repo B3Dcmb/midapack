@@ -17,199 +17,6 @@ from toast.utils import GlobalTimers, Logger, Timer, dtype_to_aligned, memreport
 from toast.ops.memory_counter import MemoryCounter
 
 
-def add_mappraiser_args(parser):
-    """Add mappraiser specific arguments."""
-
-    parser.add_argument(
-        "--ref",
-        required=False,
-        default="run0",
-        help="Reference that is added to the name of the output maps. Can be used to store multiple runs of the same configuration in a common folder (which will be specified to the parser under the name 'out_dir').",
-    )
-
-    parser.add_argument(
-        "--Lambda",
-        required=False,
-        default=16384,
-        type=int,
-        help="Half bandwidth (lambda) of noise covariance",
-    )
-
-    # FIXME : is uniform_w useful ?
-    parser.add_argument(
-        "--uniform_w",
-        required=False,
-        default=0,
-        type=int,
-        help="Activate for uniform white noise model: 0->off, 1->on",
-    )
-
-    parser.add_argument(
-        "--solver",
-        required=False,
-        default=0,
-        type=int,
-        help="Choose map-making solver: 0->PCG, 1->ECG",
-    )
-
-    parser.add_argument(
-        "--precond",
-        required=False,
-        default=0,
-        type=int,
-        help="Choose map-making preconditioner: 0->BD, 1->2lvl a priori, 2->2lvl a posteriori",
-    )
-
-    parser.add_argument(
-        "--Z_2lvl",
-        required=False,
-        default=0,
-        type=int,
-        help="2lvl deflation size",
-    )
-
-    parser.add_argument(
-        "--ptcomm_flag",
-        required=False,
-        default=6,
-        type=int,
-        help="Choose collective communication scheme",
-    )
-
-    parser.add_argument(
-        "--tol",
-        required=False,
-        default=1e-6,
-        type=np.double,
-        help="Tolerance parameter for convergence",
-    )
-
-    parser.add_argument(
-        "--maxiter",
-        required=False,
-        default=500,
-        type=int,
-        help="Maximum number of iterations in Mappraiser",
-    )
-
-    parser.add_argument(
-        "--enlFac",
-        required=False,
-        default=1,
-        type=int,
-        help="Enlargement factor for ECG",
-    )
-
-    parser.add_argument(
-        "--ortho_alg",
-        required=False,
-        default=1,
-        type=int,
-        help="Orthogonalization scheme for ECG. O:odir, 1:omin",
-    )
-
-    parser.add_argument(
-        "--bs_red",
-        required=False,
-        default=0,
-        type=int,
-        help="Use dynamic search reduction",
-    )
-
-    return
-
-
-# def apply_mappraiser(
-#     args,
-#     comm,
-#     data,
-#     params,
-#     signalname,
-#     noisename,
-#     time_comms=None,
-#     telescope_data=None,
-#     verbose=True,
-# ):
-#     """Use libmappraiser to run the ML map-making.
-
-#     Parameters
-#     ----------
-#     time_comms: iterable
-#         Series of disjoint communicators that map, e.g., seasons and days.
-#         Each entry is a tuple of the form (`name`, `communicator`)
-#     telescope_data: iterable
-#         Series of disjoint TOAST data objects.
-#         Each entry is tuple of the form (`name`, `data`).
-#     """
-#     if comm.comm_world is None:
-#         raise RuntimeError("Mappraiser requires MPI")
-
-#     log = Logger.get()
-#     total_timer = Timer()
-#     total_timer.start()
-#     if comm.world_rank == 0 and verbose:
-#         log.info("Making maps")
-
-#     mappraiser = OpMappraiser(
-#         params=params,
-#         purge=True,
-#         name=signalname,
-#         noise_name=noisename,
-#         conserve_memory=args.conserve_memory,
-#     )
-
-#     if time_comms is None:
-#         time_comms = [("all", comm.comm_world)]
-
-#     if telescope_data is None:
-#         telescope_data = [("all", data)]
-
-#     timer = Timer()
-#     for time_name, time_comm in time_comms:
-#         for tele_name, tele_data in telescope_data:
-#             if len(time_name.split("-")) == 3:
-#                 # Special rules for daily maps
-#                 if args.do_daymaps:
-#                     continue
-#                 if len(telescope_data) > 1 and tele_name == "all":
-#                     # Skip daily maps over multiple telescopes
-#                     continue
-
-#             timer.start()
-#             # N.B: code below is for Madam but may be useful to copy in Mappraiser
-#             # once we start doing multiple maps in one run
-#             # madam.params["file_root"] = "{}_telescope_{}_time_{}".format(
-#             #     file_root, tele_name, time_name
-#             # )
-#             # if time_comm == comm.comm_world:
-#             #     madam.params["info"] = info
-#             # else:
-#             #     # Cannot have verbose output from concurrent mapmaking
-#             #     madam.params["info"] = 0
-#             # if (time_comm is None or time_comm.rank == 0) and verbose:
-#             #     log.info("Mapping {}".format(madam.params["file_root"]))
-#             mappraiser.exec(tele_data, time_comm)
-
-#             if time_comm is not None:
-#                 time_comm.barrier()
-#             if comm.world_rank == 0 and verbose:
-#                 timer.report_clear(
-#                     "Mapping {}_telescope_{}_time_{}".format(
-#                         args.outpath,
-#                         tele_name,
-#                         time_name,
-#                     )
-#                 )
-
-#     if comm.comm_world is not None:
-#         comm.comm_world.barrier()
-#     total_timer.stop()
-#     if comm.world_rank == 0 and verbose:
-#         total_timer.report("Mappraiser total")
-
-#     return
-
-
 # Here are some helper functions adapted from toast/src/ops/madam_utils.py
 def log_time_memory(
     data, timer=None, timer_msg=None, mem_msg=None, full_mem=False, prefix=""
@@ -265,6 +72,7 @@ def stage_local(
     operator=None,
     n_repeat=1,
     pair_diff=False,
+    pair_skip=False,
 ):
     """Helper function to fill a mappraiser buffer from a local detdata key.
     (This function is taken from madam_utils.py)
@@ -287,30 +95,26 @@ def stage_local(
                     RuntimeWarning,
                 )
 
+    if pair_diff and pair_skip:
+        raise RuntimeError("pair_diff and pair_skip are incompatible.")
+
     for ob in data.obs:
         views = ob.view[view]
-        if pair_diff:
-            # # Check that local detectors come in even count.
-            # try:
-            #     assert len(ob.local_detectors) % 2 == 0
-            # except AssertionError as e:
-            #     msg = f"Pair-diff is activated. Detectors must come in pairs.\n\
-            #         ob = {ob}\n\
-            #         #(local dets) = {len(ob.local_detectors)}"
-            #     raise e(msg)
-            # Loop through detectors
+        if pair_diff or pair_skip:
             for idet in range(0, len(dets) - 1, 2):
                 det_0 = dets[idet]
                 det_1 = dets[idet + 1]
-                if not((det_0 in ob.local_detectors) and (det_1 in ob.local_detectors)):
-                    if (det_0 in ob.local_detectors):
+                if not (
+                    (det_0 in ob.local_detectors) and (det_1 in ob.local_detectors)
+                ):
+                    if det_0 in ob.local_detectors:
                         msg = f"det_0 is not part of ob.local_detectors\n\
                             ob = {ob}\n\
                             idet = {idet}\n\
                             det_0 = {det_0} ({det_0 in ob.local_detectors})\n\
                             det_1 = {det_1} ({det_1 in ob.local_detectors})"
                         raise RuntimeError(msg)
-                    elif (det_1 in ob.local_detectors):
+                    elif det_1 in ob.local_detectors:
                         msg = f"det_1 is not part of ob.local_detectors\n\
                             ob = {ob}\n\
                             idet = {idet}\n\
@@ -351,20 +155,32 @@ def stage_local(
                                     ::nnz_stride
                                 ],
                                 n_repeat,
-                            ) - np.repeat(
-                                views.detdata[detdata_name][ivw][det_1].flatten()[
-                                    ::nnz_stride
-                                ],
-                                n_repeat,
                             )
+                            if pair_diff:
+                                # We are staging signal or noise
+                                # Subtract the data from det_1
+                                mappraiser_buffer[slc] = mappraiser_buffer[
+                                    slc
+                                ] - np.repeat(
+                                    views.detdata[detdata_name][ivw][det_1].flatten()[
+                                        ::nnz_stride
+                                    ],
+                                    n_repeat,
+                                )
                         else:
                             mappraiser_buffer[slc] = np.repeat(
                                 views.detdata[detdata_name][ivw][det_0].flatten(),
                                 n_repeat,
-                            ) - np.repeat(
-                                views.detdata[detdata_name][ivw][det_1].flatten(),
-                                n_repeat,
                             )
+                            if pair_diff:
+                                # We are staging signal or noise
+                                # Subtract the data from det_1
+                                mappraiser_buffer[slc] = mappraiser_buffer[
+                                    slc
+                                ] - np.repeat(
+                                    views.detdata[detdata_name][ivw][det_1].flatten(),
+                                    n_repeat,
+                                )
                     else:
                         # Noiseless cases (noise_name=None).
                         mappraiser_buffer[slc] = 0.0
@@ -413,16 +229,6 @@ def stage_local(
                     else:
                         # Noiseless cases (noise_name=None).
                         mappraiser_buffer[slc] = 0.0
-
-                    # FIXME : MAPPRAISER's pixels buffer has nnz=3, not nnz=1.
-                    # detflags = None
-                    # if do_flags:
-                    #     if det_flags is None:
-                    #         detflags = flags
-                    #     else:
-                    #         detflags = np.copy(flags)
-                    #         detflags |= views.detdata[det_flags][ivw][det] & det_mask
-                    #     mappraiser_buffer[slc][detflags != 0] = -1
         if do_purge:
             del ob.detdata[detdata_name]
         interval_offset += len(views)
