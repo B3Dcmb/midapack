@@ -227,6 +227,10 @@ class Mappraiser(Operator):
     save_psd = Bool(
         False, help="Save noise PSD information during inv_tt computation."
     )
+    
+    pair_diff = Bool(
+        False, help="Process differenced timestreams."
+    )
 
     @traitlets.validate("shared_flag_mask")
     def _check_shared_flag_mask(self, proposal):

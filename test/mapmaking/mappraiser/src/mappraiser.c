@@ -191,12 +191,12 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     }
     else if (solver == 1)
     {
-        #ifdef W_ECG
+#ifdef W_ECG
         ECG_GLS(outpath, ref, &A, Nm1, x, signal, noise, cond, lhits, tol, maxiter, enlFac, ortho_alg, bs_red);
-        #else
+#else
         printf("Whoops! To use solver=1 (ECG), please compile after specifying option '--with ecg' to the configure script.\n");
         exit(1);
-        #endif
+#endif
     }
     else
     {

@@ -314,8 +314,6 @@ echo ' > ECG    = '$ECG
 ### Compilers, compilation flags, ... ##########
 ################################################
 
-#FIXME: fix this section
-
 # Fortran
 
 if [ $F90 == 0 ]
