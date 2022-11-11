@@ -223,13 +223,12 @@ class Mappraiser(Operator):
     mem_report = Bool(
         False, help="Print system memory use while staging / unstaging data."
     )
-    
-    save_psd = Bool(
-        False, help="Save noise PSD information during inv_tt computation."
-    )
-    
+
+    save_psd = Bool(False, help="Save noise PSD information during inv_tt computation.")
+
     pair_diff = Bool(
-        False, help="Process differenced timestreams."
+        False,
+        help="Process differenced timestreams between orthogonal detectors in pairs.",
     )
 
     @traitlets.validate("shared_flag_mask")
@@ -423,7 +422,7 @@ class Mappraiser(Operator):
 
         if self.params is not None:
             params.update(self.params)
-        
+
         if "fsample" not in params:
             params["fsample"] = data.obs[0].telescope.focalplane.sample_rate.to_value(
                 u.Hz
@@ -533,8 +532,8 @@ class Mappraiser(Operator):
         timer.start()
 
         params["nside"] = self.pixel_pointing.nside
-        
-        # Check that libmappraiser arguments have been provided 
+
+        # Check that libmappraiser arguments have been provided
         # and convert them to the correct data type.
         # FIXME : use tomlkit to parse a .toml parameter file properly ?
         libmappraiser_argtypes = {
@@ -553,7 +552,9 @@ class Mappraiser(Operator):
         }
         for key in libmappraiser_argtypes.keys():
             if key not in params:
-                msg = "Please set the parameter {}, which is necessary for libmappraiser.".format(key)
+                msg = "Please set the parameter {}, which is necessary for libmappraiser.".format(
+                    key
+                )
                 raise RuntimeError(msg)
             else:
                 params[key] = libmappraiser_argtypes[key](params[key])
@@ -562,7 +563,7 @@ class Mappraiser(Operator):
         if data.comm.world_rank == 0:
             with open(
                 os.path.join(params["path_output"], "mappraiser_args_log.toml"),
-                'w',
+                "w",
             ) as param_logfile:
                 toml.dump(params, param_logfile)
 
@@ -815,6 +816,7 @@ class Mappraiser(Operator):
                 None,
                 None,
                 do_purge=False,
+                pair_diff=self.pair_diff,
             )
         else:
             # Signal buffers do not yet exist
@@ -836,11 +838,17 @@ class Mappraiser(Operator):
                     None,
                     None,
                     None,
+                    pair_diff=self.pair_diff,
                 )
             else:
                 # Allocate and copy all at once.
                 storage, _ = dtype_to_aligned(mappraiser.SIGNAL_TYPE)
-                self._mappraiser_signal_raw = storage.zeros(nsamp * len(all_dets))
+                if self.pair_diff:
+                    self._mappraiser_signal_raw = storage.zeros(
+                        nsamp * (len(all_dets) // 2)
+                    )
+                else:
+                    self._mappraiser_signal_raw = storage.zeros(nsamp * len(all_dets))
                 self._mappraiser_signal = self._mappraiser_signal_raw.array()
 
                 stage_local(
@@ -858,15 +866,22 @@ class Mappraiser(Operator):
                     None,
                     None,
                     do_purge=False,
+                    pair_diff=self.pair_diff,
                 )
             # Create buffer for local_block_sizes
             b_storage, _ = dtype_to_aligned(mappraiser.PIXEL_TYPE)
-            self._mappraiser_blocksizes_raw = b_storage.zeros(
-                len(data.obs) * len(all_dets)
-            )
+            if self.pair_diff:
+                self._mappraiser_blocksizes_raw = b_storage.zeros(
+                    len(data.obs) * (len(all_dets) // 2)
+                )
+            else:
+                self._mappraiser_blocksizes_raw = b_storage.zeros(
+                    len(data.obs) * len(all_dets)
+                )
             self._mappraiser_blocksizes = self._mappraiser_blocksizes_raw.array()
 
         # Compute sizes of local data blocks
+        # TODO: adapt for pair-diff case
         compute_local_block_sizes(
             data,
             self.view,
@@ -889,8 +904,8 @@ class Mappraiser(Operator):
         )
 
         # Copy the noise.
-        # For the moment, in the absence of a gap-filling procedure in MAPPRAISER, we separate signal and noise in the simulations
-        
+        # For the moment, in the absence of a gap treatment procedure in MAPPRAISER, we separate signal and noise in the simulations
+
         # Check if the simulation contains any noise at all.
         if self.noise_name is None:
             log.info_rank(
@@ -920,6 +935,7 @@ class Mappraiser(Operator):
                 None,
                 None,
                 do_purge=False,
+                pair_diff=self.pair_diff,
             )
         else:
             # Signal buffers do not yet exist
@@ -941,11 +957,17 @@ class Mappraiser(Operator):
                     None,
                     None,
                     None,
+                    pair_diff=self.pair_diff,
                 )
             else:
                 # Allocate and copy all at once.
                 storage, _ = dtype_to_aligned(mappraiser.SIGNAL_TYPE)
-                self._mappraiser_noise_raw = storage.zeros(nsamp * len(all_dets))
+                if self.pair_diff:
+                    self._mappraiser_noise_raw = storage.zeros(
+                        nsamp * (len(all_dets) // 2)
+                    )
+                else:
+                    self._mappraiser_noise_raw = storage.zeros(nsamp * len(all_dets))
                 self._mappraiser_noise = self._mappraiser_noise_raw.array()
 
                 stage_local(
@@ -963,15 +985,22 @@ class Mappraiser(Operator):
                     None,
                     None,
                     do_purge=False,
+                    pair_diff=self.pair_diff,
                 )
             # Create buffer for invtt
             tt_storage, _ = dtype_to_aligned(mappraiser.INVTT_TYPE)
-            self._mappraiser_invtt_raw = tt_storage.zeros(
-                len(data.obs) * len(all_dets) * params["Lambda"]
-            )
+            if self.pair_diff:
+                self._mappraiser_invtt_raw = tt_storage.zeros(
+                    len(data.obs) * (len(all_dets) // 2) * params["Lambda"]
+                )
+            else:
+                self._mappraiser_invtt_raw = tt_storage.zeros(
+                    len(data.obs) * len(all_dets) * params["Lambda"]
+                )
             self._mappraiser_invtt = self._mappraiser_invtt_raw.array()
 
         # Compute invtt
+        # TODO: adapt for pair-diff
         if self.noise_name is not None:
             compute_invtt(
                 len(data.obs),
@@ -984,10 +1013,10 @@ class Mappraiser(Operator):
                 mappraiser.INVTT_TYPE,
                 print_info=(data.comm.world_rank == 0),
                 save_psd=(self.save_psd and data.comm.world_rank == 0),
-                save_dir=params["path_output"]+"/psd",
+                save_dir=params["path_output"] + "/psd",
             )
         else:
-            self._mappraiser_invtt[:] = 1.
+            self._mappraiser_invtt[:] = 1.0
 
         log_time_memory(
             data,
@@ -1009,9 +1038,16 @@ class Mappraiser(Operator):
         if not self._cached:
             # We do not have the pointing yet.
             storage, _ = dtype_to_aligned(mappraiser.PIXEL_TYPE)
-            self._mappraiser_pixels_raw = storage.zeros(nsamp * len(all_dets) * nnz)
+            if self.pair_diff:
+                self._mappraiser_pixels_raw = storage.zeros(
+                    nsamp * (len(all_dets) // 2) * (nnz - 1)
+                )
+            else:
+                self._mappraiser_pixels_raw = storage.zeros(nsamp * len(all_dets) * nnz)
             self._mappraiser_pixels = self._mappraiser_pixels_raw.array()
-
+            
+            nnz_adapt = (nnz - 1) if self.pair_diff else nnz
+            
             stage_local(
                 data,
                 nsamp,
@@ -1020,7 +1056,7 @@ class Mappraiser(Operator):
                 self.pixel_pointing.pixels,
                 self._mappraiser_pixels,
                 interval_starts,
-                nnz,
+                nnz_adapt,
                 1,
                 self.shared_flags,
                 self.shared_flag_mask,
@@ -1028,18 +1064,26 @@ class Mappraiser(Operator):
                 self.det_flag_mask,
                 do_purge=True,
                 operator=self.pixel_pointing,
-                n_repeat=nnz,
+                n_repeat=nnz_adapt,
+                pair_skip=self.pair_diff,
             )
-            
+
             # Arrange pixel indices for MAPPRAISER
-            self._mappraiser_pixels *= nnz
-            for i in range(nnz):
-                self._mappraiser_pixels[i::nnz] += i
+            self._mappraiser_pixels *= nnz_adapt
+            for i in range(nnz_adapt):
+                self._mappraiser_pixels[i::nnz_adapt] += i
 
             storage, _ = dtype_to_aligned(mappraiser.WEIGHT_TYPE)
-            self._mappraiser_pixweights_raw = storage.zeros(nsamp * len(all_dets) * nnz)
+            if self.pair_diff:
+                self._mappraiser_pixweights_raw = storage.zeros(
+                    nsamp * (len(all_dets) // 2) * (nnz - 1)
+                )
+            else:
+                self._mappraiser_pixweights_raw = storage.zeros(
+                    nsamp * len(all_dets) * nnz
+                )
             self._mappraiser_pixweights = self._mappraiser_pixweights_raw.array()
-
+            
             stage_local(
                 data,
                 nsamp,
@@ -1048,7 +1092,7 @@ class Mappraiser(Operator):
                 self.stokes_weights.weights,
                 self._mappraiser_pixweights,
                 interval_starts,
-                nnz,
+                nnz_adapt,
                 nnz_stride,
                 None,
                 None,
@@ -1056,6 +1100,7 @@ class Mappraiser(Operator):
                 None,
                 do_purge=True,
                 operator=self.stokes_weights,
+                pair_skip=self.pair_diff,
             )
 
             log_time_memory(
@@ -1277,13 +1322,17 @@ class Mappraiser(Operator):
         # -> call mappraiser in normal mode
         # -> if self.mcmode: self._cached=True
 
+        if self.pair_diff:
+            nnz_final = nnz - 1
+            nb_blocks_loc_final = int(nb_blocks_loc / 2)
+
         mappraiser.MLmap(
             data.comm.comm_world,
             params,
             data_size_proc,
-            nb_blocks_loc,
+            nb_blocks_loc_final,
             self._mappraiser_blocksizes,
-            nnz,
+            nnz_final,
             self._mappraiser_pixels,
             self._mappraiser_pixweights,
             self._mappraiser_signal,
