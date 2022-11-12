@@ -378,12 +378,14 @@ def restore_in_turns(
     return
 
 
-def compute_local_block_sizes(data, view, dets, buffer):
+def compute_local_block_sizes(data, view, dets, buffer, pair_skip=False):
     """Compute the sizes of the local data blocks and store them in the provided buffer."""
     for iobs, ob in enumerate(data.obs):
         views = ob.view[view]
         for idet, det in enumerate(dets):
             if det not in ob.local_detectors:
+                continue
+            if pair_skip and (idet % 2):
                 continue
             # Loop over views
             for vw in views:
@@ -393,7 +395,10 @@ def compute_local_block_sizes(data, view, dets, buffer):
                     view_samples = ob.n_local_samples
                 else:
                     view_samples = vw.stop - vw.start
-                buffer[idet * len(data.obs) + iobs] += view_samples
+                if pair_skip:
+                    buffer[(idet // 2) * len(data.obs) + iobs] += view_samples
+                else:
+                    buffer[idet * len(data.obs) + iobs] += view_samples
     return
 
 

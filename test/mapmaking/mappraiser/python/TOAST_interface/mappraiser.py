@@ -881,12 +881,12 @@ class Mappraiser(Operator):
             self._mappraiser_blocksizes = self._mappraiser_blocksizes_raw.array()
 
         # Compute sizes of local data blocks
-        # TODO: adapt for pair-diff case
         compute_local_block_sizes(
             data,
             self.view,
             all_dets,
             self._mappraiser_blocksizes,
+            pair_skip=self.pair_diff,
         )
 
         # Gather data sizes of the full communicator in global array
@@ -1000,7 +1000,6 @@ class Mappraiser(Operator):
             self._mappraiser_invtt = self._mappraiser_invtt_raw.array()
 
         # Compute invtt
-        # TODO: adapt for pair-diff
         if self.noise_name is not None:
             compute_invtt(
                 len(data.obs),
