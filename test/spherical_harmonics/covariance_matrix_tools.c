@@ -4,19 +4,21 @@
 #include <mpi.h>
 #include <time.h>
 #include <string.h>
+
 // choose header based on compilation option
 #ifdef W_MKL
 #include <mkl.h>
 #else
 #include <lapacke.h>
 #endif
+
 // #include "fitsio.h"
 #include <unistd.h>
 #include "s2hat_tools.h"
 
 
 
-int alm2cls(double* local_alm, double *c_ell_array; S2HAT_GLOCAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat, int gangroot){
+int alm2cls(s2hat_dcomplex* local_alm, double *c_ell_array, S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat){
     /* Transform alm to c_ell coefficients
      local_alm is a 4-dimensional array in the form :
         (1:nstokes,0:nlmax,0:nmvals-1,1:nmaps), if lda == nstokes;      (HEALpix convention)
@@ -40,8 +42,8 @@ int alm2cls(double* local_alm, double *c_ell_array; S2HAT_GLOCAL_parameters Glob
 
     // c_ell_array = (double *) calloc( nstokes, sizeof(double));
 
-    collect_cls(nmaps, mapnum, ncomp, lmax, Local_param_s2hat.nmvals, Local_param_s2hat->mvals, lda, 
-    local_alm, nspec, c_ell_array, Local_param_s2hat.gangrank, Local_param_s2hat.gangsize, gangroot, Local_param_s2hat.gang_comm)
+    collect_cls(nmaps, mapnum, ncomp, lmax, Local_param_s2hat.nmvals, Local_param_s2hat.mvals, lda, 
+                local_alm, nspec, c_ell_array, Local_param_s2hat.gangrank, Local_param_s2hat.gangsize, Local_param_s2hat.gangroot, Local_param_s2hat.gangcomm);
 
     return 0;
 }
@@ -67,7 +69,7 @@ int get_inverse_matrix(int order_matrix, double* matrix_to_be_inverted){
 
 
 
-int get_covariance_matrix_3x3(char *c_ell_path, int number_correl, double **covariance_matrix_3x3, S2HAT_GLOCAL_parameters Global_param_s2hat){
+int get_covariance_matrix_3x3(char *c_ell_path, int number_correl, double **covariance_matrix_3x3, S2HAT_GLOBAL_parameters Global_param_s2hat){
     /* Read c_ell file to compute covariance matrix
 
     Number_correl is expected to be :
@@ -85,7 +87,7 @@ int get_covariance_matrix_3x3(char *c_ell_path, int number_correl, double **cova
     int correl_index, ell_value;
     double *c_ell_array;
 
-    if (number_correl != 4) && (number_correl != 6){
+    if ((number_correl != 4) && (number_correl != 6)){
         printf("Error : number_correl must be either 4, TT, EE, BB and TE, or 6, TT, EE, BB, TE, TB and EB \n");
         fflush(stdout);
     }
@@ -96,17 +98,17 @@ int get_covariance_matrix_3x3(char *c_ell_path, int number_correl, double **cova
 
     for (ell_value=0; ell_value<lmax+1; ell_value++){
         for (correl_index=0; correl_index<3; correl_index++){
-            covariance_matrix[ell_value][correl_index*3 + ell_value] = c_ell_array[ (lmax+1)*correl_index + ell_value ]; // Diagonal part : TT (0), EE (4), BB (8)
+            covariance_matrix_3x3[ell_value][correl_index*3 + ell_value] = c_ell_array[ (lmax+1)*correl_index + ell_value ]; // Diagonal part : TT (0), EE (4), BB (8)
         }
-        covariance_matrix[ell_value][1] = c_ell_array[ 3*(lmax+1) + ell_value ]; // Cross-correlation TE (up-right block)
-        covariance_matrix[ell_value][3] = c_ell_array[ 3*(lmax+1) + ell_value ]; // Cross-correlation TE (middle-left block)
+        covariance_matrix_3x3[ell_value][1] = c_ell_array[ 3*(lmax+1) + ell_value ]; // Cross-correlation TE (up-right block)
+        covariance_matrix_3x3[ell_value][3] = c_ell_array[ 3*(lmax+1) + ell_value ]; // Cross-correlation TE (middle-left block)
 
         if(number_correl == 6){
-            covariance_matrix[ell_value][2] = c_ell_array[ 4*(lmax+1) + ell_value ]; // Cross-correlation TB (up-right block)
-            covariance_matrix[ell_value][6] = c_ell_array[ 4*(lmax+1) + ell_value ]; // Cross-correlation TB (bottom-left block)
+            covariance_matrix_3x3[ell_value][2] = c_ell_array[ 4*(lmax+1) + ell_value ]; // Cross-correlation TB (up-right block)
+            covariance_matrix_3x3[ell_value][6] = c_ell_array[ 4*(lmax+1) + ell_value ]; // Cross-correlation TB (bottom-left block)
             
-            covariance_matrix[ell_value][5] = c_ell_array[ 5*(lmax+1) + ell_value ]; // Cross-correlation EB (bottom-middle block)
-            covariance_matrix[ell_value][7] = c_ell_array[ 5*(lmax+1) + ell_value ]; // Cross-correlation EB (middle-right block)
+            covariance_matrix_3x3[ell_value][5] = c_ell_array[ 5*(lmax+1) + ell_value ]; // Cross-correlation EB (bottom-middle block)
+            covariance_matrix_3x3[ell_value][7] = c_ell_array[ 5*(lmax+1) + ell_value ]; // Cross-correlation EB (middle-right block)
         }
     }
 
@@ -115,22 +117,22 @@ int get_covariance_matrix_3x3(char *c_ell_path, int number_correl, double **cova
 }
 
 
-int get_inverse_covariance_matrix_3x3(char *c_ell_path, int number_correl, double **inverse_covariance_matrix, S2HAT_GLOCAL_parameters Global_param_s2hat){
+int get_inverse_covariance_matrix_3x3(char *c_ell_path, int number_correl, double **inverse_covariance_matrix, S2HAT_GLOBAL_parameters Global_param_s2hat){
     /* Function to obtain inverse of covariance matrix in harmonic domain, from given c_ells
 
     TO MODIFY LATER ---> As we expect TB/EB to be 0, can be improved by just computing inverse of block TT-TE-EE, and taking 1/C_ell^BB for inverse of BB block
     */
     double **covariance_matrix;
+    int ell_value, index_1;
+    int lmax = Global_param_s2hat.nlmax;
 
     covariance_matrix = calloc(lmax+1, sizeof(double *));
     for(ell_value=0; ell_value<lmax+1; ell_value++){
         covariance_matrix[ell_value] = calloc(9,sizeof(double));
     }
 
-    get_covariance_matrix(c_ell_path, number_correl, covariance_matrix, Global_param_s2hat);
+    get_covariance_matrix_3x3(c_ell_path, number_correl, covariance_matrix, Global_param_s2hat);
 
-    int ell_value;
-    int lmax = Global_param_s2hat.nlmax;
     for(ell_value=0; ell_value<lmax+1; ell_value++){
         get_inverse_matrix(3, covariance_matrix[ell_value]);
         inverse_covariance_matrix[ell_value] = covariance_matrix[ell_value];
@@ -138,18 +140,18 @@ int get_inverse_covariance_matrix_3x3(char *c_ell_path, int number_correl, doubl
     // It's possible covariance_matrix will be returned as [3][3], which is not what we want
     // To maybe modify/verify later
 
-
+    
     for (index_1=0; index_1<lmax+1; index_1++){
             free(covariance_matrix[index_1]);
     }
-    free(covariance_matrix)
+    free(covariance_matrix);
     return 0;
 }
 
 
 
 /* Old version -- DEPRECATED */
-// int get_covariance_matrix(char* c_ell_path, int number_correl, double* covariance_matrix, S2HAT_GLOCAL_parameters Global_param_s2hat)
+// int get_covariance_matrix(char* c_ell_path, int number_correl, double* covariance_matrix, S2HAT_GLOBAL_parameters Global_param_s2hat)
 //     /* Read c_ell file to compute covariance matrix
 
 //     Number_correl is expected to be :
@@ -202,7 +204,7 @@ int get_inverse_covariance_matrix_3x3(char *c_ell_path, int number_correl, doubl
 
 
 /* Old version*/
-// int get_inverse_covariance_matrix(char* c_ell_path, int number_correl, double* inverse_covariance_matrix, S2HAT_GLOCAL_parameters Global_param_s2hat){
+// int get_inverse_covariance_matrix(char* c_ell_path, int number_correl, double* inverse_covariance_matrix, S2HAT_GLOBAL_parameters Global_param_s2hat){
 //     /* Function to obtain inverse of covariance matrix in harmonic domain, from given c_ells
 
 //     TO MODIFY LATER ---> As we expect TB/EB to be 0, can be improved by just computing inverse of block TT-TE-EE, and taking 1/C_ell^BB for inverse of BB block

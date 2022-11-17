@@ -20,6 +20,7 @@ function chelp {
     echo '    openmp ; to multithreading via openmp'
     echo '    debug ; to generate a debug version'
     echo '    mkl ; use MKL optimized routines'
+    echo '    s2hat ; use s2hat routines'
     echo '    ecg ; compile ECG solver (requires preAlps, metis and MKL)'
     # echo '    docker ; compilation inside Docker image'
     echo '    example for using mpi and openmp : ./configure --with mpi --with openmp'
@@ -116,6 +117,7 @@ GPU=0
 DEBUG=0
 ERROR=0
 MKL=1
+S2HAT=1
 ECG=1
 # DOCKER=0
 
@@ -159,6 +161,10 @@ do
             then
                 MKL=1
                 shift
+            elif [ $2 == s2hat ]
+            then
+                S2HAT=1
+                shift
             elif [ $2 == ecg ]
             then
                 ECG=1
@@ -192,6 +198,10 @@ do
             elif [ $2 == mkl ]
             then
                 MKL=0
+                shift
+            elif [ $2 == s2hat ]
+            then
+                S2HAT=0
                 shift
             elif [ $2 == ecg ]
             then
@@ -286,6 +296,16 @@ else
     CFITSIO_LIB='-L${CFITSIOROOT}/lib -lcfitsio'
 fi
 
+# Check path to s2hat library
+if [[ $S2HAT -eq 1 ]] && [[ -z "$S2HATROOT" ]]
+then
+    echo 'Option --with s2hat is used. Make sure the environment variable \$S2HATROOT is set.'
+    ERROR=1
+else
+    S2HAT_INC='-I${S2HATROOT}/include'
+    S2HAT_LIB='-L${S2HATROOT}/lib/cori/intel/ -ls2hat_std'
+fi
+
 # Check if an install prefix has been defined
 if [ -z "$PREFIX" ]
 then
@@ -306,6 +326,7 @@ echo ' > OPENMP = '$OPENMP
 echo ' > GPU    = '$GPU
 echo ' > DEBUG  = '$DEBUG
 echo ' > MKL    = '$MKL
+echo ' > S2HAT  = '$S2HAT
 echo ' > ECG    = '$ECG
 # echo '  DOCKER = '$DOCKER
 
@@ -384,6 +405,15 @@ then
     echo 'setting mkl flag'
     OPT=$OPT' -D W_MKL'
 fi
+
+# # S2HAT
+
+# if [ $S2HAT -eq 1 ]
+# then
+#     echo 'setting s2hat flag'
+#     OPT=$OPT' -D W_S2HAT'
+# fi
+
 
 # ECG
 
@@ -524,6 +554,34 @@ echo 'MAPPRAISER_OBJ = ${MAPPRAISER_ROOT}/obj' >> test/mapmaking/mappraiser/src/
 echo 'MAPPRAISER_LIB = ${MAPPRAISER_ROOT}/lib' >> test/mapmaking/mappraiser/src/Makefile
 
 
+### Spherical_harmonics extension ###
+
+echo 'DIR = '$DIR > test/spherical_harmonics/Makefile
+
+echo 'PREFIX = '$PREFIX >> test/spherical_harmonics/Makefile
+
+echo 'MIDAPACK_LIB = ${PREFIX}/midapack/lib' >> test/spherical_harmonics/Makefile
+
+echo 'WIENERFILTERS_LIB = ${PREFIX}/midapack/lib' >> test/spherical_harmonics/Makefile
+
+if [ $MKL == 1 ]
+then
+    echo 'MKLROOT = '$MKLROOT >> test/spherical_harmonics/Makefile
+fi
+
+echo 'CFITSIOROOT = '$CFITSIOROOT >> test/spherical_harmonics/Makefile
+
+echo 'OPT = '$OPT >> test/spherical_harmonics/Makefile
+echo 'CC = '$CC >> test/spherical_harmonics/Makefile
+echo 'MPICC = '$MPICC >> test/spherical_harmonics/Makefile
+echo 'LDFLAGS = '$LDFLAGS >> test/spherical_harmonics/Makefile
+echo 'WIENERFILTER_ROOT = ${PREFIX}/mappraiser' >> test/spherical_harmonics/Makefile
+echo 'WIENERFILTER_OBJ = ${WIENERFILTER_ROOT}/obj' >> test/spherical_harmonics/Makefile
+echo 'WIENERFILTER_LIB = ${WIENERFILTER_ROOT}/lib' >> test/spherical_harmonics/Makefile
+
+echo 'S2HATROOT ='$S2HATROOT >> test/spherical_harmonics/Makefile
+
+
 ################################################
 ### INC and LIB ################################
 ################################################
@@ -548,6 +606,19 @@ echo 'INC = '$INC >> test/mapmaking/mappraiser/src/Makefile
 echo 'LIB = '$LIB >> test/mapmaking/mappraiser/src/Makefile
 echo 'CFITSIO_INC = '$CFITSIO_INC >> test/mapmaking/mappraiser/src/Makefile
 echo 'CFITSIO_LIB = '$CFITSIO_LIB >> test/mapmaking/mappraiser/src/Makefile
+
+# link S2HAT library (if needed)
+
+if [ $S2HAT -eq 1 ]
+then
+    INC+=' '$S2HAT_INC
+    LIB+=' '$S2HAT_LIB
+fi
+
+echo 'INC = '$INC >> test/spherical_harmonics/Makefile
+echo 'LIB = '$LIB >> test/spherical_harmonics/Makefile
+echo 'CFITSIO_INC = '$CFITSIO_INC >> test/spherical_harmonics/Makefile
+echo 'CFITSIO_LIB = '$CFITSIO_LIB >> test/spherical_harmonics/Makefile
 
 # link preAlps and metis
 
@@ -604,8 +675,11 @@ else
     MAPPRAISER_SRC_IN="test/mapmaking/mappraiser/src/Makefile.in"
 fi
 
+WIENERFILTER_IN="test/spherical_harmonics/Makefile.in"
+
 cat $MAPPRAISER_IN >> test/mapmaking/mappraiser/Makefile
 cat $MAPPRAISER_SRC_IN >> test/mapmaking/mappraiser/src/Makefile
+cat $WIENERFILTER_IN >> test/spherical_harmonics/Makefile
 
 # cat test/mapmat/Makefile.in >> test/mapmat/Makefile
 # cat test/toeplitz/Makefile.in >> test/toeplitz/Makefile

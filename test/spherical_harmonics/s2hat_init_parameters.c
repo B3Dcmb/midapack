@@ -34,7 +34,7 @@ int get_main_s2hat_global_parameters(int nside, char *maskfile_path, s2hat_pixel
 
     printf( " //// Reading mask\n");
     read_fits_mask( nside, mask, maskfile_path, 1); /* Retrieve mask */
-    make_mask_binary(mask, mask_binary, &f_sky, npix); /* Make mask binary (only with 0 and 1) */
+    make_mask_binary(mask, mask_binary, f_sky, npix); /* Make mask binary (only with 0 and 1) */
     free(mask);
 
 
@@ -51,7 +51,7 @@ int get_main_s2hat_global_parameters(int nside, char *maskfile_path, s2hat_pixel
 }
 
 
-int init_s2hat_global_parameters(char *maskfile_path, int nside, int lmax, S2HAT_GLOBAL_parameters Global_param_s2hat){
+int init_s2hat_global_parameters(char *maskfile_path, int nside, int lmax, S2HAT_GLOBAL_parameters *Global_param_s2hat){
     /* Create s2hat structure of global parameters of s2hat, which must be distributed to all processors
     All processors must have those same s2hat structure 
     Full documentation here : https://apc.u-paris.fr/APC_CS/Recherche/Adamis/MIDAS09/software/s2hat/s2hat/docs/S2HATdocs.html */ 
@@ -60,19 +60,19 @@ int init_s2hat_global_parameters(char *maskfile_path, int nside, int lmax, S2HAT
     s2hat_scandef scan_sky_structure_pixel;
     s2hat_pixparameters pixpar;
 
-    get_main_s2hat_global_parameters(nside, maskfile_path, &pixelization_scheme, &scan_sky_structure_pixel, &pixpar);
+    get_main_s2hat_global_parameters(nside, maskfile_path, pixelization_scheme, scan_sky_structure_pixel, pixpar);
 
-    Global_param_s2hat.pixelization_scheme = pixelization_scheme;
-    Global_param_s2hat.scan_sky_structure_pixel = scan_sky_structure_pixel;
-    Global_param_s2hat.pixpar = pixpar;
+    Global_param_s2hat->pixelization_scheme = pixelization_scheme;
+    Global_param_s2hat->scan_sky_structure_pixel = scan_sky_structure_pixel;
+    Global_param_s2hat->pixpar = pixpar;
     
-    Global_param_s2hat.nside = nside;
-    Global_param_s2hat.nlmax = lmax-1; // S2HAT will generate alms between 0 and nlmax included, so we have to give lamx decreased by 1 to get the lmax requested
-    Global_param_s2hat.nmmax = lmax-1;
+    Global_param_s2hat->nside = nside;
+    Global_param_s2hat->nlmax = lmax-1; // S2HAT will generate alms between 0 and nlmax included, so we have to give lamx decreased by 1 to get the lmax requested
+    Global_param_s2hat->nmmax = lmax-1;
 }
 
 
-int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat, int *mvals, int gangrank, int gangsize, int gangroot, MPI_Comm gangcomm){
+int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters *Local_param_s2hat, int *mvals, int gangrank, int gangsize, int gangroot, MPI_Comm gangcomm){
     /* Create s2hat structure of local parameters of s2hat, which will differ for all processors
     Those local parameters are used to improve the computation efficiency
     Full documentation here : https://apc.u-paris.fr/APC_CS/Recherche/Adamis/MIDAS09/software/s2hat/s2hat/docs/S2HATdocs.html */ 
@@ -95,19 +95,19 @@ int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters Global_param_s2ha
     // mvals = (int *) calloc( nmvals, sizeof( int));    /// TO FREE LATER !!!!!!
     find_mvalues( gangrank, gangsize, nmmax, nmvals, mvals);
 
-    Local_param_s2hat.gangrank = gangrank;
-    Local_param_s2hat.gangsize = gangsize;
-    Local_param_s2hat.gangroot = gangroot;
-    Local_param_s2hat.gangcomm = gangcomm;
+    Local_param_s2hat->gangrank = gangrank;
+    Local_param_s2hat->gangsize = gangsize;
+    Local_param_s2hat->gangroot = gangroot;
+    Local_param_s2hat->gangcomm = gangcomm;
 
 
-    Local_param_s2hat.plms = plms;
+    Local_param_s2hat->plms = plms;
 
-    Local_param_s2hat.nmvals = nmvals;
-    Local_param_s2hat.first_ring = first_ring;
-    Local_param_s2hat.last_ring = last_ring;
-    Local_param_s2hat.map_size = map_size;
-    Local_param_s2hat.nplm = nplm;
+    Local_param_s2hat->nmvals = nmvals;
+    Local_param_s2hat->first_ring = first_ring;
+    Local_param_s2hat->last_ring = last_ring;
+    Local_param_s2hat->map_size = map_size;
+    Local_param_s2hat->nplm = nplm;
 
     Local_param_s2hat->mvals = mvals;
     return 0;
@@ -117,24 +117,24 @@ int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters Global_param_s2ha
 
 void mpi_broadcast_s2hat_global_struc(S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat, int gangroot){
     /* Use s2hat routines to broadcast s2hat structures */
-    mpi_pixelizationbcast(&Global_param_s2hat.pixelization_scheme, gangroot, Local_param_s2hat.gangrank, Local_param_s2hat.gangcomm);
-    mpi_scanbcast(Global_param_s2hat.pixelization_scheme, &Global_param_s2hat.scan_sky_structure_pixel, gangroot, Local_param_s2hat.gangrank, Local_param_s2hat.gang_comm);
+    MPI_pixelizationBcast(&Global_param_s2hat.pixelization_scheme, gangroot, Local_param_s2hat.gangrank, Local_param_s2hat.gangcomm);
+    MPI_scanBcast(Global_param_s2hat.pixelization_scheme, &Global_param_s2hat.scan_sky_structure_pixel, gangroot, Local_param_s2hat.gangrank, Local_param_s2hat.gangcomm);
 }
 
 
 void free_covariance_matrix(double ** covariance_matrix_3x3, int lmax){
     int ell_value;
     for (ell_value=0; ell_value<lmax+1; ell_value++){
-        free(covariance_matrix[ell_value]);
+        free(covariance_matrix_3x3[ell_value]);
     }
     free(covariance_matrix_3x3);    
 }
 
-void free_s2hat_parameters_struct(S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat){
+void free_s2hat_parameters_struct(S2HAT_GLOBAL_parameters *Global_param_s2hat, S2HAT_LOCAL_parameters *Local_param_s2hat){
     free(Local_param_s2hat->mvals);
     free(Local_param_s2hat);
-    destroy_pixelization(Global_param_s2hat.pixelization_scheme);
-    destroy_scan(Global_param_s2hat.scan_sky_structure_pixel);
+    destroy_pixelization(Global_param_s2hat->pixelization_scheme);
+    destroy_scan(Global_param_s2hat->scan_sky_structure_pixel);
     free(Global_param_s2hat);
 }
 

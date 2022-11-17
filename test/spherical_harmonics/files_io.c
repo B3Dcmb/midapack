@@ -6,9 +6,12 @@
 #include <string.h>
 // #include <mkl.h>
 // #include "fitsio.h"
+#include <fitsio.h>
 #include <unistd.h>
 #include "s2hat_tools.h"
 
+#define EXIT_INFO(Y,Z,args...) { FILE *X=stdout; fprintf( X, "[%s:%d] "Z,__func__, __LINE__, ##args); fflush(X); MPI_Abort( MPI_COMM_WORLD, Y); exit(Y); }
+#define INFO(Y,args...)        { FILE *X=stdout; fprintf( X, Y, ##args); fflush(X); }
 
 
 
@@ -53,28 +56,30 @@ void read_fits_mask(int nside, double *mask, char *path_mask_file, int col)
   ffclos(fptr, &status);
 
   /* revert if NESTED */
-  if( !strcmp( ordering, "NESTED")) {
-    printf( "NEST -> RING\n");
-    for( pixel_index=0; pixel_index<npix; pixel_index++) {
-      nest2ring( nside, pixel_index, &ipix);
-      mask[ipix] = (double)tmp[pixel_index];
-    }
+  // if( !strcmp( ordering, "NESTED")) {
+  //   printf( "NEST -> RING\n");
+  //   for( pixel_index=0; pixel_index<npix; pixel_index++) {
+  //     nest2ring( nside, pixel_index, &ipix);
+  //     mask[ipix] = (double)tmp[pixel_index];
+  //   }
     
-  } else {
-    for( pixel_index=0; pixel_index<npix; pixel_index++) mask[pixel_index] = (double)tmp[pixel_index];
-  }
+  // } else {
+  //   for( pixel_index=0; pixel_index<npix; pixel_index++) mask[pixel_index] = (double)tmp[pixel_index];
+  // }
+  for( pixel_index=0; pixel_index<npix; pixel_index++) mask[pixel_index] = (double)tmp[pixel_index];
   free( tmp);
 }
 
 
 
 
-void make_mask_binary(double* mask, int* mask_binary, int f_sky; int npix){
+void make_mask_binary(double* mask, int* mask_binary, int f_sky, int npix){
   /* Function to transform the mask into binary (composed of 0 and 1 on pixel sky)*/
+  int pixel;
   mask_binary = (int *) calloc( npix, sizeof( int));
-  for( p=0; p<npix; p++)
-      if( mask[p] != 0) {
-          mask_binary[p] = 1;
+  for( pixel=0; pixel<npix; pixel++)
+      if( mask[pixel] != 0) {
+          mask_binary[pixel] = 1;
           f_sky ++;
   }
 }
@@ -111,7 +116,7 @@ void read_fits_cells(int lmax, int number_correl, double *c_ell_array, char *pat
   }
 
   /* read size of column */
-  fits_read_key( fptr, TLONG, "NAXIS2", &ncol, comment, &status);
+  fits_read_key( fptr, TLONG, "NAXIS2", &col, comment, &status);
   if( status) {
     fits_get_errstatus( status, errbuf); 
     EXIT_INFO( status, "%s\n", errbuf);

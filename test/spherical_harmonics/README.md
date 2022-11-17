@@ -14,7 +14,7 @@ In particular, we create two main structures, `S2HAT_GLOBAL_parameters` and `S2H
 
 All those details are given in the file [s2hat_init_parameters.c](s2hat_init_parameters.c) and in the documentation, starting [here](https://apc.u-paris.fr/APC_CS/Recherche/Adamis/MIDAS09/software/s2hat/s2hat/docs/Cmanual/Cprelims.html).
 
-The file [file_tools.c](file_tools.c) provides the tools to read the files required by this extension.
+The file [files_io.c](files_io.c) provides the tools to read the files required by this extension.
 
 The file [covariance_matrix_tools.c](covariance_matrix_tools.c) provides the tools to create and use the CMB covariance matrix which will be used.
 
@@ -35,3 +35,8 @@ We also apply this solution mostly in harmonic domain, with with $a^{WF}_{\ell m
 For now, we consider the preconditioner given by :
 
 $$ M = (P^t diag(N^{-1}) P)^{-1} + C^{-1} $$
+
+
+## Notes
+
+- You may need to add a link to S2HAT in your `.bashrc`, in the form `S2HATROOT=/global/homes/f/fabbian/software/s2hat_v2.55_beta`. For now, it is supported through the home of Giulio Fabbian, but it will be recompiled in `common/software`, or eventually directly added to MIDAPACK.

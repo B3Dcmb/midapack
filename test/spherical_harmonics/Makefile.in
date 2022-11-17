@@ -1,0 +1,34 @@
+
+##############   t e s t s   ############
+
+all:
+	make wiener_filter
+
+wiener_filter:
+	@echo "start compiling Wiener_Filter extension ........"
+	make $(WIENERFILTER_OBJ)/alm_pix_tools.o \
+	$(WIENERFILTER_OBJ)/covariance_matrix_tools.o \
+	$(WIENERFILTER_OBJ)/s2hat_init_parameters.o \
+	$(WIENERFILTER_OBJ)/files_io.o \
+	$(WIENERFILTER_OBJ)/tmp_communication.o \
+
+$(WIENERFILTER_OBJ)/alm_pix_tools.o: alm_pix_tools.c
+	$(CC) -c $< $(INC) $(LIB) -o $@
+
+$(WIENERFILTER_OBJ)/covariance_matrix_tools.o: covariance_matrix_tools.c
+	$(CC) -c $< $(INC) $(LIB) -o $@
+
+$(WIENERFILTER_OBJ)/s2hat_init_parameters.o: s2hat_init_parameters.c
+	$(CC) -c $< $(INC) $(LIB) -o $@
+
+$(WIENERFILTER_OBJ)/files_io.o: files_io.c
+	$(CC) -c $< $(INC) $(LIB) $(CFITSIO_INC) $(CFITSIO_LIB) -o $@
+
+$(WIENERFILTER_OBJ)/tmp_communication.o: tmp_communication.c
+	$(CC) -c $< $(INC) $(LIB) -o $@
+
+
+##############   u t i l s   #############
+
+clean:
+	rm -f $(WIENERFILTER_OBJ)/*.o ;

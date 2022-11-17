@@ -4,8 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "mapmat.h"
 #include "s2hat_tools.h"
+#include "midapack.h"
 
 /* Taken from greedyreduce in mapmat.c, case ALLREDUCE
     Reduce all pixel sky maps distributed among different procs to a single full sky map
@@ -35,6 +35,8 @@ int all_reduce_to_single_map_mappraiser(Mat *A, double* x, int nside, double* ou
         printf("%lf ", com_val[i]);
     } */
     MPI_Allreduce(com_val, out_val, 3*npix, MPI_DOUBLE, MPI_SUM, A->comm);	//maximum index
+    // -> Just reduce, not allreduce
+
     free(lvalues);
 
     ///// TO MODIFY : How are the 3 stokes parameters for the map included ?
@@ -43,7 +45,7 @@ int all_reduce_to_single_map_mappraiser(Mat *A, double* x, int nside, double* ou
 int distribute_map_S2HAT_ordering(double* full_sky_map, double *local_map_s2hat, S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat){
 
     distribute_map(Global_param_s2hat.pixelization_scheme, 1, 0, 3, Local_param_s2hat.first_ring, Local_param_s2hat.last_ring, Local_param_s2hat.map_size, 
-        local_map_s2hat, full_sky_map, Local_param_s2hat.gangrank, Local_param_s2hat.gangsize, Local_param_s2hat.gangroot, Local_param_s2hat.gang_comm);
+        local_map_s2hat, full_sky_map, Local_param_s2hat.gangrank, Local_param_s2hat.gangsize, Local_param_s2hat.gangroot, Local_param_s2hat.gangcomm);
     // 1 for the number of maps, 0 for the index of the current map, 3 for the number of Stokes parameters
 
     return 0;
@@ -55,12 +57,14 @@ int brute_force_transfer_local_maps(Mat *A, double* local_pixel_map_MAPPRAISER, 
     int nside = Global_param_s2hat.nside;
     double* full_sky_map;
 
+    int npix = 12*nside*nside;
 
     full_sky_map=(double *) malloc( 3*npix *sizeof(double));
-    all_reduce_to_single_map_mappraiser(Mat *A, local_pixel_map_MAPPRAISER, nside, full_sky_map);
+    all_reduce_to_single_map_mappraiser(A, local_pixel_map_MAPPRAISER, nside, full_sky_map);
 
-    // Change ordering of full_sky_map to have what S2HAT expects
+    // Change ordering of full_sky_map to have what S2HAT expects ? 
+    // It seems to be ordered the same way
 
-    distribute_map_S2HAT_ordering(full_sky_map, local_pixel_map_s2hat, S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat);
+    distribute_map_S2HAT_ordering(full_sky_map, local_pixel_map_s2hat, Global_param_s2hat, Local_param_s2hat);
 }
 
