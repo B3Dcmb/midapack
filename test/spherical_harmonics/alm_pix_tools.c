@@ -33,8 +33,6 @@ int apply_alm2pix(double *local_alm, double *local_map_pix, S2HAT_GLOBAL_paramet
         local_alm, Local_param_s2hat.nplm, NULL, 
 		Local_param_s2hat.gangsize, Local_param_s2hat.gangrank, Local_param_s2hat.gang_comm);
     // The NULL argument correspond to precomputed Legendre polynomials, only relevant if plms != 0
-
-
     return 0;
 }
 
@@ -43,7 +41,7 @@ int apply_alm2pix(double *local_alm, double *local_map_pix, S2HAT_GLOBAL_paramet
 
 
 int apply_pix2alm(double *local_map_pix, double *local_alm, S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat){
-    /* Transform pixel mal into alm coefficients, all details here : https://apc.u-paris.fr/APC_CS/Recherche/Adamis/MIDAS09/software/s2hat/s2hat/docs/Cmanual/Cmap2alm.html 
+    /* Transform pixel map into alm coefficients, all details here : https://apc.u-paris.fr/APC_CS/Recherche/Adamis/MIDAS09/software/s2hat/s2hat/docs/Cmanual/Cmap2alm.html 
      local_alm is a 4-dimensional array in the form :
         (1:nstokes,0:nlmax,0:nmvals-1,1:nmaps), if lda == nstokes;      (HEALpix convention)
         (0:nlmax,0:nmvals-1,1:nstokes,1:nmaps), if lda == nlmax;      (S2HAT convention)
@@ -77,9 +75,30 @@ int apply_pix2alm(double *local_map_pix, double *local_alm, S2HAT_GLOBAL_paramet
     return 0;
 }
 
-int apply_inv_covariance_matrix_to_alm(double* local_alm, double* inv_covariance_matrix, S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat){
+int apply_inv_covariance_matrix_to_alm(double *local_alm, double **inv_covariance_matrix, S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat){
+    /* Apply inverse of covariance matrix to local_alm */
 
     // distribute_alms to apply to covariance matrix ?
 
+    int ell_value, m_value, nstokes, line_index;
+    int lmax = Global_param_s2hat.nlmax;
 
+    int nmvals = Local_param_s2hat.nmvals; // Total number of m values
+    // int *mvals = Local_param_s2hat->mvals; // Values of m the considered processor contain
+
+    double res;
+
+    for(ell_value=0; ell_value < lmax+1; ell_value++){
+        for(m_value=0; m_value < nmvals; m_value++){
+            for (nstokes=0; nstokes<3; nstokes++){
+                res = 0;
+                for (line_index=0; line_index < 3; line_index++){
+                    res += local_alm[line_index*(lmax+1)*nmvals + ell_value*nmvals + m_value] * inv_covariance_matrix[ell_value][nstokes*3 + line_index];
+                }
+                local_alm[nstokes*(lmax+1)*nmvals + ell_value*nmvals + m_value] = res;
+            }
+            // Verify it is not applied to part where a_lm not defined !!!
+        }
+    }
 }
+

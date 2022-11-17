@@ -67,7 +67,7 @@ int get_inverse_matrix(int order_matrix, double* matrix_to_be_inverted){
 
 
 
-int get_covariance_matrix_3x3(char *c_ell_path, int number_correl, double **covariance_matrix_3x3, S2HAT_GLOCAL_parameters Global_param_s2hat)
+int get_covariance_matrix_3x3(char *c_ell_path, int number_correl, double **covariance_matrix_3x3, S2HAT_GLOCAL_parameters Global_param_s2hat){
     /* Read c_ell file to compute covariance matrix
 
     Number_correl is expected to be :
@@ -81,7 +81,6 @@ int get_covariance_matrix_3x3(char *c_ell_path, int number_correl, double **cova
         in this order, ravelled in 1D
         so covariance_matrix_3x3[lmax][9] with 9 being [TT, TE, TB, ET, EE, EB, BT, BE, BB] (with TE=ET, TB=BT and BE=EB)
         */
-{
     int lmax = Global_param_s2hat.nlmax;
     int correl_index, ell_value;
     double *c_ell_array;
@@ -92,22 +91,22 @@ int get_covariance_matrix_3x3(char *c_ell_path, int number_correl, double **cova
     }
 
     c_ell_array = malloc(number_correl*sizeof(double));
-    read_fits_cells(lmax, number_correl, c_ell_array, c_ell_path, 1); // Reading cell_fits_file
+    read_fits_cells(lmax+1, number_correl, c_ell_array, c_ell_path, 1); // Reading cell_fits_file
 
 
-    for (ell_value=0; ell_value<lmax; ell_value++){
+    for (ell_value=0; ell_value<lmax+1; ell_value++){
         for (correl_index=0; correl_index<3; correl_index++){
-            covariance_matrix[ell_value][correl_index*3 + ell_value] = c_ell_array[ lmax*correl_index + ell_value ]; // Diagonal part : TT (0), EE (4), BB (8)
+            covariance_matrix[ell_value][correl_index*3 + ell_value] = c_ell_array[ (lmax+1)*correl_index + ell_value ]; // Diagonal part : TT (0), EE (4), BB (8)
         }
-        covariance_matrix[ell_value][1] = c_ell_array[ 3*lmax + ell_value ]; // Cross-correlation TE (up-right block)
-        covariance_matrix[ell_value][3] = c_ell_array[ 3*lmax + ell_value ]; // Cross-correlation TE (middle-left block)
+        covariance_matrix[ell_value][1] = c_ell_array[ 3*(lmax+1) + ell_value ]; // Cross-correlation TE (up-right block)
+        covariance_matrix[ell_value][3] = c_ell_array[ 3*(lmax+1) + ell_value ]; // Cross-correlation TE (middle-left block)
 
         if(number_correl == 6){
-            covariance_matrix[ell_value][2] = c_ell_array[ 4*lmax + ell_value ]; // Cross-correlation TB (up-right block)
-            covariance_matrix[ell_value][6] = c_ell_array[ 4*lmax + ell_value ]; // Cross-correlation TB (bottom-left block)
+            covariance_matrix[ell_value][2] = c_ell_array[ 4*(lmax+1) + ell_value ]; // Cross-correlation TB (up-right block)
+            covariance_matrix[ell_value][6] = c_ell_array[ 4*(lmax+1) + ell_value ]; // Cross-correlation TB (bottom-left block)
             
-            covariance_matrix[ell_value][5] = c_ell_array[ 5*lmax + ell_value ]; // Cross-correlation EB (bottom-middle block)
-            covariance_matrix[ell_value][7] = c_ell_array[ 5*lmax + ell_value ]; // Cross-correlation EB (middle-right block)
+            covariance_matrix[ell_value][5] = c_ell_array[ 5*(lmax+1) + ell_value ]; // Cross-correlation EB (bottom-middle block)
+            covariance_matrix[ell_value][7] = c_ell_array[ 5*(lmax+1) + ell_value ]; // Cross-correlation EB (middle-right block)
         }
     }
 
@@ -123,8 +122,8 @@ int get_inverse_covariance_matrix_3x3(char *c_ell_path, int number_correl, doubl
     */
     double **covariance_matrix;
 
-    covariance_matrix = calloc(lmax, sizeof(double *));
-    for(ell_value=0; ell_value<lmax; ell_value++){
+    covariance_matrix = calloc(lmax+1, sizeof(double *));
+    for(ell_value=0; ell_value<lmax+1; ell_value++){
         covariance_matrix[ell_value] = calloc(9,sizeof(double));
     }
 
@@ -132,7 +131,7 @@ int get_inverse_covariance_matrix_3x3(char *c_ell_path, int number_correl, doubl
 
     int ell_value;
     int lmax = Global_param_s2hat.nlmax;
-    for(ell_value=0; ell_value<lmax; ell_value++){
+    for(ell_value=0; ell_value<lmax+1; ell_value++){
         get_inverse_matrix(3, covariance_matrix[ell_value]);
         inverse_covariance_matrix[ell_value] = covariance_matrix[ell_value];
     }    
@@ -140,7 +139,7 @@ int get_inverse_covariance_matrix_3x3(char *c_ell_path, int number_correl, doubl
     // To maybe modify/verify later
 
 
-    for (index_1=0; index_1<lmax; index_1++){
+    for (index_1=0; index_1<lmax+1; index_1++){
             free(covariance_matrix[index_1]);
     }
     free(covariance_matrix)
@@ -149,7 +148,7 @@ int get_inverse_covariance_matrix_3x3(char *c_ell_path, int number_correl, doubl
 
 
 
-/* Old version*/
+/* Old version -- DEPRECATED */
 // int get_covariance_matrix(char* c_ell_path, int number_correl, double* covariance_matrix, S2HAT_GLOCAL_parameters Global_param_s2hat)
 //     /* Read c_ell file to compute covariance matrix
 

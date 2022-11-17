@@ -70,12 +70,13 @@ void read_fits_mask(int nside, double *mask, char *path_mask_file, int col)
 
 
 void make_mask_binary(double* mask, int* mask_binary, int f_sky; int npix){
-        mask_binary = (int *) calloc( npix, sizeof( int));
-        for( p=0; p<npix; p++)
-            if( mask[p] != 0) {
-                mask_binary[p] = 1;
-                f_sky ++;
-        }
+  /* Function to transform the mask into binary (composed of 0 and 1 on pixel sky)*/
+  mask_binary = (int *) calloc( npix, sizeof( int));
+  for( p=0; p<npix; p++)
+      if( mask[p] != 0) {
+          mask_binary[p] = 1;
+          f_sky ++;
+  }
 }
 
 
@@ -127,5 +128,4 @@ void read_fits_cells(int lmax, int number_correl, double *c_ell_array, char *pat
     EXIT_INFO( status, "%s\n", errbuf);
   }
 }
-
 
