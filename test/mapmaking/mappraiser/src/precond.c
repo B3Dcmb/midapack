@@ -32,10 +32,9 @@
 int getlocalW(Mat *A, Tpltz Nm1, double *vpixBlock, int *lhits)
 {
     int i, j, k, l; // some indexes
-    int m;
-
-    m = Nm1.local_V_size; // number of local time samples
-    int nnz = (A->nnz);
+    int m = Nm1.local_V_size; // number of local time samples
+    int nnz = (A->nnz); // number of non-zero entries
+    int n_valid = (A->lcount) - (A->trash_pix) * nnz; // size of map-domain objects
 
     // Define the indices for each process
     int idv0, idvn; // indice of the first and the last block of V for each processes
@@ -50,7 +49,7 @@ int getlocalW(Mat *A, Tpltz Nm1, double *vpixBlock, int *lhits)
     // vpixDiag = (double *) malloc(A->lcount *sizeof(double));
 
     int istart, il, istartn;
-    for (i = 0; i < nnz * A->lcount; i++)
+    for (i = 0; i < nnz * n_valid; i++)
         vpixBlock[i] = 0.0; // 0.0;
 
     int vShft = idpnew - Nm1.idp; //=Nm1.tpltzblocks[idv0].idv-Nm1.idp in principle
@@ -64,14 +63,22 @@ int getlocalW(Mat *A, Tpltz Nm1, double *vpixBlock, int *lhits)
     */
 
     // go until the first piecewise stationary period
+    int vpix_i, vpix_j = 0;
     for (i = 0; i < vShft; i++)
     {
-        lhits[(int)(A->indices[i * nnz] / nnz)] += 1;
-        for (j = 0; j < nnz; j++)
+        // only do something for valid pixels
+        if (!A->trash_pix || (A->trash_pix && A->indices[i * A->nnz] != 0))
         {
-            for (k = 0; k < nnz; k++)
+            vpix_i = A->indices[i * nnz] / nnz - A->trash_pix;
+            lhits[vpix_i] += 1;
+            for (j = 0; j < nnz; j++)
             {
-                vpixBlock[nnz * A->indices[i * nnz + j] + k] += A->values[i * nnz + j] * A->values[i * nnz + k];
+                vpix_j = A->indices[i * nnz + j] - nnz * A->trash_pix;
+                for (k = 0; k < nnz; k++)
+                {
+                    // value (j, k) of 3*3 block
+                    vpixBlock[nnz * vpix_j + k] += A->values[i * nnz + j] * A->values[i * nnz + k];
+                }
             }
         }
     }
@@ -111,27 +118,43 @@ int getlocalW(Mat *A, Tpltz Nm1, double *vpixBlock, int *lhits)
             */
 
             // a piecewise stationary period
+            vpix_i = 0;
+            vpix_j = 0;
             for (i = istart; i < istart + il; i++)
             {
-                lhits[(int)(A->indices[i * nnz] / nnz)] += 1;
-                for (j = 0; j < nnz; j++)
+                // only do something for valid pixels
+                if (!A->trash_pix || (A->trash_pix && A->indices[i * A->nnz] != 0))
                 {
-                    for (l = 0; l < nnz; l++)
+                    vpix_i = A->indices[i * nnz] / nnz - A->trash_pix;
+                    lhits[vpix_i] += 1;
+                    for (j = 0; j < nnz; j++)
                     {
-                        vpixBlock[nnz * A->indices[i * nnz + j] + l] += A->values[i * nnz + j] * A->values[i * nnz + l] * diagNm1;
+                        vpix_j = A->indices[i * nnz + j] - nnz * A->trash_pix;
+                        for (l = 0; l < nnz; l++)
+                        {
+                            vpixBlock[nnz * vpix_j + l] += A->values[i * nnz + j] * A->values[i * nnz + l] * diagNm1;
+                        }
                     }
                 }
             }
 
             // continue until the next period if exist or to the last line of V
+            vpix_i = 0;
+            vpix_j = 0;
             for (i = istart + il; i < istartn; i++)
             {
-                lhits[(int)(A->indices[i * nnz] / nnz)] += 1;
-                for (j = 0; j < nnz; j++)
+                // only do something for valid pixels
+                if (!A->trash_pix || (A->trash_pix && A->indices[i * A->nnz] != 0))
                 {
-                    for (l = 0; l < nnz; l++)
+                    vpix_i = A->indices[i * nnz] / nnz - A->trash_pix;
+                    lhits[vpix_i] += 1;
+                    for (j = 0; j < nnz; j++)
                     {
-                        vpixBlock[nnz * A->indices[i * nnz + j] + l] += A->values[i * nnz + j] * A->values[i * nnz + l];
+                        vpix_j = A->indices[i * nnz + j] - nnz * A->trash_pix;
+                        for (l = 0; l < nnz; l++)
+                        {
+                            vpixBlock[nnz * vpix_j + l] += A->values[i * nnz + j] * A->values[i * nnz + l];
+                        }
                     }
                 }
             }
@@ -482,11 +505,11 @@ int get_pixshare_pond(Mat *A, double *pixpond)
     return 0;
 }
 
-// Block diagonal jacobi preconditioner with degenrate pixels pre-processing
+// Block diagonal jacobi preconditioner with degenerate pixels pre-processing
 int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ_inv, Mat *BJ, double *b, double *cond, int *lhits)
 {
     int i, j, k; // some indexes
-    int m, m_cut, n, rank, size;
+    int m, m_cut, n, rank, size, nnz;
     int *indices_new, *tmp1;
     double *vpixBlock, *vpixBlock_inv, *vpixBlock_loc, *hits_proc, *tmp2, *tmp3, *tmp4;
     double det, invdet;
@@ -500,15 +523,16 @@ int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ_inv, Mat *BJ, double *b, d
     lda = 3;
 
     m = A->m;
+    nnz = A->nnz;
     m_cut = m;
-    n = A->lcount;
+    // at this stage there can be some invalid (flagged) pixels
+    n = (A->lcount) - nnz * (A->trash_pix);
     MPI_Comm_rank(A->comm, &rank); //
     MPI_Comm_size(A->comm, &size);
 
-    indices_new = (int *)malloc((A->nnz) * n * sizeof(int));
     vpixBlock_loc = (double *)malloc(n * sizeof(double));
-    vpixBlock = (double *)malloc(n * (A->nnz) * sizeof(double));
-    vpixBlock_inv = (double *)malloc(n * (A->nnz) * sizeof(double));
+    vpixBlock = (double *)malloc(n * nnz * sizeof(double));
+    vpixBlock_inv = (double *)malloc(n * nnz * sizeof(double));
     hits_proc = (double *)malloc(n * sizeof(double));
     if (indices_new == NULL || vpixBlock_loc == NULL || vpixBlock == NULL || vpixBlock_inv == NULL || hits_proc == NULL)
     {
@@ -535,50 +559,50 @@ int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ_inv, Mat *BJ, double *b, d
 
     // communicate with the other processes to have the global reduce
     // TODO : This should be done in a more efficient way
-    for (i = 0; i < n * (A->nnz); i += (A->nnz) * (A->nnz))
+    for (i = 0; i < n * nnz; i += nnz * nnz)
     {
-        for (j = 0; j < (A->nnz); j++)
+        for (j = 0; j < nnz; j++)
         {
-            vpixBlock_loc[(i / (A->nnz)) + j] = vpixBlock[i + j];
+            vpixBlock_loc[(i / nnz) + j] = vpixBlock[i + j];
         }
     }
     commScheme(A, vpixBlock_loc, 2);
-    for (i = 0; i < n * (A->nnz); i += (A->nnz) * (A->nnz))
+    for (i = 0; i < n * nnz; i += nnz * nnz)
     {
-        for (j = 0; j < (A->nnz); j++)
+        for (j = 0; j < nnz; j++)
         {
-            vpixBlock[i + j] = vpixBlock_loc[(i / (A->nnz)) + j];
+            vpixBlock[i + j] = vpixBlock_loc[(i / nnz) + j];
         }
     }
 
-    for (i = 3; i < n * (A->nnz); i += (A->nnz) * (A->nnz))
+    for (i = 3; i < n * nnz; i += nnz * nnz)
     {
-        for (j = 0; j < (A->nnz); j++)
-            vpixBlock_loc[(i - 3) / (A->nnz) + j] = vpixBlock[i + j];
+        for (j = 0; j < nnz; j++)
+            vpixBlock_loc[(i - 3) / nnz + j] = vpixBlock[i + j];
     }
     commScheme(A, vpixBlock_loc, 2);
-    for (i = 3; i < n * (A->nnz); i += (A->nnz) * (A->nnz))
+    for (i = 3; i < n * nnz; i += nnz * nnz)
     {
-        for (j = 0; j < (A->nnz); j++)
-            vpixBlock[i + j] = vpixBlock_loc[(i - 3) / (A->nnz) + j];
+        for (j = 0; j < nnz; j++)
+            vpixBlock[i + j] = vpixBlock_loc[(i - 3) / nnz + j];
     }
 
-    for (i = 6; i < n * (A->nnz); i += (A->nnz) * (A->nnz))
+    for (i = 6; i < n * nnz; i += nnz * nnz)
     {
-        for (j = 0; j < (A->nnz); j++)
-            vpixBlock_loc[(i - 6) / (A->nnz) + j] = vpixBlock[i + j];
+        for (j = 0; j < nnz; j++)
+            vpixBlock_loc[(i - 6) / nnz + j] = vpixBlock[i + j];
     }
     commScheme(A, vpixBlock_loc, 2);
-    for (i = 6; i < n * (A->nnz); i += (A->nnz) * (A->nnz))
+    for (i = 6; i < n * nnz; i += nnz * nnz)
     {
-        for (j = 0; j < (A->nnz); j++)
-            vpixBlock[i + j] = vpixBlock_loc[(i - 6) / (A->nnz) + j];
+        for (j = 0; j < nnz; j++)
+            vpixBlock[i + j] = vpixBlock_loc[(i - 6) / nnz + j];
     }
     free(vpixBlock_loc);
 
-    // Compute the inverse of the global AtA blocks (beware this part is only valid for nnz = 3)
+    // Compute the inverse of the global Atdiag(N^-1)A blocks (beware this part is only valid for nnz = 3)
     int uncut_pixel_index = 0;
-    for (i = 0; i < n * (A->nnz); i += (A->nnz) * (A->nnz))
+    for (i = 0; i < n * nnz; i += nnz * nnz)
     {
         // init 3x3 block
         double block[3][3];
@@ -613,13 +637,17 @@ int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ_inv, Mat *BJ, double *b, d
               block[0][1] * (block[1][0] * block[2][2] - block[1][2] * block[2][0]) +
               block[0][2] * (block[1][0] * block[2][1] - block[1][1] * block[2][0]);
 
+        // Remove the degenerate pixels from the map-making
+
         if (rcond > 1e-1)
         {
+            // The pixel is well enough observed, inverse the preconditioner block
+
             invdet = 1 / det;
 
             // Compute the inverse coeffs
             // TODO: This should take into account the fact that the blocks are symmetric
-            //  an generalize beyond the 3x3 case
+            // and generalize beyond the 3x3 case
             vpixBlock_inv[i] = (block[1][1] * block[2][2] - block[2][1] * block[1][2]) * invdet;
             vpixBlock_inv[i + 1] = (block[0][2] * block[2][1] - block[0][1] * block[2][2]) * invdet;
             vpixBlock_inv[i + 2] = (block[0][1] * block[1][2] - block[0][2] * block[1][1]) * invdet;
@@ -631,55 +659,61 @@ int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ_inv, Mat *BJ, double *b, d
             vpixBlock_inv[i + 8] = (block[0][0] * block[1][1] - block[1][0] * block[0][1]) * invdet;
         }
         else
-        { // Remove the degenerate pixels from the map-making
-
+        {
+            // The pixel is not well enough observed
             // Remove the poorly conditioned pixel from the map, point the associated gap samples to trash pixel
-            // Set flag of trash pixels in pointing matrix to 1
+
+            // Raise pointing matrix flag to signal presence of trash pixels
             A->trash_pix = 1;
+
             // Search for the corresponding gap samples
-            j = A->id0pix[(int)uncut_pixel_index / ((A->nnz) * (A->nnz))]; // last index of time sample pointing to degenerate pixel
+            j = A->id0pix[uncut_pixel_index]; // last index of time sample pointing to degenerate pixel
+
             // Point the last gap sample to trash pixel
-            for (k = 0; k < (A->nnz); k++)
+            for (k = 0; k < nnz; k++)
             {
-                A->indices[j * (A->nnz) + k] = k - (A->nnz);
-                A->values[j * (A->nnz) + k] = 0;
+                A->indices[j * nnz + k] = k - nnz;
+                A->values[j * nnz + k] = 0;
             }
+
             // Set the corresponding signal time stream sample to zero
             b[j] = 0;
+
             // Point all the preceding gap samples to trash pixel and set them to zero in the TOD
             while (A->ll[j] != -1)
             {
                 b[A->ll[j]] = 0;
-                for (k = 0; k < (A->nnz); k++)
+                for (k = 0; k < nnz; k++)
                 {
-                    A->indices[A->ll[j] * (A->nnz) + k] = k - (A->nnz);
-                    A->values[A->ll[j] * (A->nnz) + k] = 0;
+                    A->indices[A->ll[j] * nnz + k] = k - nnz;
+                    A->values[A->ll[j] * nnz + k] = 0;
                 }
                 j = A->ll[j];
             }
 
             // Remove degenerate pixel from vpixBlock, lhits, and cond
-            memmove(vpixBlock + i, vpixBlock + i + (A->nnz) * (A->nnz), (n * (A->nnz) - (A->nnz) * (A->nnz) - i) * sizeof(double));
-            memmove(lhits + (int)i / ((A->nnz) * (A->nnz)), lhits + (int)i / ((A->nnz) * (A->nnz)) + 1, ((int)n / (A->nnz) - 1 - (int)i / ((A->nnz) * (A->nnz))) * sizeof(int));
-            memmove(cond + (int)i / ((A->nnz) * (A->nnz)), cond + (int)i / ((A->nnz) * (A->nnz)) + 1, ((int)n / (A->nnz) - 1 - (int)i / ((A->nnz) * (A->nnz))) * sizeof(double));
+            memmove(vpixBlock + i, vpixBlock + i + nnz * nnz, (n * nnz - nnz * nnz - i) * sizeof(double));
+            memmove(lhits + (int)i / (nnz * nnz), lhits + (int)i / (nnz * nnz) + 1, ((int)n / nnz - 1 - (int)i / (nnz * nnz)) * sizeof(int));
+            memmove(cond + (int)i / (nnz * nnz), cond + (int)i / (nnz * nnz) + 1, ((int)n / nnz - 1 - (int)i / (nnz * nnz)) * sizeof(double));
 
             // Shrink effective size of vpixBlock
-            n -= (A->nnz);
-            i -= (A->nnz) * (A->nnz);
+            n -= nnz;
+            i -= nnz * nnz;
         }
-        uncut_pixel_index += (A->nnz) * (A->nnz);
+        ++uncut_pixel_index;
     }
     // free memory
     free(A->id0pix);
     free(A->ll);
+    
     // Reallocate memory for preconditioner blocks and redefine pointing matrix in case of the presence of degenerate pixels
     if (A->trash_pix)
     {
         // Reallocate memory of vpixBlock by shrinking its memory size to its effective size (no degenerate pixel)
-        tmp2 = (double *)realloc(vpixBlock, n * (A->nnz) * sizeof(double));
-        tmp4 = (double *)realloc(vpixBlock_inv, n * (A->nnz) * sizeof(double));
-        tmp1 = (int *)realloc(lhits, (int)n / (A->nnz) * sizeof(int));
-        tmp3 = (double *)realloc(cond, (int)n / (A->nnz) * sizeof(double));
+        tmp2 = (double *)realloc(vpixBlock, n * nnz * sizeof(double));
+        tmp4 = (double *)realloc(vpixBlock_inv, n * nnz * sizeof(double));
+        tmp1 = (int *)realloc(lhits, (int)n / nnz * sizeof(int));
+        tmp3 = (double *)realloc(cond, (int)n / nnz * sizeof(double));
         if (tmp1 == NULL || tmp2 == NULL || tmp3 == NULL || tmp4 == NULL)
         {
             printf("Out of memory: reallocation of preconditioner blocks, hits or rcond maps failed");
@@ -695,7 +729,7 @@ int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ_inv, Mat *BJ, double *b, d
     }
 
     // map local indices to global indices in indices_cut
-    for (i = 0; i < m * A->nnz; i++)
+    for (i = 0; i < m * nnz; i++)
     {
         // switch to global indices
         if (A->indices[i] >= 0) // only for no trash_pix
@@ -706,26 +740,27 @@ int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ_inv, Mat *BJ, double *b, d
     MatFree(A);
 
     // Define new pointing matrix (marginalized over degenerate pixels and free from gap samples)
-    MatInit(A, m, A->nnz, A->indices, A->values, A->flag, MPI_COMM_WORLD);
+    MatInit(A, m, nnz, A->indices, A->values, A->flag, MPI_COMM_WORLD);
 
     // Define Block-Jacobi preconditioner indices
+    indices_new = (int *)malloc(n * nnz * sizeof(int));
     for (i = 0; i < n; i++)
     {
-        for (j = 0; j < (A->nnz); j++)
+        for (j = 0; j < nnz; j++)
         {
-            indices_new[i * (A->nnz) + j] = A->lindices[(A->nnz) * (A->trash_pix) + (A->nnz) * ((int)i / (A->nnz)) + j];
+            indices_new[i * nnz + j] = A->lindices[nnz * (A->trash_pix) + nnz * ((int)i / nnz) + j];
         }
     }
 
     // Init Block-Jacobi inv preconditioner
-    MatSetIndices(BJ_inv, n, A->nnz, indices_new);
-    MatSetValues(BJ_inv, n, A->nnz, vpixBlock_inv);
+    MatSetIndices(BJ_inv, n, nnz, indices_new);
+    MatSetValues(BJ_inv, n, nnz, vpixBlock_inv);
     BJ_inv->trash_pix = 0;
     MatLocalShape(BJ_inv, 3);
 
     // Init Block-Jacobi preconditioner
-    MatSetIndices(BJ, n, A->nnz, indices_new);
-    MatSetValues(BJ, n, A->nnz, vpixBlock);
+    MatSetIndices(BJ, n, nnz, indices_new);
+    MatSetValues(BJ, n, nnz, vpixBlock);
     BJ->trash_pix = 0;
     MatLocalShape(BJ, 3);
 
@@ -1447,9 +1482,6 @@ void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat
 
     MPI_Comm_rank(A->comm, &rank);
     MPI_Comm_size(A->comm, &size);
-
-    if (rank == 0)
-        printf("Last compiled on %s at %s\n", __DATE__, __TIME__);
 
     p->precond = precond;
     p->Zn = Zn;

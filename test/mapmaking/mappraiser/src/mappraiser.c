@@ -29,9 +29,11 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     int64_t gif;           // global indice for the first local line
     int i, j, k;
     Mat A; // pointing matrix structure
-    int *id0pix, *ll;
-    double *x;    // pixel domain vectors
-    double st, t; // timer, start time
+    int *id0pix, *ll = NULL; // pixel-to-time-domain mapping
+    int nbr_valid_pixels;    // nbr of valid pixel indices
+    double *x, *cond = NULL; // pixel domain vectors
+    int *lhits = NULL;
+    double st, t;         // timer, start time
     int rank, size;
     MPI_Status status;
 
@@ -42,6 +44,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     if (rank == 0)
     {
         printf("\n############# MAPPRAISER : MidAPack PaRAllel Iterative Sky EstimatoR vDev, May 2019 ################\n");
+        printf("Last compiled on %s at %s\n", __DATE__, __TIME__);
         printf("rank = %d, size = %d\n", rank, size);
         fflush(stdout);
     }
@@ -78,10 +81,21 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
         fflush(stdout);
     }
 
-    // Pointing matrix init
+    // Pointing matrix initialization
+
     st = MPI_Wtime();
     A.trash_pix = 0;
     MatInit(&A, m, Nnz, pix, pixweights, pointing_commflag, comm);
+
+    // check if any samples have been flagged (i.e. pixel indices set to negative values)
+    // if this is the case, raise the trash_pix flag
+    nbr_valid_pixels = A.lcount;
+    if (A.lindices[0] < 0)
+    {
+        A.trash_pix = 1;
+        nbr_valid_pixels -= A.nnz;
+    }
+
     t = MPI_Wtime();
     if (rank == 0)
     {
@@ -89,31 +103,45 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
         fflush(stdout);
     }
 
-    // Build pixel-to-time domain mapping
+    // Build pixel-to-time-domain mapping
+
     st = MPI_Wtime();
-    id0pix = (int *)malloc(A.lcount / (A.nnz) * sizeof(int)); // index of the last time sample pointing to each pixel
-    ll = (int *)malloc(m * sizeof(int));                      // linked list of time samples indexes
+    id0pix = (int *)malloc(nbr_valid_pixels / (A.nnz) * sizeof(int)); // index of the last time sample pointing to each pixel
+    ll = (int *)malloc(m * sizeof(int));                              // linked list of time samples indexes
+
+    if (id0pix == NULL || ll == NULL)
+    {
+        printf("memory allocation failed");
+        exit(1);
+    }
 
     // initialize the mapping arrays to -1
     for (i = 0; i < m; i++)
     {
         ll[i] = -1;
     }
-    for (j = 0; j < A.lcount / (A.nnz); j++)
+    for (j = 0; j < nbr_valid_pixels / (A.nnz); j++)
     {
         id0pix[j] = -1;
     }
+
     // build the linked list chain of time samples corresponding to each pixel
+    int vpix_i = 0;
     for (i = 0; i < m; i++)
     {
-        if (id0pix[A.indices[i * A.nnz] / (A.nnz)] == -1)
+        // only do something for valid pixels
+        if (!A.trash_pix || (A.trash_pix && A.indices[i * A.nnz] != 0))
         {
-            id0pix[A.indices[i * A.nnz] / (A.nnz)] = i;
-        }
-        else
-        {
-            ll[i] = id0pix[A.indices[i * A.nnz] / (A.nnz)];
-            id0pix[A.indices[i * A.nnz] / (A.nnz)] = i;
+            vpix_i = A.indices[i * A.nnz] / A.nnz - A.trash_pix;
+            if (id0pix[vpix_i] == -1)
+            {
+                id0pix[vpix_i] = i;
+            }
+            else
+            {
+                ll[i] = id0pix[vpix_i];
+                id0pix[vpix_i] = i;
+            }
         }
     }
     A.id0pix = id0pix;
@@ -121,18 +149,23 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     t = MPI_Wtime();
     if (rank == 0)
     {
-        printf("[rank %d] Total pixel-to-time domain mapping time=%lf \n", rank, t - st);
+        printf("[rank %d] Total pixel-to-time-domain mapping time=%lf \n", rank, t - st);
         fflush(stdout);
     }
 
-    // Map objects memory allocation (MatInit gives A.lcount)
-    int *lhits;
-    double *cond;
-    x = (double *)malloc(A.lcount * sizeof(double));
-    cond = (double *)malloc((int)(A.lcount / 3) * sizeof(double));
-    lhits = (int *)malloc((int)(A.lcount / 3) * sizeof(int));
+    // Map objects memory allocation
+    // MatInit gives A.lcount which is used to compute nbr_valid_pixels
 
-    for (j = 0; j < A.lcount; j++)
+    x = (double *)malloc(nbr_valid_pixels * sizeof(double));
+    cond = (double *)malloc((int)(nbr_valid_pixels / 3) * sizeof(double));
+    lhits = (int *)malloc((int)(nbr_valid_pixels / 3) * sizeof(int));
+    if (x == NULL || cond == NULL || lhits == NULL)
+    {
+        printf("memory allocation failed");
+        exit(1);
+    }
+
+    for (j = 0; j < nbr_valid_pixels; j++)
     {
         x[j] = 0.;
         if (j % 3 == 0)
@@ -191,12 +224,12 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     }
     else if (solver == 1)
     {
-        #ifdef W_ECG
+#ifdef W_ECG
         ECG_GLS(outpath, ref, &A, Nm1, x, signal, noise, cond, lhits, tol, maxiter, enlFac, ortho_alg, bs_red);
-        #else
+#else
         printf("Whoops! To use solver=1 (ECG), please compile after specifying option '--with ecg' to the configure script.\n");
         exit(1);
-        #endif
+#endif
     }
     else
     {
