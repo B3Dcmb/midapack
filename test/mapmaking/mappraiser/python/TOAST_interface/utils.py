@@ -272,18 +272,8 @@ def stage_local(
     if shared_flags is not None or det_flags is not None:
         do_flags = True
         # Flagging should only be enabled when we are processing the pixel indices
-        # (which is how madam effectively implements flagging).  So we will set
+        # (which is how mappraiser effectively implements flagging).  So we will set
         # all flagged samples to "-1" below.
-        # N.B: MAPPRAISER does not use flags for now.
-        if nnz != 1:
-            # raise RuntimeError(
-            #     "Internal error on mappraiser copy.  Only pixel indices should be flagged."
-            # )
-            if data.comm.world_rank == 0:
-                warnings.warn(
-                    "Trying to use pixel flagging with nnz != 1.  Mappraiser does not use flags yet, but this may change in the future.",
-                    RuntimeWarning,
-                )
 
     for ob in data.obs:
         views = ob.view[view]
@@ -303,6 +293,7 @@ def stage_local(
                 else:
                     view_samples = vw.stop - vw.start
                 offset = interval_starts[interval_offset + ivw]
+                
                 flags = None
                 if do_flags:
                     # Using flags
@@ -329,16 +320,17 @@ def stage_local(
                 else:
                     # Noiseless cases (noise_name=None).
                     mappraiser_buffer[slc] = 0.
-                    
-                # FIXME : MAPPRAISER's pixels buffer has nnz=3, not nnz=1.
-                # detflags = None
-                # if do_flags:
-                #     if det_flags is None:
-                #         detflags = flags
-                #     else:
-                #         detflags = np.copy(flags)
-                #         detflags |= views.detdata[det_flags][ivw][det] & det_mask
-                #     mappraiser_buffer[slc][detflags != 0] = -1
+
+                detflags = None
+                if do_flags:
+                    if det_flags is None:
+                        detflags = flags
+                    else:
+                        detflags = np.copy(flags)
+                        detflags |= views.detdata[det_flags][ivw][det] & det_mask
+                    # mappraiser's pixels buffer has nnz=3, not nnz=1
+                    repeated_flags = np.repeat(detflags, n_repeat)
+                    mappraiser_buffer[slc][repeated_flags != 0] = -1
         if do_purge:
             del ob.detdata[detdata_name]
         interval_offset += len(views)

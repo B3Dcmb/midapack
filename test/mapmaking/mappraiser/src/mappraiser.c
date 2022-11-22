@@ -22,6 +22,21 @@
 
 int x2map_pol(double *mapI, double *mapQ, double *mapU, double *Cond, int *hits, int npix, double *x, int *lstid, double *cond, int *lhits, int xsize);
 
+void print_array(int arr[], int count, int offset)
+{
+    int i = 0;
+    fputs("{", stdout);
+
+    for (i = offset; i < count + offset; i++)
+    {
+        if (i == count + offset - 1)
+            printf("%d}", arr[i]);
+        else
+            printf("%d, ", arr[i]);
+    }
+    puts("");
+}
+
 void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int Z_2lvl, int pointing_commflag, double tol, int maxiter, int enlFac, int ortho_alg, int bs_red, int nside, void *data_size_proc, int nb_blocks_loc, void *local_blocks_sizes, int Nnz, void *pix, void *pixweights, void *signal, double *noise, int lambda, double *invtt)
 {
     int64_t M;             // Global number of rows
@@ -85,6 +100,13 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
 
     st = MPI_Wtime();
     A.trash_pix = 0;
+
+    // if (rank == 0)
+    // {
+    //     print_array(pix, 600, 801);
+    //     fflush(stdout);
+    // }
+
     MatInit(&A, m, Nnz, pix, pixweights, pointing_commflag, comm);
 
     // check if any samples have been flagged (i.e. pixel indices set to negative values)
@@ -99,7 +121,11 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     t = MPI_Wtime();
     if (rank == 0)
     {
-        printf("[rank %d] Initializing pointing matrix time=%lf \n", rank, t - st);
+        printf("[rank %d] Initializing pointing matrix time = %lf \n", rank, t - st);
+        printf("[rank %d] Nbr of sky pixels = %d \n", rank, A.lcount);
+        printf("[rank %d] Valid sky pixels  = %d \n", rank, nbr_valid_pixels);
+        // print_array(A.indices, 600, 801);
+        // print_array(A.lindices, A.lcount, 0);
         fflush(stdout);
     }
 
@@ -150,7 +176,23 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     if (rank == 0)
     {
         printf("[rank %d] Total pixel-to-time-domain mapping time=%lf \n", rank, t - st);
-        fflush(stdout);
+    }
+
+    for (int myrank=0; myrank<size; ++myrank)
+    {
+        if (myrank == rank)
+        {
+            printf("[rank %d]\n", rank);
+            print_array(A.lindices, A.lcount, 0);
+            print_array(A.id0pix, nbr_valid_pixels / A.nnz, 0);
+            for (int valid_pix = 0; valid_pix < nbr_valid_pixels / A.nnz; ++valid_pix)
+            {
+                printf("%d    ", A.indices[id0pix[valid_pix] * A.nnz]);
+            }
+            puts("");
+            fflush(stdout);
+        }
+        MPI_Barrier(A.comm);
     }
 
     // Map objects memory allocation
