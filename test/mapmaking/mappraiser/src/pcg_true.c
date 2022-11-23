@@ -55,12 +55,15 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
 
     if (Z_2lvl == 0)
         Z_2lvl = size;
+
     build_precond(&p, &pixpond, &n, A, &Nm1, &x, b, noise, cond, lhits, tol, Z_2lvl, precond);
 
     t = MPI_Wtime();
     if (rank == 0)
     {
         printf("[rank %d] Preconditioner computation time = %lf \n", rank, t - st);
+        // printf("[rank %d] trash_pix flag = %d \n", rank, A->trash_pix);
+        // printf("[rank %d] nbr sky pixels = %d \n", rank, n);
         fflush(stdout);
     }
 
