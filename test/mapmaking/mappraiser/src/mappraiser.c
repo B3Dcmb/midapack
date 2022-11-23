@@ -112,9 +112,8 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     // check if any samples have been flagged (i.e. pixel indices set to negative values)
     // if this is the case, raise the trash_pix flag
     nbr_valid_pixels = A.lcount;
-    if (A.lindices[0] < 0)
+    if (A.trash_pix)
     {
-        A.trash_pix = 1;
         nbr_valid_pixels -= A.nnz;
     }
 
@@ -156,7 +155,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     for (i = 0; i < m; i++)
     {
         // only do something for valid pixels
-        if (!A.trash_pix || (A.trash_pix && A.indices[i * A.nnz] != 0))
+        if (!A.trash_pix || (A.trash_pix && (A.indices[i * A.nnz] != 0)))
         {
             vpix_i = A.indices[i * A.nnz] / A.nnz - A.trash_pix;
             if (id0pix[vpix_i] == -1)

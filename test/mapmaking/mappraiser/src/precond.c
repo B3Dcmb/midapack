@@ -294,9 +294,11 @@ int commScheme(Mat *A, double *vpixDiag, int pflag)
     int nSmax, nRmax, nStot, nRtot;
     double *lvalues, *com_val, *out_val;
 
+    int nbr_values = A->lcount - (A->nnz) * (A->trash_pix);
+
 #if W_MPI
-    lvalues = (double *)malloc((A->lcount - (A->nnz) * (A->trash_pix)) * sizeof(double)); /*<allocate and set to 0.0 local values*/
-    memcpy(lvalues, vpixDiag, (A->lcount - (A->nnz) * (A->trash_pix)) * sizeof(double));  /*<copy local values into result values*/
+    lvalues = (double *)malloc(nbr_values * sizeof(double)); /*<allocate and set to 0.0 local values*/
+    memcpy(lvalues, vpixDiag, nbr_values * sizeof(double));  /*<copy local values into result values*/
 
     nRmax = 0;
     nSmax = 0;
@@ -317,9 +319,9 @@ int commScheme(Mat *A, double *vpixDiag, int pflag)
             com_val[i] = 0.0;
         }
         // already done    memcpy(vpixDiag, lvalues, (A->lcount) *sizeof(double)); /*<copy local values into result values*/
-        m2m(lvalues, A->lindices + (A->nnz) * (A->trash_pix), A->lcount - (A->nnz) * (A->trash_pix), com_val, A->com_indices, A->com_count);
+        m2m(lvalues, A->lindices + (A->nnz) * (A->trash_pix), nbr_values, com_val, A->com_indices, A->com_count);
         butterfly_reduce(A->R, A->nR, nRmax, A->S, A->nS, nSmax, com_val, A->steps, A->comm);
-        m2m(com_val, A->com_indices, A->com_count, vpixDiag, A->lindices + (A->nnz) * (A->trash_pix), A->lcount - (A->nnz) * (A->trash_pix));
+        m2m(com_val, A->com_indices, A->com_count, vpixDiag, A->lindices + (A->nnz) * (A->trash_pix), nbr_values);
         free(com_val);
     }
     else if (A->flag == BUTTERFLY_BLOCKING_1)
@@ -333,9 +335,9 @@ int commScheme(Mat *A, double *vpixDiag, int pflag)
         com_val = (double *)malloc(A->com_count * sizeof(double));
         for (i = 0; i < A->com_count; i++)
             com_val[i] = 0.0;
-        m2m(lvalues, A->lindices + (A->nnz) * (A->trash_pix), A->lcount - (A->nnz) * (A->trash_pix), com_val, A->com_indices, A->com_count);
+        m2m(lvalues, A->lindices + (A->nnz) * (A->trash_pix), nbr_values, com_val, A->com_indices, A->com_count);
         butterfly_blocking_1instr_reduce(A->R, A->nR, nRmax, A->S, A->nS, nSmax, com_val, A->steps, A->comm);
-        m2m(com_val, A->com_indices, A->com_count, vpixDiag, A->lindices + (A->nnz) * (A->trash_pix), A->lcount - (A->nnz) * (A->trash_pix));
+        m2m(com_val, A->com_indices, A->com_count, vpixDiag, A->lindices + (A->nnz) * (A->trash_pix), nbr_values);
         free(com_val);
     }
     else if (A->flag == BUTTERFLY_BLOCKING_2)
@@ -349,9 +351,9 @@ int commScheme(Mat *A, double *vpixDiag, int pflag)
         com_val = (double *)malloc(A->com_count * sizeof(double));
         for (i = 0; i < A->com_count; i++)
             com_val[i] = 0.0;
-        m2m(lvalues, A->lindices + (A->nnz) * (A->trash_pix), A->lcount - (A->nnz) * (A->trash_pix), com_val, A->com_indices, A->com_count);
+        m2m(lvalues, A->lindices + (A->nnz) * (A->trash_pix), nbr_values, com_val, A->com_indices, A->com_count);
         butterfly_blocking_1instr_reduce(A->R, A->nR, nRmax, A->S, A->nS, nSmax, com_val, A->steps, A->comm);
-        m2m(com_val, A->com_indices, A->com_count, vpixDiag, A->lindices + (A->nnz) * (A->trash_pix), A->lcount - (A->nnz) * (A->trash_pix));
+        m2m(com_val, A->com_indices, A->com_count, vpixDiag, A->lindices + (A->nnz) * (A->trash_pix), nbr_values);
         free(com_val);
     }
     else if (A->flag == NOEMPTYSTEPRING)
@@ -396,7 +398,7 @@ int commScheme(Mat *A, double *vpixDiag, int pflag)
             com_val[i] = 0.0;
             out_val[i] = 0.0;
         }
-        s2m(com_val, lvalues, A->com_indices, A->lcount - (A->nnz) * (A->trash_pix));
+        s2m(com_val, lvalues, A->com_indices, nbr_values);
         /*for(i=0; i < A->com_count; i++){
             printf("%lf ", com_val[i]);
             } */
@@ -404,7 +406,7 @@ int commScheme(Mat *A, double *vpixDiag, int pflag)
         /*for(i=0; i < A->com_count; i++){
             printf("%lf ", out_val[i]);
             } */
-        m2s(out_val, vpixDiag, A->com_indices, A->lcount - (A->nnz) * (A->trash_pix)); // sum receive buffer into values
+        m2s(out_val, vpixDiag, A->com_indices, nbr_values); // sum receive buffer into values
         free(com_val);
         free(out_val);
     }

@@ -116,7 +116,7 @@ def MLmap(
     # DEBUG
     # cut number of samples
     tot_samples = data_size_proc[comm.rank]
-    cut_factor = 10
+    cut_factor = 1
 
     comm.Barrier()
     if comm.rank == 0:

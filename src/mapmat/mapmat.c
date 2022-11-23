@@ -528,6 +528,13 @@ int MatLocalShape(Mat *A, int sflag)
 	free(tmp_indices);
 
 	sindex(A->lindices, A->lcount, A->indices, A->nnz * A->m);
+
+	// check for masked pixels
+	if (A->lindices[0] < 0)
+    {
+        A->trash_pix = 1;
+    }
+
 	return 0;
 }
 
@@ -624,8 +631,8 @@ int MatComShape(Mat *A, int flag, MPI_Comm comm)
 		A->com_indices = A->lindices + (A->nnz) * (A->trash_pix);
 		break;
 	case ALLREDUCE:
-		MPI_Allreduce(&A->lindices[A->lcount - 1], &max, 1, MPI_INT, MPI_MAX, A->comm);             // maximum index
-		MPI_Allreduce(&A->lindices[(A->nnz) * (A->trash_pix)], &min, 1, MPI_INT, MPI_MIN, A->comm); //
+		MPI_Allreduce(&(A->lindices[A->lcount - 1]), &max, 1, MPI_INT, MPI_MAX, A->comm);             // maximum index
+		MPI_Allreduce(&(A->lindices[(A->nnz) * (A->trash_pix)]), &min, 1, MPI_INT, MPI_MIN, A->comm); //
 		A->com_count = (max - min + 1);
 		A->com_indices = (int *)malloc((A->lcount - (A->nnz) * (A->trash_pix)) * sizeof(int)); // warning
 		i = (A->nnz) * (A->trash_pix);
