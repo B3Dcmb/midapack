@@ -4,13 +4,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "s2hat_tools.h"
+#include "s2hat.h"
 #include "midapack.h"
+#include "s2hat_tools.h"
 
 /* Taken from greedyreduce in mapmat.c, case ALLREDUCE
     Reduce all pixel sky maps distributed among different procs to a single full sky map
 */
-int all_reduce_to_single_map_mappraiser(Mat *A, double* x, int nside, double* out_val){
+int all_reduce_to_single_map_mappraiser(Mat *A, double* x, int nside, double* out_val, int root){
     int i;
     double *lvalues;
     lvalues = (double *) malloc((A->lcount-(A->nnz)*(A->trash_pix)) *sizeof(double));	//allocate and set to 0.0 local values
@@ -34,8 +35,8 @@ int all_reduce_to_single_map_mappraiser(Mat *A, double* x, int nside, double* ou
     /*for(i=0; i < A->com_count; i++){
         printf("%lf ", com_val[i]);
     } */
-    MPI_Allreduce(com_val, out_val, 3*npix, MPI_DOUBLE, MPI_SUM, A->comm);	//maximum index
-    // -> Just reduce, not allreduce
+    // MPI_Allreduce(com_val, out_val, 3*npix, MPI_DOUBLE, MPI_SUM, A->comm);	//maximum index
+    MPI_Reduce(com_val, out_val, 3*npix, MPI_DOUBLE, MPI_SUM, root, A->comm);	//maximum index
 
     free(lvalues);
 
@@ -60,7 +61,7 @@ int brute_force_transfer_local_maps(Mat *A, double* local_pixel_map_MAPPRAISER, 
     int npix = 12*nside*nside;
 
     full_sky_map=(double *) malloc( 3*npix *sizeof(double));
-    all_reduce_to_single_map_mappraiser(A, local_pixel_map_MAPPRAISER, nside, full_sky_map);
+    all_reduce_to_single_map_mappraiser(A, local_pixel_map_MAPPRAISER, nside, full_sky_map, Local_param_s2hat.gangroot);
 
     // Change ordering of full_sky_map to have what S2HAT expects ? 
     // It seems to be ordered the same way

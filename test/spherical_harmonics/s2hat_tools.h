@@ -5,8 +5,9 @@
  
  /* Full documentation for S2HAT here : https://apc.u-paris.fr/APC_CS/Recherche/Adamis/MIDAS09/software/s2hat/s2hat/docs/S2HATdocs.html */ 
     
-#include <mpi.h>
-#include "s2hat.h"
+// #include <mpi.h>
+// #include "s2hat.h"
+// #include "midapack.h"
 
 
 #ifndef DBL_MAX
@@ -47,25 +48,32 @@ typedef struct S2HAT_LOCAL_parameters{
     long int nplm;
 } S2HAT_LOCAL_parameters;
 
+typedef enum { false, true } bool;
+
 /* Get global s2hat structures which must be distributed to all processors*/
-int get_main_s2hat_global_parameters(int nside, char *maskfile_path, s2hat_pixeltype pixelization_scheme, s2hat_scandef scan_sky_structure_pixel, s2hat_pixparameters pixpar);
+int get_main_s2hat_global_parameters(int nside, char *maskfile_path, s2hat_pixeltype *pixelization_scheme, s2hat_scandef *scan_sky_structure_pixel, s2hat_pixparameters *pixpar, bool use_mask_file);
 
 /* Create wrapper structure s2hat of local parameters of s2hat, which will differ for all processors */
-int init_s2hat_global_parameters(char *maskfile_path, int nside, int lmax, S2HAT_GLOBAL_parameters *Global_param_s2hat);
+int init_s2hat_global_parameters(char *maskfile_path, int nside, int lmax, S2HAT_GLOBAL_parameters *Global_param_s2hat, bool use_mask_file);
 
-/* Create wrapper structure of s2hat of local parameters of s2hat, which will differ for all processors */
-int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters *Local_param_s2hat, int *mvals, int gangrank, int gangsize, int gangroot, MPI_Comm gangcomm);
+/* Initialize MPI parameters of local parameters wrapper structure of s2hat, which will differ for all processors */
+int init_MPI_struct_s2hat_local_parameters(S2HAT_LOCAL_parameters *Local_param_s2hat, int gangrank, int gangsize, int gangroot, MPI_Comm gangcomm);
+
+/* Create wrapper structure of local parameters wrapper structure of s2hat, which will differ for all processors, and assuming MPI structure already assigned */
+int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters *Local_param_s2hat);
 
 
 /* Use s2hat routines to broadcast s2hat global structures */
-void mpi_broadcast_s2hat_global_struc(S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat, int gangroot);
+void mpi_broadcast_s2hat_global_struc(S2HAT_GLOBAL_parameters *Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat);
 
 /* Free covariance matrix */
 void free_covariance_matrix(double ** covariance_matrix_3x3, int lmax);
 
 /* Free wrapper structures of s2hat */
-void free_s2hat_parameters_struct(S2HAT_GLOBAL_parameters *Global_param_s2hat, S2HAT_LOCAL_parameters *Local_param_s2hat);
+void free_s2hat_GLOBAL_parameters_struct(S2HAT_GLOBAL_parameters *Global_param_s2hat);
 
+/* Free wrapper structures of s2hat */
+void free_s2hat_LOCAL_parameters_struct(S2HAT_LOCAL_parameters *Local_param_s2hat);
 
 
 
@@ -74,8 +82,11 @@ void free_s2hat_parameters_struct(S2HAT_GLOBAL_parameters *Global_param_s2hat, S
 /* Function to read file corresponding to the mask */
 void read_fits_mask(int nside, double *mask, char *path_mask_file, int col);
 
+/* Function to read TQU maps */
+void read_TQU_maps( int nside, double *map, char *infile, int nstokes);
+
 /* Function to transform the mask into binary (composed of 0 and 1 on pixel sky)*/
-void make_mask_binary(double* mask, int* mask_binary, int f_sky, int npix);
+void make_mask_binary(double* mask, int* mask_binary, int *f_sky, long npix);
 
 /* Obtain c_ell array from c_ell path */
 void read_fits_cells(int lmax, int number_correl, double *c_ell_array, char *path_list_file, int col);
@@ -86,6 +97,9 @@ int apply_alm2pix(s2hat_dcomplex *local_alm, double *local_map_pix, S2HAT_GLOBAL
 /* Transform local pixel map into local alm coefficients */
 int apply_pix2alm(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat);
 
+/* Gather all local_map to obtain a full_sky_map */
+int gather_map(double *local_map_pix, double *full_sky_map, S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat);
+
 /* Apply inverse of covariance matrix to local_alm */
 int apply_inv_covariance_matrix_to_alm(s2hat_dcomplex *local_alm, double **inv_covariance_matrix, S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat);
 
@@ -94,7 +108,7 @@ int apply_inv_covariance_matrix_to_alm(s2hat_dcomplex *local_alm, double **inv_c
 
 
 /* Transform alm to c_ell coefficients */
-int alm2cls(s2hat_dcomplex *local_alm, double *c_ell_array, S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat);
+int alm2cls(s2hat_dcomplex *local_alm, double *c_ell_array, int npsec, S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat);
 
 /* General function to inverse matrix using LAPACK */
 int get_inverse_matrix(int order_matrix, double* matrix_to_be_inverted);
@@ -106,3 +120,9 @@ int get_covariance_matrix_3x3(char *c_ell_path, int number_correl, double **cova
 int get_inverse_covariance_matrix_3x3(char *c_ell_path, int number_correl, double **inverse_covariance_matrix, S2HAT_GLOBAL_parameters Global_param_s2hat);
 
 
+/* tmp functions for communication */
+int all_reduce_to_single_map_mappraiser(Mat *A, double* x, int nside, double* out_val, int root);
+
+int distribute_map_S2HAT_ordering(double* full_sky_map, double *local_map_s2hat, S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat);
+
+int brute_force_transfer_local_maps(Mat *A, double* local_pixel_map_MAPPRAISER, double *local_pixel_map_s2hat, S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat);

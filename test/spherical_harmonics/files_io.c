@@ -8,6 +8,8 @@
 // #include "fitsio.h"
 #include <fitsio.h>
 #include <unistd.h>
+#include "s2hat.h"
+#include "midapack.h"
 #include "s2hat_tools.h"
 
 #define EXIT_INFO(Y,Z,args...) { FILE *X=stdout; fprintf( X, "[%s:%d] "Z,__func__, __LINE__, ##args); fflush(X); MPI_Abort( MPI_COMM_WORLD, Y); exit(Y); }
@@ -53,8 +55,7 @@ void read_fits_mask(int nside, double *mask, char *path_mask_file, int col)
     fits_get_errstatus( status, errbuf); 
     printf( "\nFITS ERROR: %s\n", errbuf);
   }
-  ffclos(fptr, &status);
-
+  ffclos(fptr, &status);  
   /* revert if NESTED */
   // if( !strcmp( ordering, "NESTED")) {
   //   printf( "NEST -> RING\n");
@@ -62,27 +63,56 @@ void read_fits_mask(int nside, double *mask, char *path_mask_file, int col)
   //     nest2ring( nside, pixel_index, &ipix);
   //     mask[ipix] = (double)tmp[pixel_index];
   //   }
-    
   // } else {
   //   for( pixel_index=0; pixel_index<npix; pixel_index++) mask[pixel_index] = (double)tmp[pixel_index];
   // }
-  for( pixel_index=0; pixel_index<npix; pixel_index++) mask[pixel_index] = (double)tmp[pixel_index];
+  
+  for( pixel_index=0; pixel_index<npix; pixel_index++){
+    mask[pixel_index] = tmp[pixel_index];
+  }
+  // printf("Tmp test 3 : %ld %f \t", pixel_index, mask[pixel_index]);
+  // fflush(stdout);
+
   free( tmp);
+
+}
+
+void read_TQU_maps( int nside, double *map, char *infile, int nstokes)
+{
+  long nele = 12*(long)nside*(long)nside;
+  double *mapI = map;
+  double *mapQ = map + nele;
+  double *mapU = map + nele + nele;
+
+  //READ MAPS
+  printf( "           data   : %s ", infile);
+
+  read_fits_mask( nside, mapI, infile, 1);
+  printf( "( T ");
+  if( nstokes == 3) {
+    read_fits_mask( nside, mapQ, infile, 2);
+    printf( "Q ");
+    read_fits_mask( nside, mapU, infile, 3);
+    printf( "U ");
+    }
+  printf( ")\n");
+  fflush( stdout);
 }
 
 
 
-
-void make_mask_binary(double* mask, int* mask_binary, int f_sky, int npix){
+void make_mask_binary(double* mask, int* mask_binary, int *f_sky, long npix){
   /* Function to transform the mask into binary (composed of 0 and 1 on pixel sky)*/
-  int pixel;
-  mask_binary = (int *) calloc( npix, sizeof( int));
+  long pixel;
+  // mask_binary = (int *) calloc( npix, sizeof( int));
+  // printf("Tmp test %ld \n", npix);
   for( pixel=0; pixel<npix; pixel++)
       if( mask[pixel] != 0) {
           mask_binary[pixel] = 1;
-          f_sky ++;
+          // printf("Tmp test %ld \t", pixel,  );
+          *f_sky = *f_sky + 1;
+      }
   }
-}
 
 
 
@@ -116,11 +146,11 @@ void read_fits_cells(int lmax, int number_correl, double *c_ell_array, char *pat
   }
 
   /* read size of column */
-  fits_read_key( fptr, TLONG, "NAXIS2", &col, comment, &status);
-  if( status) {
-    fits_get_errstatus( status, errbuf); 
-    EXIT_INFO( status, "%s\n", errbuf);
-  }
+  // fits_read_key( fptr, TLONG, "NAXIS2", &col, comment, &status);
+  // if( status) {
+  //   fits_get_errstatus( status, errbuf); 
+  //   EXIT_INFO( status, "%s\n", errbuf);
+  // }
 
   fits_read_col_dbl( fptr, col, 1, 1, size_c_ell, DBL_MAX, c_ell_array, &anynul, &status);
   if( status) {
