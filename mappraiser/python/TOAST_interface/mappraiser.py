@@ -512,6 +512,7 @@ class Mappraiser(Operator):
         if data.comm.world_rank == 0:
             msg = "{} Copying toast data to buffers".format(self._logprefix)
             log.info(msg)
+
         signal_dtype, data_size_proc = self._stage_data(
             params,
             data,
@@ -1020,10 +1021,10 @@ class Mappraiser(Operator):
                 mappraiser.INVTT_TYPE,
                 print_info=(data.comm.world_rank == 0),
                 save_psd=(self.save_psd and data.comm.world_rank == 0),
-                save_dir=params["path_output"]+"/psd",
+                save_dir=os.path.join(params["path_output"], "psd"),
             )
         else:
-            self._mappraiser_invtt[:] = 1.
+            self._mappraiser_invtt[:] = 1.0
 
         log_time_memory(
             data,
@@ -1046,7 +1047,7 @@ class Mappraiser(Operator):
             # We do not have the pointing yet.
             self._mappraiser_pixels_raw, self._mappraiser_pixels = stage_in_turns(
                 data,
-              nodecomm,
+                nodecomm,
                 n_copy_groups,
                 nsamp,
                 self.view,
@@ -1069,7 +1070,10 @@ class Mappraiser(Operator):
             for i in range(nnz):
                 self._mappraiser_pixels[i::nnz] += i
 
-            self._mappraiser_pixweights_raw, self._mappraiser_pixweights = stage_in_turns(
+            (
+                self._mappraiser_pixweights_raw,
+                self._mappraiser_pixweights,
+            ) = stage_in_turns(
                 data,
                 nodecomm,
                 n_copy_groups,
