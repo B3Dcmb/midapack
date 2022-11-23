@@ -23,21 +23,6 @@
 
 int apply_weights(Tpltz Nm1, double *tod);
 
-void print_array_pcg(int arr[], int count, int offset)
-{
-    int i = 0;
-    fputs("{", stdout);
-
-    for (i = offset; i < count + offset; i++)
-    {
-        if (i == count + offset - 1)
-            printf("%d}", arr[i]);
-        else
-            printf("%d, ", arr[i]);
-    }
-    puts("");
-}
-
 int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl)
 {
     int i, j, k; // some indexes
@@ -77,8 +62,8 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
     if (rank == 0)
     {
         printf("[rank %d] Preconditioner computation time = %lf \n", rank, t - st);
-        printf("[rank %d] trash_pix flag = %d \n", rank, A->trash_pix);
-        printf("[rank %d] nbr sky pixels = %d \n", rank, n);
+        // printf("[rank %d] trash_pix flag = %d \n", rank, A->trash_pix);
+        // printf("[rank %d] nbr sky pixels = %d \n", rank, n);
         fflush(stdout);
     }
 

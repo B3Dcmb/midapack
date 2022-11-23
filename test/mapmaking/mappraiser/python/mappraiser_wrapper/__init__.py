@@ -113,41 +113,6 @@ def MLmap(
     outpath = params["path_output"].encode("ascii")
     ref = params["ref"].encode("ascii")
 
-    # DEBUG
-    # cut number of samples
-    tot_samples = data_size_proc[comm.rank]
-    cut_factor = 1
-
-    comm.Barrier()
-    if comm.rank == 0:
-        print("Arguments passed to mappraiser...")
-        print(f"Local samples = {tot_samples}, cut_factor = {cut_factor}")
-        print(" -> data_size_proc       =", data_size_proc // cut_factor)
-        print(" -> total data size      =", np.sum(data_size_proc // cut_factor))
-        print(" -> nb_blocks_loc        =", nb_blocks_loc)
-        print(" -> local_blocks_sizes   =", local_blocks_sizes // cut_factor)
-        print(" -> nnz                  =", nnz)
-        print(
-            " -> length(pixels)       =",
-            len(pixels[: nnz * tot_samples // cut_factor]),
-        )
-        print(
-            " -> length(pixweights)   =",
-            len(pixweights[: nnz * tot_samples // cut_factor]),
-        )
-        print(" -> length(signal)       =", len(signal[: tot_samples // cut_factor]))
-        print(" -> length(noise)        =", len(noise[: tot_samples // cut_factor]))
-        print(" -> lambda               =", Lambda)
-        print(" -> length(invtt)        =", len(invtt))
-        print(" -> unique invtt values  =", np.unique(invtt))
-        print(
-            " -> unique pixel values  =",
-            np.unique(pixels[: nnz * tot_samples // cut_factor]),
-        )
-        print("", flush=True)
-    comm.Barrier()
-    # DEBUG
-
     _mappraiser.MLmap(
         encode_comm(comm),
         outpath,
@@ -162,14 +127,14 @@ def MLmap(
         params["ortho_alg"],
         params["bs_red"],
         params["nside"],
-        data_size_proc // cut_factor,
+        data_size_proc,
         nb_blocks_loc,
-        local_blocks_sizes // cut_factor,
+        local_blocks_sizes,
         nnz,
-        pixels[: nnz * tot_samples // cut_factor],
-        pixweights[: nnz * tot_samples // cut_factor],
-        signal[: tot_samples // cut_factor],
-        noise[: tot_samples // cut_factor],
+        pixels,
+        pixweights,
+        signal,
+        noise,
         Lambda,
         invtt,
     )
