@@ -365,6 +365,8 @@ class Mappraiser(Operator):
     @function_timer
     def _exec(self, data, detectors=None, **kwargs):
         log = Logger.get()
+        timer = Timer()
+        timer.start()
 
         if not available():
             raise RuntimeError("Mappraiser is either not installed or MPI is disabled")
@@ -449,6 +451,12 @@ class Mappraiser(Operator):
             interval_starts,
             psd_freqs,
         ) = self._prepare(params, data, detectors)
+        
+        log.info_rank(
+            f"{self._logprefix} Parsed parameters in",
+            comm=data.comm.comm_world,
+            timer=timer,
+        )
 
         # Stage data
         if data.comm.world_rank == 0:
@@ -465,6 +473,12 @@ class Mappraiser(Operator):
             interval_starts,
             psd_freqs,
         )
+        
+        log.info_rank(
+            f"{self._logprefix} Staged data in",
+            comm=data.comm.comm_world,
+            timer=timer,
+        )
 
         # Compute the ML map
         if data.comm.world_rank == 0:
@@ -476,6 +490,12 @@ class Mappraiser(Operator):
             data_size_proc,
             len(data.obs) * len(all_dets),
             nnz,
+        )
+        
+        log.info_rank(
+            f"{self._logprefix} Destriped data in",
+            comm=data.comm.comm_world,
+            timer=timer,
         )
 
         # Unstage data
@@ -491,6 +511,12 @@ class Mappraiser(Operator):
             nnz_full,
             interval_starts,
             signal_dtype,
+        )
+        
+        log.info_rank(
+            f"{self._logprefix} Unstaged data in",
+            comm=data.comm.comm_world,
+            timer=timer,
         )
 
         return
@@ -889,11 +915,9 @@ class Mappraiser(Operator):
         
         # Check if the simulation contains any noise at all.
         if self.noise_name is None:
+            msg = "{} noise_name = None -> noise buffer filled with zeros".format(self._logprefix)
             log.info_rank(
-                "#####\n"
-                "Data staging: noise_name = None\n"
-                "The noise buffer will be filled with zeros.\n"
-                "#####",
+                msg,
                 data.comm.comm_world,
             )
 
@@ -921,7 +945,7 @@ class Mappraiser(Operator):
             # Signal buffers do not yet exist
             if self.purge_det_data:
                 # Allocate in a staggered way.
-                (self._mappraiser_noise_raw, self._mappraiser_noise,) = stage_in_turns(
+                self._mappraiser_noise_raw, self._mappraiser_noise = stage_in_turns(
                     data,
                     nodecomm,
                     n_copy_groups,
@@ -1004,17 +1028,15 @@ class Mappraiser(Operator):
 
         if not self._cached:
             # We do not have the pointing yet.
-            storage, _ = dtype_to_aligned(mappraiser.PIXEL_TYPE)
-            self._mappraiser_pixels_raw = storage.zeros(nsamp * len(all_dets) * nnz)
-            self._mappraiser_pixels = self._mappraiser_pixels_raw.array()
-
-            stage_local(
+            self._mappraiser_pixels_raw, self._mappraiser_pixels = stage_in_turns(
                 data,
+              nodecomm,
+                n_copy_groups,
                 nsamp,
                 self.view,
                 all_dets,
                 self.pixel_pointing.pixels,
-                self._mappraiser_pixels,
+                mappraiser.PIXEL_TYPE,
                 interval_starts,
                 nnz,
                 1,
@@ -1022,7 +1044,6 @@ class Mappraiser(Operator):
                 self.shared_flag_mask,
                 self.det_flags,
                 self.det_flag_mask,
-                do_purge=True,
                 operator=self.pixel_pointing,
                 n_repeat=nnz,
             )
@@ -1032,17 +1053,15 @@ class Mappraiser(Operator):
             for i in range(nnz):
                 self._mappraiser_pixels[i::nnz] += i
 
-            storage, _ = dtype_to_aligned(mappraiser.WEIGHT_TYPE)
-            self._mappraiser_pixweights_raw = storage.zeros(nsamp * len(all_dets) * nnz)
-            self._mappraiser_pixweights = self._mappraiser_pixweights_raw.array()
-
-            stage_local(
+            self._mappraiser_pixweights_raw, self._mappraiser_pixweights = stage_in_turns(
                 data,
+                nodecomm,
+                n_copy_groups,
                 nsamp,
                 self.view,
                 all_dets,
                 self.stokes_weights.weights,
-                self._mappraiser_pixweights,
+                mappraiser.WEIGHT_TYPE,
                 interval_starts,
                 nnz,
                 nnz_stride,
@@ -1050,7 +1069,6 @@ class Mappraiser(Operator):
                 None,
                 None,
                 None,
-                do_purge=True,
                 operator=self.stokes_weights,
             )
 

@@ -226,6 +226,7 @@ def log_time_memory(
         if data.comm.world_rank == 0:
             msg = "{} {}: {:0.1f} s".format(prefix, timer_msg, timer.seconds())
             log.debug(msg)
+            timer.clear()
 
     if mem_msg is not None:
         # Dump toast memory use
@@ -354,6 +355,7 @@ def stage_in_turns(
     det_flags,
     det_mask,
     operator=None,
+    n_repeat=1,
 ):
     """When purging data, take turns staging it.
     (This function is taken from madam_utils.py)
@@ -382,6 +384,7 @@ def stage_in_turns(
                 det_mask,
                 do_purge=True,
                 operator=operator,
+                n_repeat=n_repeat,
             )
         nodecomm.barrier()
     return raw, wrapped
