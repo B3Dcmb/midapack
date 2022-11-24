@@ -224,23 +224,6 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     A.id_last_pix = id_last_pix;
     A.ll = ll;
 
-    if (rank == 0 && Gaps.ngap > 0)
-    {
-        printf("ngap = %d\n", Gaps.ngap);
-        puts("id0gap = ");
-        for (i = 0; i < ngap; ++i)
-        {
-            printf("%ld, ", Gaps.id0gap[i]);
-        }
-        puts("\nlengap = ");
-        for (i = 0; i < ngap; ++i)
-        {
-            printf("%d, ", Gaps.lgap[i]);
-        }
-        puts("");
-        fflush(stdout);
-    }
-
     // Map objects memory allocation
     // MatInit gives A.lcount which is used to compute nbr_valid_pixels
 
