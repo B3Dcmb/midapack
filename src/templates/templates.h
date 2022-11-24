@@ -7,6 +7,9 @@
  * @description Header file for defining templates classes structure + utilities
  */
 
+#ifndef TEMPLATES_H
+#define TEMPLATES_H
+
 /******************************************************************************/
 /*                             Defining Structures                            */
 /******************************************************************************/
@@ -52,3 +55,5 @@ int InvKernel(double *B, int n, double *Binv);
 int TCinit(TemplateClass *X, int tinit, int tlast, int nbinMin, int nbinMax,
   int nmult, int *bins, double *wghts, char *flag_det, char *flag_CES,
   char* flag_dataset, char *flag_w, char *ID);
+
+#endif /* TEMPLATES_H */

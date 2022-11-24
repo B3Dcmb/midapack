@@ -9,6 +9,9 @@
 /** Update by Hamza El Bouhargani
     @date February 2019 */
 
+#ifndef MAPMAT_H
+#define MAPMAT_H
+
 #include <mpi.h>
 #include "butterfly.h"
 #include "alm.h"
@@ -101,6 +104,7 @@ int MatInfo(Mat *A, int master, char* filename);
 
 int greedyreduce(Mat *A, double* x);
 
+#endif /* MAPMAT_H */
 
 // Doxygen definitions
 

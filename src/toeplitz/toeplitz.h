@@ -56,8 +56,8 @@
 */
 
 
-#ifndef   	TOEPLITZ_H_
-#define   	TOEPLITZ_H_
+#ifndef TOEPLITZ_H
+#define TOEPLITZ_H
 
 #ifdef W_MPI
 #include <mpi.h>
@@ -357,4 +357,4 @@ int build_reshape(double *Vin, int *nocol, int nbcol, int lconc, int n, int m, i
 int extract_result(double *Vout, int *nocol, int nbcol, int lconc, int n, int m, int id0, int l, int lambda, int nfft, double *Vrshp, int nrshp, int mrshp, int lrshp, int flag_format_rshp);
 
 //=========================================================================
-#endif 	    /* !TOEPLITZ_H_ */
+#endif /* TOEPLITZ_H */

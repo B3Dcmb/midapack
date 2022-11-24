@@ -28,6 +28,8 @@
 **
 */
 
+#ifndef MIDAPACK_H
+#define MIDAPACK_H
 
 #include <fftw3.h>
 #include <mpi.h>
@@ -45,3 +47,5 @@
 #include "../src/mapmat/mapmat.h"
 //============================ mapmat coarse ======================
 #include "../src/mapmat/mapmatc.h"
+
+#endif /* MIDAPACK_H */

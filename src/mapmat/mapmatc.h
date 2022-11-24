@@ -2,6 +2,9 @@
     @author Pierre Cargemel
     @date October 2012 */
 
+#ifndef MAPMATC_H
+#define MAPMATC_H
+
 #include "butterfly.h"
 #include "alm.h"
 #include "als.h"
@@ -63,3 +66,5 @@ int CMatComShape(CMat *A, int flag);
 int CMatVecProd(CMat *A, double *x, double *y, int pflag);
 
 int CTrMatVecProd(CMat *A, double *y, double* x, int pflag);
+
+#endif /* MAPMATC_H */
