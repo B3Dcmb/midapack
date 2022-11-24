@@ -543,7 +543,7 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, 
     // Initialize to 0 in case of no flagged samples
     // (trash_pix = 0 from 1st MatInit)
     // Initialize to 1 in case of flagged samples
-    // to take into account additional element in id0pix at index 0
+    // to take into account additional element in id_last_pix at index 0
     int uncut_pixel_index = A->trash_pix;
 
     for (i = 0; i < n * nnz; i += nnz * nnz) {
