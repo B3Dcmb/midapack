@@ -15,9 +15,7 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
-// #include <mkl.h>
 #include "fitsio.h"
-#include "midapack.h"
 #include "mappraiser.h"
 
 int x2map_pol(double *mapI, double *mapQ, double *mapU, double *Cond, int *hits, int npix, double *x, int *lstid, double *cond, int *lhits, int xsize);
@@ -28,14 +26,21 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     int m, Nb_t_Intervals; // local number of rows of the pointing matrix A, nbr of stationary intervals
     int64_t gif;           // global indice for the first local line
     int i, j, k;
-    Mat A;                        // pointing matrix structure
-    int *id_last_pix, *ll = NULL; // pixel-to-time-domain mapping
-    int nbr_valid_pixels;         // nbr of valid pixel indices
-    double *x, *cond = NULL;      // pixel domain vectors
+    Mat A;                   // pointing matrix structure
+    int *id0pix, *ll = NULL; // pixel-to-time-domain mapping
+    int nbr_valid_pixels;    // nbr of valid pixel indices
+    double *x, *cond = NULL; // pixel domain vectors
     int *lhits = NULL;
-    double st, t;         // timer, start time
+    double st, t; // timer, start time
     int rank, size;
     MPI_Status status;
+
+    // variables to build the Gap structure
+    int64_t gap_start;
+    int ngap, lengap;
+    int64_t *id0gap;
+    int *lgap;
+    Gap time_gaps;
 
     // mkl_set_num_threads(1); // Circumvent an MKL bug
 
@@ -87,11 +92,16 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     A.trash_pix = 0;
     MatInit(&A, m, Nnz, pix, pixweights, pointing_commflag, comm);
 
-    // reduce the size of map-domain objects in case the trash_pix flag is raised
-    nbr_valid_pixels = A.lcount;
+    // check if trash_pix flag was raised during MatInit
     if (A.trash_pix)
     {
-        nbr_valid_pixels -= A.nnz;
+        // timestreams contain flagged samples
+        nbr_valid_pixels = A.lcount - A.nnz;
+    }
+    else
+    {
+        // timestreams do not contain flagged samples
+        nbr_valid_pixels = A.lcount;
     }
 
     t = MPI_Wtime();
@@ -106,11 +116,15 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
 
     // Build pixel-to-time-domain mapping
 
-    st = MPI_Wtime();
-    id_last_pix = (int *)malloc(nbr_valid_pixels / (A.nnz) * sizeof(int)); // index of last sample pointing to each pixel
-    ll = (int *)malloc(m * sizeof(int));                                   // linked list of time samples indexes
+    // at the same time, compute the number of gaps
+    ngap = 0;
+    lengap = 0;
 
-    if (id_last_pix == NULL || ll == NULL)
+    st = MPI_Wtime();
+    id0pix = (int *)malloc(A.lcount / (A.nnz) * sizeof(int)); // index of last sample pointing to each pixel
+    ll = (int *)malloc(m * sizeof(int));                      // linked list of time samples indexes
+
+    if (id0pix == NULL || ll == NULL)
     {
         printf("memory allocation failed");
         exit(1);
@@ -121,37 +135,117 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     {
         ll[i] = -1;
     }
-    for (j = 0; j < nbr_valid_pixels / (A.nnz); j++)
+    for (j = 0; j < A.lcount / (A.nnz); j++)
     {
-        id_last_pix[j] = -1;
+        id0pix[j] = -1;
     }
 
     // build the linked list chain of time samples corresponding to each pixel
     int vpix_i = 0;
     for (i = 0; i < m; i++)
     {
-        // only do something for valid pixels
-        if (!A.trash_pix || (A.trash_pix && (A.indices[i * A.nnz] != 0)))
+        // if (rank == 0 && i % 10000 == 0)
+        // {
+        //     printf("i = %d\n", i);
+        //     fflush(stdout);
+        // }
+        // MPI_Barrier(A.comm);
+
+        vpix_i = A.indices[i * A.nnz] / A.nnz;
+        if (id0pix[vpix_i] == -1)
         {
-            vpix_i = A.indices[i * A.nnz] / A.nnz - A.trash_pix;
-            if (id_last_pix[vpix_i] == -1)
+            id0pix[vpix_i] = i;
+        }
+        else
+        {
+            ll[i] = id0pix[vpix_i];
+            id0pix[vpix_i] = i;
+        }
+
+        // compute the number of gaps in the timestream
+        if (A.indices[i * A.nnz] != 0) /* valid sample */
+        {
+            // reset gap length
+            lengap = 0;
+        }
+        else /* flagged sample -> gap */
+        {
+            if (lengap == 0) /* This is a new gap */
             {
-                id_last_pix[vpix_i] = i;
+                // increment gap count
+                ++ngap;
             }
-            else
-            {
-                ll[i] = id_last_pix[vpix_i];
-                id_last_pix[vpix_i] = i;
-            }
+
+            // increment current gap size
+            ++lengap;
         }
     }
 
-    A.id_last_pix = id_last_pix;
-    A.ll = ll;
     t = MPI_Wtime();
     if (rank == 0)
     {
         printf("[rank %d] Total pixel-to-time-domain mapping time=%lf \n", rank, t - st);
+        fflush(stdout);
+    }
+
+    // now that we know ngap, we can allocate memory
+    // to store the gap lengths and id0gap
+    if (A.trash_pix)
+    {
+        id0gap = malloc((sizeof *id0gap) * ngap);
+        lgap = malloc((sizeof *lgap) * ngap);
+        if (id0gap == NULL || lgap == NULL)
+        {
+            printf("malloc of id0gap or lgap failed");
+            exit(EXIT_FAILURE);
+        }
+
+        // go through the time samples once more
+        i = ngap - 1;
+        lengap = 1;
+        j = id0pix[0]; /* index of last flagged sample */
+        gap_start = j;
+        while(ll[j] != -1)
+        {
+            // go to previous flagged sample
+            j = ll[j];
+
+            if (gap_start - j == 1) /* same gap */
+            {
+                ++lengap;
+            }
+            else /* different gap */
+            {
+                id0gap[i] = gap_start;
+                lgap[i] = lengap;
+                lengap = 1;
+                --i;
+            }
+            gap_start = j;
+        }
+        time_gaps.ngap = ngap;
+        time_gaps.id0gap = id0gap;
+        time_gaps.lgap = lgap;
+    }
+
+    A.id0pix = id0pix;
+    A.ll = ll;
+
+    if (rank == 0)
+    {
+        printf("ngap = %d\n", time_gaps.ngap);
+        puts("id0gap = ");
+        for (i = 0; i < ngap; ++i)
+        {
+            printf("%ld, ", time_gaps.id0gap[i]);
+        }
+        puts("\nlengap = ");
+        for (i = 0; i < ngap; ++i)
+        {
+            printf("%ld, ", time_gaps.id0gap[i]);
+        }
+        puts("");
+        fflush(stdout);
     }
 
     // Map objects memory allocation

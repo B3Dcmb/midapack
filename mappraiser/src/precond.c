@@ -26,7 +26,6 @@
 
 #endif
 
-#include "midapack.h"
 #include "mappraiser.h"
 
 #define eps 1.0e-15
@@ -540,6 +539,14 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, 
     free(vpixBlock_loc);
 
     // Compute the inverse of the global Atdiag(N^-1)A blocks (beware this part is only valid for nnz = 3)
+
+    // Initialize to 0 in case of no flagged samples
+    // (trash_pix = 0 from 1st MatInit)
+    // Initialize to 1 in case of flagged samples
+    // to take into account additional element in id0pix at index 0
+    int uncut_pixel_index = A->trash_pix;
+
+    for (i = 0; i < n * nnz; i += nnz * nnz) {
     int uncut_pixel_index = 0;
     for (i = 0; i < n * nnz; i += nnz * nnz) {
         // init 3x3 block
