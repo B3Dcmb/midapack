@@ -34,10 +34,10 @@ int get_main_s2hat_global_parameters(int nside, char *maskfile_path, s2hat_pixel
 
     // printf("Pixchoice : %d \n", pixpar->par1);
 
-    printf( " //// Define s2hat structures\n"); 
+    // printf( " //// Define s2hat structures\n"); 
 
     if (use_mask_file){
-        printf( " //// Reading mask\n");
+        // printf( " //// Reading mask\n");
         mask = (double *) malloc( npix*sizeof(double));
         read_fits_mask( nside, mask, maskfile_path, 1); /* Retrieve mask */
 
@@ -47,7 +47,7 @@ int get_main_s2hat_global_parameters(int nside, char *maskfile_path, s2hat_pixel
         free(mask);
     }
     else{
-        printf( " //// No use of mask - fill fake mask with 1 \n");
+        // printf( " //// No use of mask - fill fake mask with 1 \n");
         mask_binary = (int *) malloc( npix*sizeof(int));
         int index;
         for (index=0;index<npix;index++){
@@ -55,18 +55,18 @@ int get_main_s2hat_global_parameters(int nside, char *maskfile_path, s2hat_pixel
         }
         f_sky = npix;
     }
-    printf( " //// Setting s2hat structure \n"); fflush(stdout);
+    // printf( " //// Setting s2hat structure \n"); fflush(stdout);
 
     set_pixelization(pixchoice, *pixpar, pixelization_scheme);   /* Set C pixelization structure */
     mask2scan(mask_binary, *pixelization_scheme, scan_sky_structure_pixel); /* Set scan pixelization : s2hat structure containing all the info about sky coverage needed by the transforms */
     /* Scan pixelization will be used to avoid doing unecessary calculations */
         
-    printf( "F_sky = %f%%\n", (double)f_sky/(double)npix*100.); fflush(stdout);
+    // printf( "F_sky = %f%%\n", (double)f_sky/(double)npix*100.); fflush(stdout);
     return 0;
 }
 
 
-int init_s2hat_global_parameters(char *maskfile_path, int nside, int lmax, S2HAT_GLOBAL_parameters *Global_param_s2hat, bool use_mask_file){
+int init_s2hat_global_parameters(Files_path_WIENER_FILTER Files_WF_struct, int nside, int lmax, S2HAT_GLOBAL_parameters *Global_param_s2hat){
     /* Create s2hat structure of global parameters of s2hat, which must be distributed to all processors
     All processors must have those same s2hat structure 
     Full documentation here : https://apc.u-paris.fr/APC_CS/Recherche/Adamis/MIDAS09/software/s2hat/s2hat/docs/S2HATdocs.html */ 
@@ -74,7 +74,9 @@ int init_s2hat_global_parameters(char *maskfile_path, int nside, int lmax, S2HAT
     s2hat_pixeltype pixelization_scheme;
     s2hat_scandef scan_sky_structure_pixel;
     s2hat_pixparameters pixpar;
-
+    char *maskfile_path = Files_WF_struct.maskfile_path;
+    bool use_mask_file = Files_WF_struct.use_mask_file;
+    
     get_main_s2hat_global_parameters(nside, maskfile_path, &pixelization_scheme, &scan_sky_structure_pixel, &pixpar, use_mask_file);
 
     Global_param_s2hat->pixelization_scheme = pixelization_scheme;

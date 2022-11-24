@@ -26,6 +26,7 @@
 #endif
 
 #include "midapack.h"
+#include "s2hat_tools.h"
 #include "mappraiser.h"
 
 #define eps 1.0e-15
@@ -1324,8 +1325,8 @@ void Lanczos_eig(Mat *A, Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ, double *x
 }
 
 // General routine for constructing a preconditioner
-void build_precond(Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tpltz *Nm1, double **in_out_x,
-                   double *b, const double *noise, double *cond, int *lhits, double tol, int Zn, int precond) {
+void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tpltz *Nm1, double **in_out_x, double *b, const double *noise, double *cond, int *lhits, double tol, int Zn, int domain_PCG_computation, Files_path_WIENER_FILTER Files_path_WF_struct, S2HAT_GLOBAL_parameters Global_param_s2hat, int precond)
+{
     int rank, size, i;
     double st, t;
     double *x;
@@ -1343,11 +1344,14 @@ void build_precond(Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tp
 
     p->n = (A->lcount) - (A->nnz) * (A->trash_pix);
 
-    // Reallocate memory for well-conditioned map
-    x = realloc(*in_out_x, p->n * sizeof(double));
-    if (x == NULL) {
-        printf("Out of memory: map reallocation failed");
-        exit(1);
+    if (domain_PCG_computation == 0){
+        // Reallocate memory for well-conditioned map
+        x = realloc(*in_out_x, p->n * sizeof(double));
+        if (x == NULL)
+        {
+            printf("Out of memory: map reallocation failed");
+            exit(1);
+        }
     }
 
     p->pixpond = (double *) malloc(p->n * sizeof(double));
@@ -1355,7 +1359,9 @@ void build_precond(Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tp
     // Compute pixel share ponderation
     get_pixshare_pond(A, p->pixpond);
 
-    if (precond != 0) {
+
+    if ((precond == 1) || (precond == 2))
+    {
         p->Qg = calloc(p->n, sizeof(double));
         p->AQg = calloc(p->n, sizeof(double));
         p->w = calloc(Zn, sizeof(double));   // Zt * x
@@ -1371,8 +1377,8 @@ void build_precond(Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tp
 
             // 2lvl a posteriori
         else if (precond == 2)
-            Lanczos_eig(A, Nm1, &(p->BJ_inv), &(p->BJ), x, b, noise, tol, p->pixpond, Zn, &(p->Z),
-                        &(p->AZ)); // 2lvl a posteriori preconditioner
+            Lanczos_eig(A, Nm1, &(p->BJ_inv), &(p->BJ), x, b, noise, tol, p->pixpond, Zn, &(p->Z), &(p->AZ)); // 2lvl a posteriori preconditioner
+            // TO CHANGE MODIFY LATER TO ADAPT FOR DOMAIN_PCG_COMPUTATION
 
             // Invalid precond
         else {
@@ -1406,6 +1412,21 @@ void build_precond(Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tp
         //  x[i] = x[i] +  p->Z[Zn-1][i];
     }
 
+    if (precond == 3) // Wiener Filter preconditionner : C^{-1} + P^t diag(N^-1) P
+    {
+        int lmax_WF = Global_param_s2hat->nlmax+1; // Convention by S2HAT
+
+        // double **inverse_covariance_matrix;
+        p->inverse_covariance_matrix = calloc(lmax_WF, sizeof(double *));
+        for(ell_value=0; ell_value<lmax_WF; ell_value++){
+            p->inverse_covariance_matrix[ell_value] = calloc(9,sizeof(double)); // 9 for each element of the covariance matrix [TT, TE, TB, ET, EE, EB, BT, BE, BB]
+        }
+        get_inverse_covariance_matrix_3x3(Files_path_WF_struct, p->inverse_covariance_matrix, Global_param_s2hat);
+        /* The covariance matrix will be inverted separately for each of its ell_value,
+            In particular for each ell_value a 3*3 matrix [TT, TE, TB, ET, EE, EB, BT, BE, BB] will be inverted
+        */        
+    }
+
     *out_p = p;
     *out_pixpond = p->pixpond;
     *out_n = p->n;
@@ -1413,31 +1434,107 @@ void build_precond(Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tp
 }
 
 // General routine for applying the preconditioner to a map vector
-void apply_precond(Precond *p, const Mat *A, Tpltz *Nm1, double *g, double *Cg) {
+void apply_precond(struct Precond *p, const Mat *A, const Tpltz *Nm1, int domain_PCG_computation, S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat, double *g, double *Cg)
+{
     int i;
 
-    // BJ
-    if (p->precond == 0) {
-        MatVecProd(&(p->BJ_inv), g, Cg, 0);
-    }
+    switch(domain_PCG_computation){
+        case 0: // pixel domain, MAPPRAISER - g is in pixel domain and Cg is supposed to be returned in pixel domain
+            double *init_local_pix = g;
+            double *out_local_pix = Cg;
 
-        // 2lvl
-    else {
-        build_Qtx(A, p->Z, p->Em1, g, p->pixpond, p->w, p->Qtx, p->Zn, p->n);
-        mul_ZQtx(p->Z, p->Qtx, p->Qg, p->Zn, p->n);
-        mul_ZQtx(p->AZ, p->Qtx, p->AQg, p->Zn, p->n);
+            if(p->precond == 3){
+                s2hat_dcomplex *local_alm_s2hat = (s2hat_dcomplex *) malloc(A->nnz*(Global_param_s2hat->nlmax+1)*Global_param_s2hat->nmmax*sizeof(s2hat_dcomplex));
+                global_map_2_harmonic(init_local_pix, local_alm_s2hat, A, Global_param_s2hat, Local_param_s2hat);
+                // Transform original map into harmonic domain
+            }
+        case 1: // Harmonic domain - g is in harmonic domain and Cg is supposed to be returned in harmonic domain
+            s2hat_dcomplex *local_alm_out = Cg;
 
-        for (i = 0; i < p->n; ++i) {
-            p->AQg[i] = g[i] - p->AQg[i];
+            double *init_local_pix = (double *)malloc(p->n*sizeof(double));
+            double *out_local_pix = (double *)malloc(p->n*sizeof(double));
+
+            s2hat_dcomplex *local_alm_s2hat = (s2hat_dcomplex *) malloc(A->nnz*(Global_param_s2hat->nlmax+1)*Global_param_s2hat->nmmax*sizeof(s2hat_dcomplex));
+            memcpy(local_alm_s2hat, g, A->nnz*(Global_param_s2hat->nlmax+1)*Global_param_s2hat->nmmax * sizeof(s2hat_dcomplex));
+
+            global_harmonic_2_map(init_local_pix, local_alm_s2hat, A, Global_param_s2hat, Local_param_s2hat); // Convert g into pixel domain
         }
 
-        MatVecProd(&(p->BJ_inv), p->AQg, Cg, 0);
+    switch(p->precond) {
+        case 0 :
+            // BJ
+            MatVecProd(&(p->BJ_inv), init_local_pix, out_local_pix, 0);
 
-        for (i = 0; i < p->n; ++i) {
-            Cg[i] += p->Qg[i];
-        }
+        case 1 :
+        case 2 :
+            // 2lvl
+            build_Qtx(A, p->Z, p->Em1, init_local_pix, p->pixpond, p->w, p->Qtx, p->Zn, p->n);
+            mul_ZQtx(p->Z, p->Qtx, p->Qg, p->Zn, p->n);
+            mul_ZQtx(p->AZ, p->Qtx, p->AQg, p->Zn, p->n);
+
+            for (i = 0; i < p->n; ++i)
+            {
+                p->AQg[i] = init_local_pix[i] - p->AQg[i];
+            }
+
+            MatVecProd(&(p->BJ_inv), p->AQg, out_local_pix, 0);
+
+            for (i = 0; i < p->n; ++i)
+            {
+                out_local_pix[i] += p->Qg[i];
+            }
+
+        case 3 : // Preconditionner C^{-1} + Pdiag(N^-1)P
+            
+            MatVecProd(&(p->BJ_inv), init_local_pix, out_local_pix, 0);
+                
+            apply_inv_covariance_matrix_to_alm(local_alm_s2hat, p->inverse_covariance_matrix, Global_param_s2hat, Local_param_s2hat); 
+            // Multiplication of C^{-1} with vector a_lm
+
+            // The addition C^{-1}g + Pdiag(N)Pg will be done in the next step
+            
     }
+    switch (domain_PCG_computation)
+        {
+        case 0:
+
+        if (p->precond == 3){
+            double *new_local_variable_pix = (double *)malloc(p->n*sizeof(double));
+            global_harmonic_2_map(new_local_variable_pix, local_alm_s2hat, A, Global_param_s2hat, Local_param_s2hat);
+            // Transformation of a_lm back into pixel domain
+            for (i = 0; i < p->n; ++i)
+            {
+                out_local_pix[i] += new_local_variable_pix[i]; // Adding C^(-1)g and Pdiag(N)Px
+            }
+            free(new_local_variable_pix);
+            free(local_alm_s2hat);
+        }
+        // g = init_local_pix;
+        // Cg = out_local_pix;
+
+        case 1:
+        global_map_2_harmonic(out_local_pix, local_alm_out, A, Global_param_s2hat, Local_param_s2hat); 
+        // Result in pixel transformed in harmonic
+
+        if (p->precond == 3){
+            for (i = 0; i < A->nnz*(Global_param_s2hat->nlmax+1)*Global_param_s2hat->nmmax ; ++i)
+            {
+                local_alm_out[i] += local_alm_s2hat[i]; // Adding C^(-1)g and Pdiag(N)Px
+            }
+        }
+
+        free(local_alm_s2hat);
+        free(init_local_pix);
+        free(out_local_pix);
+
+        // g = init_local_pix;
+        // Cg = local_alm_out;
+        }
 }
+
+
+
+
 
 // Free memory from the preconditioner
 void free_precond(Precond **in_out_p) {

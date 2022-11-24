@@ -7,6 +7,12 @@
 #include "s2hat.h"
 #include "midapack.h"
 #include "s2hat_tools.h"
+#include "domain_generalization.h"
+
+
+
+
+
 
 /* Taken from greedyreduce in mapmat.c, case ALLREDUCE
     Reduce all pixel sky maps distributed among different procs to a single full sky map
@@ -54,6 +60,7 @@ int distribute_map_S2HAT_ordering(double* full_sky_map, double *local_map_s2hat,
 
 
 int brute_force_transfer_local_maps(Mat *A, double* local_pixel_map_MAPPRAISER, double *local_pixel_map_s2hat, S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat){
+    // Temporary transfer method, which compile every thing and redistribute everything
 
     int nside = Global_param_s2hat.nside;
     double* full_sky_map;
@@ -67,5 +74,18 @@ int brute_force_transfer_local_maps(Mat *A, double* local_pixel_map_MAPPRAISER, 
     // It seems to be ordered the same way
 
     distribute_map_S2HAT_ordering(full_sky_map, local_pixel_map_s2hat, Global_param_s2hat, Local_param_s2hat);
+
 }
 
+
+int global_map_2_harmonic(double* local_pixel_map_MAPPRAISER, s2hat_dcomplex *local_alm_s2hat, Mat *A, S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat){
+    // Transform local_maps pixel distribution from MAPPRAISER into a harmonic S2HAT a_lm distribution
+
+    double *local_pixel_map_s2hat = (double *)malloc(Local_param_s2hat.map_size*sizeof(double));
+    brute_force_transfer_local_maps(A, local_pixel_map_MAPPRAISER, local_pixel_map_s2hat, Global_param_s2hat, Local_param_s2hat);
+    // Temporary transfer method
+
+    apply_pix2alm(local_map_pix, local_alm_s2hat, Global_param_s2hat, Local_param_s2hat);
+    free(local_alm_s2hat);
+
+}

@@ -56,7 +56,7 @@ def add_mappraiser_args(parser):
         required=False,
         default=0,
         type=int,
-        help="Choose map-making preconditioner: 0->BD, 1->2lvl a priori, 2->2lvl a posteriori",
+        help="Choose map-making preconditioner: 0->BD, 1->2lvl a priori, 2->2lvl a posteriori, 3->Wiener_filtering (BD+C^-1)",
     )
 
     parser.add_argument(

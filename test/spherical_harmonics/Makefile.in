@@ -10,7 +10,6 @@ wiener_filter:
 	$(WIENERFILTER_OBJ)/covariance_matrix_tools.o \
 	$(WIENERFILTER_OBJ)/s2hat_init_parameters.o \
 	$(WIENERFILTER_OBJ)/files_io.o \
-	$(WIENERFILTER_OBJ)/tmp_communication.o \
 
 $(WIENERFILTER_OBJ)/alm_pix_tools.o: alm_pix_tools.c
 	$(CC) -c $< $(INC) $(LIB) -o $@
@@ -24,8 +23,9 @@ $(WIENERFILTER_OBJ)/s2hat_init_parameters.o: s2hat_init_parameters.c
 $(WIENERFILTER_OBJ)/files_io.o: files_io.c
 	$(CC) -c $< $(INC) $(LIB) $(CFITSIO_INC) $(CFITSIO_LIB) -o $@
 
-$(WIENERFILTER_OBJ)/tmp_communication.o: tmp_communication.c
-	$(CC) -c $< $(INC) $(LIB) -o $@
+
+library:
+	$(CC) $(LDFLAGS) $(WIENERFILTER_OBJ)/alm_pix_tools.o $(WIENERFILTER_OBJ)/covariance_matrix_tools.o $(WIENERFILTER_OBJ)/s2hat_init_parameters.o $(WIENERFILTER_OBJ)/files_io.o $(CFITSIO_LIB) $(S2HAT_LIB) -o $(MAPPRAISER_LIB)/libwienerfilter.so
 
 
 ##############   u t i l s   #############

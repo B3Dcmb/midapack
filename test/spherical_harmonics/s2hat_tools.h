@@ -50,11 +50,20 @@ typedef struct S2HAT_LOCAL_parameters{
 
 typedef enum { false, true } bool;
 
+typedef struct Files_path_WIENER_FILTER{
+    /* Global parameters of S2HAT, to give to all processors */
+    bool use_mask_file; // Boolean  to determine if a mask is used or not ; if not, maskfile_path will not be considered
+    char *maskfile_path; // Path to mask file, of dimensions [12*nside**2, 3] in fits format (write_maps of Healpy can be used)
+    
+    char *c_ell_path; // Path for c_ells fits file, to construct CMB sky covariance matrix, in the form of a 1d vector of dimension [lmax,number_correlations] in column-wise ordering
+    int number_correlations; // Number of correlations included in c_ell fits file, can be eitehr 4, TT, EE, BB and TE, or 6, TT, EE, BB, TE, TB and EB (in this order)
+} Files_path_WIENER_FILTER;
+
 /* Get global s2hat structures which must be distributed to all processors*/
 int get_main_s2hat_global_parameters(int nside, char *maskfile_path, s2hat_pixeltype *pixelization_scheme, s2hat_scandef *scan_sky_structure_pixel, s2hat_pixparameters *pixpar, bool use_mask_file);
 
 /* Create wrapper structure s2hat of local parameters of s2hat, which will differ for all processors */
-int init_s2hat_global_parameters(char *maskfile_path, int nside, int lmax, S2HAT_GLOBAL_parameters *Global_param_s2hat, bool use_mask_file);
+int init_s2hat_global_parameters(Files_path_WIENER_FILTER Files_WF_struct, int nside, int lmax, S2HAT_GLOBAL_parameters *Global_param_s2hat);
 
 /* Initialize MPI parameters of local parameters wrapper structure of s2hat, which will differ for all processors */
 int init_MPI_struct_s2hat_local_parameters(S2HAT_LOCAL_parameters *Local_param_s2hat, int gangrank, int gangsize, int gangroot, MPI_Comm gangcomm);
@@ -76,8 +85,8 @@ void free_s2hat_GLOBAL_parameters_struct(S2HAT_GLOBAL_parameters *Global_param_s
 void free_s2hat_LOCAL_parameters_struct(S2HAT_LOCAL_parameters *Local_param_s2hat);
 
 
-
-
+/* Define file support structure for Wiener_filter extension */
+void init_files_struct_WF(Files_path_WIENER_FILTER *Files_path_WF_struct, char *path_mask_file,  bool use_mask_file, char *c_ell_path, int number_correlations);
 
 /* Function to read file corresponding to the mask */
 void read_fits_mask(int nside, double *mask, char *path_mask_file, int col);
@@ -117,7 +126,7 @@ int get_inverse_matrix(int order_matrix, double* matrix_to_be_inverted);
 int get_covariance_matrix_3x3(char *c_ell_path, int number_correl, double **covariance_matrix_3x3, S2HAT_GLOBAL_parameters Global_param_s2hat);
 
 /* Function to obtain inverse of covariance matrix in harmonic domain, from given c_ells */
-int get_inverse_covariance_matrix_3x3(char *c_ell_path, int number_correl, double **inverse_covariance_matrix, S2HAT_GLOBAL_parameters Global_param_s2hat);
+int get_inverse_covariance_matrix_3x3(Files_path_WIENER_FILTER Files_WF_struct, double **inverse_covariance_matrix, S2HAT_GLOBAL_parameters Global_param_s2hat);
 
 
 /* tmp functions for communication */

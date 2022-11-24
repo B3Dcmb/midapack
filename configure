@@ -619,6 +619,8 @@ echo 'INC = '$INC >> test/spherical_harmonics/Makefile
 echo 'LIB = '$LIB >> test/spherical_harmonics/Makefile
 echo 'CFITSIO_INC = '$CFITSIO_INC >> test/spherical_harmonics/Makefile
 echo 'CFITSIO_LIB = '$CFITSIO_LIB >> test/spherical_harmonics/Makefile
+echo 'S2HAT_INC = '$S2HAT_INC >> test/spherical_harmonics/Makefile
+echo 'S2HAT_LIB = '$S2HAT_LIB >> test/spherical_harmonics/Makefile
 
 # link preAlps and metis
 

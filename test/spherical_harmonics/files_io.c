@@ -16,6 +16,21 @@
 #define INFO(Y,args...)        { FILE *X=stdout; fprintf( X, Y, ##args); fflush(X); }
 
 
+void init_files_struct_WF(Files_path_WIENER_FILTER *Files_path_WF_struct, char *path_mask_file,  bool use_mask_file, char *c_ell_path, int number_correlations){
+  /* Define file support structure for Wiener_filter extension 
+    path_mask_file : path for fits mask file, ignored if use_mask_file=false
+    use_mask_file : allow user to not use a mask, in that case a list of 1 (of size 12*nside**2) will be used
+
+    c_ell_path : path for c_ell fits file
+    number_correlations :  is expected to be
+                            4 : TT, EE, BB and TE are given in this order
+                            6 : TT, EE, BB, TE, TB and EB are given in this order
+  */
+    Files_path_WF_struct->maskfile_path = path_mask_file;
+    Files_path_WF_struct->c_ell_path = c_ell_path;
+    Files_path_WF_struct->use_mask_file = use_mask_file;
+    Files_path_WF_struct->number_correlations = number_correlations;
+}
 
 void read_fits_mask(int nside, double *mask, char *path_mask_file, int col)
 /* Function from Xpure, to obtain array from mask path

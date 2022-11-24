@@ -126,10 +126,8 @@ int get_covariance_matrix_3x3(char *c_ell_path, int number_correl, double **cova
 }
 
 
-int get_inverse_covariance_matrix_3x3(char *c_ell_path, int number_correl, double **inverse_covariance_matrix, S2HAT_GLOBAL_parameters Global_param_s2hat){
+int get_inverse_covariance_matrix_3x3(Files_path_WIENER_FILTER Files_WF_struct, double **inverse_covariance_matrix, S2HAT_GLOBAL_parameters Global_param_s2hat){
     /* Function to obtain inverse of covariance matrix in harmonic domain, from given c_ells
-
-    TO MODIFY LATER ---> As we expect TB/EB to be 0, can be improved by just computing inverse of block TT-TE-EE, and taking 1/C_ell^BB for inverse of BB block
     */
     double **covariance_matrix;
     int ell_value, index_1;
@@ -142,7 +140,9 @@ int get_inverse_covariance_matrix_3x3(char *c_ell_path, int number_correl, doubl
 
     // printf("Test 4 \n");
     // fflush(stdout);
-    get_covariance_matrix_3x3(c_ell_path, number_correl, inverse_covariance_matrix, Global_param_s2hat);
+    char *c_ell_path = Files_WF_struct.c_ell_path;
+    int number_correlations = Files_WF_struct.number_correlations;
+    get_covariance_matrix_3x3(c_ell_path, number_correlations, inverse_covariance_matrix, Global_param_s2hat);
 
     for(ell_value=0; ell_value<lmax+1; ell_value++){
         get_inverse_matrix(3, inverse_covariance_matrix[ell_value]);
