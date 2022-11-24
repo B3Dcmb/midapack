@@ -12,12 +12,11 @@
 #include <mpi.h>
 #include <time.h>
 #include <string.h>
-#include "midapack.h"
-#include "mappraiser.h"
-#include "fitsio.h"
 #include <stdbool.h>
 #include <errno.h>
 #include <unistd.h>
+#include "fitsio.h"
+#include "mappraiser.h"
 
 char *WORKDIR;
 int IOVERBOSE = 0;

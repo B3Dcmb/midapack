@@ -15,10 +15,7 @@
 #include <mpi.h>
 #include <time.h>
 #include <string.h>
-// #include <mkl.h>
-// #include "fitsio.h"
 #include <unistd.h>
-#include "midapack.h"
 #include "mappraiser.h"
 
 int apply_weights(Tpltz Nm1, double *tod);

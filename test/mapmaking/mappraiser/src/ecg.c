@@ -22,8 +22,6 @@
 #include <mpi.h>
 /* MKL */
 #include <mkl.h>
-/* MIDAPACK */
-#include "midapack.h"
 /* MAPPRAISER */
 #include "mappraiser.h"
 /* preAlps */
