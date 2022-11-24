@@ -51,7 +51,7 @@ typedef struct {
   int   trash_pix;   //flag for presence of trash pixel
   int		*indices;		// column indices tab; size = m * nnz; can be a global or local numbering
   double	*values;		// non-zero values tab; size = m * nnz
-  int *id0pix;    // index of the first time sample pointing to each pixel (no nnz repeat factor)
+  int *id_last_pix;    // index of the last time sample pointing to each pixel (no nnz repeat factor)
   int *ll;      // linked list of time samples indexes linked by pixels
   //--------local shaping---------------
   int		lcount;

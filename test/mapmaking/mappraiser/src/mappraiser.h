@@ -63,7 +63,7 @@ struct Precond
     double *w;   // size Zn
 };
 // Block-Jacobi preconditioner
-int precondblockjacobilike(Mat *A, Tpltz Nm1, Mat *BJ_inv, Mat *BJ, double *b, double *cond, int *lhits);
+int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, double *cond, int *lhits);
 
 // Preconditioner constructor
 void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tpltz *Nm1, double **in_out_x, double *b, const double *noise, double *cond, int *lhits, double tol, int Zn, int precond);
@@ -80,11 +80,11 @@ void free_precond(struct Precond **in_out_p);
 int get_pixshare_pond(Mat *A, double *pixpond);
 
 // PCG routine
-int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl);
+int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Gap *Gaps, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl);
 
 // ECG routine
 #ifdef W_ECG
-int ECG_GLS(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int maxIter, int enlFac, int ortho_alg, int bs_red);
+int ECG_GLS(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int maxIter, int enlFac, int ortho_alg, int bs_red);
 #endif
 
 #endif /* MAPPRAISER_H */

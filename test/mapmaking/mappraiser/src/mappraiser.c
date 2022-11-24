@@ -28,10 +28,10 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     int m, Nb_t_Intervals; // local number of rows of the pointing matrix A, nbr of stationary intervals
     int64_t gif;           // global indice for the first local line
     int i, j, k;
-    Mat A; // pointing matrix structure
-    int *id0pix, *ll = NULL; // pixel-to-time-domain mapping
-    int nbr_valid_pixels;    // nbr of valid pixel indices
-    double *x, *cond = NULL; // pixel domain vectors
+    Mat A;                        // pointing matrix structure
+    int *id_last_pix, *ll = NULL; // pixel-to-time-domain mapping
+    int nbr_valid_pixels;         // nbr of valid pixel indices
+    double *x, *cond = NULL;      // pixel domain vectors
     int *lhits = NULL;
     double st, t;         // timer, start time
     int rank, size;
@@ -97,19 +97,20 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     t = MPI_Wtime();
     if (rank == 0)
     {
-        printf("[rank %d] Initializing pointing matrix time = %lf \n", rank, t - st);
-        // printf("[rank %d] Nbr of sky pixels = %d \n", rank, A.lcount);
-        // printf("[rank %d] Valid sky pixels  = %d \n", rank, nbr_valid_pixels);
+        printf("[rank %d] Initializing pointing matrix time = %lf\n", rank, t - st);
+        printf("  -> nbr of sky pixels = %d\n", A.lcount);
+        printf("  -> valid sky pixels  = %d\n", nbr_valid_pixels);
+        printf("  -> trash_pix flag    = %d\n", A.trash_pix);
         fflush(stdout);
     }
 
     // Build pixel-to-time-domain mapping
 
     st = MPI_Wtime();
-    id0pix = (int *)malloc(nbr_valid_pixels / (A.nnz) * sizeof(int)); // index of last sample pointing to each pixel
-    ll = (int *)malloc(m * sizeof(int));                              // linked list of time samples indexes
+    id_last_pix = (int *)malloc(nbr_valid_pixels / (A.nnz) * sizeof(int)); // index of last sample pointing to each pixel
+    ll = (int *)malloc(m * sizeof(int));                                   // linked list of time samples indexes
 
-    if (id0pix == NULL || ll == NULL)
+    if (id_last_pix == NULL || ll == NULL)
     {
         printf("memory allocation failed");
         exit(1);
@@ -122,7 +123,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     }
     for (j = 0; j < nbr_valid_pixels / (A.nnz); j++)
     {
-        id0pix[j] = -1;
+        id_last_pix[j] = -1;
     }
 
     // build the linked list chain of time samples corresponding to each pixel
@@ -133,18 +134,19 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
         if (!A.trash_pix || (A.trash_pix && (A.indices[i * A.nnz] != 0)))
         {
             vpix_i = A.indices[i * A.nnz] / A.nnz - A.trash_pix;
-            if (id0pix[vpix_i] == -1)
+            if (id_last_pix[vpix_i] == -1)
             {
-                id0pix[vpix_i] = i;
+                id_last_pix[vpix_i] = i;
             }
             else
             {
-                ll[i] = id0pix[vpix_i];
-                id0pix[vpix_i] = i;
+                ll[i] = id_last_pix[vpix_i];
+                id_last_pix[vpix_i] = i;
             }
         }
     }
-    A.id0pix = id0pix;
+
+    A.id_last_pix = id_last_pix;
     A.ll = ll;
     t = MPI_Wtime();
     if (rank == 0)
@@ -205,7 +207,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     // print Toeplitz parameters for information
     if (rank == 0)
     {
-        printf("[rank %d] Noise model: Banded block Toeplitz, half bandwidth = %d \n", rank, lambda_block_avg);
+        printf("[rank %d] Noise model: Banded block Toeplitz, half bandwidth = %d\n", rank, lambda_block_avg);
     }
 
     MPI_Barrier(comm);
@@ -219,22 +221,29 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     // Conjugate Gradient
     if (solver == 0)
     {
-        PCG_GLS_true(outpath, ref, &A, Nm1, x, signal, noise, cond, lhits, tol, maxiter, precond, Z_2lvl);
+        PCG_GLS_true(outpath, ref, &A, &Nm1, &Gaps, x, signal, noise, cond, lhits, tol, maxiter, precond, Z_2lvl);
     }
     else if (solver == 1)
     {
+        if (Gaps.ngap > 0) /* gaps not supported for ECG */
+        {
+            if (rank == 0)
+                printf("Timestream gaps not supported by ECG solver.\n");
+            exit(EXIT_FAILURE);
+        }
 #ifdef W_ECG
-        ECG_GLS(outpath, ref, &A, Nm1, x, signal, noise, cond, lhits, tol, maxiter, enlFac, ortho_alg, bs_red);
+        ECG_GLS(outpath, ref, &A, &Nm1, x, signal, noise, cond, lhits, tol, maxiter, enlFac, ortho_alg, bs_red);
 #else
-        printf("Whoops! To use solver=1 (ECG), please compile after specifying option '--with ecg' to the configure script.\n");
-        exit(1);
+        if (rank == 0)
+            printf("To use solver=1 (ECG), use configure option '--with ecg'.\n");
+        exit(EXIT_FAILURE);
 #endif
     }
     else
     {
-        printf("Whoops! Incorrect solver parameter, please check documentation and try again\n");
-        printf("Quick reminder: solver = 0 -> PCG, solver = 1 -> ECG\n");
-        exit(1);
+        printf("Incorrect solver parameter.\n");
+        printf("Reminder: solver = 0 -> PCG, solver = 1 -> ECG\n");
+        exit(EXIT_FAILURE);
     }
 
     MPI_Barrier(comm);

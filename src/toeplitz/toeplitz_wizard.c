@@ -60,18 +60,18 @@
 /** @ingroup wizard
  **/
 
-int stbmmProd( Tpltz Nm1, double *V)
+int stbmmProd(Tpltz *Nm1, double *V)
 {
 
 #ifdef W_MPI
 
-  mpi_stbmm(&V, Nm1.nrow, Nm1.m_cw, Nm1.m_rw, Nm1.tpltzblocks, Nm1.nb_blocks_loc, Nm1.nb_blocks_tot, Nm1.idp, Nm1.local_V_size, Nm1.flag_stgy, Nm1.comm);
+  mpi_stbmm(&V, Nm1->nrow, Nm1->m_cw, Nm1->m_rw, Nm1->tpltzblocks, Nm1->nb_blocks_loc, Nm1->nb_blocks_tot, Nm1->idp, Nm1->local_V_size, Nm1->flag_stgy, Nm1->comm);
 
 #else
 
 //int stbmm(double **V, int nrow, int m_cw, int m_rw, Block *tpltzblocks, int nb_blocks, int64_t idp, int local_V_size, Flag flag_stgy)
 
-  stbmm(&V, Nm1.nrow, Nm1.m_cw, Nm1.m_rw, Nm1.tpltzblocks, Nm1.nb_blocks_loc, Nm1.idp, Nm1.local_V_size, Nm1.flag_stgy);
+  stbmm(&V, Nm1->nrow, Nm1->m_cw, Nm1->m_rw, Nm1->tpltzblocks, Nm1->nb_blocks_loc, Nm1->idp, Nm1->local_V_size, Nm1->flag_stgy);
 
 #endif
 
@@ -80,22 +80,20 @@ int stbmmProd( Tpltz Nm1, double *V)
 
 
 
-int gstbmmProd( Tpltz Nm1, double *V, Gap Gaps)
+int gstbmmProd(Tpltz *Nm1, double *V, Gap *Gaps)
 {
 
 #ifdef W_MPI
 
-  mpi_gstbmm(&V, Nm1.nrow, Nm1.m_cw, Nm1.m_rw, Nm1.tpltzblocks, Nm1.nb_blocks_loc, Nm1.nb_blocks_tot, Nm1.idp, Nm1.local_V_size, Gaps.id0gap, Gaps.lgap, Gaps.ngap, Nm1.flag_stgy, Nm1.comm);
+  mpi_gstbmm(&V, Nm1->nrow, Nm1->m_cw, Nm1->m_rw, Nm1->tpltzblocks, Nm1->nb_blocks_loc, Nm1->nb_blocks_tot, Nm1->idp, Nm1->local_V_size, Gaps->id0gap, Gaps->lgap, Gaps->ngap, Nm1->flag_stgy, Nm1->comm);
 
 #else
 
 //int gstbmm0(double **V, int nrow, int m_cw, int m_rw, Block *tpltzblocks, int nb_blocks, int64_t idp, int local_V_size, int *id0gap, int *lgap, int ngap, Flag flag_stgy)
 
-  gstbmm(&V, Nm1.nrow, Nm1.m_cw, Nm1.m_rw, Nm1.tpltzblocks, Nm1.nb_blocks_loc, Nm1.idp, Nm1.local_V_size, Gaps.id0gap, Gaps.lgap, Gaps.ngap, Nm1.flag_stgy);
+  gstbmm(&V, Nm1->nrow, Nm1->m_cw, Nm1->m_rw, Nm1->tpltzblocks, Nm1->nb_blocks_loc, Nm1->idp, Nm1->local_V_size, Gaps->id0gap, Gaps->lgap, Gaps->ngap, Nm1->flag_stgy);
 
 #endif
 
   return 0;
 }
-
-

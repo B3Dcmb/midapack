@@ -18,9 +18,9 @@
 #include <unistd.h>
 #include "mappraiser.h"
 
-int apply_weights(Tpltz Nm1, double *tod);
+int apply_weights(Tpltz *Nm1, Gap *Gaps, double *tod);
 
-int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl)
+int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Gap *Gaps, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl)
 {
     int i, j, k; // some indexes
     int m, n;    // number of local time samples, number of local pixels
@@ -53,7 +53,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
     if (Z_2lvl == 0)
         Z_2lvl = size;
 
-    build_precond(&p, &pixpond, &n, A, &Nm1, &x, b, noise, cond, lhits, tol, Z_2lvl, precond);
+    build_precond(&p, &pixpond, &n, A, Nm1, &x, b, noise, cond, lhits, tol, Z_2lvl, precond);
 
     t = MPI_Wtime();
     if (rank == 0)
@@ -85,11 +85,11 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
     for (i = 0; i < m; i++)
         _g[i] = b[i] + noise[i] - _g[i];
 
-    apply_weights(Nm1, _g); // _g = Nm1 (d-Ax0)  (d = signal + noise)
+    apply_weights(Nm1, Gaps, _g); // _g = Nm1 (d-Ax0)  (d = signal + noise)
 
     TrMatVecProd(A, _g, g, 0); // g = At _g
 
-    apply_precond(p, A, &Nm1, g, Cg);
+    apply_precond(p, A, Nm1, g, Cg);
 
     for (j = 0; j < n; j++) // h = Cg
         h[j] = Cg[j];
@@ -155,7 +155,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
 
         MatVecProd(A, h, Ah, 0); // Ah = A h
 
-        apply_weights(Nm1, Nm1Ah); // Nm1Ah = Nm1 Ah   (Nm1Ah == Ah)
+        apply_weights(Nm1, Gaps, Nm1Ah); // Nm1Ah = Nm1 Ah   (Nm1Ah == Ah)
 
         TrMatVecProd(A, Nm1Ah, AtNm1Ah, 0); // AtNm1Ah = At Nm1Ah
 
@@ -173,7 +173,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
         for (j = 0; j < n; j++)             // g = g + ro * (At Nm1 A) h
             g[j] = gp[j] - ro * AtNm1Ah[j]; // Use Ribière-Polak formula
 
-        apply_precond(p, A, &Nm1, g, Cg);
+        apply_precond(p, A, Nm1, g, Cg);
 
         g2pixp = g2pix; // g2p = "res"
         localreduce = 0.0;
@@ -265,28 +265,37 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double 
 }
 
 /* Weights TOD data according to the adopted noise model*/
-int apply_weights(Tpltz Nm1, double *tod)
+int apply_weights(Tpltz *Nm1, Gap *Gaps, double *tod)
 {
     int t_id; // time sample index in local data
     int i, j;
 
-    // Use straightforward loop for white noise model
-    if (Nm1.tpltzblocks[0].lambda == 1)
+    // if (Gaps->ngap == 0) /* No gaps in the timestream */
+    if (1)
     {
-        // Here it is assumed that we use a single bandwidth for all TOD intervals, i.e. lambda is the same for all Toeplitz blocks
-        t_id = 0;
-        for (i = 0; i < Nm1.nb_blocks_loc; i++)
+        // Use straightforward loop for white noise model
+        if (Nm1->tpltzblocks[0].lambda == 1)
         {
-            for (j = 0; j < Nm1.tpltzblocks[i].n; j++)
+            // Here it is assumed that we use a single bandwidth for all TOD intervals, i.e. lambda is the same for all Toeplitz blocks
+            t_id = 0;
+            for (i = 0; i < Nm1->nb_blocks_loc; i++)
             {
-                tod[t_id + j] = Nm1.tpltzblocks[i].T_block[0] * tod[t_id + j];
+                for (j = 0; j < Nm1->tpltzblocks[i].n; j++)
+                {
+                    tod[t_id + j] = Nm1->tpltzblocks[i].T_block[0] * tod[t_id + j];
+                }
+                t_id += Nm1->tpltzblocks[i].n;
             }
-            t_id += Nm1.tpltzblocks[i].n;
         }
+        // Use stbmmProd routine for correlated noise model (No det-det correlations for now)
+        else
+            stbmmProd(Nm1, tod);
     }
-    // Use stbmmProd routine for correlated noise model (No det-det correlations for now)
-    else
-        stbmmProd(Nm1, tod);
+    else /* Use PCG + gstbmmProd to apply the noise weights */
+    {
+        printf("not implemented");
+        exit(EXIT_FAILURE);
+    }
 
     return 0;
 }

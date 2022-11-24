@@ -32,17 +32,17 @@
 /*                           FUNCTIONS PROTOTYPES                            */
 /*****************************************************************************/
 /* Build right hand side */
-int get_rhs(Mat *A, Tpltz Nm1, double *b, double *noise, double *x, double *rhs);
+int get_rhs(Mat *A, Tpltz *Nm1, double *b, double *noise, double *x, double *rhs);
 /* Preconditioner operator */
-double Opmmpreconditioner(Mat *A, Mat BJ_inv, double *X, double *Y, int ncol);
+double Opmmpreconditioner(Mat *A, Mat *BJ_inv, double *X, double *Y, int ncol);
 /* System matrix operator: A^T * N^-1 * A */
-double Opmmmatrix(Mat *A, Tpltz Nm1, double *X, double *Y, int ncol);
+double Opmmmatrix(Mat *A, Tpltz *Nm1, double *X, double *Y, int ncol);
 /*****************************************************************************/
 
 /*****************************************************************************/
 /*                                 CODE                                      */
 /*****************************************************************************/
-int ECG_GLS(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double *b,
+int ECG_GLS(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double *b,
             double *noise, double *cond, int *lhits, double tol, int maxIter, int enlFac,
             int ortho_alg, int bs_red)
 {
@@ -59,10 +59,10 @@ int ECG_GLS(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double *b,
     int N;          // Global number of pixels (no overlapping correction)
     int m, n;       // local number of time samples, local number of pixels x nnz (IQU)
     double *tmp;    // temporary pointer
-    Mat BJ_inv, BJ; // Block-Jacobi preconditioner
+    Mat *BJ_inv, *BJ; // Block-Jacobi preconditioner
 
     /*=== Pre-process degenerate pixels & build the preconditioner ===*/
-    precondblockjacobilike(A, Nm1, &BJ_inv, &BJ, b, cond, lhits);
+    precondblockjacobilike(A, Nm1, BJ_inv, &BJ, b, cond, lhits);
     // Correct the pixels counter after pre-processing
     n = A->lcount - (A->nnz) * (A->trash_pix);
     // Reallocate memory for the well-conditioned map
@@ -204,8 +204,8 @@ int ECG_GLS(char *outpath, char *ref, Mat *A, Tpltz Nm1, double *x, double *b,
 /*                           FUNCTIONS DEFINITION                            */
 /*****************************************************************************/
 /* Build right hand side */
-int get_rhs(Mat *A, Tpltz Nm1, double *b, double *noise, double *x, double *rhs)
-{          // rhs = A^T*Nm1* (b - A*x_0 )
+int get_rhs(Mat *A, Tpltz *Nm1, double *b, double *noise, double *x, double *rhs)
+{ /* rhs = A^T*Nm1* (b - A*x_0 ) */
     int i; // some indexes
     int m, n;
     double *_g; // time domain vector
@@ -225,7 +225,7 @@ int get_rhs(Mat *A, Tpltz Nm1, double *b, double *noise, double *x, double *rhs)
 }
 
 /* Preconditioner operator */
-double Opmmpreconditioner(Mat *A, Mat BJ_inv, double *X, double *Y, int ncol)
+double Opmmpreconditioner(Mat *A, Mat *BJ_inv, double *X, double *Y, int ncol)
 { // Y = M^-1 X
     double timing = MPI_Wtime();
 
@@ -241,7 +241,7 @@ double Opmmpreconditioner(Mat *A, Mat BJ_inv, double *X, double *Y, int ncol)
     {
         // get column vector x
         x = X + i * n;
-        MatVecProd(&BJ_inv, x, Cg, 0);
+        MatVecProd(BJ_inv, x, Cg, 0);
         for (j = 0; j < n; j++)
         {
             Y[i * n + j] = Cg[j];
@@ -252,8 +252,8 @@ double Opmmpreconditioner(Mat *A, Mat BJ_inv, double *X, double *Y, int ncol)
 }
 
 /* System matrix operator: A^T * N^-1 * A */
-double Opmmmatrix(Mat *A, Tpltz Nm1, double *X, double *Y, int ncol)
-{ // Y = A^T*Nm1*A * X
+double Opmmmatrix(Mat *A, Tpltz *Nm1, double *X, double *Y, int ncol)
+{ /* Y = A^T*Nm1*A * X */
     double timing = MPI_Wtime();
 
     int i, j; // some indexes

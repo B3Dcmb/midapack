@@ -55,7 +55,6 @@
 **
 */
 
-
 #ifndef TOEPLITZ_H
 #define TOEPLITZ_H
 
@@ -74,13 +73,12 @@
 #include <string.h>
 
 //=========================================================================
-//Basic functions definition
-#define max(a,b) (((a) > (b)) ? (a) : (b))
-#define min(a,b) (((a) < (b)) ? (a) : (b))
+// Basic functions definition
+#define max(a, b) (((a) > (b)) ? (a) : (b))
+#define min(a, b) (((a) < (b)) ? (a) : (b))
 
 //=========================================================================
-//Fixed parameters
-
+// Fixed parameters
 
 /// MPI user defined tag
 /** Tag used for MPI communications.
@@ -89,19 +87,18 @@
 #define MPI_USER_TAG 123
 #endif
 
-//Define this parameter to use fftw multithreading
-//This is not fully tested
+// Define this parameter to use fftw multithreading
+// This is not fully tested
 #ifndef fftw_MULTITHREADING
 #define fftw_MULTITHREADING
 #endif
 
 /// Number of FFT's performed at the same time (default value).
 /** FFT's can be performed simultaneously using advanced fftw plans.
-*/
+ */
 #ifndef NFFT_DEFAULT
 #define NFFT_DEFAULT 1 /*1*/
 #endif
-
 
 /// fftw plan allocation flag (default value).
 /** fftw plan allocation flag can be one of (from fastest to lowest):
@@ -112,80 +109,80 @@
 #define FFTW_FLAG_AUTO FFTW_ESTIMATE
 #endif
 
-
-//Parameters to define the computational strategy
+// Parameters to define the computational strategy
 #ifndef FLAG_STGY
 #define FLAG_STGY
 
-#define FLAG_BS 0  //0:auto  1:fixed  2:zero  3:3lambda  4:4lambda  5:formula2
-#define FLAG_NFFT 0  //0:auto  1:fixed  2:numthreads  3:fftwthreads
-#define FLAG_FFTW FFTW_FLAG_AUTO  //ESTIMATE, MEASURE, PATIENT, EXHAUSTIVE. Default is MEASURE
-#define FLAG_NO_RSHP 0  //0:auto  1:yes  1:no
-#define FLAG_NOFFT 0 //0:auto  1:yes  1:no
-#define FLAG_BLOCKINGCOMM 0  //0:auto  1:noblocking  2:blocking
-#define FIXED_NFFT 0  //fixed init value for nfft
-#define FIXED_BS 0   //fixed init value for blockside
+#define FLAG_BS 0                // 0:auto  1:fixed  2:zero  3:3lambda  4:4lambda  5:formula2
+#define FLAG_NFFT 0              // 0:auto  1:fixed  2:numthreads  3:fftwthreads
+#define FLAG_FFTW FFTW_FLAG_AUTO // ESTIMATE, MEASURE, PATIENT, EXHAUSTIVE. Default is MEASURE
+#define FLAG_NO_RSHP 0           // 0:auto  1:yes  1:no
+#define FLAG_NOFFT 0             // 0:auto  1:yes  1:no
+#define FLAG_BLOCKINGCOMM 0      // 0:auto  1:noblocking  2:blocking
+#define FIXED_NFFT 0             // fixed init value for nfft
+#define FIXED_BS 0               // fixed init value for blockside
 #define FLAG_VERBOSE 0
 #define FLAG_SKIP_BUILD_GAPPY_BLOCKS 0
 #define FLAG_PARAM_DISTMIN_FIXED 0
-#define FLAG_PRECOMPUTE_LVL 0   //0: no precompute  1: precompute plans  2: precomputes Toeplitz and plans
+#define FLAG_PRECOMPUTE_LVL 0 // 0: no precompute  1: precompute plans  2: precomputes Toeplitz and plans
 
 #endif
 
 //=========================================================================
-//Global parameters
+// Global parameters
 
 extern int VERBOSE;
 extern int PRINT_RANK;
 
 //=========================================================================
-//Strutures definition
+// Strutures definition
 
-
-typedef struct Block {
+typedef struct Block
+{
      int64_t idv;
-     double *T_block;  //pointer of the Toeplitz data
+     double *T_block; // pointer of the Toeplitz data
      int lambda;
      int n;
-/* For precomputed fftw
-     int bs;
-     int nfft;
-     fftw_complex *T_fft;
-     fftw_complex *V_fft;
-     double *V_rfft;
-     fftw_plan plan_f;
-     fftw_plan plan_b;
-     fftw_plan plan_f_T;
-*/
+     /* For precomputed fftw
+          int bs;
+          int nfft;
+          fftw_complex *T_fft;
+          fftw_complex *V_fft;
+          double *V_rfft;
+          fftw_plan plan_f;
+          fftw_plan plan_b;
+          fftw_plan plan_f_T;
+     */
 } Block;
 
-
-typedef struct Flag {
-       int flag_bs;  //bs used formula
-       int flag_nfft;
-       int flag_fftw;
-       int flag_no_rshp;  //with or without
-       int flag_nofft;
-       int flag_blockingcomm;
-       int fixed_nfft;  //init value for nfft
-       int fixed_bs;   //long long int
-       int flag_verbose;
-       int flag_skip_build_gappy_blocks;
-       int flag_param_distmin_fixed;
-       int flag_precompute_lvl;
+typedef struct Flag
+{
+     int flag_bs; // bs used formula
+     int flag_nfft;
+     int flag_fftw;
+     int flag_no_rshp; // with or without
+     int flag_nofft;
+     int flag_blockingcomm;
+     int fixed_nfft; // init value for nfft
+     int fixed_bs;   // long long int
+     int flag_verbose;
+     int flag_skip_build_gappy_blocks;
+     int flag_param_distmin_fixed;
+     int flag_precompute_lvl;
 } Flag;
 
-typedef struct Gap {
-  int64_t *id0gap;
-  int *lgap;
-  int ngap;
+typedef struct Gap
+{
+     int64_t *id0gap;
+     int *lgap;
+     int ngap;
 } Gap;
 
-
-typedef struct Tpltz {
-     int64_t nrow;  //n total
-     int m_cw;  //V column number in the linear row-wise order (vect row-wise order)
-     int m_rw;  //V column number in the uniform row-wise order (matrix row-wise order)
+typedef struct Tpltz
+{
+     int64_t nrow; // n total
+     int m_cw;     // V column number in the linear row-wise order (vect row-wise order)
+     int m_rw;     // V column number in the uniform row-wise order (matrix row-wise order)
      Block *tpltzblocks;
      int nb_blocks_loc;
      int nb_blocks_tot;
@@ -195,9 +192,8 @@ typedef struct Tpltz {
      MPI_Comm comm;
 } Tpltz;
 
-
 //=========================================================================
-//Groups definition for documentation
+// Groups definition for documentation
 
 /** @defgroup toeplitz TOEPLITZ module
  *  Toeplitz matrix algebra module
@@ -244,18 +240,13 @@ typedef struct Tpltz {
  *  @ingroup group2
  */
 
-
 //=========================================================================
 // User routines definition (API)
 
-//Wizard routines
-int stbmmProd( Tpltz Nm1, double *V);
-
-
-//Sequential routines (group 11)
+// Sequential routines (group 11)
 int tpltz_init(int n, int lambda, int *nfft, int *blocksize, fftw_complex **T_fft, double *T, fftw_complex **V_fft, double **V_rfft, fftw_plan *plan_f, fftw_plan *plan_b, Flag flag_stgy);
 
-int tpltz_cleanup(fftw_complex **T_fft, fftw_complex **V_fft, double **V_rfft,fftw_plan *plan_f, fftw_plan *plan_b);
+int tpltz_cleanup(fftw_complex **T_fft, fftw_complex **V_fft, double **V_rfft, fftw_plan *plan_f, fftw_plan *plan_b);
 
 int stmm_core(double **V, int n, int m, double *T, fftw_complex *T_fft, int blocksize, int lambda, fftw_complex *V_fft, double *V_rfft, int nfft, fftw_plan plan_f, fftw_plan plan_b, int flag_offset, int flag_nofft);
 
@@ -263,33 +254,25 @@ int stmm_main(double **V, int n, int m, int id0, int l, double *T, fftw_complex 
 
 int stmm(double **V, int n, int m, double *T, int lambda, Flag flag_stgy);
 
-//int stbmm(double **V, int nrow, int m, int m_rowwise, Block *tpltzblocks, int nb_blocks_local, int nb_blocks_all, int idp, int local_V_size, Flag flag_stgy);
-
-//int gstbmm(double **V, int nrow, int m, int m_rowwise, Block *tpltzblocks, int nb_blocks_local, int nb_blocks_all, int id0p, int local_V_size, int *id0gap, int *lgap, int ngap,Flag flag_stgy);
-
 int stbmm(double **V, int nrow, int m_cw, int m_rw, Block *tpltzblocks, int nb_blocks, int64_t idp, int local_V_size, Flag flag_stgy);
 
 int gstbmm(double **V, int nrow, int m_cw, int m_rw, Block *tpltzblocks, int nb_blocks, int64_t idp, int local_V_size, int64_t *id0gap, int *lgap, int ngap, Flag flag_stgy);
 
+int reset_gaps(double **V, int id0, int local_V_size, int m, int nrow, int m_rowwise, int64_t *id0gap, int *lgap, int ngap);
 
-int reset_gaps(double **V, int id0,int local_V_size, int m, int nrow, int m_rowwise, int64_t *id0gap, int *lgap, int ngap);
-
-
-//Mpi routines (group 12)
+// Mpi routines (group 12)
 #ifdef W_MPI
 int mpi_stmm(double **V, int n, int m, int id0, int l, double *T, int lambda, Flag flag_stgy, MPI_Comm comm);
 
 int mpi_stbmm(double **V, int64_t nrow, int m, int m_rowwise, Block *tpltzblocks, int nb_blocks_local, int nb_blocks_all, int64_t idp, int local_V_size, Flag flag_stgy, MPI_Comm comm);
 
 int mpi_gstbmm(double **V, int nrow, int m, int m_rowwise, Block *tpltzblocks, int nb_blocks_local, int nb_blocks_all, int id0p, int local_V_size, int64_t *id0gap, int *lgap, int ngap, Flag flag_stgy, MPI_Comm comm);
-
 #endif
-
 
 //=========================================================================
 // User routines definition
 
-//Low level routines (group 21)
+// Low level routines (group 21)
 int flag_stgy_init_auto(Flag *flag_stgy);
 
 int flag_stgy_init_zeros(Flag *flag_stgy);
@@ -316,8 +299,7 @@ int stmm_simple_basic(double **V, int n, int m, double *T, int lambda, double **
 
 int build_gappy_blocks(int nrow, int m, Block *tpltzblocks, int nb_blocks_local, int nb_blocks_all, int64_t *id0gap, int *lgap, int ngap, Block *tpltzblocks_gappy, int *nb_blocks_gappy_final, int flag_param_distmin_fixed);
 
-
-//Internal routines (group 22)
+// Internal routines (group 22)
 int print_error_message(int error_number, char const *file, int line);
 
 int copy_block(int ninrow, int nincol, double *Vin, int noutrow, int noutcol, double *Vout, int inrow, int incol, int nblockrow, int nblockcol, int outrow, int outcol, double norm, int set_zero_flag);
@@ -328,12 +310,12 @@ int nfftblock2vect(double *V2, int fft_size, int nfft, int lambda, double *V1, i
 
 int get_overlapping_blocks_params(int nbloc, Block *tpltzblocks, int local_V_size, int64_t nrow, int64_t idp, int64_t *idpnew, int *local_V_size_new, int *nnew, int *ifirstBlock, int *ilastBlock);
 
+// Wizard routines
+int stbmmProd(Tpltz *Nm1, double *V);
 
+int gstbmmProd(Tpltz *Nm1, double *V, Gap *Gaps);
 
-//Wizard routines
-int stbmmProd( Tpltz Nm1, double *V);
-
-//Toeplitz rshp routines
+// Toeplitz rshp routines
 int fctid_mat2vect(int i, int id0, int n, int lambda);
 
 int fctid_mat2vect_inv(int i, int id0, int n, int lambda);
