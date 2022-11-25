@@ -2,7 +2,8 @@
 .PHONY: lib
 all :
 	@echo "starts compiling ........"
-	mkdir -p $(MIDAPACK_ROOT) $(MIDAPACK_OBJ) $(MAPMAT_OBJ) $(TOEPLITZ_OBJ) $(MIDAPACK_LIB)
+	mkdir -p $(MIDAPACK_ROOT) $(MIDAPACK_INC) $(MIDAPACK_OBJ) $(MAPMAT_OBJ) $(TOEPLITZ_OBJ) $(MIDAPACK_LIB)
+	cp ${DIR}/include/* $(MIDAPACK_INC)
 	make mapmat
 	make toeplitz
 	make lib

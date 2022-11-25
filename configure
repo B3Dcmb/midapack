@@ -420,6 +420,7 @@ echo 'LIBNAME = '$LIBNAME >> Makefile
 echo 'PREFIX = '$PREFIX >> Makefile
 
 echo 'MIDAPACK_ROOT = ${PREFIX}/midapack' >> Makefile
+echo 'MIDAPACK_INC = ${MIDAPACK_ROOT}/include' >> Makefile
 echo 'MIDAPACK_OBJ = ${MIDAPACK_ROOT}/obj' >> Makefile
 echo 'MAPMAT_OBJ = ${MIDAPACK_OBJ}/mapmat' >> Makefile
 echo 'TOEPLITZ_OBJ = ${MIDAPACK_OBJ}/toeplitz' >> Makefile
@@ -514,6 +515,7 @@ echo 'LDFLAGS = '$LDFLAGS >> test/mapmaking/mappraiser/Makefile
 echo 'MAPPRAISER_ROOT = ${PREFIX}/mappraiser' >> test/mapmaking/mappraiser/Makefile
 echo 'MAPPRAISER_OBJ = ${MAPPRAISER_ROOT}/obj' >> test/mapmaking/mappraiser/Makefile
 echo 'MAPPRAISER_LIB = ${MAPPRAISER_ROOT}/lib' >> test/mapmaking/mappraiser/Makefile
+echo 'MAPPRAISER_INC = ${MAPPRAISER_ROOT}/include' >> test/mapmaking/mappraiser/Makefile
 
 echo 'OPT = '$OPT >> test/mapmaking/mappraiser/src/Makefile
 echo 'CC = '$CC >> test/mapmaking/mappraiser/src/Makefile
@@ -526,7 +528,7 @@ echo 'MAPPRAISER_LIB = ${MAPPRAISER_ROOT}/lib' >> test/mapmaking/mappraiser/src/
 ### INC and LIB ################################
 ################################################
 
-INC='-I${DIR}/include'
+INC='-I${MIDAPACK_ROOT}/include'
 LIB='-L${MIDAPACK_LIB} -lmidapack'
 
 # link MKL library (if needed)

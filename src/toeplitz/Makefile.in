@@ -1,6 +1,7 @@
 
 ##############   s r c   ############
 all:
+	cp *.h $(MIDAPACK_ROOT)/include
 	make $(TOEPLITZ_OBJ)/toeplitz.o \
 	$(TOEPLITZ_OBJ)/toeplitz_seq.o \
 	$(TOEPLITZ_OBJ)/toeplitz_block.o \

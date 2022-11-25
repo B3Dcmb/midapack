@@ -2,7 +2,7 @@
 ##############   t e s t s   ############
 
 all:
-	mkdir -p $(MAPPRAISER_ROOT) $(MAPPRAISER_OBJ) $(MAPPRAISER_LIB)
+	mkdir -p $(MAPPRAISER_ROOT) $(MAPPRAISER_OBJ) $(MAPPRAISER_LIB) $(MAPPRAISER_INC)
 	cp -r $(DIR)/test/mapmaking/mappraiser/python $(MAPPRAISER_ROOT)
 	make map
 	make library

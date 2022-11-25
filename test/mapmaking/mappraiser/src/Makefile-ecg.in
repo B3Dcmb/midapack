@@ -6,6 +6,7 @@ all:
 
 mappraiser:
 	@echo "start compiling MAPPRAISER ........"
+	cp *.h $(MAPPRAISER_ROOT)/include
 	make $(MAPPRAISER_OBJ)/createToeplitz.o \
 	$(MAPPRAISER_OBJ)/precond.o \
 	$(MAPPRAISER_OBJ)/pcg_true.o \

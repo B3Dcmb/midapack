@@ -1,5 +1,8 @@
 
-all : $(MAPMAT_OBJ)/mapmat.o $(MAPMAT_OBJ)/mapmatc.o
+all :
+	cp *.h $(MIDAPACK_ROOT)/include
+	make $(MAPMAT_OBJ)/mapmat.o \
+	$(MAPMAT_OBJ)/mapmatc.o
 
 $(MAPMAT_OBJ)/bitop.o : bitop.c
 	$(CC) -c $< -o $@
