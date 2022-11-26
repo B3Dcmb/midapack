@@ -62,7 +62,7 @@ int ECG_GLS(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double *b,
     Mat *BJ_inv, *BJ; // Block-Jacobi preconditioner
 
     /*=== Pre-process degenerate pixels & build the preconditioner ===*/
-    precondblockjacobilike(A, Nm1, BJ_inv, &BJ, b, cond, lhits);
+    precondblockjacobilike(A, Nm1, BJ_inv, BJ, b, cond, lhits);
     // Correct the pixels counter after pre-processing
     n = A->lcount - (A->nnz) * (A->trash_pix);
     // Reallocate memory for the well-conditioned map

@@ -29,7 +29,7 @@
 #define eps 1.0e-15
 
 // do the local Atdiag(Nm1)A with as output a block-diagonal matrix (stored as a vector) in the pixel domain
-int getlocalW(const Mat *A, const Tpltz *Nm1, double *vpixBlock, int *lhits)
+int getlocalW(const Mat *A, Tpltz *Nm1, double *vpixBlock, int *lhits)
 {
     int i, j, k, l;                                 // some indexes
     int m = Nm1->local_V_size;                       // number of local time samples
@@ -1103,7 +1103,7 @@ void build_Em1(const Mat *A, double **Z, double **AZ, const double *pixpond, int
 }
 
 // AZ constructor to speed-up iterations with the 2lvl preconditioners
-void build_AZ(Mat *A, const Tpltz *Nm1, double **Z, int Zn, int n, double ***out_AZ)
+void build_AZ(Mat *A, Tpltz *Nm1, double **Z, int Zn, int n, double ***out_AZ)
 {
     double **AZ;
     double *v;
@@ -1187,7 +1187,7 @@ void mul_ZQtx(double **Z, const double *Qtx, double *vec, int Zn, int n)
 }
 
 // Lanczos procedure to build the deflation subspace of the "a posteriori" 2lvl preconditioner
-void Lanczos_eig(Mat *A, const Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ, double *x, const double *b, const double *noise, double tol, const double *pixpond, int K, double ***out_Ritz_vectors, double ***out_Ritz_vectors_AZ)
+void Lanczos_eig(Mat *A, Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ, double *x, const double *b, const double *noise, double tol, const double *pixpond, int K, double ***out_Ritz_vectors, double ***out_Ritz_vectors_AZ)
 {
     int i, j, k; // some indexes
     int m, n, rank, size;
@@ -1567,7 +1567,7 @@ void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat
 }
 
 // General routine for applying the preconditioner to a map vector
-void apply_precond(struct Precond *p, const Mat *A, const Tpltz *Nm1, double *g, double *Cg)
+void apply_precond(struct Precond *p, const Mat *A, Tpltz *Nm1, double *g, double *Cg)
 {
     int i;
 

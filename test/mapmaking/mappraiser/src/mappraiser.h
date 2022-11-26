@@ -69,7 +69,7 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, 
 void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tpltz *Nm1, double **in_out_x, double *b, const double *noise, double *cond, int *lhits, double tol, int Zn, int precond);
 
 // Product of the preconditioner with a map vector
-void apply_precond(struct Precond *p, const Mat *A, const Tpltz *Nm1, double *g, double *Cg);
+void apply_precond(struct Precond *p, const Mat *A, Tpltz *Nm1, double *g, double *Cg);
 
 // Free memory of the preconditioner
 void free_precond(struct Precond **in_out_p);
