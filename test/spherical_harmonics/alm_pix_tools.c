@@ -139,24 +139,24 @@ int gather_map(double *local_map_pix, double *full_sky_map, S2HAT_GLOBAL_paramet
 }
 
 
-int apply_inv_covariance_matrix_to_alm(s2hat_dcomplex *local_alm, double **inv_covariance_matrix, S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat){
-    /* Apply inverse of covariance matrix to local_alm */
+int apply_inv_covariance_matrix_to_alm(s2hat_dcomplex *input_local_alm, s2hat_dcomplex *out_local_alm, double **inv_covariance_matrix, S2HAT_parameters *S2HAT_params){
+    /* Apply inverse of covariance matrix to input_local_alm */
 
-    // distribute_alms to apply to covariance matrix ?
-    
-    
+    // S2HAT_GLOBAL_parameters Global_param_s2hat = *(S2HAT_params->Global_param_s2hat);
+    // S2HAT_LOCAL_parameters Local_param_s2hat = *(S2HAT_params->Local_param_s2hat);
+
 
     int ell_value, m_value, index_stokes, line_index;
     int nstokes = 3;
-    int lmax = Global_param_s2hat.nlmax;
+    int lmax = S2HAT_params->Global_param_s2hat->nlmax;
 
-    int nmvals = Local_param_s2hat.nmvals; // Total number of m values
+    int nmvals = S2HAT_params->Local_param_s2hat->nmvals; // Total number of m values
     // int *mvals = Local_param_s2hat->mvals; // Values of m the considered processor contain
 
     double res_real, res_imag;
 
-    s2hat_dcomplex *new_local_alm;
-    new_local_alm = (s2hat_dcomplex *) calloc(nstokes*(lmax+1)*m_value,sizeof(s2hat_dcomplex));
+    // s2hat_dcomplex *out_local_alm;
+    // out_local_alm = (s2hat_dcomplex *) calloc(nstokes*(lmax+1)*m_value,sizeof(s2hat_dcomplex));
 
 
     for(ell_value=0; ell_value < lmax+1; ell_value++){
@@ -165,28 +165,28 @@ int apply_inv_covariance_matrix_to_alm(s2hat_dcomplex *local_alm, double **inv_c
                 res_real = 0;
                 res_imag = 0;
                 for (line_index=0; line_index < nstokes; line_index++){
-                    // res_real += local_alm[line_index*(lmax+1)*nmvals + ell_value*nmvals + m_value].re * inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index];
-                    // res_imag += local_alm[line_index*(lmax+1)*nmvals + ell_value*nmvals + m_value].im * inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index];
+                    // res_real += input_local_alm[line_index*(lmax+1)*nmvals + ell_value*nmvals + m_value].re * inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index];
+                    // res_imag += input_local_alm[line_index*(lmax+1)*nmvals + ell_value*nmvals + m_value].im * inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index];
                     
-                    // res_real += local_alm[m_value*(lmax+1)*nstokes + ell_value*nstokes + line_index].re * inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index];
-                    // res_imag += local_alm[m_value*(lmax+1)*nstokes + ell_value*nstokes + line_index].im * inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index];
+                    // res_real += input_local_alm[m_value*(lmax+1)*nstokes + ell_value*nstokes + line_index].re * inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index];
+                    // res_imag += input_local_alm[m_value*(lmax+1)*nstokes + ell_value*nstokes + line_index].im * inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index];
 
-                    res_real += inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index] * local_alm[m_value*(lmax+1)*nstokes + ell_value*nstokes + line_index].re;
-                    res_imag += inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index] * local_alm[m_value*(lmax+1)*nstokes + ell_value*nstokes + line_index].im;
+                    res_real += inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index] * input_local_alm[m_value*(lmax+1)*nstokes + ell_value*nstokes + line_index].re;
+                    res_imag += inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index] * input_local_alm[m_value*(lmax+1)*nstokes + ell_value*nstokes + line_index].im;
                     // Maybe with [line_index*nstokes + index_stokes] ?
                 }
-                // local_alm[index_stokes*(lmax+1)*nmvals + ell_value*nmvals + m_value].re = res_real;
-                // local_alm[index_stokes*(lmax+1)*nmvals + ell_value*nmvals + m_value].im = res_imag;
-                new_local_alm[m_value*(lmax+1)*nstokes + ell_value*nstokes + index_stokes].re = res_real;
-                new_local_alm[m_value*(lmax+1)*nstokes + ell_value*nstokes + index_stokes].im = res_imag;
+                // input_local_alm[index_stokes*(lmax+1)*nmvals + ell_value*nmvals + m_value].re = res_real;
+                // input_local_alm[index_stokes*(lmax+1)*nmvals + ell_value*nmvals + m_value].im = res_imag;
+                out_local_alm[m_value*(lmax+1)*nstokes + ell_value*nstokes + index_stokes].re = res_real;
+                out_local_alm[m_value*(lmax+1)*nstokes + ell_value*nstokes + index_stokes].im = res_imag;
             }
             // Verify it is not applied to part where a_lm not defined !!!
         }
     }
-    long int index;
-    for(index=0; index<nstokes*(lmax+1)*m_value; index++){
-        local_alm[index].re = new_local_alm[index].re;
-        local_alm[index].im = new_local_alm[index].im;
-    }
-    free(new_local_alm);
+    // long int index;
+    // for(index=0; index<nstokes*(lmax+1)*m_value; index++){
+    //     local_alm[index].re = out_local_alm[index].re;
+    //     local_alm[index].im = out_local_alm[index].im;
+    // }
+    // free(out_local_alm);
 }

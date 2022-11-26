@@ -155,6 +155,24 @@ int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters Global_param_s2ha
 }
 
 
+int init_s2hat_parameters_superstruct(Files_path_WIENER_FILTER *Files_WF_struct, int nside, S2HAT_parameters *S2HAT_params, int root)
+{   // Initalize both S2HAT_GLOBAL_parameters and S2HAT_LOCAL_parameters for superstructure of S2HAT
+    
+    S2HAT_GLOBAL_parameters *Global_param_s2hat = (S2HAT_GLOBAL_parameters *) malloc( 1 * sizeof(S2HAT_GLOBAL_parameters));
+    init_s2hat_global_parameters(Files_WF_struct, nside, Files_WF_struct->lmax_Wiener_Filter, Global_param_s2hat); 
+    // Initialization of Global_param_s2hat structure, for sky pixelization scheme and lmax_WF choice
+
+
+    S2HAT_LOCAL_parameters *Local_param_s2hat = (S2HAT_LOCAL_parameters *) malloc( 1 * sizeof(S2HAT_LOCAL_parameters));
+    init_MPI_struct_s2hat_local_parameters(Local_param_s2hat, rank, size, root, comm); 
+    init_s2hat_local_parameters_struct(*Global_param_s2hat, Local_param_s2hat);
+    // Initialization of Local_param_s2hat structure, including MPI parameters, first/last rings studied, size of pixels cut sky per rank, etc. -- see Wiener filter extension directory for more details
+
+    S2HAT_params->Global_param_s2hat = Global_param_s2hat;
+    S2HAT_parameters->Local_param_s2hat = Local_param_s2hat;
+    // Initialization of final superstructure S2HAT_params
+}
+
 
 void mpi_broadcast_s2hat_global_struc(S2HAT_GLOBAL_parameters *Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat){
     /* Use s2hat routines to broadcast s2hat structures */
@@ -166,6 +184,28 @@ void mpi_broadcast_s2hat_global_struc(S2HAT_GLOBAL_parameters *Global_param_s2ha
     MPI_Bcast( &(Global_param_s2hat->nmmax), 1, MPI_INT, Local_param_s2hat.gangroot, Local_param_s2hat.gangcomm);
     MPI_Bcast( &(Global_param_s2hat->nside), 1, MPI_INT, Local_param_s2hat.gangroot, Local_param_s2hat.gangcomm);
 }
+
+int distribute_full_sky_map_into_local_maps_S2HAT(double* full_sky_map, double *local_map_s2hat, S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat, int nstokes){
+    /* Distribute full sky map in ring ordering, with convention [npix, nstokes] in column-wise order among procs, into local maps */
+    distribute_map(Global_param_s2hat.pixelization_scheme, 1, 0, nstokes, Local_param_s2hat.first_ring, Local_param_s2hat.last_ring, Local_param_s2hat.map_size, 
+        local_map_s2hat, full_sky_map, Local_param_s2hat.gangrank, Local_param_s2hat.gangsize, Local_param_s2hat.gangroot, Local_param_s2hat.gangcomm);
+    // 1 for the number of maps, 0 for the index of the current map
+
+    return 0;
+}
+
+
+int collect_partial_map_from_pixels(double* local_map_s2hat, double *output_submap, int first_pix, int last_pix, S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat, int nstokes){
+    // Collect specific pixels from all local_map_s2hat to form a submap given first and last pixels 
+    int submap_size = last_pix - first_pix; // Submapsize given by pixel numbers
+
+    collect_partialmap(Global_param_s2hat.pixelization_scheme, 1, 0, nstokes, first_pix, last_pix, 
+        output_submap, first_ring, last_ring, submap_size, local_map_s2hat, 
+        Local_param_s2hat.gangrank, Local_param_s2hat.gangsize, Local_param_s2hat.gangroot, Local_param_s2hat.gangcomm);
+    // 1 map given, 0 is the number of the map
+}
+
+
 
 
 void free_covariance_matrix(double ** covariance_matrix_3x3, int lmax){
@@ -185,4 +225,12 @@ void free_s2hat_GLOBAL_parameters_struct(S2HAT_GLOBAL_parameters *Global_param_s
 void free_s2hat_LOCAL_parameters_struct(S2HAT_LOCAL_parameters *Local_param_s2hat){
     free(Local_param_s2hat->mvals);
     free(Local_param_s2hat);
+}
+
+void free_s2hat_parameters_struct(S2HAT_parameters *S2HAT_params){
+
+    free_s2hat_GLOBAL_parameters_struct(S2HAT_params->Global_param_s2hat);
+    free_s2hat_LOCAL_parameters_struct(S2HAT_params->Local_param_s2hat);
+
+    free(S2HAT_params);
 }

@@ -22,6 +22,7 @@ void m2s(double *mapval, double *submapval, int *subset, int count){
   }
 }
 
+
 /** @brief Local mat vec prod
     @param indm table of integers apval array of values
     @param submapval  array of values

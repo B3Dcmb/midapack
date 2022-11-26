@@ -126,9 +126,13 @@ int get_covariance_matrix_3x3(char *c_ell_path, int number_correl, double **cova
 }
 
 
-int get_inverse_covariance_matrix_3x3(Files_path_WIENER_FILTER Files_WF_struct, double **inverse_covariance_matrix, S2HAT_GLOBAL_parameters Global_param_s2hat){
+int get_inverse_covariance_matrix_3x3(S2HAT_parameters *S2HAT_params, double **inverse_covariance_matrix){
     /* Function to obtain inverse of covariance matrix in harmonic domain, from given c_ells
     */
+
+    Files_path_WF_struct = *(S2HAT_params->Files_path_WF_struct);
+    Global_param_s2hat = *(S2HAT_params->Global_param_s2hat);
+    
     double **covariance_matrix;
     int ell_value, index_1;
     int lmax = Global_param_s2hat.nlmax;

@@ -6,6 +6,7 @@
 #include <string.h>
 // #include <mkl.h>
 // #include "fitsio.h"
+#include <chealpix.h>
 #include <fitsio.h>
 #include <unistd.h>
 #include "s2hat.h"
@@ -16,7 +17,7 @@
 #define INFO(Y,args...)        { FILE *X=stdout; fprintf( X, Y, ##args); fflush(X); }
 
 
-void init_files_struct_WF(Files_path_WIENER_FILTER *Files_path_WF_struct, char *path_mask_file,  bool use_mask_file, char *c_ell_path, int number_correlations){
+void init_files_struct_WF(Files_path_WIENER_FILTER *Files_path_WF_struct, char *path_mask_file,  bool use_mask_file, int nside, int lmax_Wiener_Filter, char *c_ell_path, int number_correlations){
   /* Define file support structure for Wiener_filter extension 
     path_mask_file : path for fits mask file, ignored if use_mask_file=false
     use_mask_file : allow user to not use a mask, in that case a list of 1 (of size 12*nside**2) will be used
@@ -30,6 +31,40 @@ void init_files_struct_WF(Files_path_WIENER_FILTER *Files_path_WF_struct, char *
     Files_path_WF_struct->c_ell_path = c_ell_path;
     Files_path_WF_struct->use_mask_file = use_mask_file;
     Files_path_WF_struct->number_correlations = number_correlations;
+    Files_path_WF_struct->nside = nside;
+    Files_path_WF_struct->lmax_Wiener_Filter = lmax_Wiener_Filter;
+}
+
+
+void compute_full_map_nest2ring(double *map_nest, double *map_ring, int nside, int nstokes, int npix){
+  // Compute S2HAT ring version of MAPPRAISER nest map map_nest
+  // Expect map of nstokes*npix
+  int pixel_index, nstokes_index, ipix;
+
+  for( pixel_index=0; pixel_index<npix; pixel_index++) {
+    nest2ring( nside, pixel_index, &ipix);
+    for (nstokes_index=0; nstokes_index<nstokes; nstokes_index++){
+      map_ring[ipix + nstokes_index*npix] = map_nest[pixel_index*nstokes + nstokes_index];
+      // Change map in ring ordering with S2HAT convention [npix, stokes]
+      // into map in nest ordering, with MAPPRAISER convention [nstokes, npix] in column-wise ordering
+    }
+  }
+}
+
+
+void compute_full_map_ring2nest(double *map_ring, double *map_nest, int nside, int nstokes, int npix){
+  // Compute MAPPRAISER nest version of S2HAT ring map map_ring
+  // Expect map of nstokes*npix
+  int pixel_index;
+
+  for( pixel_index=0; pixel_index<npix; pixel_index++) {
+    ring2nest( nside, pixel_index, &ipix);
+    for (nstokes_index=0; nstokes_index<nstokes; nstokes_index++){
+      map_nest[ipix*nstokes + nstokes_index] = map_ring[pixel_index + nstokes_index*npix];
+      // Change map in nest ordering, with MAPPRAISER convention [nstokes, npix]
+      // into map in ring ordering with S2HAT convention [npix, stokes] in column-wise ordering
+    }
+  }
 }
 
 void read_fits_mask(int nside, double *mask, char *path_mask_file, int col)
@@ -72,19 +107,18 @@ void read_fits_mask(int nside, double *mask, char *path_mask_file, int col)
   }
   ffclos(fptr, &status);  
   /* revert if NESTED */
-  // if( !strcmp( ordering, "NESTED")) {
-  //   printf( "NEST -> RING\n");
-  //   for( pixel_index=0; pixel_index<npix; pixel_index++) {
-  //     nest2ring( nside, pixel_index, &ipix);
-  //     mask[ipix] = (double)tmp[pixel_index];
-  //   }
-  // } else {
-  //   for( pixel_index=0; pixel_index<npix; pixel_index++) mask[pixel_index] = (double)tmp[pixel_index];
-  // }
-  
-  for( pixel_index=0; pixel_index<npix; pixel_index++){
-    mask[pixel_index] = tmp[pixel_index];
+  if( !strcmp( ordering, "NESTED")) {
+    printf( "NEST -> RING\n");
+    // for( pixel_index=0; pixel_index<npix; pixel_index++) {
+    //   nest2ring( nside, pixel_index, &ipix);
+    //   mask[ipix] = (double)tmp[pixel_index];
+    // }
+    compute_full_map_nest2ring(tmp, mask, nside);
+
+  } else {
+    for( pixel_index=0; pixel_index<npix; pixel_index++) mask[pixel_index] = (double)tmp[pixel_index];
   }
+
   // printf("Tmp test 3 : %ld %f \t", pixel_index, mask[pixel_index]);
   // fflush(stdout);
 
