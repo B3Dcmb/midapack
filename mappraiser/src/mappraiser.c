@@ -209,7 +209,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
             }
             else /* different gap, or no flagged samples remaining */
             {
-                id0gap[i] = (int64_t)gap_start;
+                id0gap[i] = gif + gap_start; // global row index
                 lgap[i] = lengap;
                 lengap = 1;
                 --i;
