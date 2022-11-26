@@ -18,9 +18,9 @@
 #include <unistd.h>
 #include "mappraiser.h"
 
-int apply_weights(Tpltz *Nm1, Gap *Gaps, double *tod);
+int apply_weights(Tpltz *Nm1, Tpltz *Ncov, Gap *Gaps, double *tod);
 
-int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Gap *Gaps, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl)
+int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *Ncov, Gap *Gaps, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl)
 {
     int i, j, k; // some indexes
     int m, n;    // number of local time samples, number of local pixels
@@ -85,7 +85,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Gap *Gaps, double
     for (i = 0; i < m; i++)
         _g[i] = b[i] + noise[i] - _g[i];
 
-    apply_weights(Nm1, Gaps, _g); // _g = Nm1 (d-Ax0)  (d = signal + noise)
+    apply_weights(Nm1, Ncov, Gaps, _g); // _g = Nm1 (d-Ax0)  (d = signal + noise)
 
     TrMatVecProd(A, _g, g, 0); // g = At _g
 
@@ -155,7 +155,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Gap *Gaps, double
 
         MatVecProd(A, h, Ah, 0); // Ah = A h
 
-        apply_weights(Nm1, Gaps, Nm1Ah); // Nm1Ah = Nm1 Ah   (Nm1Ah == Ah)
+        apply_weights(Nm1, Ncov, Gaps, Nm1Ah); // Nm1Ah = Nm1 Ah   (Nm1Ah == Ah)
 
         TrMatVecProd(A, Nm1Ah, AtNm1Ah, 0); // AtNm1Ah = At Nm1Ah
 
@@ -265,13 +265,12 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Gap *Gaps, double
 }
 
 /* Weights TOD data according to the adopted noise model*/
-int apply_weights(Tpltz *Nm1, Gap *Gaps, double *tod)
+int apply_weights(Tpltz *Nm1, Tpltz *Ncov, Gap *Gaps, double *tod)
 {
     int t_id; // time sample index in local data
     int i, j;
 
-    // if (Gaps->ngap == 0) /* No gaps in the timestream */
-    if (1)
+    if (Gaps->ngap == 0) /* No gaps in the timestream */
     {
         // Use straightforward loop for white noise model
         if (Nm1->tpltzblocks[0].lambda == 1)
@@ -293,8 +292,53 @@ int apply_weights(Tpltz *Nm1, Gap *Gaps, double *tod)
     }
     else /* Use PCG + gstbmmProd to apply the noise weights */
     {
-        printf("not implemented");
-        exit(EXIT_FAILURE);
+        /* python code
+        y = np.zeros(x.size, dtype=x.dtype)
+
+        # Compute initial residual
+        r = x - g_toeplitz_matvec(tt, y, flags, use_scipy=use_scipy)
+        z = apply_precond(tt, r, mode=precond_mode, flags=flags, segments=valid_segments)
+            
+        res = np.linalg.norm(r)
+        
+        res0 = res
+        res_list = [res]
+
+        # Set initial descent direction
+        p = z
+
+        # Gradient descent
+        k = 0
+        while k < maxiter and not has_converged(res, res0, tol, k, verbose=verbose):
+            # compute next guess and residual
+            Tp = g_toeplitz_matvec(tt, p, flags, use_scipy=use_scipy)
+
+            alpha = np.dot(r, z) / np.dot(p, Tp)
+            y = y + alpha * p
+            
+            if implicit_res:
+                r_new = r - alpha * Tp
+            else:
+                r_new = x - g_toeplitz_matvec(tt, y, flags, use_scipy=use_scipy)
+            
+            z_new = apply_precond(tt, r_new, mode=precond_mode, flags=flags, segments=valid_segments)
+            
+            res = np.linalg.norm(r_new)
+            res_list.append(res)
+
+            # update search direction
+            beta = -np.dot(r_new, z_new) / np.dot(r, z)
+            p = z_new - beta * p
+
+            r = r_new
+            z = z_new
+            k += 1
+        
+        for i in range(len(res_list)):
+            res_list[i] /= res0
+            
+        return y, res_list
+        */
     }
 
     return 0;

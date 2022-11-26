@@ -70,6 +70,7 @@ _mappraiser.MLmap.argtypes = [
     npc.ndpointer(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"),
     ct.c_int,  # lambda
     npc.ndpointer(dtype=INVTT_TYPE, ndim=1, flags="C_CONTIGUOUS"),
+    npc.ndpointer(dtype=INVTT_TYPE, ndim=1, flags="C_CONTIGUOUS"),
 ]
 
 
@@ -86,6 +87,7 @@ def MLmap(
     noise,
     Lambda,
     invtt,
+    tt,
 ):
     """
     Compute the MLMV solution of the GLS estimator, assuming uniform detector weighting and a single PSD for all stationary intervals.
@@ -105,6 +107,7 @@ def MLmap(
     * `noise`: Noise buffer
     * `Lambda`: Toeplitz matrix half-bandwidth
     * `invtt`: Inverse noise weights
+    * `tt`: noise autocorrelation
 
     """
     if not available:
@@ -112,6 +115,12 @@ def MLmap(
 
     outpath = params["path_output"].encode("ascii")
     ref = params["ref"].encode("ascii")
+    
+    if comm.rank == 0:
+        print(invtt)
+        print(tt, flush=True)
+    
+    comm.Barrier()
 
     _mappraiser.MLmap(
         encode_comm(comm),
@@ -137,6 +146,7 @@ def MLmap(
         noise,
         Lambda,
         invtt,
+        tt,
     )
 
     return

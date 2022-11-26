@@ -20,7 +20,7 @@
 
 int x2map_pol(double *mapI, double *mapQ, double *mapU, double *Cond, int *hits, int npix, double *x, int *lstid, double *cond, int *lhits, int xsize);
 
-void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int Z_2lvl, int pointing_commflag, double tol, int maxiter, int enlFac, int ortho_alg, int bs_red, int nside, void *data_size_proc, int nb_blocks_loc, void *local_blocks_sizes, int Nnz, void *pix, void *pixweights, void *signal, double *noise, int lambda, double *invtt)
+void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int Z_2lvl, int pointing_commflag, double tol, int maxiter, int enlFac, int ortho_alg, int bs_red, int nside, void *data_size_proc, int nb_blocks_loc, void *local_blocks_sizes, int Nnz, void *pix, void *pixweights, void *signal, double *noise, int lambda, double *inverse_correlation, double *correlation)
 {
     int64_t M;             // Global number of rows
     int m, Nb_t_Intervals; // local number of rows of the pointing matrix A, nbr of stationary intervals
@@ -271,8 +271,14 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
 
     // Block definition
     tpltzblocks = (Block *)malloc(nb_blocks_loc * sizeof(Block));
-    defineBlocks_avg(tpltzblocks, invtt, nb_blocks_loc, local_blocks_sizes, lambda_block_avg, id0);
+    defineBlocks_avg(tpltzblocks, inverse_correlation, nb_blocks_loc, local_blocks_sizes, lambda_block_avg, id0);
     defineTpltz_avg(&Nm1, nrow, 1, mcol, tpltzblocks, nb_blocks_loc, nb_blocks_tot, id0, local_V_size, flag_stgy, comm);
+
+    // define the noise covariance matrix
+    Tpltz Ncov;
+    tpltzblocks_Ncov = (Block *)malloc(nb_blocks_loc * sizeof(Block));
+    defineBlocks_avg(tpltzblocks_Ncov, correlation, nb_blocks_loc, local_blocks_sizes, lambda_block_avg, id0);
+    defineTpltz_avg(&Ncov, nrow, 1, mcol, tpltzblocks_Ncov, nb_blocks_loc, nb_blocks_tot, id0, local_V_size, flag_stgy, comm);
 
     // print Toeplitz parameters for information
     if (rank == 0)
@@ -291,7 +297,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     // Conjugate Gradient
     if (solver == 0)
     {
-        PCG_GLS_true(outpath, ref, &A, &Nm1, &Gaps, x, signal, noise, cond, lhits, tol, maxiter, precond, Z_2lvl);
+        PCG_GLS_true(outpath, ref, &A, &Nm1, &Ncov, &Gaps, x, signal, noise, cond, lhits, tol, maxiter, precond, Z_2lvl);
     }
     else if (solver == 1)
     {

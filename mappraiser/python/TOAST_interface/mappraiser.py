@@ -20,7 +20,7 @@ import toml
 
 # local imports
 from .utils import (
-    compute_invtt,
+    compute_autocorrelations,
     compute_local_block_sizes,
     log_time_memory,
     restore_in_turns,
@@ -1001,16 +1001,20 @@ class Mappraiser(Operator):
                     None,
                     do_purge=False,
                 )
-            # Create buffer for invtt
-            tt_storage, _ = dtype_to_aligned(mappraiser.INVTT_TYPE)
-            self._mappraiser_invtt_raw = tt_storage.zeros(
+            # Create buffer for invtt and tt
+            storage, _ = dtype_to_aligned(mappraiser.INVTT_TYPE)
+            self._mappraiser_invtt_raw = storage.zeros(
+                len(data.obs) * len(all_dets) * params["Lambda"]
+            )
+            self._mappraiser_tt_raw = storage.zeros(
                 len(data.obs) * len(all_dets) * params["Lambda"]
             )
             self._mappraiser_invtt = self._mappraiser_invtt_raw.array()
+            self._mappraiser_tt = self._mappraiser_tt_raw.array()
 
-        # Compute invtt
+        # Compute noise autocorrelation and inverse autocorrelation functions
         if not self.noiseless:
-            compute_invtt(
+            compute_autocorrelations(
                 len(data.obs),
                 len(all_dets),
                 self._mappraiser_noise,
@@ -1018,6 +1022,7 @@ class Mappraiser(Operator):
                 params["Lambda"],
                 params["fsample"],
                 self._mappraiser_invtt,
+                self._mappraiser_tt,
                 mappraiser.INVTT_TYPE,
                 print_info=(data.comm.world_rank == 0),
                 save_psd=(self.save_psd and data.comm.world_rank == 0),
@@ -1025,6 +1030,7 @@ class Mappraiser(Operator):
             )
         else:
             self._mappraiser_invtt[:] = 1.0
+            self._mappraiser_tt[:] = 1.0
 
         log_time_memory(
             data,
@@ -1252,6 +1258,8 @@ class Mappraiser(Operator):
                 del self._mappraiser_noise_raw
                 del self._mappraiser_invtt
                 del self._mappraiser_invtt_raw
+                del self._mappraiser_tt
+                del self._mappraiser_tt_raw
             else:
                 # We want to re-use the signal buffer, just copy.
                 restore_local(
@@ -1324,6 +1332,7 @@ class Mappraiser(Operator):
             self._mappraiser_noise,
             params["Lambda"],
             self._mappraiser_invtt,
+            self._mappraiser_tt,
         )
 
         return

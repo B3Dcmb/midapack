@@ -497,14 +497,15 @@ def compute_local_block_sizes(data, view, dets, buffer):
     return
 
 
-def compute_invtt(
+def compute_autocorrelations(
     nobs,
     ndet,
     mappraiser_noise,
     local_block_sizes,
     Lambda,
     fsamp,
-    buffer,
+    buffer_corr,
+    buffer_invcorr,
     invtt_dtype,
     print_info=False,
     save_psd=False,
@@ -521,7 +522,7 @@ def compute_invtt(
                 (idet * nobs + iobs) * Lambda + Lambda,
                 1,
             )
-            buffer[slc] = noise2invtt(
+            buffer_invcorr[slc], buffer_corr[slc] = noise_autocorrelation(
                 nsetod,
                 blocksize,
                 Lambda,
@@ -552,7 +553,7 @@ def inverselogpsd_model(f, a, alpha, fknee, fmin):
     return a - np.log10(1 + ((f + fmin) / fknee) ** alpha)
 
 
-def noise2invtt(
+def noise_autocorrelation(
     nsetod,
     nn,
     Lambda,
@@ -605,6 +606,7 @@ def noise2invtt(
 
     # Compute inverse noise autocorrelation functions
     inv_tt = np.fft.irfft(psdm1, n=nn)
+    tt = np.fft.irfft(np.reciprocal(psdm1), n=nn)
 
     # Define apodization window
     # Only allow max lambda = nn//2
@@ -617,6 +619,7 @@ def noise2invtt(
     
     # Apply window
     inv_tt_w = np.multiply(window, inv_tt[:Lambda], dtype=invtt_dtype)
+    tt_w = np.multiply(window, tt[:Lambda], dtype=invtt_dtype)
 
     # Optionnally save some PSDs for plots
     if save_psd:
@@ -639,4 +642,4 @@ def noise2invtt(
         ipsd = np.abs(np.fft.fft(circ_invtt_w, n=nn))
         np.save(save_dir+"/psd_eff"+str(Lambda)+".npy",ipsd[:nn//2])
 
-    return inv_tt_w
+    return inv_tt_w, tt_w
