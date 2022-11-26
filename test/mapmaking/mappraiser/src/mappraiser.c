@@ -221,16 +221,10 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     // Conjugate Gradient
     if (solver == 0)
     {
-        PCG_GLS_true(outpath, ref, &A, &Nm1, &Gaps, x, signal, noise, cond, lhits, tol, maxiter, precond, Z_2lvl);
+        PCG_GLS_true(outpath, ref, &A, &Nm1, x, signal, noise, cond, lhits, tol, maxiter, precond, Z_2lvl);
     }
     else if (solver == 1)
     {
-        if (Gaps.ngap > 0) /* gaps not supported for ECG */
-        {
-            if (rank == 0)
-                printf("Timestream gaps not supported by ECG solver.\n");
-            exit(EXIT_FAILURE);
-        }
 #ifdef W_ECG
         ECG_GLS(outpath, ref, &A, &Nm1, x, signal, noise, cond, lhits, tol, maxiter, enlFac, ortho_alg, bs_red);
 #else
