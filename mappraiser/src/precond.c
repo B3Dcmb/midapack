@@ -457,7 +457,8 @@ void get_pixshare_pond(Mat *A, double *pixpond) {
 // }
 
 // Block diagonal jacobi preconditioner with degenerate pixels pre-processing
-int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, double *cond, int *lhits) {
+int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, double *cond, int *lhits,
+                           Gap *Gaps, int64_t gif) {
     int i, j, k; // some indexes
     int m, m_cut, n, rank, size, nnz;
     int *indices_new, *tmp1;
@@ -543,7 +544,7 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, 
     // Initialize to 0 in case of no flagged samples
     // (trash_pix = 0 from 1st MatInit)
     // Initialize to 1 in case of flagged samples
-    // to take into account additional element in id_last_pix at index 0
+    // to take into account additional element in pix_to_last_samp at index 0
     int uncut_pixel_index = A->trash_pix;
 
     for (i = 0; i < n * nnz; i += nnz * nnz) {
@@ -624,7 +625,7 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, 
             A->trash_pix = 1;
 
             // Search for the corresponding gap samples
-            j = A->id_last_pix[uncut_pixel_index]; // last index of time sample pointing to degenerate pixel
+            j = A->pix_to_last_samp[uncut_pixel_index]; // last index of time sample pointing to degenerate pixel
 
             // Point the last gap sample to trash pixel
             for (k = 0; k < nnz; k++) {
@@ -658,9 +659,6 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, 
         }
         ++uncut_pixel_index;
     }
-    // free memory
-    free(A->id_last_pix);
-    free(A->ll);
 
     // Reallocate memory for preconditioner blocks and redefine pointing matrix in case of the presence of degenerate pixels
     if (A->trash_pix) {
@@ -688,11 +686,29 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, 
             A->indices[i] = A->lindices[A->indices[i]];
     }
 
-    // free  memory of original pointing matrix and synchronize
+    // free memory of original pointing matrix and synchronize
     MatFree(A);
 
     // Define new pointing matrix (marginalized over degenerate pixels and free from gap samples)
     MatInit(A, m, nnz, A->indices, A->values, A->flag, MPI_COMM_WORLD);
+
+    // Here we have to build the Gap struct
+    // including the samples observing the degenerate pixels
+    // to do so we must first rebuild the pixel to time-domain mapping
+    build_pixel_to_time_domain_mapping(A);
+
+    if (A->trash_pix)
+        build_gap_struct(gif, Gaps, A);
+
+    if (rank == 0)
+    {
+        printf("[rank %d] after degenerate pixels\n", rank);
+        printf("  -> detected %d timestream gaps\n", Gaps->ngap);
+    }
+
+    // free memory
+    free(A->pix_to_last_samp);
+    free(A->ll);
 
     // Define Block-Jacobi preconditioner indices
     indices_new = (int *) malloc(n * nnz * sizeof(int));
@@ -1360,7 +1376,8 @@ void Lanczos_eig(Mat *A, Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ, double *x
 
 // General routine for constructing a preconditioner
 void build_precond(Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tpltz *Nm1, double **in_out_x,
-                   double *b, const double *noise, double *cond, int *lhits, double tol, int Zn, int precond) {
+                   double *b, const double *noise, double *cond, int *lhits, double tol, int Zn, int precond,
+                   Gap *Gaps, int64_t gif) {
     int rank, size, i;
     double st, t;
     double *x;
@@ -1374,7 +1391,7 @@ void build_precond(Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tp
     p->precond = precond;
     p->Zn = Zn;
 
-    precondblockjacobilike(A, Nm1, &(p->BJ_inv), &(p->BJ), b, cond, lhits);
+    precondblockjacobilike(A, Nm1, &(p->BJ_inv), &(p->BJ), b, cond, lhits, Gaps, gif);
 
     p->n = (A->lcount) - (A->nnz) * (A->trash_pix);
 

@@ -20,7 +20,7 @@
 
 int apply_weights(Tpltz *Nm1, Tpltz *Ncov, Gap *Gaps, double *tod);
 
-int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *Ncov, Gap *Gaps, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl)
+int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *Ncov, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl, Gap *Gaps, int64_t gif)
 {
     int i, j, k; // some indexes
     int m, n;    // number of local time samples, number of local pixels
@@ -53,7 +53,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *Ncov, Gap 
     if (Z_2lvl == 0)
         Z_2lvl = size;
 
-    build_precond(&p, &pixpond, &n, A, Nm1, &x, b, noise, cond, lhits, tol, Z_2lvl, precond);
+    build_precond(&p, &pixpond, &n, A, Nm1, &x, b, noise, cond, lhits, tol, Z_2lvl, precond, Gaps, gif);
 
     t = MPI_Wtime();
     if (rank == 0)

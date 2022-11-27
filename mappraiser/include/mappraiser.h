@@ -14,6 +14,12 @@ int defineTpltz_avg(Tpltz *Nm1, int64_t nrow, int m_cw, int m_rw, Block *tpltzbl
 
 int defineBlocks_avg(Block *tpltzblocks, double *T, int nb_blocks_loc, void *local_blocks_sizes, int lambda_block_avg, int64_t id0);
 
+/* Build the pixel-to-time-domain mapping and measure the timestream gaps */
+
+int build_pixel_to_time_domain_mapping(Mat *A);
+
+void build_gap_struct(int64_t gif, Gap *Gaps, Mat *A);
+
 /* IO routines */
 
 int ioWritebinfile(int mapsize, int mappart_id, int *lstid, double *map, double *cond, int *lhits);
@@ -65,10 +71,10 @@ struct Precond
 typedef struct Precond Precond;
 
 // Block-Jacobi preconditioner
-int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, double *cond, int *lhits);
+int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, double *cond, int *lhits, Gap *Gaps, int64_t gif);
 
 // Preconditioner constructor
-void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tpltz *Nm1, double **in_out_x, double *b, const double *noise, double *cond, int *lhits, double tol, int Zn, int precond);
+void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tpltz *Nm1, double **in_out_x, double *b, const double *noise, double *cond, int *lhits, double tol, int Zn, int precond, Gap *Gaps, int64_t gif);
 
 // Product of the preconditioner with a map vector
 void apply_precond(struct Precond *p, const Mat *A, Tpltz *Nm1, double *g, double *Cg);
@@ -82,7 +88,7 @@ void free_precond(struct Precond **in_out_p);
 void get_pixshare_pond(Mat *A, double *pixpond);
 
 // PCG routine
-int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *Ncov, Gap *Gaps, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl);
+int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *Ncov, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl, Gap *Gaps, int64_t gif);
 
 // ECG routine
 #ifdef WITH_ECG

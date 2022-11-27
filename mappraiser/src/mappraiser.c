@@ -26,21 +26,15 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     int m, Nb_t_Intervals; // local number of rows of the pointing matrix A, nbr of stationary intervals
     int64_t gif;           // global indice for the first local line
     int i, j, k;
-    Mat A;                        // pointing matrix structure
-    int *id_last_pix, *ll = NULL; // pixel-to-time-domain mapping
-    int nbr_valid_pixels;         // nbr of valid pixel indices
-    double *x, *cond = NULL;      // pixel domain vectors
+    Mat A;                   // pointing matrix structure
+    int nbr_valid_pixels;    // nbr of valid pixel indices
+    int ngap;                // nbr of timestream gaps
+    Gap Gaps;                // timestream gaps structure
+    double *x, *cond = NULL; // pixel domain vectors
     int *lhits = NULL;
     double st, t; // timer, start time
     int rank, size;
     MPI_Status status;
-
-    // variables to build the Gap structure
-    int gap_start;
-    int ngap, lengap;
-    int64_t *id0gap;
-    int *lgap;
-    Gap Gaps;
 
     // mkl_set_num_threads(1); // Circumvent an MKL bug
 
@@ -92,17 +86,11 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     A.trash_pix = 0;
     MatInit(&A, m, Nnz, pix, pixweights, pointing_commflag, comm);
 
+    nbr_valid_pixels = A.lcount;
+
     // check if trash_pix flag was raised during MatInit
     if (A.trash_pix)
-    {
-        // timestreams contain flagged samples
-        nbr_valid_pixels = A.lcount - A.nnz;
-    }
-    else
-    {
-        // timestreams do not contain flagged samples
-        nbr_valid_pixels = A.lcount;
-    }
+        nbr_valid_pixels -= A.nnz;
 
     t = MPI_Wtime();
     if (rank == 0)
@@ -116,113 +104,17 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
 
     // Build pixel-to-time-domain mapping
 
-    // at the same time, compute the number of gaps
-    ngap = 0;
-    lengap = 0;
-
     st = MPI_Wtime();
-    id_last_pix = (int *)malloc(A.lcount / (A.nnz) * sizeof(int)); // index of last sample pointing to each pixel
-    ll = (int *)malloc(m * sizeof(int));                           // linked list of time samples indexes
 
-    if (id_last_pix == NULL || ll == NULL)
-    {
-        printf("memory allocation failed");
-        exit(1);
-    }
-
-    // initialize the mapping arrays to -1
-    for (i = 0; i < m; i++)
-    {
-        ll[i] = -1;
-    }
-    for (j = 0; j < A.lcount / (A.nnz); j++)
-    {
-        id_last_pix[j] = -1;
-    }
-
-    // build the linked list chain of time samples corresponding to each pixel
-    int vpix_i = 0;
-    for (i = 0; i < m; i++)
-    {
-        vpix_i = A.indices[i * A.nnz] / A.nnz;
-        if (id_last_pix[vpix_i] == -1)
-        {
-            id_last_pix[vpix_i] = i;
-        }
-        else
-        {
-            ll[i] = id_last_pix[vpix_i];
-            id_last_pix[vpix_i] = i;
-        }
-
-        // compute the number of gaps in the timestream
-        if (A.indices[i * A.nnz] != 0) /* valid sample */
-        {
-            // reset gap length
-            lengap = 0;
-        }
-        else /* flagged sample -> gap */
-        {
-            if (lengap == 0) /* This is a new gap */
-            {
-                // increment gap count
-                ++ngap;
-            }
-
-            // increment current gap size
-            ++lengap;
-        }
-    }
+    ngap = build_pixel_to_time_domain_mapping(&A);
 
     t = MPI_Wtime();
     if (rank == 0)
     {
-        printf("[rank %d] Total pixel-to-time-domain mapping time = %lf \n", rank, t - st);
+        printf("[rank %d] Total pixel-to-time-domain mapping time = %lf\n", rank, t - st);
+        printf("  -> detected %d timestream gaps\n", ngap);
         fflush(stdout);
     }
-
-    // now that we know ngap, we can allocate memory
-    // to store the gap lengths and id0gap
-    if (A.trash_pix)
-    {
-        id0gap = malloc((sizeof *id0gap) * ngap);
-        lgap = malloc((sizeof *lgap) * ngap);
-        if (id0gap == NULL || lgap == NULL)
-        {
-            printf("malloc of id0gap or lgap failed");
-            exit(EXIT_FAILURE);
-        }
-
-        // go through the time samples once more
-        i = ngap - 1;
-        lengap = 1;
-        j = id_last_pix[0]; /* index of last flagged sample */
-        gap_start = j;
-        while (j != -1)
-        {
-            // go to previous flagged sample
-            j = ll[j];
-
-            if (j != -1 && gap_start - j == 1) /* same gap, and there are flagged samples left */
-            {
-                ++lengap;
-            }
-            else /* different gap, or no flagged samples remaining */
-            {
-                id0gap[i] = gif + gap_start; // global row index
-                lgap[i] = lengap;
-                lengap = 1;
-                --i;
-            }
-            gap_start = j;
-        }
-        Gaps.ngap = ngap;
-        Gaps.id0gap = id0gap;
-        Gaps.lgap = lgap;
-    }
-
-    A.id_last_pix = id_last_pix;
-    A.ll = ll;
 
     // Map objects memory allocation
     // MatInit gives A.lcount which is used to compute nbr_valid_pixels
@@ -297,16 +189,10 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     // Conjugate Gradient
     if (solver == 0)
     {
-        PCG_GLS_true(outpath, ref, &A, &Nm1, &Ncov, &Gaps, x, signal, noise, cond, lhits, tol, maxiter, precond, Z_2lvl);
+        PCG_GLS_true(outpath, ref, &A, &Nm1, &Ncov, x, signal, noise, cond, lhits, tol, maxiter, precond, Z_2lvl, &Gaps, gif);
     }
     else if (solver == 1)
     {
-        if (Gaps.ngap > 0) /* gaps not supported for ECG */
-        {
-            if (rank == 0)
-                printf("Timestream gaps not supported by ECG solver.\n");
-            exit(EXIT_FAILURE);
-        }
 #ifdef W_ECG
         ECG_GLS(outpath, ref, &A, &Nm1, x, signal, noise, cond, lhits, tol, maxiter, enlFac, ortho_alg, bs_red);
 #else
@@ -484,6 +370,8 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     free(cond);
     free(lhits);
     free(tpltzblocks);
+    free(Gaps.id0gap);
+    free(Gaps.lgap);
     MPI_Barrier(comm);
     t = MPI_Wtime();
     if (rank == 0)
