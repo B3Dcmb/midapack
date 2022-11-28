@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include "midapack.h"
 #include "mappraiser.h"
 
 int build_pixel_to_time_domain_mapping(Mat *A)
@@ -15,7 +16,7 @@ int build_pixel_to_time_domain_mapping(Mat *A)
     if (A->pix_to_last_samp == NULL || A->ll == NULL)
     {
         printf("memory allocation of pix_to_last_samp or ll failed\n");
-        exit(EIXT_FAILURE);
+        exit(EXIT_FAILURE);
     }
 
     // initialize the mapping arrays to -1

@@ -18,7 +18,7 @@
 #include <unistd.h>
 #include "mappraiser.h"
 
-int apply_weights(Tpltz *Nm1, Tpltz *Ncov, Gap *Gaps, double *tod, int m);
+int apply_weights(Tpltz *Nm1, Tpltz *Ncov, Gap *Gaps, double *tod, int m, int rank);
 
 int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *Ncov, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl, Gap *Gaps, int64_t gif)
 {
@@ -85,7 +85,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *Ncov, doub
     for (i = 0; i < m; i++)
         _g[i] = b[i] + noise[i] - _g[i];
 
-    apply_weights(Nm1, Ncov, Gaps, _g, A->m); // _g = Nm1 (d-Ax0)  (d = signal + noise)
+    apply_weights(Nm1, Ncov, Gaps, _g, A->m, rank); // _g = Nm1 (d-Ax0)  (d = signal + noise)
 
     TrMatVecProd(A, _g, g, 0); // g = At _g
 
@@ -155,7 +155,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *Ncov, doub
 
         MatVecProd(A, h, Ah, 0); // Ah = A h
 
-        apply_weights(Nm1, Ncov, Gaps, Nm1Ah, A->m); // Nm1Ah = Nm1 Ah   (Nm1Ah == Ah)
+        apply_weights(Nm1, Ncov, Gaps, Nm1Ah, A->m, rank); // Nm1Ah = Nm1 Ah   (Nm1Ah == Ah)
 
         TrMatVecProd(A, Nm1Ah, AtNm1Ah, 0); // AtNm1Ah = At Nm1Ah
 
@@ -265,7 +265,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *Ncov, doub
 }
 
 /* Weights TOD data according to the adopted noise model*/
-int apply_weights(Tpltz *Nm1, Tpltz *Ncov, Gap *Gaps, double *tod, int m)
+int apply_weights(Tpltz *Nm1, Tpltz *Ncov, Gap *Gaps, double *tod, int m, int rank)
 {
     int t_id; // time sample index in local data
     int i, j;
@@ -337,7 +337,7 @@ int apply_weights(Tpltz *Nm1, Tpltz *Ncov, Gap *Gaps, double *tod, int m)
 
         // check convergence
         lval_1 = 0.0;
-        for (i = 0; i < n; i++)
+        for (i = 0; i < m; i++)
             lval_1 += r[i] * r[i];
 
         res = 0.0;
@@ -394,7 +394,7 @@ int apply_weights(Tpltz *Nm1, Tpltz *Ncov, Gap *Gaps, double *tod, int m)
             }
 
             // apply preconditioner (z = M^{-1} r)
-            gstbmm(Nm1, z, Prod);
+            gstbmmProd(Nm1, z, Gaps);
 
             // compute coeff for new search direction
             lval_2 = 0.0;
@@ -405,13 +405,12 @@ int apply_weights(Tpltz *Nm1, Tpltz *Ncov, Gap *Gaps, double *tod, int m)
             MPI_Allreduce(&lval_2, &coef_2, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
             // update search direction
-            for (i = 0; i < m; ++i)
-                p[i] = z[i] + (coef_2 / coef_1) * p[i];
-
-            // check convergence
             lval_1 = 0.0;
-            for (i = 0; i < n; i++)
+            for (i = 0; i < m; ++i)
+            {
+                p[i] = z[i] + (coef_2 / coef_1) * p[i];
                 lval_1 += r[i] * r[i];
+            }
 
             res = 0.0;
             MPI_Allreduce(&lval_1, &res, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);

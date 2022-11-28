@@ -168,7 +168,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
 
     // define the noise covariance matrix
     Tpltz Ncov;
-    tpltzblocks_Ncov = (Block *)malloc(nb_blocks_loc * sizeof(Block));
+    Block *tpltzblocks_Ncov = (Block *)malloc(nb_blocks_loc * sizeof(Block));
     defineBlocks_avg(tpltzblocks_Ncov, correlation, nb_blocks_loc, local_blocks_sizes, lambda_block_avg, id0);
     defineTpltz_avg(&Ncov, nrow, 1, mcol, tpltzblocks_Ncov, nb_blocks_loc, nb_blocks_tot, id0, local_V_size, flag_stgy, comm);
 
