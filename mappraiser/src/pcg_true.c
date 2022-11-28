@@ -18,7 +18,7 @@
 #include <unistd.h>
 #include "mappraiser.h"
 
-int apply_weights(Tpltz *Nm1, Tpltz *Ncov, Gap *Gaps, double *tod);
+int apply_weights(Tpltz *Nm1, Tpltz *Ncov, Gap *Gaps, double *tod, int m);
 
 int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *Ncov, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl, Gap *Gaps, int64_t gif)
 {
@@ -85,7 +85,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *Ncov, doub
     for (i = 0; i < m; i++)
         _g[i] = b[i] + noise[i] - _g[i];
 
-    apply_weights(Nm1, Ncov, Gaps, _g); // _g = Nm1 (d-Ax0)  (d = signal + noise)
+    apply_weights(Nm1, Ncov, Gaps, _g, A->m); // _g = Nm1 (d-Ax0)  (d = signal + noise)
 
     TrMatVecProd(A, _g, g, 0); // g = At _g
 
@@ -155,7 +155,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *Ncov, doub
 
         MatVecProd(A, h, Ah, 0); // Ah = A h
 
-        apply_weights(Nm1, Ncov, Gaps, Nm1Ah); // Nm1Ah = Nm1 Ah   (Nm1Ah == Ah)
+        apply_weights(Nm1, Ncov, Gaps, Nm1Ah, A->m); // Nm1Ah = Nm1 Ah   (Nm1Ah == Ah)
 
         TrMatVecProd(A, Nm1Ah, AtNm1Ah, 0); // AtNm1Ah = At Nm1Ah
 
@@ -265,7 +265,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *Ncov, doub
 }
 
 /* Weights TOD data according to the adopted noise model*/
-int apply_weights(Tpltz *Nm1, Tpltz *Ncov, Gap *Gaps, double *tod)
+int apply_weights(Tpltz *Nm1, Tpltz *Ncov, Gap *Gaps, double *tod, int m)
 {
     int t_id; // time sample index in local data
     int i, j;
@@ -292,53 +292,147 @@ int apply_weights(Tpltz *Nm1, Tpltz *Ncov, Gap *Gaps, double *tod)
     }
     else /* Use PCG + gstbmmProd to apply the noise weights */
     {
-        /* python code
-        y = np.zeros(x.size, dtype=x.dtype)
+        const int kmax = 50;     // maximum iteration count
+        const double tol = 1e-6; // convergence criterion
+        int k = 0;               // iteration number
+        double r0, res, tol2rel; // residuals
+        double coef_1, coef_2;   // scalars
+        double lval_1, lval_2;   // local values before reduction
 
-        # Compute initial residual
-        r = x - g_toeplitz_matvec(tt, y, flags, use_scipy=use_scipy)
-        z = apply_precond(tt, r, mode=precond_mode, flags=flags, segments=valid_segments)
-            
-        res = np.linalg.norm(r)
-        
-        res0 = res
-        res_list = [res]
+        double *x, *p = NULL;      // guess, search direction
+        double *_r, *r, *z = NULL; // gradient
 
-        # Set initial descent direction
-        p = z
+        x = malloc((sizeof *x) * m);
+        p = malloc((sizeof *p) * m);
+        _r = malloc((sizeof *_r) * m);
+        r = malloc((sizeof *r) * m);
+        z = malloc((sizeof *z) * m);
 
-        # Gradient descent
-        k = 0
-        while k < maxiter and not has_converged(res, res0, tol, k, verbose=verbose):
-            # compute next guess and residual
-            Tp = g_toeplitz_matvec(tt, p, flags, use_scipy=use_scipy)
+        if (x == NULL || p == NULL || _r == NULL || r == NULL || z == NULL)
+        {
+            puts("out of memory: allocation of time-domain vectors for tod weighting failed");
+            exit(EXIT_FAILURE);
+        }
 
-            alpha = np.dot(r, z) / np.dot(p, Tp)
-            y = y + alpha * p
-            
-            if implicit_res:
-                r_new = r - alpha * Tp
-            else:
-                r_new = x - g_toeplitz_matvec(tt, y, flags, use_scipy=use_scipy)
-            
-            z_new = apply_precond(tt, r_new, mode=precond_mode, flags=flags, segments=valid_segments)
-            
-            res = np.linalg.norm(r_new)
-            res_list.append(res)
+        // initial guess
+        for (i = 0; i < m; ++i)
+            _r[i] = tod[i];
 
-            # update search direction
-            beta = -np.dot(r_new, z_new) / np.dot(r, z)
-            p = z_new - beta * p
+        // apply system matrix (_r = Nx0)
+        gstbmmProd(Ncov, _r, Gaps);
 
-            r = r_new
-            z = z_new
-            k += 1
-        
-        for i in range(len(res_list)):
-            res_list[i] /= res0
-            
-        return y, res_list
-        */
+        // compute initial residual (r = b - Nx0)
+        for (i = 0; i < m; ++i)
+        {
+            r[i] = tod[i] - _r[i];
+            z[i] = r[i];
+        }
+
+        // apply preconditioner (z0 = M^{-1} * r0)
+        gstbmmProd(Nm1, z, Gaps);
+
+        // set initial search direction (p0 = z0)
+        for (i = 0; i < m; ++i)
+            p[i] = z[i];
+
+        // check convergence
+        lval_1 = 0.0;
+        for (i = 0; i < n; i++)
+            lval_1 += r[i] * r[i];
+
+        res = 0.0;
+        MPI_Allreduce(&lval_1, &res, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        r0 = res;
+        tol2rel = tol * tol * res;
+
+        if (rank == 0) /* print information on screen */
+        {
+            printf("[noise weighting PCG] k = %d, r0 = %e\n", k, r0);
+        }
+
+        if (res < tol * tol)
+        {
+            // print info on screen
+            if (rank == 0)
+                printf("  -> converged (%e < %e)\n", res, tol * tol);
+
+            // do not enter the PCG loop
+            k = kmax;
+        }
+
+        for (k = 1; k < kmax; ++k)
+        {
+            fflush(stdout);
+
+            // apply system matrix (_r = Np)
+            for (i = 0; i < m; ++i)
+                _r[i] = p[i];
+
+            gstbmmProd(Ncov, _r, Gaps);
+
+            // compute alpha = (r,z)/(p,Np)
+            lval_1 = 0.0;
+            lval_2 = 0.0;
+            for (i = 0; i < m; ++i)
+            {
+                lval_1 += r[i] * z[i];
+                lval_2 += p[i] * _r[i];
+            }
+
+            coef_1 = 0.0; // (r,z)
+            coef_2 = 0.0; // (p,Np)
+            MPI_Allreduce(&lval_1, &coef_1, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+            MPI_Allreduce(&lval_2, &coef_2, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+            // update current vector (x = x + alpha * p)
+            // update residual (r = r - alpha * Np)
+            for (i = 0; i < m; ++i)
+            {
+                x[i] = x[i] + (coef_1 / coef_2) * p[i];
+                r[i] = r[i] - (coef_1 / coef_2) * _r[i];
+                z[i] = r[i];
+            }
+
+            // apply preconditioner (z = M^{-1} r)
+            gstbmm(Nm1, z, Prod);
+
+            // compute coeff for new search direction
+            lval_2 = 0.0;
+            for (i = 0; i < m; ++i)
+                lval_2 += r[i] * z[i];
+
+            coef_2 = 0.0; // new (r,z)
+            MPI_Allreduce(&lval_2, &coef_2, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+            // update search direction
+            for (i = 0; i < m; ++i)
+                p[i] = z[i] + (coef_2 / coef_1) * p[i];
+
+            // check convergence
+            lval_1 = 0.0;
+            for (i = 0; i < n; i++)
+                lval_1 += r[i] * r[i];
+
+            res = 0.0;
+            MPI_Allreduce(&lval_1, &res, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+
+            if (rank == 0)
+            {
+                printf("[k = %d] res = %e, relative = %e\n", k, res, sqrt(res / r0));
+            }
+
+            if (res < tol2rel)
+            {
+                if (rank == 0)
+                {
+                    printf("  -> converged (%e < %e) \n", res, tol2rel);
+                    printf("  -> i.e.      (%e < %e) \n", sqrt(res / r0), tol);
+                    // printf("  -> solve time = %lf \n", solve_time);
+                }
+                break;
+            }
+        }
+        fflush(stdout);
     }
 
     return 0;
