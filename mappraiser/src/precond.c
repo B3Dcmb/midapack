@@ -695,7 +695,7 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, 
     // Here we have to build the Gap struct
     // including the samples observing the degenerate pixels
     // to do so we must first rebuild the pixel to time-domain mapping
-    build_pixel_to_time_domain_mapping(A);
+    Gaps->ngap = build_pixel_to_time_domain_mapping(A);
 
     if (A->trash_pix)
         build_gap_struct(gif, Gaps, A);

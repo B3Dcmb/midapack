@@ -6,12 +6,16 @@
 int build_pixel_to_time_domain_mapping(Mat *A)
 {
     int i, j;
-    int vpix_i = 0;
-    int ngap, lengap = 0;
+    int vpix_i;
+    int ngap, lengap;
 
-    // allocate memory for the arrays
-    A->pix_to_last_samp = malloc((sizeof A->pix_to_last_samp) * A->lcount / A->nnz); // index of last sample pointing to each pixel
-    A->ll = malloc((sizeof A->ll) * A->m);                                           // linked list of time samples indexes
+    /* Allocate memory for the arrays */
+    
+    // index of last sample pointing to each pixel
+    A->pix_to_last_samp = malloc((sizeof A->pix_to_last_samp) * A->lcount / A->nnz);
+    
+    // linked list of time samples indexes
+    A->ll = malloc((sizeof A->ll) * A->m);
 
     if (A->pix_to_last_samp == NULL || A->ll == NULL)
     {
@@ -31,6 +35,8 @@ int build_pixel_to_time_domain_mapping(Mat *A)
 
     // build the linked list chain of time samples corresponding to each pixel
     // and compute number of timestream gaps
+    ngap = 0;
+    lengap = 0;
     for (i = 0; i < A->m; i++)
     {
         vpix_i = A->indices[i * A->nnz] / A->nnz;
