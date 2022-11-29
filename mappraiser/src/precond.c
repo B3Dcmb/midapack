@@ -457,7 +457,7 @@ void get_pixshare_pond(Mat *A, double *pixpond) {
 // }
 
 // Block diagonal jacobi preconditioner with degenerate pixels pre-processing
-int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, double *cond, int *lhits,
+int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, double *noise, double *cond, int *lhits,
                            Gap *Gaps, int64_t gif) {
     int i, j, k; // some indexes
     int m, m_cut, n, rank, size, nnz;
@@ -547,9 +547,8 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, 
     // to take into account additional element in pix_to_last_samp at index 0
     int uncut_pixel_index = A->trash_pix;
 
-    for (i = 0; i < n * nnz; i += nnz * nnz) {
-    int uncut_pixel_index = 0;
-    for (i = 0; i < n * nnz; i += nnz * nnz) {
+    for (i = 0; i < n * nnz; i += nnz * nnz)
+    {
         // init 3x3 block
         double block[3][3];
         for (j = 0; j < 3; j++) {
@@ -634,11 +633,15 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, 
             }
 
             // Set the corresponding signal time stream sample to zero
+            // Now that the timestream gaps are accounted for we also set the noise to zero
+            // as it will not be possible to separate it from the signal in real data
             b[j] = 0;
+            noise[j] = 0;
 
             // Point all the preceding gap samples to trash pixel and set them to zero in the TOD
             while (A->ll[j] != -1) {
                 b[A->ll[j]] = 0;
+                noise[A->ll[j]] = 0;
                 for (k = 0; k < nnz; k++) {
                     A->indices[A->ll[j] * nnz + k] = k - nnz;
                     A->values[A->ll[j] * nnz + k] = 0;
@@ -1391,7 +1394,7 @@ void build_precond(Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tp
     p->precond = precond;
     p->Zn = Zn;
 
-    precondblockjacobilike(A, Nm1, &(p->BJ_inv), &(p->BJ), b, cond, lhits, Gaps, gif);
+    precondblockjacobilike(A, Nm1, &(p->BJ_inv), &(p->BJ), b, noise, cond, lhits, Gaps, gif);
 
     p->n = (A->lcount) - (A->nnz) * (A->trash_pix);
 
