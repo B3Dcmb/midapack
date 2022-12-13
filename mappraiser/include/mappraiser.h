@@ -68,7 +68,7 @@ typedef struct Precond Precond;
 int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, double *cond, int *lhits);
 
 // Preconditioner constructor
-void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tpltz *Nm1, double **in_out_x, double *b, const double *noise, double *cond, int *lhits, double tol, int Zn, int precond);
+void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tpltz *Nm1, PCG_var **PCG_variable, double *b, const double *noise, double *cond, int *lhits, double tol, int Zn, S2HAT_parameters *S2HAT_params, int precond);
 
 // Product of the preconditioner with a map vector
 void apply_precond(struct Precond *p, const Mat *A, Tpltz *Nm1, double *g, double *Cg);

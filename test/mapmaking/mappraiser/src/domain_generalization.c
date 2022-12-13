@@ -17,6 +17,11 @@ int initialize_PCG_var_struct(PCG_var *PCG_variable, double *local_map_pix, s2ha
     PCG_variable->local_map_pix = local_map_pix; // Local map in pixel domain, with MAPPRAISER convention
     PCG_variable->local_alm = local_alm; // Local alm in harmonic domain, with S2HAT convention
 
+    if ((local_alm == NULL) && ((domain_PCG_computation == 1) || (bool_apply_filter == 1)))
+    {
+        PCG_variable->local_alm = (s2hat_dcomplex *) calloc( A->nnz * S2HAT_params->size_alm, sizeof(s2hat_dcomplex));
+    }
+
     // Specifications of the computation
     PCG_variable->domain_PCG_computation = domain_PCG_computation; // Domain chosen for PCG computation : 0 pixel, 1 harmonic
     PCG_variable->bool_apply_filter = bool_apply_filter; // 0 no filter applied, 1 Wiener filter applied
@@ -32,6 +37,7 @@ int initialize_PCG_var_struct(PCG_var *PCG_variable, double *local_map_pix, s2ha
     return 0;
 }
 
+
 int update_PCG_var(PCG_var *PCG_variable, Mat *A)
 {   // Update either local_map_pix from local_alm or the inverse, or do nothing, depending on the update flags
     // Reset the update flags to 0 afterwards
@@ -40,15 +46,11 @@ int update_PCG_var(PCG_var *PCG_variable, Mat *A)
         PCG_variable->does_map_pixel_need_update = 0;
     }
 
-
-    if (PCG_variable->does_local_alm_need_update == 1){
+    if ((PCG_variable->does_local_alm_need_update == 1) && (PCG_variable->local_alm != NULL)){
         global_map_2_harmonic(PCG_variable->local_map_pix, PCG_variable->local_alm, A, PCG_variable->Global_param_s2hat, PCG_variable->Local_param_s2hat);
         PCG_variable->does_local_alm_need_update = 0;
     }
 }
-
-
-
 
 
 

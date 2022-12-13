@@ -27,6 +27,7 @@
 
 #include "midapack.h"
 #include "s2hat_tools.h"
+#include "domain_generalization.h"
 #include "mappraiser.h"
 
 #define eps 1.0e-15
@@ -1325,7 +1326,7 @@ void Lanczos_eig(Mat *A, Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ, double *x
 }
 
 // General routine for constructing a preconditioner
-void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tpltz *Nm1, double **in_out_x, double *b, const double *noise, double *cond, int *lhits, double tol, int Zn, int domain_PCG_computation, S2HAT_parameters *S2HAT_params, int precond)
+void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tpltz *Nm1, PCG_var **PCG_variable, double *b, const double *noise, double *cond, int *lhits, double tol, int Zn, int domain_PCG_computation, S2HAT_parameters *S2HAT_params, int precond)
 {
     int rank, size, i;
     double st, t;
@@ -1346,7 +1347,7 @@ void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat
 
     if (domain_PCG_computation == 0){
         // Reallocate memory for well-conditioned map
-        x = realloc(*in_out_x, p->n * sizeof(double));
+        x = realloc(*(PCG_variable->local_map_pix), p->n * sizeof(double));
         if (x == NULL)
         {
             printf("Out of memory: map reallocation failed");
@@ -1431,7 +1432,8 @@ void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat
     *out_p = p;
     *out_pixpond = p->pixpond;
     *out_n = p->n;
-    *in_out_x = x;
+    
+    *(PCG_variable->local_map_pix) = x;
 }
 
 // General routine for applying the preconditioner to a map vector
@@ -1467,7 +1469,6 @@ void apply_precond(struct Precond *p, const Mat *A, const Tpltz *Nm1, S2HAT_para
             out_PCG_var->does_local_alm_need_update = 1; // Change done on pixel domain, harmonic domain need update
         case 3 : // Preconditionner C^{-1} + Pdiag(N^-1)P
 
-            
             MatVecProd(&(p->BJ_inv), init_PCG_var->local_map_pix, out_PCG_var->local_map_pix, 0);
             // Calculation on pixel domain of Pdiag(N)P
                 
@@ -1476,7 +1477,7 @@ void apply_precond(struct Precond *p, const Mat *A, const Tpltz *Nm1, S2HAT_para
 
             // The addition C^{-1}.init_PCG_var + Pdiag(N)P.init_PCG_var will be done in the next step
 
-            switch (domain_PCG_computation)
+            switch (out_PCG_var->domain_PCG_computation)
             {
                 case 0:
                 double *new_local_variable_pix = (double *)malloc(p->n*sizeof(double));
@@ -1487,24 +1488,23 @@ void apply_precond(struct Precond *p, const Mat *A, const Tpltz *Nm1, S2HAT_para
                     out_PCG_var->local_map_pix[i] += new_local_variable_pix[i]; // Adding C^(-1)init_PCG_var and Pdiag(N)Px
                 }
                 free(new_local_variable_pix);
-                
-                
+
                 out_PCG_var->does_local_alm_need_update = 1; // Change done on pixel domain, harmonic domain need update
                 // init_PCG_var = init_local_pix;
                 // out_PCG_var = out_local_pix;
 
                 case 1:
-                local_alm_out = 
+                
                 s2hat_dcomplex *local_alm_out = (s2hat_dcomplex *) malloc( A->nnz*(S2HAT_params->Global_param_s2hat->nlmax+1)*S2HAT_params->Global_param_s2hat->nmmax*sizeof(s2hat_dcomplex));
     
                 global_map_2_harmonic(out_PCG_var->local_map_pix, local_alm_out, A, S2HAT_params->Global_param_s2hat, S2HAT_params->Local_param_s2hat); 
                 // Result in pixel transformed in harmonic
-                
+
                 for (i = 0; i < A->nnz*(Global_param_s2hat->nlmax+1)*Global_param_s2hat->nmmax ; ++i)
                 {
                     out_PCG_var->local_alm[i] += local_alm_out[i] ; // Adding C^(-1)init_PCG_var and Pdiag(N)Px
                 }
-                out_PCG_var->local_alm = local_alm_out; // Putting the final result in local_alm_out
+                // out_PCG_var->local_alm = local_alm_out; // Putting the final result in local_alm_out
 
                 out_PCG_var->does_map_pixel_need_update = 1; // Change done on harmonic domain, pixel domain need update
 

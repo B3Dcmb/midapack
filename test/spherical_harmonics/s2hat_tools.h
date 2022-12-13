@@ -66,6 +66,8 @@ typedef struct S2HAT_parameters{
     S2HAT_GLOBAL_parameters *Global_param_s2hat;
     S2HAT_LOCAL_parameters *Local_param_s2hat;
     Files_path_WIENER_FILTER *Files_WF_struct;
+
+    int size_alm;
 }
 
 /* Get global s2hat structures which must be distributed to all processors*/

@@ -171,6 +171,8 @@ int init_s2hat_parameters_superstruct(Files_path_WIENER_FILTER *Files_WF_struct,
     S2HAT_params->Global_param_s2hat = Global_param_s2hat;
     S2HAT_parameters->Local_param_s2hat = Local_param_s2hat;
     // Initialization of final superstructure S2HAT_params
+
+    S2HAT_params->size_alm = (Global_param_s2hat->nlmax+1)*Global_param_s2hat->nmmax;
 }
 
 

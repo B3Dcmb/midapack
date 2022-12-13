@@ -21,6 +21,7 @@ function chelp {
     echo '    debug ; to generate a debug version'
     echo '    mkl ; use MKL optimized routines'
     echo '    s2hat ; use s2hat routines'
+    echo '    healpix ; use healpix routines'
     echo '    ecg ; compile ECG solver (requires preAlps, metis and MKL)'
     # echo '    docker ; compilation inside Docker image'
     echo '    example for using mpi and openmp : ./configure --with mpi --with openmp'
@@ -118,6 +119,7 @@ DEBUG=0
 ERROR=0
 MKL=1
 S2HAT=1
+HEALPIX=1
 ECG=1
 # DOCKER=0
 
@@ -165,6 +167,10 @@ do
             then
                 S2HAT=1
                 shift
+            elif [ $2 == healpix ]
+            then
+                HEALPIX=1
+                shift
             elif [ $2 == ecg ]
             then
                 ECG=1
@@ -202,6 +208,10 @@ do
             elif [ $2 == s2hat ]
             then
                 S2HAT=0
+                shift
+            elif [ $2 == healpix ]
+            then
+                HEALPIX=0
                 shift
             elif [ $2 == ecg ]
             then
@@ -304,6 +314,16 @@ then
 else
     S2HAT_INC='-I${S2HATROOT}/include'
     S2HAT_LIB='-L${S2HATROOT}/lib/cori/intel/ -ls2hat_std'
+fi
+
+# Check path to Healpix library
+if [[ $HEALPIX -eq 1 ]] && [[ -z "$HEALPIXROOT" ]]
+then
+    echo 'Option --with healpix is used. Make sure the environment variable \$HEALPIXROOT is set.'
+    ERROR=1
+else
+    HEALPIX_INC='-I${HEALPIXROOT}/include'
+    HEALPIX_LIB='-L${HEALPIXROOT}/lib'
 fi
 
 # Check if an install prefix has been defined
@@ -413,6 +433,14 @@ fi
 #     echo 'setting s2hat flag'
 #     OPT=$OPT' -D W_S2HAT'
 # fi
+
+# # HEALPIX
+
+if [ $HEALPIX -eq 1 ]
+then
+    echo 'setting healpix flag'
+    OPT=$OPT' -DHEALPIXDATA=\"${HEALPIXROOT}/share/healpix/\'
+fi
 
 
 # ECG
@@ -580,6 +608,7 @@ echo 'WIENERFILTER_OBJ = ${WIENERFILTER_ROOT}/obj' >> test/spherical_harmonics/M
 echo 'WIENERFILTER_LIB = ${WIENERFILTER_ROOT}/lib' >> test/spherical_harmonics/Makefile
 
 echo 'S2HATROOT ='$S2HATROOT >> test/spherical_harmonics/Makefile
+echo 'HEALPIXROOT ='$HEALPIXROOT >> test/spherical_harmonics/Makefile
 
 
 ################################################
@@ -607,7 +636,7 @@ echo 'LIB = '$LIB >> test/mapmaking/mappraiser/src/Makefile
 echo 'CFITSIO_INC = '$CFITSIO_INC >> test/mapmaking/mappraiser/src/Makefile
 echo 'CFITSIO_LIB = '$CFITSIO_LIB >> test/mapmaking/mappraiser/src/Makefile
 
-# link S2HAT library (if needed)
+# link S2HAT and HEALPIX library (if needed)
 
 if [ $S2HAT -eq 1 ]
 then
@@ -615,12 +644,20 @@ then
     LIB+=' '$S2HAT_LIB
 fi
 
+
+if [ $HEALPIX -eq 1 ]
+then
+    INC+=' '$HEALPIX_INC
+    LIB+=' '$HEALPIX_LIB
+fi
+
+
 echo 'INC = '$INC >> test/spherical_harmonics/Makefile
 echo 'LIB = '$LIB >> test/spherical_harmonics/Makefile
 echo 'CFITSIO_INC = '$CFITSIO_INC >> test/spherical_harmonics/Makefile
 echo 'CFITSIO_LIB = '$CFITSIO_LIB >> test/spherical_harmonics/Makefile
 echo 'S2HAT_INC = '$S2HAT_INC >> test/spherical_harmonics/Makefile
-echo 'S2HAT_LIB = '$S2HAT_LIB >> test/spherical_harmonics/Makefile
+echo 'HEALPIX_LIB = '$HEALPIX_LIB >> test/spherical_harmonics/Makefile
 
 # link preAlps and metis
 
