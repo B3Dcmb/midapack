@@ -589,8 +589,12 @@ class Mappraiser(Operator):
                 toml.dump(params, param_logfile)
 
         # Check if noise_name is specified or not.
-        if self.noise_name is None and params["Lambda"] != 1:
-            raise RuntimeError("Lambda = 1 must be used with noiseless cases")
+        if self.noise_name is None:
+            if params["Lambda"] != 1:
+                # raise RuntimeError("Lambda = 1 must be used with noiseless cases")
+                if data.comm.world_rank == 0:
+                    log.info("{} Noiseless case -> setting Lambda = 1".format(self._logprefix))
+            params["Lambda"] = 1
 
         # MAPPRAISER requires a fixed set of detectors and pointing matrix non-zeros.
         # Here we find the superset of local detectors used, and also the number
