@@ -44,7 +44,7 @@ test/mapmat/*
 test/toeplitz/*
 
 # Tests WF
-test/spherical_harmonics/test_functions/*
+# test/spherical_harmonics/test_functions/*
 # test/spherical_harmonics/test_spherical_harmonics.*
 
 # ignore Makefiles (manually configured in each platform for now)
