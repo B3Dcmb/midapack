@@ -230,6 +230,10 @@ class Mappraiser(Operator):
 
     save_psd = Bool(False, help="Save noise PSD information during inv_tt computation.")
 
+    apod_window_type = Unicode(
+        "chebwin", help="Type of apodisation window to use during noise PSD estimation."
+    )
+
     bandwidth = Int(16384, help="Half-bandwidth for the noise model")
 
     # additional parameters for the solver (C library)
@@ -513,6 +517,7 @@ class Mappraiser(Operator):
         if data.comm.world_rank == 0:
             msg = "{} Copying toast data to buffers".format(self._logprefix)
             log.info(msg)
+
         signal_dtype, data_size_proc = self._stage_data(
             params,
             data,
@@ -1019,9 +1024,10 @@ class Mappraiser(Operator):
                 params["fsample"],
                 self._mappraiser_invtt,
                 mappraiser.INVTT_TYPE,
+                apod_window_type=self.apod_window_type,
                 print_info=(data.comm.world_rank == 0),
                 save_psd=(self.save_psd and data.comm.world_rank == 0),
-                save_dir=params["path_output"]+"/psd",
+                save_dir=os.path.join(params["path_output"], "psd"),
             )
         else:
             self._mappraiser_invtt[:] = 1.

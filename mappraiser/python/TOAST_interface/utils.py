@@ -4,214 +4,19 @@
 # @author: Hamza El Bouhargani
 # @date: January 2020
 
-import argparse, warnings
-
+import os
 import numpy as np
-import math
 import scipy.signal
 from scipy.optimize import curve_fit
 from astropy import units as u
 
-from toast.timing import function_timer
-from toast.utils import GlobalTimers, Logger, Timer, dtype_to_aligned, memreport
+from toast.utils import Logger, dtype_to_aligned, memreport
 from toast.ops.memory_counter import MemoryCounter
-
-def add_mappraiser_args(parser):
-    """Add mappraiser specific arguments."""
-
-    parser.add_argument(
-        "--ref",
-        required=False,
-        default="run0",
-        help="Reference that is added to the name of the output maps. Can be used to store multiple runs of the same configuration in a common folder (which will be specified to the parser under the name 'out_dir').",
-    )
-
-    parser.add_argument(
-        "--Lambda",
-        required=False,
-        default=16384,
-        type=int,
-        help="Half bandwidth (lambda) of noise covariance",
-    )
-
-    # FIXME : is uniform_w useful ?
-    parser.add_argument(
-        "--uniform_w",
-        required=False,
-        default=0,
-        type=int,
-        help="Activate for uniform white noise model: 0->off, 1->on",
-    )
-
-    parser.add_argument(
-        "--solver",
-        required=False,
-        default=0,
-        type=int,
-        help="Choose map-making solver: 0->PCG, 1->ECG",
-    )
-
-    parser.add_argument(
-        "--precond",
-        required=False,
-        default=0,
-        type=int,
-        help="Choose map-making preconditioner: 0->BD, 1->2lvl a priori, 2->2lvl a posteriori",
-    )
-
-    parser.add_argument(
-        "--Z_2lvl",
-        required=False,
-        default=0,
-        type=int,
-        help="2lvl deflation size",
-    )
-
-    parser.add_argument(
-        "--ptcomm_flag",
-        required=False,
-        default=6,
-        type=int,
-        help="Choose collective communication scheme",
-    )
-
-    parser.add_argument(
-        "--tol",
-        required=False,
-        default=1e-6,
-        type=np.double,
-        help="Tolerance parameter for convergence",
-    )
-
-    parser.add_argument(
-        "--maxiter",
-        required=False,
-        default=500,
-        type=int,
-        help="Maximum number of iterations in Mappraiser",
-    )
-
-    parser.add_argument(
-        "--enlFac",
-        required=False,
-        default=1,
-        type=int,
-        help="Enlargement factor for ECG",
-    )
-
-    parser.add_argument(
-        "--ortho_alg",
-        required=False,
-        default=1,
-        type=int,
-        help="Orthogonalization scheme for ECG. O:odir, 1:omin",
-    )
-
-    parser.add_argument(
-        "--bs_red",
-        required=False,
-        default=0,
-        type=int,
-        help="Use dynamic search reduction",
-    )
-    
-    return
-
-
-# def apply_mappraiser(
-#     args,
-#     comm,
-#     data,
-#     params,
-#     signalname,
-#     noisename,
-#     time_comms=None,
-#     telescope_data=None,
-#     verbose=True,
-# ):
-#     """Use libmappraiser to run the ML map-making.
-
-#     Parameters
-#     ----------
-#     time_comms: iterable
-#         Series of disjoint communicators that map, e.g., seasons and days.
-#         Each entry is a tuple of the form (`name`, `communicator`)
-#     telescope_data: iterable
-#         Series of disjoint TOAST data objects.
-#         Each entry is tuple of the form (`name`, `data`).
-#     """
-#     if comm.comm_world is None:
-#         raise RuntimeError("Mappraiser requires MPI")
-
-#     log = Logger.get()
-#     total_timer = Timer()
-#     total_timer.start()
-#     if comm.world_rank == 0 and verbose:
-#         log.info("Making maps")
-
-#     mappraiser = OpMappraiser(
-#         params=params,
-#         purge=True,
-#         name=signalname,
-#         noise_name=noisename,
-#         conserve_memory=args.conserve_memory,
-#     )
-
-#     if time_comms is None:
-#         time_comms = [("all", comm.comm_world)]
-
-#     if telescope_data is None:
-#         telescope_data = [("all", data)]
-
-#     timer = Timer()
-#     for time_name, time_comm in time_comms:
-#         for tele_name, tele_data in telescope_data:
-#             if len(time_name.split("-")) == 3:
-#                 # Special rules for daily maps
-#                 if args.do_daymaps:
-#                     continue
-#                 if len(telescope_data) > 1 and tele_name == "all":
-#                     # Skip daily maps over multiple telescopes
-#                     continue
-
-#             timer.start()
-#             # N.B: code below is for Madam but may be useful to copy in Mappraiser
-#             # once we start doing multiple maps in one run
-#             # madam.params["file_root"] = "{}_telescope_{}_time_{}".format(
-#             #     file_root, tele_name, time_name
-#             # )
-#             # if time_comm == comm.comm_world:
-#             #     madam.params["info"] = info
-#             # else:
-#             #     # Cannot have verbose output from concurrent mapmaking
-#             #     madam.params["info"] = 0
-#             # if (time_comm is None or time_comm.rank == 0) and verbose:
-#             #     log.info("Mapping {}".format(madam.params["file_root"]))
-#             mappraiser.exec(tele_data, time_comm)
-
-#             if time_comm is not None:
-#                 time_comm.barrier()
-#             if comm.world_rank == 0 and verbose:
-#                 timer.report_clear(
-#                     "Mapping {}_telescope_{}_time_{}".format(
-#                         args.outpath,
-#                         tele_name,
-#                         time_name,
-#                     )
-#                 )
-
-#     if comm.comm_world is not None:
-#         comm.comm_world.barrier()
-#     total_timer.stop()
-#     if comm.world_rank == 0 and verbose:
-#         total_timer.report("Mappraiser total")
-
-#     return
 
 
 # Here are some helper functions adapted from toast/src/ops/madam_utils.py
 def log_time_memory(
-    data, timer=None, timer_msg=None, mem_msg=None, full_mem=False, prefix=""
+        data, timer=None, timer_msg=None, mem_msg=None, full_mem=False, prefix=""
 ):
     """(This function is taken from madam_utils.py)"""
     log = Logger.get()
@@ -236,7 +41,7 @@ def log_time_memory(
 
         if data.comm.group_rank == 0:
             msg = "{} {} Group {} memory = {:0.2f} GB".format(
-                prefix, mem_msg, data.comm.group, toast_bytes / 1024**2
+                prefix, mem_msg, data.comm.group, toast_bytes / 1024 ** 2
             )
             log.debug(msg)
         if full_mem:
@@ -248,22 +53,22 @@ def log_time_memory(
 
 
 def stage_local(
-    data,
-    nsamp,
-    view,
-    dets,
-    detdata_name,
-    mappraiser_buffer,
-    interval_starts,
-    nnz,
-    nnz_stride,
-    shared_flags,
-    shared_mask,
-    det_flags,
-    det_mask,
-    do_purge=False,
-    operator=None,
-    n_repeat=1,
+        data,
+        nsamp,
+        view,
+        dets,
+        detdata_name,
+        mappraiser_buffer,
+        interval_starts,
+        nnz,
+        nnz_stride,
+        shared_flags,
+        shared_mask,
+        det_flags,
+        det_mask,
+        do_purge=False,
+        operator=None,
+        n_repeat=1,
 ):
     """Helper function to fill a mappraiser buffer from a local detdata key.
     (This function is taken from madam_utils.py)
@@ -294,7 +99,7 @@ def stage_local(
                 else:
                     view_samples = vw.stop - vw.start
                 offset = interval_starts[interval_offset + ivw]
-                
+
                 flags = None
                 if do_flags:
                     # Using flags
@@ -320,7 +125,7 @@ def stage_local(
                         )
                 else:
                     # Noiseless cases (noise_name=None).
-                    mappraiser_buffer[slc] = 0.
+                    mappraiser_buffer[slc] = 0.0
 
                 detflags = None
                 if do_flags:
@@ -339,23 +144,23 @@ def stage_local(
 
 
 def stage_in_turns(
-    data,
-    nodecomm,
-    n_copy_groups,
-    nsamp,
-    view,
-    dets,
-    detdata_name,
-    mappraiser_dtype,
-    interval_starts,
-    nnz,
-    nnz_stride,
-    shared_flags,
-    shared_mask,
-    det_flags,
-    det_mask,
-    operator=None,
-    n_repeat=1,
+        data,
+        nodecomm,
+        n_copy_groups,
+        nsamp,
+        view,
+        dets,
+        detdata_name,
+        mappraiser_dtype,
+        interval_starts,
+        nnz,
+        nnz_stride,
+        shared_flags,
+        shared_mask,
+        det_flags,
+        det_mask,
+        operator=None,
+        n_repeat=1,
 ):
     """When purging data, take turns staging it.
     (This function is taken from madam_utils.py)
@@ -391,15 +196,15 @@ def stage_in_turns(
 
 
 def restore_local(
-    data,
-    nsamp,
-    view,
-    dets,
-    detdata_name,
-    detdata_dtype,
-    mappraiser_buffer,
-    interval_starts,
-    nnz,
+        data,
+        nsamp,
+        view,
+        dets,
+        detdata_name,
+        detdata_dtype,
+        mappraiser_buffer,
+        interval_starts,
+        nnz,
 ):
     """Helper function to create a detdata buffer from mappraiser data.
     (This function is taken from madam_utils.py)
@@ -443,18 +248,18 @@ def restore_local(
 
 
 def restore_in_turns(
-    data,
-    nodecomm,
-    n_copy_groups,
-    nsamp,
-    view,
-    dets,
-    detdata_name,
-    detdata_dtype,
-    mappraiser_buffer,
-    mappraiser_buffer_raw,
-    interval_starts,
-    nnz,
+        data,
+        nodecomm,
+        n_copy_groups,
+        nsamp,
+        view,
+        dets,
+        detdata_name,
+        detdata_dtype,
+        mappraiser_buffer,
+        mappraiser_buffer_raw,
+        interval_starts,
+        nnz,
 ):
     """When restoring data, take turns copying it.
     (This function is taken from madam_utils.py)
@@ -498,24 +303,25 @@ def compute_local_block_sizes(data, view, dets, buffer):
 
 
 def compute_invtt(
-    nobs,
-    ndet,
-    mappraiser_noise,
-    local_block_sizes,
-    Lambda,
-    fsamp,
-    buffer,
-    invtt_dtype,
-    print_info=False,
-    save_psd=False,
-    save_dir=None,
+        nobs,
+        ndet,
+        mappraiser_noise,
+        local_block_sizes,
+        Lambda,
+        fsamp,
+        buffer,
+        invtt_dtype,
+        print_info=False,
+        save_psd=False,
+        save_dir=None,
+        apod_window_type="chebwin",
 ):
     """Compute the first lines of the blocks of the banded noise covariance and store them in the provided buffer."""
     offset = 0
     for iobs in range(nobs):
         for idet in range(ndet):
             blocksize = local_block_sizes[idet * nobs + iobs]
-            nsetod = mappraiser_noise[offset : offset + blocksize]
+            nsetod = mappraiser_noise[offset: offset + blocksize]
             slc = slice(
                 (idet * nobs + iobs) * Lambda,
                 (idet * nobs + iobs) * Lambda + Lambda,
@@ -528,6 +334,7 @@ def compute_invtt(
                 fsamp,
                 idet,
                 invtt_dtype,
+                apod_window_type,
                 verbose=(print_info and (idet == 0) and (iobs == 0)),
                 save_psd=(save_psd and (idet == 0) and (iobs == 0)),
                 save_dir=save_dir,
@@ -553,15 +360,16 @@ def inverselogpsd_model(f, a, alpha, fknee, fmin):
 
 
 def noise2invtt(
-    nsetod,
-    nn,
-    Lambda,
-    fsamp,
-    idet,
-    invtt_dtype,
-    verbose=False,
-    save_psd=False,
-    save_dir=None,
+        nsetod,
+        nn,
+        Lambda,
+        fsamp,
+        idet,
+        invtt_dtype,
+        apod_window_type,
+        verbose=False,
+        save_psd=False,
+        save_dir=None,
 ):
     """Computes a periodogram from a noise timestream, and fits a PSD model
     to it, which is then used to build the first row of a Toeplitz block.
@@ -573,7 +381,7 @@ def noise2invtt(
     except AttributeError:
         pass
 
-    # Estimate psd from noise timestream 
+    # Estimate psd from noise timestream
 
     # Length of segments used to estimate PSD (defines the lowest frequency we can estimate)
     nperseg = nn
@@ -612,35 +420,54 @@ def noise2invtt(
 
     # Define apodization window
     # Only allow max lambda = nn//2
-    if Lambda > nn//2:
+    if Lambda > nn // 2:
         raise RuntimeError("Bandwidth cannot be larger than timestream.")
-    q_apo = 3 # Apodization factor: cut happens at q_apo * sigma in the Gaussian window 
-    window = scipy.signal.get_window(('general_gaussian', 1, 1/q_apo * Lambda), 2 * Lambda)
+
+    if apod_window_type == "gaussian":
+        q_apo = 3  # Apodization factor: cut happens at q_apo * sigma in the Gaussian window
+        window = scipy.signal.get_window(
+            ("general_gaussian", 1, 1 / q_apo * Lambda), 2 * Lambda
+        )
+    elif apod_window_type == "chebwin":
+        # https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.windows.chebwin.html#scipy.signal.windows.chebwin
+        at = 150
+        window = scipy.signal.get_window(("chebwin", at), 2 * Lambda)
+    else:
+        raise RuntimeError(f"Apodisation window '{apod_window_type}' is not supported.")
+
     window = np.fft.ifftshift(window)
     window = window[:Lambda]
-    
+
     # Apply window
     inv_tt_w = np.multiply(window, inv_tt[:Lambda], dtype=invtt_dtype)
 
-    # Optionnally save some PSDs for plots
+    # Optionally save some PSDs for plots
     if save_psd:
-
         # Save TOD
-        np.save(save_dir+"/tod.npy", nsetod)
-        
-        # simulated inverse psd
-        psd_sim_m1 = np.reciprocal(psd)
-        np.save(save_dir+"/psd_sim.npy",psd_sim_m1)
-        
-        # fit of the inverse psd
-        np.save(save_dir+"/freq.npy",f_full[:nn//2])
-        np.save(save_dir+"/psd_fit.npy",psdm1[:nn//2])
-        
-        # "effective" inverse psd
-        circ_invtt_w = np.pad(inv_tt_w, (0,nn-Lambda), 'constant')
-        if Lambda > 1:
-            circ_invtt_w[-Lambda+1:] = np.flip(inv_tt_w[1:],0)
-        ipsd = np.abs(np.fft.fft(circ_invtt_w, n=nn))
-        np.save(save_dir+"/psd_eff"+str(Lambda)+".npy",ipsd[:nn//2])
+        np.save(os.path.join(save_dir, "tod.npy"), nsetod)
+
+        # save simulated PSD
+        np.save(os.path.join(save_dir, "f_psd.npy"), f)
+        np.save(os.path.join(save_dir, "psd_sim.npy"), psd)
+        # ipsd = np.reciprocal(psd)
+        # np.save(os.path.join(save_dir, "ipsd_sim.npy"), ipsd)
+
+        # save fit of the PSD
+        np.save(os.path.join(save_dir, "f_full.npy"), f_full[: nn // 2])
+        # np.save(os.path.join(save_dir, "ipsd_fit.npy"), ipsd_fit[: nn // 2])
+
+        # save effective PSDs
+        ipsd_eff = compute_psd_eff(inv_tt_w, nn)
+        np.save(os.path.join(save_dir, "ipsd_eff" + str(Lambda) + ".npy"), ipsd_eff)
 
     return inv_tt_w
+
+
+def compute_psd_eff(t, n):
+    # Compute "effective" PSD from truncated autocorrelation function
+    lag = t.size
+    circ_t = np.pad(t, (0, n - lag), "constant")
+    if lag > 1:
+        circ_t[-lag + 1:] = np.flip(t[1:], 0)
+    psd_eff = np.abs(np.fft.fft(circ_t, n=n))
+    return psd_eff[: n // 2]
