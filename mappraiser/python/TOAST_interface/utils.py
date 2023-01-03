@@ -6,15 +6,18 @@
 
 import argparse, warnings
 
+import os
 import numpy as np
 import math
 import scipy.signal
 from scipy.optimize import curve_fit
 from astropy import units as u
+from typing import Union
 
 from toast.timing import function_timer
 from toast.utils import GlobalTimers, Logger, Timer, dtype_to_aligned, memreport
 from toast.ops.memory_counter import MemoryCounter
+
 
 def add_mappraiser_args(parser):
     """Add mappraiser specific arguments."""
@@ -114,7 +117,7 @@ def add_mappraiser_args(parser):
         type=int,
         help="Use dynamic search reduction",
     )
-    
+
     return
 
 
@@ -294,7 +297,7 @@ def stage_local(
                 else:
                     view_samples = vw.stop - vw.start
                 offset = interval_starts[interval_offset + ivw]
-                
+
                 flags = None
                 if do_flags:
                     # Using flags
@@ -310,7 +313,9 @@ def stage_local(
                 if detdata_name is not None:
                     if nnz > 1:
                         mappraiser_buffer[slc] = np.repeat(
-                            views.detdata[detdata_name][ivw][det].flatten()[::nnz_stride],
+                            views.detdata[detdata_name][ivw][det].flatten()[
+                                ::nnz_stride
+                            ],
                             n_repeat,
                         )
                     else:
@@ -320,7 +325,7 @@ def stage_local(
                         )
                 else:
                     # Noiseless cases (noise_name=None).
-                    mappraiser_buffer[slc] = 0.
+                    mappraiser_buffer[slc] = 0.0
 
                 detflags = None
                 if do_flags:
@@ -498,19 +503,19 @@ def compute_local_block_sizes(data, view, dets, buffer):
 
 
 def compute_autocorrelations(
-    nobs,
-    ndet,
-    mappraiser_noise,
-    local_block_sizes,
-    Lambda,
-    fsamp,
-    buffer_corr,
-    buffer_invcorr,
-    invtt_dtype,
-    print_info=False,
-    save_psd=False,
-    save_dir=None,
-):
+    nobs: int,
+    ndet: int,
+    mappraiser_noise: np.ndarray,
+    local_block_sizes: np.ndarray,
+    Lambda: int,
+    fsamp: Union[u.Quantity, float],
+    buffer_inv_tt,
+    buffer_tt,
+    invtt_dtype: np.dtype,
+    print_info: bool = False,
+    save_psd: bool = False,
+    save_dir: str = "",
+) -> None:
     """Compute the first lines of the blocks of the banded noise covariance and store them in the provided buffer."""
     offset = 0
     for iobs in range(nobs):
@@ -522,7 +527,7 @@ def compute_autocorrelations(
                 (idet * nobs + iobs) * Lambda + Lambda,
                 1,
             )
-            buffer_invcorr[slc], buffer_corr[slc] = noise_autocorrelation(
+            buffer_inv_tt[slc], buffer_tt[slc] = noise_autocorrelation(
                 nsetod,
                 blocksize,
                 Lambda,
@@ -554,16 +559,17 @@ def inverselogpsd_model(f, a, alpha, fknee, fmin):
 
 
 def noise_autocorrelation(
-    nsetod,
-    nn,
-    Lambda,
-    fsamp,
-    idet,
-    invtt_dtype,
-    verbose=False,
-    save_psd=False,
-    save_dir=None,
-):
+    nsetod: np.ndarray,
+    nn: int,
+    Lambda: int,
+    fsamp: Union[u.Quantity, float],
+    idet: int,
+    invtt_dtype: np.dtype,
+    nperseg: int = 0,
+    verbose: bool = False,
+    save_psd: bool = False,
+    save_dir: str = "",
+) -> np.ndarray:
     """Computes a periodogram from a noise timestream, and fits a PSD model
     to it, which is then used to build the first row of a Toeplitz block.
     """
@@ -574,9 +580,12 @@ def noise_autocorrelation(
     except AttributeError:
         pass
 
-    # Estimate psd from noise timestream 
-    nperseg = nn # Length of segments used to estimate PSD (defines the lowest frequency we can estimate)
-    f, psd = scipy.signal.welch(nsetod, fsamp, window='hann', nperseg=nperseg, detrend='linear')
+    # Estimate psd from noise timestream
+    if nperseg == 0:
+        nperseg = nn  # Length of segments used to estimate PSD (defines the lowest frequency we can estimate)
+    f, psd = scipy.signal.welch(
+        nsetod, fsamp, window="hann", nperseg=nperseg, detrend="linear"
+    )
 
     # Fit the psd model to the periodogram (in log scale)
     popt, pcov = curve_fit(
@@ -602,21 +611,27 @@ def noise_autocorrelation(
     f_full = np.fft.rfftfreq(nn, 1.0 / fsamp)
 
     # Compute inverse noise psd from fit and extrapolate (if needed) to lowest frequencies
-    psdm1 = inversepsd_model(f_full, 10 ** (-popt[0]), *popt[1:])
+    ipsd_fit = inversepsd_model(f_full, 10 ** (-popt[0]), *popt[1:])
+    psd_fit = psd_model(f_full, 10 ** (popt[0]), *popt[1:])
+    psd_fit[0] = 0.0
 
     # Compute inverse noise autocorrelation functions
-    inv_tt = np.fft.irfft(psdm1, n=nn)
-    tt = np.fft.irfft(np.reciprocal(psdm1), n=nn)
+    inv_tt = np.fft.irfft(ipsd_fit, n=nn)
+    tt = np.fft.irfft(psd_fit, n=nn)
 
     # Define apodization window
     # Only allow max lambda = nn//2
-    if Lambda > nn//2:
+    if Lambda > nn // 2:
         raise RuntimeError("Bandwidth cannot be larger than timestream.")
-    q_apo = 3 # Apodization factor: cut happens at q_apo * sigma in the Gaussian window 
-    window = scipy.signal.get_window(('general_gaussian', 1, 1/q_apo * Lambda), 2 * Lambda)
+    # q_apo = 3  # Apodization factor: cut happens at q_apo * sigma in the Gaussian window
+    # window = scipy.signal.get_window(
+    #     ("general_gaussian", 1, 1 / q_apo * Lambda), 2 * Lambda
+    # )
+    at = 150  # attenuation factor in dB for the sidelobes of the window's frequency response side-lobes
+    window = scipy.signal.get_window(("chebwin", at), 2 * Lambda)
     window = np.fft.ifftshift(window)
     window = window[:Lambda]
-    
+
     # Apply window
     inv_tt_w = np.multiply(window, inv_tt[:Lambda], dtype=invtt_dtype)
     tt_w = np.multiply(window, tt[:Lambda], dtype=invtt_dtype)
@@ -625,21 +640,33 @@ def noise_autocorrelation(
     if save_psd:
 
         # Save TOD
-        np.save(save_dir+"/tod.npy", nsetod)
-        
-        # simulated inverse psd
-        psd_sim_m1 = np.reciprocal(psd)
-        np.save(save_dir+"/psd_sim.npy",psd_sim_m1)
-        
-        # fit of the inverse psd
-        np.save(save_dir+"/freq.npy",f_full[:nn//2])
-        np.save(save_dir+"/psd_fit.npy",psdm1[:nn//2])
-        
-        # "effective" inverse psd
-        circ_invtt_w = np.pad(inv_tt_w, (0,nn-Lambda), 'constant')
-        if Lambda > 1:
-            circ_invtt_w[-Lambda+1:] = np.flip(inv_tt_w[1:],0)
-        ipsd = np.abs(np.fft.fft(circ_invtt_w, n=nn))
-        np.save(save_dir+"/psd_eff"+str(Lambda)+".npy",ipsd[:nn//2])
+        np.save(os.path.join(save_dir, "tod.npy"), nsetod)
+
+        # save simulated PSD
+        np.save(os.path.join(save_dir, "f_psd.npy"), f)
+        np.save(os.path.join(save_dir, "psd_sim.npy"), psd)
+        # ipsd = np.reciprocal(psd)
+        # np.save(os.path.join(save_dir, "ipsd_sim.npy"), ipsd)
+
+        # save fit of the PSD
+        np.save(os.path.join(save_dir, "f_full.npy"), f_full[: nn // 2])
+        np.save(os.path.join(save_dir, "psd_fit.npy"), psd_fit[: nn // 2])
+        # np.save(os.path.join(save_dir, "ipsd_fit.npy"), ipsd_fit[: nn // 2])
+
+        # save effective PSDs
+        ipsd_eff = compute_psd_eff(inv_tt_w, nn)
+        psd_eff = compute_psd_eff(tt_w, nn)
+        np.save(os.path.join(save_dir, "ipsd_eff" + str(Lambda) + ".npy"), ipsd_eff)
+        np.save(os.path.join(save_dir, "psd_eff" + str(Lambda) + ".npy"), psd_eff)
 
     return inv_tt_w, tt_w
+
+
+def compute_psd_eff(t, n):
+    # Compute "effective" PSD from truncated autocorrelation function
+    l = t.size
+    circ_t = np.pad(t, (0, n - l), "constant")
+    if l > 1:
+        circ_t[-l + 1 :] = np.flip(t[1:], 0)
+    psd_eff = np.abs(np.fft.fft(circ_t, n=n))
+    return psd_eff[: n // 2]
