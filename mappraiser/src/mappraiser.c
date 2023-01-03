@@ -20,7 +20,7 @@
 
 int x2map_pol(double *mapI, double *mapQ, double *mapU, double *Cond, int *hits, int npix, double *x, int *lstid, double *cond, int *lhits, int xsize);
 
-void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int Z_2lvl, int pointing_commflag, double tol, int maxiter, int enlFac, int ortho_alg, int bs_red, int nside, void *data_size_proc, int nb_blocks_loc, void *local_blocks_sizes, int Nnz, void *pix, void *pixweights, void *signal, double *noise, int lambda, double *inverse_correlation, double *correlation)
+void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int Z_2lvl, int pointing_commflag, double tol, int maxiter, int enlFac, int ortho_alg, int bs_red, int nside, void *data_size_proc, int nb_blocks_loc, void *local_blocks_sizes, int Nnz, void *pix, void *pixweights, void *signal, double *noise, int lambda, double *inv_tt, double *tt)
 {
     int64_t M;             // Global number of rows
     int m, Nb_t_Intervals; // local number of rows of the pointing matrix A, nbr of stationary intervals
@@ -147,8 +147,11 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     Flag flag_stgy;
     flag_stgy_init_auto(&flag_stgy);
 
+    // skip build gappy blocks
+    flag_stgy.flag_skip_build_gappy_blocks = 1;
+
     // to print something on screen
-    flag_stgy.flag_verbose = 1;
+    // flag_stgy.flag_verbose = 1;
 
     // define Toeplitz blocks list and structure for Nm1
     Block *tpltzblocks;
@@ -163,25 +166,27 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
 
     // Block definition
     tpltzblocks = (Block *)malloc(nb_blocks_loc * sizeof(Block));
-    defineBlocks_avg(tpltzblocks, inverse_correlation, nb_blocks_loc, local_blocks_sizes, lambda_block_avg, id0);
+    defineBlocks_avg(tpltzblocks, inv_tt, nb_blocks_loc, local_blocks_sizes, lambda_block_avg, id0);
     defineTpltz_avg(&Nm1, nrow, 1, mcol, tpltzblocks, nb_blocks_loc, nb_blocks_tot, id0, local_V_size, flag_stgy, comm);
 
     // define the noise covariance matrix
-    Tpltz Ncov;
-    Block *tpltzblocks_Ncov = (Block *)malloc(nb_blocks_loc * sizeof(Block));
-    defineBlocks_avg(tpltzblocks_Ncov, correlation, nb_blocks_loc, local_blocks_sizes, lambda_block_avg, id0);
-    defineTpltz_avg(&Ncov, nrow, 1, mcol, tpltzblocks_Ncov, nb_blocks_loc, nb_blocks_tot, id0, local_V_size, flag_stgy, comm);
+    Tpltz N;
+    Block *tpltzblocks_N = (Block *)malloc(nb_blocks_loc * sizeof(Block));
+    defineBlocks_avg(tpltzblocks_N, tt, nb_blocks_loc, local_blocks_sizes, lambda_block_avg, id0);
+    defineTpltz_avg(&N, nrow, 1, mcol, tpltzblocks_N, nb_blocks_loc, nb_blocks_tot, id0, local_V_size, flag_stgy, comm);
 
     // print Toeplitz parameters for information
     if (rank == 0)
     {
         printf("[rank %d] Noise model: Banded block Toeplitz, half bandwidth = %d\n", rank, lambda_block_avg);
+        printf("[rank %d] Toeplitz flags:\n", rank);
+        print_flag_stgy_init(flag_stgy);
     }
 
     MPI_Barrier(comm);
     if (rank == 0)
     {
-        printf("##### Start PCG ####################\n");
+        printf("\n##### Start PCG ####################\n");
     }
     fflush(stdout);
 
@@ -189,12 +194,12 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     // Conjugate Gradient
     if (solver == 0)
     {
-        PCG_GLS_true(outpath, ref, &A, &Nm1, &Ncov, x, signal, noise, cond, lhits, tol, maxiter, precond, Z_2lvl, &Gaps, gif);
+        PCG_GLS_true(outpath, ref, &A, &Nm1, &N, x, signal, noise, cond, lhits, tol, maxiter, precond, Z_2lvl, &Gaps, gif);
     }
     else if (solver == 1)
     {
 #ifdef W_ECG
-        ECG_GLS(outpath, ref, &A, &Nm1, x, signal, noise, cond, lhits, tol, maxiter, enlFac, ortho_alg, bs_red);
+        ECG_GLS(outpath, ref, &A, &Nm1, x, signal, noise, cond, lhits, tol, maxiter, enlFac, ortho_alg, bs_red, &Gaps, gif);
 #else
         if (rank == 0)
             printf("To use solver=1 (ECG), use configure option '--with ecg'.\n");

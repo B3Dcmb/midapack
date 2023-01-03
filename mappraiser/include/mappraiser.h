@@ -74,7 +74,7 @@ typedef struct Precond Precond;
 int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, double *noise, double *cond, int *lhits, Gap *Gaps, int64_t gif);
 
 // Preconditioner constructor
-void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tpltz *Nm1, double **in_out_x, double *b, const double *noise, double *cond, int *lhits, double tol, int Zn, int precond, Gap *Gaps, int64_t gif);
+void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tpltz *Nm1, double **in_out_x, double *b, double *noise, double *cond, int *lhits, double tol, int Zn, int precond, Gap *Gaps, int64_t gif);
 
 // Product of the preconditioner with a map vector
 void apply_precond(struct Precond *p, const Mat *A, Tpltz *Nm1, double *g, double *Cg);
@@ -88,11 +88,12 @@ void free_precond(struct Precond **in_out_p);
 void get_pixshare_pond(Mat *A, double *pixpond);
 
 // PCG routine
-int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *Ncov, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl, Gap *Gaps, int64_t gif);
+int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl, Gap *Gaps, int64_t gif);
 
 // ECG routine
 #ifdef WITH_ECG
-int ECG_GLS(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int maxIter, int enlFac, int ortho_alg, int bs_red);
+int ECG_GLS(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double *b, double *noise, double *cond, int *lhits,
+            double tol, int maxIter, int enlFac, int ortho_alg, int bs_red, Gap *Gaps, int64_t gif);
 #endif
 
 #endif /* MAPPRAISER_H */

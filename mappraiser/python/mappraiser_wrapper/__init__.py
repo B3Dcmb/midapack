@@ -61,16 +61,15 @@ _mappraiser.MLmap.argtypes = [
     ct.c_int,  # nside
     npc.ndpointer(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"),  # data_size_proc
     ct.c_int,  # nb_blocks_loc
-    # local_blocks_sizes
-    npc.ndpointer(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"),
+    npc.ndpointer(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"),  # local_blocks_sizes
     ct.c_int,  # Nnz
-    npc.ndpointer(dtype=PIXEL_TYPE, ndim=1, flags="C_CONTIGUOUS"),
-    npc.ndpointer(dtype=WEIGHT_TYPE, ndim=1, flags="C_CONTIGUOUS"),
-    npc.ndpointer(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"),
-    npc.ndpointer(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"),
+    npc.ndpointer(dtype=PIXEL_TYPE, ndim=1, flags="C_CONTIGUOUS"), # pixels
+    npc.ndpointer(dtype=WEIGHT_TYPE, ndim=1, flags="C_CONTIGUOUS"), # pixweights
+    npc.ndpointer(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"), # signal
+    npc.ndpointer(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"), # noise
     ct.c_int,  # lambda
-    npc.ndpointer(dtype=INVTT_TYPE, ndim=1, flags="C_CONTIGUOUS"),
-    npc.ndpointer(dtype=INVTT_TYPE, ndim=1, flags="C_CONTIGUOUS"),
+    npc.ndpointer(dtype=INVTT_TYPE, ndim=1, flags="C_CONTIGUOUS"), # inv_tt
+    npc.ndpointer(dtype=INVTT_TYPE, ndim=1, flags="C_CONTIGUOUS"), # tt
 ]
 
 
@@ -86,7 +85,7 @@ def MLmap(
     signal,
     noise,
     Lambda,
-    invtt,
+    inv_tt,
     tt,
 ):
     """
@@ -106,8 +105,8 @@ def MLmap(
     * `signal`: Signal buffer
     * `noise`: Noise buffer
     * `Lambda`: Toeplitz matrix half-bandwidth
-    * `invtt`: Inverse noise weights
-    * `tt`: noise autocorrelation
+    * `inv_tt`: Inverse noise correlation
+    * `tt`: Noise autocorrelation
 
     """
     if not available:
@@ -115,10 +114,6 @@ def MLmap(
 
     outpath = params["path_output"].encode("ascii")
     ref = params["ref"].encode("ascii")
-    
-    if comm.rank == 0:
-        print(invtt)
-        print(tt, flush=True)
     
     comm.Barrier()
 
@@ -145,7 +140,7 @@ def MLmap(
         signal,
         noise,
         Lambda,
-        invtt,
+        inv_tt,
         tt,
     )
 
