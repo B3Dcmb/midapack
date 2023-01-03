@@ -231,6 +231,10 @@ class Mappraiser(Operator):
 
     save_psd = Bool(False, help="Save noise PSD information during inv_tt computation.")
 
+    apod_window_type = Unicode(
+        "chebwin", help="Type of apodisation window to use during noise PSD estimation."
+    )
+
     bandwidth = Int(16384, help="Half-bandwidth for the noise model")
 
     # additional parameters for the solver (C library)
@@ -1027,6 +1031,7 @@ class Mappraiser(Operator):
                 print_info=(data.comm.world_rank == 0),
                 save_psd=(self.save_psd and data.comm.world_rank == 0),
                 save_dir=os.path.join(params["path_output"], "psd"),
+                apod_window_type=self.apod_window_type,
             )
         else:
             self._mappraiser_invtt[:] = 1.0

@@ -569,6 +569,7 @@ def noise_autocorrelation(
     verbose: bool = False,
     save_psd: bool = False,
     save_dir: str = "",
+    apod_window_type: str = "chebwin",
 ) -> np.ndarray:
     """Computes a periodogram from a noise timestream, and fits a PSD model
     to it, which is then used to build the first row of a Toeplitz block.
@@ -623,12 +624,19 @@ def noise_autocorrelation(
     # Only allow max lambda = nn//2
     if Lambda > nn // 2:
         raise RuntimeError("Bandwidth cannot be larger than timestream.")
-    # q_apo = 3  # Apodization factor: cut happens at q_apo * sigma in the Gaussian window
-    # window = scipy.signal.get_window(
-    #     ("general_gaussian", 1, 1 / q_apo * Lambda), 2 * Lambda
-    # )
-    at = 150  # attenuation factor in dB for the sidelobes of the window's frequency response side-lobes
-    window = scipy.signal.get_window(("chebwin", at), 2 * Lambda)
+    
+    if apod_window_type == "gaussian":
+        q_apo = 3  # Apodization factor: cut happens at q_apo * sigma in the Gaussian window
+        window = scipy.signal.get_window(
+            ("general_gaussian", 1, 1 / q_apo * Lambda), 2 * Lambda
+        )
+    elif apod_window_type == "chebwin":
+        # https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.windows.chebwin.html#scipy.signal.windows.chebwin
+        at = 150
+        window = scipy.signal.get_window(("chebwin", at), 2 * Lambda)
+    else:
+        raise RuntimeError(f"Apodisation window '{apod_window_type}' is not supported.")
+    
     window = np.fft.ifftshift(window)
     window = window[:Lambda]
 
