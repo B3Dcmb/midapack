@@ -6,7 +6,7 @@
 int build_pixel_to_time_domain_mapping(Mat *A)
 {
     int i, j;
-    int vpix_i;
+    int ipix;
     int ngap, lengap;
 
     /* Allocate memory for the arrays */
@@ -39,33 +39,36 @@ int build_pixel_to_time_domain_mapping(Mat *A)
     lengap = 0;
     for (i = 0; i < A->m; i++)
     {
-        vpix_i = A->indices[i * A->nnz] / A->nnz;
-        if (A->pix_to_last_samp[vpix_i] == -1)
+        ipix = A->indices[i * A->nnz] / A->nnz;
+        if (A->pix_to_last_samp[ipix] == -1)
         {
-            A->pix_to_last_samp[vpix_i] = i;
+            A->pix_to_last_samp[ipix] = i;
         }
         else
         {
-            A->ll[i] = A->pix_to_last_samp[vpix_i];
-            A->pix_to_last_samp[vpix_i] = i;
+            A->ll[i] = A->pix_to_last_samp[ipix];
+            A->pix_to_last_samp[ipix] = i;
         }
 
         // compute the number of gaps in the timestream
-        if (A->indices[i * A->nnz] != 0) /* valid sample */
+        if (A->trash_pix)
         {
-            // reset gap length
-            lengap = 0;
-        }
-        else /* flagged sample -> gap */
-        {
-            if (lengap == 0) /* This is a new gap */
+            if (A->indices[i * A->nnz] != 0) /* valid sample */
             {
-                // increment gap count
-                ++ngap;
+                // reset gap length
+                lengap = 0;
             }
+            else /* flagged sample -> gap */
+            {
+                if (lengap == 0) /* This is a new gap */
+                {
+                    // increment gap count
+                    ++ngap;
+                }
 
-            // increment current gap size
-            ++lengap;
+                // increment current gap size
+                ++lengap;
+            }
         }
     }
     return ngap;
