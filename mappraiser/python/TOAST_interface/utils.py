@@ -515,6 +515,7 @@ def compute_autocorrelations(
     print_info: bool = False,
     save_psd: bool = False,
     save_dir: str = "",
+    apod_window_type: str = "chebwin",
 ) -> None:
     """Compute the first lines of the blocks of the banded noise covariance and store them in the provided buffer."""
     offset = 0
@@ -534,6 +535,7 @@ def compute_autocorrelations(
                 fsamp,
                 idet,
                 invtt_dtype,
+                apod_window_type,
                 verbose=(print_info and (idet == 0) and (iobs == 0)),
                 save_psd=(save_psd and (idet == 0) and (iobs == 0)),
                 save_dir=save_dir,
@@ -565,11 +567,11 @@ def noise_autocorrelation(
     fsamp: Union[u.Quantity, float],
     idet: int,
     invtt_dtype: np.dtype,
+    apod_window_type: str,
     nperseg: int = 0,
     verbose: bool = False,
     save_psd: bool = False,
     save_dir: str = "",
-    apod_window_type: str = "chebwin",
 ) -> np.ndarray:
     """Computes a periodogram from a noise timestream, and fits a PSD model
     to it, which is then used to build the first row of a Toeplitz block.
