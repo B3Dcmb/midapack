@@ -16,11 +16,12 @@
 #include <time.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdbool.h>
 #include "mappraiser.h"
 
-int apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod, int m, int rank, int verbose);
+void apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod, int m, int tot_ngap, MPI_Comm comm, int verbose);
 
-int reset_tod_gaps(double *tod, Tpltz *N, Gap *Gaps);
+void reset_tod_gaps(double *tod, Tpltz *N, Gap *Gaps);
 
 int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl, Gap *Gaps, int64_t gif)
 {
@@ -66,6 +67,16 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
         fflush(stdout);
     }
 
+    // find out the total number of gaps
+    int tot_ngap = 0;
+    MPI_Allreduce(&Gaps->ngap, &tot_ngap, 1, MPI_INT, MPI_SUM, A->comm);
+
+    if (rank == 0)
+    {
+        printf("[rank %d] total nbr of gaps across all processes = %d\n", rank, tot_ngap);
+        fflush(stdout);
+    }
+
     // map domain objects memory allocation
     h = (double *)malloc(n * sizeof(double));  // descent direction
     g = (double *)malloc(n * sizeof(double));  // residual
@@ -87,10 +98,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
     for (i = 0; i < m; i++)
         _g[i] = b[i] + noise[i] - _g[i];
 
-    apply_weights(Nm1, N, Gaps, _g, A->m, rank, 0); // _g = Nm1 (d-Ax0)  (d = signal + noise)
-
-    // debug: look at one execution of noise weighting PCG
-    // exit(0);
+    apply_weights(Nm1, N, Gaps, _g, A->m, tot_ngap, A->comm, 0); // _g = Nm1 (d-Ax0)  (d = signal + noise)
 
     TrMatVecProd(A, _g, g, 0); // g = At _g
 
@@ -104,7 +112,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
     for (i = 0; i < n; i++) // g2pix = (Cg, g)
         localreduce += Cg[i] * g[i] * pixpond[i];
 
-    MPI_Allreduce(&localreduce, &g2pix, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&localreduce, &g2pix, 1, MPI_DOUBLE, MPI_SUM, A->comm);
 
     t = MPI_Wtime();
     solve_time += (t - st);
@@ -116,7 +124,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
         for (i = 0; i < n; i++) // g2 = (g, g)
             localreduce += g[i] * g[i] * pixpond[i];
 
-        MPI_Allreduce(&localreduce, &res, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(&localreduce, &res, 1, MPI_DOUBLE, MPI_SUM, A->comm);
     }
     else
     {
@@ -129,7 +137,6 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
     // Test if already converged
     if (rank == 0)
     {
-
         res_rel = sqrt(res) / sqrt(res0);
         printf("k = %d, res = %e, g2pix = %e, res_rel = %e, time = %lf\n", 0, res, g2pix, res_rel, t - st);
         char filename[256];
@@ -160,7 +167,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
 
         MatVecProd(A, h, Ah, 0); // Ah = A h
 
-        apply_weights(Nm1, N, Gaps, Nm1Ah, A->m, rank, 0); // Nm1Ah = Nm1 Ah   (Nm1Ah == Ah)
+        apply_weights(Nm1, N, Gaps, Nm1Ah, A->m, tot_ngap, A->comm, 0); // Nm1Ah = Nm1 Ah   (Nm1Ah == Ah)
 
         TrMatVecProd(A, Nm1Ah, AtNm1Ah, 0); // AtNm1Ah = At Nm1Ah
 
@@ -168,7 +175,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
         localreduce = 0.0;
         for (i = 0; i < n; i++)
             localreduce += h[i] * AtNm1Ah[i] * pixpond[i];
-        MPI_Allreduce(&localreduce, &coeff, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(&localreduce, &coeff, 1, MPI_DOUBLE, MPI_SUM, A->comm);
 
         ro = g2pix / coeff;
 
@@ -185,13 +192,13 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
         for (i = 0; i < n; i++) // g2 = (Cg, g)
             localreduce += Cg[i] * g[i] * pixpond[i];
 
-        MPI_Allreduce(&localreduce, &g2pix, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(&localreduce, &g2pix, 1, MPI_DOUBLE, MPI_SUM, A->comm);
 
         localreduce = 0.0;
         for (i = 0; i < n; i++) // g2 = (Cg, g)
             localreduce += Cg[i] * (g[i] - gp[i]) * pixpond[i];
 
-        MPI_Allreduce(&localreduce, &g2pix_polak, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(&localreduce, &g2pix_polak, 1, MPI_DOUBLE, MPI_SUM, A->comm);
 
         t = MPI_Wtime();
         solve_time += (t - st);
@@ -203,7 +210,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
             for (i = 0; i < n; i++) // g2 = (Cg, g)
                 localreduce += g[i] * g[i] * pixpond[i];
 
-            MPI_Allreduce(&localreduce, &res, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+            MPI_Allreduce(&localreduce, &res, 1, MPI_DOUBLE, MPI_SUM, A->comm);
         }
         else
         {
@@ -270,10 +277,14 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
 }
 
 /* Weights TOD data according to the adopted noise model*/
-int apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod, int m, int rank, int verbose)
+void apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod, int m, int tot_ngap, MPI_Comm comm, int verbose)
 {
     int t_id; // time sample index in local data
     int i, j;
+
+    int rank, size;
+    MPI_Comm_rank(comm, &rank);
+    MPI_Comm_size(comm, &size);
 
     if (Nm1->tpltzblocks[0].lambda == 1) /* Use straightforward loop for white noise model */
     {
@@ -289,7 +300,7 @@ int apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod, int m, int rank,
             t_id += Nm1->tpltzblocks[i].n;
         }
     }
-    else if (Gaps->ngap == 0) /* No gaps in the timestream */
+    else if (tot_ngap == 0) /* No gaps in the timestream */
     {
         // Use stbmmProd routine for correlated noise model
         // (no det-det correlations for now)
@@ -297,13 +308,14 @@ int apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod, int m, int rank,
     }
     else /* Use PCG + gstbmmProd to apply the noise weights */
     {
-        const int kmax = 100;    // maximum iteration count
+        const int kmax = 50;    // maximum iteration count
         const double tol = 1e-6; // convergence criterion
         int k = 0;               // iteration number
         double r0, res, tol2rel; // residuals
         double coef_1, coef_2;   // scalars
         double lval_1, lval_2;   // local values before reduction
         double st, t;            // timing variables
+        bool converged = false;
 
         double *p = NULL, *_r = NULL, *r = NULL, *z = NULL; // time-domain objects
 
@@ -318,6 +330,7 @@ int apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod, int m, int rank,
         if (_r == NULL || r == NULL)
         {
             puts("out of memory: allocation of time-domain vectors for tod weighting failed");
+            fflush(stdout);
             exit(EXIT_FAILURE);
         }
 
@@ -329,7 +342,10 @@ int apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod, int m, int rank,
         }
 
         // apply system matrix (_r = Nx0)
-        gstbmmProd(N, _r, Gaps);
+        if (Gaps->ngap > 0)
+            gstbmmProd(N, _r, Gaps);
+        else
+            stbmmProd(N, _r);
 
         // compute initial residual (r = b - Nx0)
         // check for instant convergence
@@ -341,27 +357,31 @@ int apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod, int m, int rank,
         }
 
         res = 0.0;
-        MPI_Allreduce(&lval_1, &res, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(&lval_1, &res, 1, MPI_DOUBLE, MPI_SUM, comm);
         r0 = res;
         tol2rel = tol * tol * res;
 
         t = MPI_Wtime();
 
-        if (rank == 0 && verbose) /* print information on screen */
+        if ((rank == 0) && (verbose > 0)) /* print information on screen */
         {
-            printf("[noise weighting PCG] k = %d, r0 = %e, time=%lf\n", k, r0, t - st);
+            printf("  apply_weights: k = %d, r0 = %e, time=%lf\n", k, r0, t - st);
+            fflush(stdout);
         }
 
         if (res < tol * tol)
         {
             // print info on screen
-            if (rank == 0 && verbose)
+            if ((rank == 0) && (verbose > 0))
+            {
                 printf("  -> converged (%e < %e)\n", res, tol * tol);
+                fflush(stdout);
+            }
 
             // return immediately
             free(_r);
             free(r);
-            return 0;
+            return;
         }
 
         p = malloc((sizeof *p) * m);
@@ -369,15 +389,18 @@ int apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod, int m, int rank,
         if (p == NULL || z == NULL)
         {
             puts("out of memory: allocation of time-domain vectors for tod weighting failed");
+            fflush(stdout);
             exit(EXIT_FAILURE);
         }
-
-        t = MPI_Wtime();
 
         // apply preconditioner (z0 = M^{-1} * r0)
         for (i = 0; i < m; ++i)
             z[i] = r[i];
-        gstbmmProd(Nm1, z, Gaps);
+        
+        if (Gaps->ngap > 0)
+            gstbmmProd(Nm1, z, Gaps);
+        else
+            stbmmProd(Nm1, z);
 
         // set initial search direction (p0 = z0)
         for (i = 0; i < m; ++i)
@@ -385,13 +408,14 @@ int apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod, int m, int rank,
 
         for (k = 1; k < kmax; ++k)
         {
-            fflush(stdout);
-
             // apply system matrix (_r = Np)
             for (i = 0; i < m; ++i)
                 _r[i] = p[i];
 
-            gstbmmProd(N, _r, Gaps);
+            if (Gaps->ngap > 0)
+                gstbmmProd(N, _r, Gaps);
+            else
+                stbmmProd(N, _r);
 
             // compute alpha = (r,z)/(p,Np)
             lval_1 = 0.0;
@@ -404,8 +428,8 @@ int apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod, int m, int rank,
 
             coef_1 = 0.0; // (r,z)
             coef_2 = 0.0; // (p,Np)
-            MPI_Allreduce(&lval_1, &coef_1, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
-            MPI_Allreduce(&lval_2, &coef_2, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+            MPI_Allreduce(&lval_1, &coef_1, 1, MPI_DOUBLE, MPI_SUM, comm);
+            MPI_Allreduce(&lval_2, &coef_2, 1, MPI_DOUBLE, MPI_SUM, comm);
 
             // update current vector (x = x + alpha * p)
             // update residual (r = r - alpha * Np)
@@ -417,7 +441,10 @@ int apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod, int m, int rank,
             }
 
             // apply preconditioner (z = M^{-1} r)
-            gstbmmProd(Nm1, z, Gaps);
+            if (Gaps->ngap > 0)
+                gstbmmProd(Nm1, z, Gaps);
+            else
+                stbmmProd(Nm1, z);
 
             // compute coeff for new search direction
             lval_2 = 0.0;
@@ -425,7 +452,7 @@ int apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod, int m, int rank,
                 lval_2 += r[i] * z[i];
 
             coef_2 = 0.0; // new (r,z)
-            MPI_Allreduce(&lval_2, &coef_2, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+            MPI_Allreduce(&lval_2, &coef_2, 1, MPI_DOUBLE, MPI_SUM, comm);
 
             // update search direction
             lval_1 = 0.0;
@@ -436,32 +463,41 @@ int apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod, int m, int rank,
             }
 
             res = 0.0;
-            MPI_Allreduce(&lval_1, &res, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+            MPI_Allreduce(&lval_1, &res, 1, MPI_DOUBLE, MPI_SUM, comm);
 
-            if (rank == 0 && verbose)
+            if ((rank == 0) && (verbose > 0))
             {
-                printf("[k = %d] res = %e, relative = %e\n", k, res, sqrt(res / r0));
+                printf("  -> k = %d, res = %e, relative = %e\n", k, res, sqrt(res / r0));
+                fflush(stdout);
             }
 
             if (res < tol2rel)
             {
                 t = MPI_Wtime();
+                converged = true;
                 if (rank == 0)
                 {
-                    if (verbose)
+                    if (verbose > 0)
                     {
                         printf("  -> converged (%e < %e)\n", res, tol2rel);
                         printf("  -> i.e.      (%e < %e)\n", sqrt(res / r0), tol);
-                        printf("  -> n_iter = %d, solve time = %lf\n", k, t - st);
+                        printf("  -> n_iter = %d, solve time = %lf s\n", k, t - st);
                     }
                     else
                     {
-                        printf("  -> applied noise weights in %d iterations (%lf seconds)\n", k, t - st);
+                        printf("  -> applied noise weights in %d iterations (%lf s)\n", k, t - st);
                     }
                 }
                 break;
             }
         }
+
+        if (!converged && rank == 0)
+        {
+            t = MPI_Wtime();
+            printf("  -> did not converge in %d iterations (%lf s)\n", k, t - st);
+        }
+
         fflush(stdout);
 
         // free memory
@@ -470,11 +506,9 @@ int apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod, int m, int rank,
         free(r);
         free(z);
     }
-
-    return 0;
 }
 
-int reset_tod_gaps(double *tod, Tpltz *N, Gap *Gaps)
+void reset_tod_gaps(double *tod, Tpltz *N, Gap *Gaps)
 {
     reset_gaps(&tod, N->idp, N->local_V_size, N->m_cw, N->nrow, N->m_rw, Gaps->id0gap, Gaps->lgap, Gaps->ngap);
 }
