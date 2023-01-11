@@ -229,11 +229,29 @@ class Mappraiser(Operator):
         False, help="Print system memory use while staging/unstaging data"
     )
 
-    save_psd = Bool(False, help="Save noise PSD information during inv_tt computation.")
+    save_psd = Bool(False, help="Save noise PSD information during inv_tt computation")
 
     apod_window_type = Unicode(
-        "chebwin", help="Type of apodisation window to use during noise PSD estimation."
+        "chebwin", help="Type of apodisation window to use during noise PSD estimation"
     )
+    
+    nperseg = Int(
+        0, help="If 0, set nperseg = timestream length to compute the noise periodograms. If > 0, nperseg = Lambda."
+    )
+    
+    bandwidth = Int(16384, help="Half-bandwidth for the noise model")
+    
+    # additional parameters for the solver (C library)
+    # TODO: fill in missing help info
+    solver = Int(0, help="Choice of mapmaking solver (0 = PCG, 1 = ECG)")
+    z_2lvl = Int(0, help="Dimension of deflation subspace for 2lvl preconditioners")
+    precond = Int(0, help="Choice of preconditioner (0 = BJ, 1 = 2lvl a priori, 2 = 2lvl a posteriori")
+    ortho_alg = Int(1, help="")
+    ptcomm_flag = Int(6, help="")
+    tol = Float(1e-6, help="Convergence threshold for the iterative solver")
+    maxiter = Int(3000, help="Maximum number of iterations allowed for the solver")
+    enlFac = Int(1, help="")
+    bs_red = Int(0, help="")
 
     bandwidth = Int(16384, help="Half-bandwidth for the noise model")
 
@@ -457,6 +475,35 @@ class Mappraiser(Operator):
         #     params["write_tod"] = True
         # else:
         #     params["write_tod"] = False
+        
+        # Parameters for mappraiser C library
+        # 'path_output' and 'ref' already provided as script arguments to toast_so_sim
+        
+        # No noise: half bandwidth of noise model must be set to 1
+        if self.noise_name is None:
+            params["Lambda"] = 1
+        else:
+            params["Lambda"] = self.bandwidth
+        
+        params.update({
+            "solver": self.solver,
+            "precond": self.precond,
+            "Z_2lvl": self.z_2lvl,
+            "ptcomm_flag": self.ptcomm_flag,
+            "tol": np.double(self.tol),
+            "maxiter": self.maxiter,
+            "enlFac": self.enlFac,
+            "ortho_alg": self.ortho_alg,
+            "bs_red": self.bs_red,
+        })
+        
+        # Log the libmappraiser parameters that were used.
+        if data.comm.world_rank == 0:
+            with open(
+                os.path.join(params["path_output"], "mappraiser_args_log.toml"),
+                "w",
+            ) as f:
+                toml.dump(params, f)
 
         # Parameters for mappraiser C library
         # 'path_output' and 'ref' already provided as script arguments to toast_so_sim
