@@ -9,7 +9,7 @@ from toast.mpi import MPI, use_mpi
 from toast.observation import default_values as defaults
 from toast.templates import Offset
 from toast.timing import function_timer
-from toast.traits import Bool, Dict, Instance, Int, Unicode, trait_docs
+from toast.traits import Bool, Dict, Instance, Int, Float, Unicode, trait_docs
 from toast.utils import Environment, GlobalTimers, Logger, Timer, dtype_to_aligned
 from toast.ops.delete import Delete
 from toast.ops.mapmaker import MapMaker
@@ -203,7 +203,7 @@ class Mappraiser(Operator):
     #! N.B: not supported for the moment
     mcmode = Bool(
         False,
-        help="If true, Madam will store auxiliary information such as pixel matrices and noise filter.",
+        help="If true, Madam will store auxiliary information such as pixel matrices and noise filter",
     )
 
     copy_groups = Int(
@@ -212,7 +212,7 @@ class Mappraiser(Operator):
     )
 
     translate_timestamps = Bool(
-        False, help="Translate timestamps to enforce monotonity."
+        False, help="Translate timestamps to enforce monotonity"
     )
 
     noise_scale = Unicode(
@@ -221,12 +221,28 @@ class Mappraiser(Operator):
     )
 
     mem_report = Bool(
-        False, help="Print system memory use while staging / unstaging data."
+        False, help="Print system memory use while staging/unstaging data"
     )
-    
-    save_psd = Bool(
-        False, help="Save noise PSD information during inv_tt computation."
+
+    save_psd = Bool(False, help="Save noise PSD information during inv_tt computation.")
+
+    nperseg = Int(
+        0, help="If 0, set nperseg = timestream length to compute the noise periodograms. If > 0, nperseg = Lambda."
     )
+
+    bandwidth = Int(16384, help="Half-bandwidth for the noise model")
+
+    # additional parameters for the solver (C library)
+    # TODO: fill in missing help info
+    solver = Int(0, help="Choice of mapmaking solver (0 = PCG, 1 = ECG)")
+    z_2lvl = Int(0, help="Dimension of deflation subspace for 2lvl preconditioners")
+    precond = Int(0, help="Choice of preconditioner (0 = BJ, 1 = 2lvl a priori, 2 = 2lvl a posteriori")
+    ortho_alg = Int(1, help="")
+    ptcomm_flag = Int(6, help="")
+    tol = Float(1e-6, help="Convergence threshold for the iterative solver")
+    maxiter = Int(3000, help="Maximum number of iterations allowed for the solver")
+    enlFac = Int(1, help="")
+    bs_red = Int(0, help="")
 
     @traitlets.validate("shared_flag_mask")
     def _check_shared_flag_mask(self, proposal):
@@ -421,7 +437,7 @@ class Mappraiser(Operator):
 
         if self.params is not None:
             params.update(self.params)
-        
+
         if "fsample" not in params:
             params["fsample"] = data.obs[0].telescope.focalplane.sample_rate.to_value(
                 u.Hz
@@ -438,6 +454,35 @@ class Mappraiser(Operator):
         # else:
         #     params["write_tod"] = False
 
+        # Parameters for mappraiser C library
+        # 'path_output' and 'ref' already provided as script arguments to toast_so_sim
+
+        # No noise: half bandwidth of noise model must be set to 1
+        if self.noise_name is None:
+            params["Lambda"] = 1
+        else:
+            params["Lambda"] = self.bandwidth
+
+        params.update({
+            "solver": self.solver,
+            "precond": self.precond,
+            "Z_2lvl": self.z_2lvl,
+            "ptcomm_flag": self.ptcomm_flag,
+            "tol": np.double(self.tol),
+            "maxiter": self.maxiter,
+            "enlFac": self.enlFac,
+            "ortho_alg": self.ortho_alg,
+            "bs_red": self.bs_red,
+        })
+
+        # Log the libmappraiser parameters that were used.
+        if data.comm.world_rank == 0:
+            with open(
+                os.path.join(params["path_output"], "mappraiser_args_log.toml"),
+                "w",
+            ) as f:
+                toml.dump(params, f)
+
         # Check input parameters and compute the sizes of Mappraiser data objects
         if data.comm.world_rank == 0:
             msg = "{} Computing data sizes".format(self._logprefix)
@@ -451,7 +496,7 @@ class Mappraiser(Operator):
             interval_starts,
             psd_freqs,
         ) = self._prepare(params, data, detectors)
-        
+
         log.info_rank(
             f"{self._logprefix} Parsed parameters in",
             comm=data.comm.comm_world,
@@ -473,7 +518,7 @@ class Mappraiser(Operator):
             interval_starts,
             psd_freqs,
         )
-        
+
         log.info_rank(
             f"{self._logprefix} Staged data in",
             comm=data.comm.comm_world,
@@ -491,7 +536,7 @@ class Mappraiser(Operator):
             len(data.obs) * len(all_dets),
             nnz,
         )
-        
+
         log.info_rank(
             f"{self._logprefix} Destriped data in",
             comm=data.comm.comm_world,
@@ -512,7 +557,7 @@ class Mappraiser(Operator):
             interval_starts,
             signal_dtype,
         )
-        
+
         log.info_rank(
             f"{self._logprefix} Unstaged data in",
             comm=data.comm.comm_world,
@@ -555,46 +600,6 @@ class Mappraiser(Operator):
         timer.start()
 
         params["nside"] = self.pixel_pointing.nside
-        
-        # Check that libmappraiser arguments have been provided 
-        # and convert them to the correct data type.
-        # FIXME : use tomlkit to parse a .toml parameter file properly ?
-        libmappraiser_argtypes = {
-            "path_output": str,
-            "ref": str,
-            "Lambda": int,
-            "solver": int,
-            "precond": int,
-            "Z_2lvl": int,
-            "ptcomm_flag": int,
-            "tol": np.double,
-            "maxiter": int,
-            "enlFac": int,
-            "ortho_alg": int,
-            "bs_red": int,
-        }
-        for key in libmappraiser_argtypes.keys():
-            if key not in params:
-                msg = "Please set the parameter {}, which is necessary for libmappraiser.".format(key)
-                raise RuntimeError(msg)
-            else:
-                params[key] = libmappraiser_argtypes[key](params[key])
-
-        # Log the libmappraiser parameters that were used.
-        if data.comm.world_rank == 0:
-            with open(
-                os.path.join(params["path_output"], "mappraiser_args_log.toml"),
-                'w',
-            ) as param_logfile:
-                toml.dump(params, param_logfile)
-
-        # Check if noise_name is specified or not.
-        if self.noise_name is None:
-            if params["Lambda"] != 1:
-                # raise RuntimeError("Lambda = 1 must be used with noiseless cases")
-                if data.comm.world_rank == 0:
-                    log.info("{} Noiseless case -> setting Lambda = 1".format(self._logprefix))
-            params["Lambda"] = 1
 
         # MAPPRAISER requires a fixed set of detectors and pointing matrix non-zeros.
         # Here we find the superset of local detectors used, and also the number
@@ -916,7 +921,7 @@ class Mappraiser(Operator):
 
         # Copy the noise.
         # For the moment, in the absence of a gap-filling procedure in MAPPRAISER, we separate signal and noise in the simulations
-        
+
         # Check if the simulation contains any noise at all.
         if self.noise_name is None:
             msg = "{} noise_name = None -> noise buffer filled with zeros".format(self._logprefix)
@@ -1051,7 +1056,7 @@ class Mappraiser(Operator):
                 operator=self.pixel_pointing,
                 n_repeat=nnz,
             )
-            
+
             # Arrange pixel indices for MAPPRAISER
             self._mappraiser_pixels *= nnz
             for i in range(nnz):
