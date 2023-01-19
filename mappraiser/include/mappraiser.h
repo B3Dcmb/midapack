@@ -97,6 +97,6 @@ int ECG_GLS(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double *b, 
 #endif
 
 /* Noise weighting */
-void apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod, int m, int tot_ngap, MPI_Comm comm, int verbose);
+void apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod);
 
 #endif /* MAPPRAISER_H */
