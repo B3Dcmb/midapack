@@ -16,7 +16,7 @@ void reset_tod_gaps(double *tod, Tpltz *N, Gap *Gaps)
     reset_gaps(&tod, N->idp, N->local_V_size, N->m_cw, N->nrow, N->m_rw, Gaps->id0gap, Gaps->lgap, Gaps->ngap);
 }
 
-void set_tpltz_struct(Tpltz *single_block_struct, Tpltz *full_struct, Block *block, int64_t block_size, int offset);
+void set_tpltz_struct(Tpltz *single_block_struct, Tpltz *full_struct, Block *block);
 void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_block, int m_block, int verbose);
 void PCG_global(Tpltz *N, Tpltz *Nm1, Gap *Gaps, double *tod, int m, int rank, int verbose);
 
@@ -57,53 +57,58 @@ void apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod)
     //     // (no det-det correlations for now)
     //     stbmmProd(Nm1, tod);
     // }
+    // else
+    // {
+    //     PCG_global(N, Nm1, Gaps, tod, N->local_V_size, rank, (rank == 0));
+    // }
     else /* Iteratively solve Nx=b to apply the noise weights */
     {
         // variables for a single toeplitz block
-        Block *block, *block_m1;
+        Block block, block_m1;
         Tpltz N_block, Nm1_block;
-        int m_block = 0;
         double *tod_block = NULL;
-        
+
         for (i = 0; i < N->nb_blocks_loc; ++i)
         {
             // pick the single Toeplitz block
-            block = &(N->tpltzblocks[i]);
-            block_m1 = &(Nm1->tpltzblocks[i]);
+            block = N->tpltzblocks[i];
+            block_m1 = Nm1->tpltzblocks[i];
 
-            // size of the block
-            m_block = block->n;
+            // if (rank == 0)
+            // {
+            //     printf("process toeplitz block %d of %d\n", i+1, N->nb_blocks_loc);
+            //     printf("  block.n = %d\n", block.n);
+            //     printf("  block.idv = %ld\n", block.idv);
+            //     printf("  offset = %d\n", t_id);
+            //     fflush(stdout);
+            // }
 
             // define Tpltz structures for the single block
-            set_tpltz_struct(&N_block, N, block, m_block, t_id);
-            set_tpltz_struct(&Nm1_block, Nm1, block_m1, m_block, t_id);
+            set_tpltz_struct(&N_block, N, &block);
+            set_tpltz_struct(&Nm1_block, Nm1, &block_m1);
 
             // pointer to current block in the tod
             tod_block = (tod + t_id);
 
             // apply the weights with a PCG
-            PCG_single_block(&N_block, &Nm1_block, Gaps, tod_block, m_block, (rank == 0));
-            
+            PCG_single_block(&N_block, &Nm1_block, Gaps, tod_block, block.n, (rank == 0));
+
             // update our index of local samples
-            t_id += m_block;
+            t_id += block.n;
         }
-        // free memory
-        free(block);
-        free(block_m1);
-        free(tod_block);
     }
 }
 
-void set_tpltz_struct(Tpltz *single_block_struct, Tpltz *full_struct, Block *block, int64_t block_size, int offset)
+void set_tpltz_struct(Tpltz *single_block_struct, Tpltz *full_struct, Block *block)
 {
-    single_block_struct->nrow = block_size;
+    single_block_struct->nrow = full_struct->nrow; // does not matter anyway
     single_block_struct->m_cw = full_struct->m_cw; // 1
     single_block_struct->m_rw = full_struct->m_rw; // 1
     single_block_struct->tpltzblocks = block;
     single_block_struct->nb_blocks_loc = 1;
     single_block_struct->nb_blocks_tot = 1;
-    single_block_struct->idp = full_struct->idp + offset;
-    single_block_struct->local_V_size = block_size;
+    single_block_struct->idp = block->idv;
+    single_block_struct->local_V_size = block->n;
     single_block_struct->flag_stgy = full_struct->flag_stgy;
     
     // TODO: can not set to NULL, maybe create a communicator with only 1 process?
