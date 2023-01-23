@@ -700,8 +700,7 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, 
     // to do so we must first rebuild the pixel to time-domain mapping
     Gaps->ngap = build_pixel_to_time_domain_mapping(A);
 
-    if (A->trash_pix)
-        build_gap_struct(gif, Gaps, A);
+    build_gap_struct(gif, Gaps, A);
 
     if (rank == 0)
     {

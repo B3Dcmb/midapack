@@ -3,17 +3,23 @@
 #include "midapack.h"
 #include "mappraiser.h"
 
+/**
+ * @brief Build the pixel-to-time-domain mapping, i.e.
+ * i) A->pix_to_last_samp which contains the indexes of the last samples pointing to each pixel
+ * ii) A->ll which is a linked list of time sample indexes
+ * 
+ * @param A the pointing matrix structure
+ * @return int the number of timestream gaps found
+ */
 int build_pixel_to_time_domain_mapping(Mat *A)
 {
     int i, j;
     int ipix;
     int ngap, lengap;
 
-    /* Allocate memory for the arrays */
-    
     // index of last sample pointing to each pixel
     A->pix_to_last_samp = malloc((sizeof A->pix_to_last_samp) * A->lcount / A->nnz);
-    
+
     // linked list of time samples indexes
     A->ll = malloc((sizeof A->ll) * A->m);
 
@@ -74,39 +80,56 @@ int build_pixel_to_time_domain_mapping(Mat *A)
     return ngap;
 }
 
+
+/**
+ * @brief Build the gap structure for the local samples.
+ * 
+ * @param gif global row index offset of the local data
+ * @param Gaps Gap structure (Gaps->ngap must already be computed!)
+ * @param A poiting matrix structure
+ */
 void build_gap_struct(int64_t gif, Gap *Gaps, Mat *A)
 {
-    int i = Gaps->ngap - 1;         // index of the gap being computed
-    int lengap = 1;                 // length of the current gap
-    int j = A->pix_to_last_samp[0]; // index to go through linked time samples
-    int gap_start = j;              // index of the first sample of the gap
+    // allocate the arrays
 
-    // allocate memory for the arrays
+    // only test correct allocation if ngap > 0 because
+    // behaviour of malloc(0) is implementation-defined
+    // free(NULL) produces no error
+
     Gaps->id0gap = malloc((sizeof Gaps->id0gap) * Gaps->ngap);
     Gaps->lgap = malloc((sizeof Gaps->lgap) * Gaps->ngap);
-    if (Gaps->id0gap == NULL || Gaps->lgap == NULL)
-    {
-        printf("malloc of id0gap or lgap failed\n");
-        exit(EXIT_FAILURE);
-    }
 
-    // go through the time samples
-    while (j != -1)
+    if (Gaps->ngap > 0)
     {
-        // go to previous flagged sample
-        j = A->ll[j];
+        int i = Gaps->ngap - 1;         // index of the gap being computed
+        int lengap = 1;                 // length of the current gap
+        int j = A->pix_to_last_samp[0]; // index to go through linked time samples
+        int gap_start = j;              // index of the first sample of the gap
 
-        if (j != -1 && gap_start - j == 1) /* same gap, and there are flagged samples left */
+        if (Gaps->id0gap == NULL || Gaps->lgap == NULL)
         {
-            ++lengap;
+            printf("malloc of id0gap or lgap failed\n");
+            exit(EXIT_FAILURE);
         }
-        else /* different gap, or no flagged samples remaining */
+
+        // go through the time samples
+        while (j != -1)
         {
-            Gaps->id0gap[i] = gif + gap_start; // global row index
-            Gaps->lgap[i] = lengap;
-            lengap = 1;
-            --i;
+            // go to previous flagged sample
+            j = A->ll[j];
+
+            if (j != -1 && gap_start - j == 1) // same gap, and there are flagged samples left
+            {
+                ++lengap;
+            }
+            else // different gap, or no flagged samples remaining
+            {
+                Gaps->id0gap[i] = gif + gap_start; // global row index
+                Gaps->lgap[i] = lengap;
+                lengap = 1;
+                --i;
+            }
+            gap_start = j;
         }
-        gap_start = j;
     }
 }

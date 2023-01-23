@@ -64,16 +64,6 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
         fflush(stdout);
     }
 
-    // find out the total number of gaps
-    int tot_ngap = 0;
-    MPI_Allreduce(&Gaps->ngap, &tot_ngap, 1, MPI_INT, MPI_SUM, A->comm);
-
-    if (rank == 0)
-    {
-        printf("[rank %d] total nbr of gaps across all processes = %d\n", rank, tot_ngap);
-        fflush(stdout);
-    }
-
     // map domain objects memory allocation
     h = (double *)malloc(n * sizeof(double));  // descent direction
     g = (double *)malloc(n * sizeof(double));  // residual
@@ -95,7 +85,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
     for (i = 0; i < m; i++)
         _g[i] = b[i] + noise[i] - _g[i];
 
-    apply_weights(Nm1, N, Gaps, _g, A->m, tot_ngap, A->comm, 0); // _g = Nm1 (d-Ax0)  (d = signal + noise)
+    apply_weights(Nm1, N, Gaps, _g); // _g = Nm1 (d-Ax0)  (d = signal + noise)
 
     TrMatVecProd(A, _g, g, 0); // g = At _g
 
@@ -164,7 +154,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
 
         MatVecProd(A, h, Ah, 0); // Ah = A h
 
-        apply_weights(Nm1, N, Gaps, Nm1Ah, A->m, tot_ngap, A->comm, 0); // Nm1Ah = Nm1 Ah   (Nm1Ah == Ah)
+        apply_weights(Nm1, N, Gaps, Nm1Ah); // Nm1Ah = Nm1 Ah   (Nm1Ah == Ah)
 
         TrMatVecProd(A, Nm1Ah, AtNm1Ah, 0); // AtNm1Ah = At Nm1Ah
 
