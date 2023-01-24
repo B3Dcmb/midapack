@@ -11,13 +11,9 @@
 #define PCG_TOEPLITZ_KMAX 100
 #define PCG_TOEPLITZ_TOL 1e-6
 
-void reset_tod_gaps(double *tod, Tpltz *N, Gap *Gaps)
-{
-    reset_gaps(&tod, N->idp, N->local_V_size, N->m_cw, N->nrow, N->m_rw, Gaps->id0gap, Gaps->lgap, Gaps->ngap);
-}
-
+void reset_tod_gaps(double *tod, Tpltz *N, Gap *Gaps);
 void set_tpltz_struct(Tpltz *single_block_struct, Tpltz *full_struct, Block *block);
-void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_block, int m_block, int verbose);
+void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_block, int verbose);
 void PCG_global(Tpltz *N, Tpltz *Nm1, Gap *Gaps, double *tod, int m, int rank, int verbose);
 
 /**
@@ -91,7 +87,7 @@ void apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod)
             tod_block = (tod + t_id);
 
             // apply the weights with a PCG
-            PCG_single_block(&N_block, &Nm1_block, Gaps, tod_block, block.n, (rank == 0));
+            PCG_single_block(&N_block, &Nm1_block, Gaps, tod_block, (rank == 0));
 
             // update our index of local samples
             t_id += block.n;
@@ -110,7 +106,7 @@ void set_tpltz_struct(Tpltz *single_block_struct, Tpltz *full_struct, Block *blo
     single_block_struct->idp = block->idv;
     single_block_struct->local_V_size = block->n;
     single_block_struct->flag_stgy = full_struct->flag_stgy;
-    
+
     // TODO: can not set to NULL, maybe create a communicator with only 1 process?
     single_block_struct->comm = full_struct->comm;
 }
@@ -118,36 +114,38 @@ void set_tpltz_struct(Tpltz *single_block_struct, Tpltz *full_struct, Block *blo
 /**
  * @brief Iteratively solve Nx=b in order to compute an inverse noise-weighted timestream.
  * Here it is assumed that we work with a single toeplitz block.
- * 
- * @param N_block Tpltz structure of the single block
- * @param Nm1_block Tpltz structure of the single inverse block
- * @param Gaps structure of the timestream gaps
- * @param tod_block pointer to the block in the local data
- * @param m_block size of the block
+ *
+ * @param N_block [in] Tpltz structure of the single block
+ * @param Nm1_block [in] Tpltz structure of the single inverse block
+ * @param Gaps [in] structure of the timestream gaps
+ * @param tod_block [in] pointer to the RHS vector [out] solution of the system
+ * @param m_block [in] size of the block
  * @param verbose
  */
-void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_block, int m_block, int verbose)
+void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_block, int verbose)
 {
-    int k = 0;               // iteration number
-    double r0, res, tol2rel; // residuals
-    double coef_1, coef_2;   // scalars
-    double st, t;            // timing variables
-    bool converged = false;  // convergence state
-    int ng = Gaps->ngap;
-    int i;
+    int k = 0;                               // iteration number
+    double r0, res, tol2rel;                 // residuals
+    double coef_1, coef_2;                   // scalars
+    double st, t;                            // timing variables
+    bool converged = false;                  // convergence state
+    int ng = Gaps->ngap;                     // number of gaps
+    int m_block = N_block->tpltzblocks[0].n; // size of the data
+    int i;                                   // loop index
 
-    // time-domain objects
-    double *p = NULL, *_r = NULL, *r = NULL, *z = NULL;
+    // TODO: implement stopping criterion (divergence)
+    // TODO: store solver results in a SolverInfo structure passed as argument
 
     st = MPI_Wtime();
 
     // reset gaps of the rhs
-    if (ng > 0) {
+    if (ng > 0)
+    {
         reset_tod_gaps(tod_block, N_block, Gaps);
     }
 
-    _r = malloc((sizeof *_r) * m_block);
-    r = malloc((sizeof *r) * m_block);
+    double *_r = malloc((sizeof *_r) * m_block);
+    double *r = malloc((sizeof *r) * m_block); // residual
 
     if (_r == NULL || r == NULL)
     {
@@ -168,9 +166,12 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
     }
 
     // apply system matrix (_r = Nx0)
-    if (ng > 0) {
+    if (ng > 0)
+    {
         gstbmmProd(N_block, _r, Gaps);
-    } else {
+    }
+    else
+    {
         stbmmProd(N_block, _r);
     }
 
@@ -209,9 +210,12 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
         return;
     }
 
-    p = malloc((sizeof *p) * m_block);
-    z = malloc((sizeof *z) * m_block);
-    if (p == NULL || z == NULL)
+    double *p = malloc((sizeof *p) * m_block);   // search direction
+    double *z = malloc((sizeof *z) * m_block);   // M^{-1} * r
+    double *zp = malloc((sizeof *zp) * m_block); // previous z
+    double *zt = NULL;                           // backup pointer for zp
+
+    if (p == NULL || z == NULL || zp == NULL)
     {
         puts("out of memory: allocation of time-domain vectors for tod weighting failed");
         fflush(stdout);
@@ -219,31 +223,40 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
     }
 
     // apply preconditioner (z0 = M^{-1} * r0)
-    for (i = 0; i < m_block; ++i) {
+    for (i = 0; i < m_block; ++i)
+    {
         z[i] = r[i];
     }
 
-    if (ng > 0) {
+    if (ng > 0)
+    {
         gstbmmProd(Nm1_block, z, Gaps);
-    } else {
+    }
+    else
+    {
         stbmmProd(Nm1_block, z);
     }
 
     // set initial search direction (p0 = z0)
-    for (i = 0; i < m_block; ++i) {
+    for (i = 0; i < m_block; ++i)
+    {
         p[i] = z[i];
     }
 
     for (k = 1; k < PCG_TOEPLITZ_KMAX + 1; ++k)
     {
         // apply system matrix (_r = Np)
-        for (i = 0; i < m_block; ++i) {
+        for (i = 0; i < m_block; ++i)
+        {
             _r[i] = p[i];
         }
 
-        if (ng > 0) {
+        if (ng > 0)
+        {
             gstbmmProd(N_block, _r, Gaps);
-        } else {
+        }
+        else
+        {
             stbmmProd(N_block, _r);
         }
 
@@ -255,6 +268,11 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
             coef_1 += r[i] * z[i];
             coef_2 += p[i] * _r[i];
         }
+        
+        // swap pointers to store previous z before updating
+        zt = zp;
+        zp = z;
+        z = zt;
 
         // update current vector (x = x + alpha * p)
         // update residual (r = r - alpha * Np)
@@ -266,16 +284,25 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
         }
 
         // apply preconditioner (z = M^{-1} r)
-        if (ng > 0) {
+        if (ng > 0)
+        {
             gstbmmProd(Nm1_block, z, Gaps);
-        } else {
+        }
+        else
+        {
             stbmmProd(Nm1_block, z);
         }
 
         // compute coeff for new search direction
         coef_2 = 0.0; // new (r,z)
         for (i = 0; i < m_block; ++i)
-            coef_2 += r[i] * z[i];
+        {
+            // Fletcher-Reeves
+            // coef_2 += r[i] * z[i];
+
+            // Polak-Ribière
+            coef_2 += r[i] * (z[i] - zp[i]);
+        }
 
         // update search direction
         res = 0.0; // (r,r)
@@ -300,7 +327,7 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
     }
 
     t = MPI_Wtime();
-    
+
     if (verbose > 0)
     {
         if (converged)
@@ -308,7 +335,9 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
             printf("  -> converged (%e < %e)\n", res, tol2rel);
             printf("  -> i.e.      (%e < %e)\n", sqrt(res / r0), PCG_TOEPLITZ_TOL);
             printf("  -> n_iter = %d, solve time = %lf s\n", k, t - st);
-        } else {
+        }
+        else
+        {
             printf("  -> no convergence (%e > %e)\n", res, tol2rel);
             printf("  -> i.e.           (%e > %e)\n", sqrt(res / r0), PCG_TOEPLITZ_TOL);
             printf("  -> n_iter = %d, time = %lf s\n", k - 1, t - st);
@@ -321,6 +350,12 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
     free(_r);
     free(r);
     free(z);
+    free(zp);
+}
+
+void reset_tod_gaps(double *tod, Tpltz *N, Gap *Gaps)
+{
+    reset_gaps(&tod, N->idp, N->local_V_size, N->m_cw, N->nrow, N->m_rw, Gaps->id0gap, Gaps->lgap, Gaps->ngap);
 }
 
 void PCG_global(Tpltz *N, Tpltz *Nm1, Gap *Gaps, double *tod, int m, int rank, int verbose)
