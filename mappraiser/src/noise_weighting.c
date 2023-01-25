@@ -1,3 +1,11 @@
+/**
+ * @file noise_weighting.c
+ * @author Simon Biquard
+ * @brief Perform the inverse noise weighting of the mapmaking procedure with an iterative approach.
+ * @version 0.1
+ * @date Jan 2023
+ */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -7,13 +15,11 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include "mappraiser.h"
-
-#define PCG_TOEPLITZ_KMAX 100
-#define PCG_TOEPLITZ_TOL 1e-6
+#include "solver_info.h"
 
 void reset_tod_gaps(double *tod, Tpltz *N, Gap *Gaps);
 void set_tpltz_struct(Tpltz *single_block_struct, Tpltz *full_struct, Block *block);
-void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_block, int verbose);
+void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_block, SolverInfo *si);
 void PCG_global(Tpltz *N, Tpltz *Nm1, Gap *Gaps, double *tod, int m, int rank, int verbose);
 
 /**
@@ -64,6 +70,11 @@ void apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod)
         Tpltz N_block, Nm1_block;
         double *tod_block = NULL;
 
+        // create a SolverInfo structure for the solver parameters and output
+        SolverInfo si;
+        solverinfo_set_defaults(&si);
+        si.print = (rank == 0);
+
         for (i = 0; i < N->nb_blocks_loc; ++i)
         {
             // pick the single Toeplitz block
@@ -87,7 +98,14 @@ void apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod)
             tod_block = (tod + t_id);
 
             // apply the weights with a PCG
-            PCG_single_block(&N_block, &Nm1_block, Gaps, tod_block, (rank == 0));
+            PCG_single_block(&N_block, &Nm1_block, Gaps, tod_block, &si);
+
+            // do something with solver output
+            //
+            //
+
+            if (si.store_hist)
+                solverinfo_free(&si);
 
             // update our index of local samples
             t_id += block.n;
@@ -119,42 +137,58 @@ void set_tpltz_struct(Tpltz *single_block_struct, Tpltz *full_struct, Block *blo
  * @param Nm1_block [in] Tpltz structure of the single inverse block
  * @param Gaps [in] structure of the timestream gaps
  * @param tod_block [in] pointer to the RHS vector [out] solution of the system
- * @param m_block [in] size of the block
- * @param verbose
+ * @param si SolverInfo structure [in] contains solver parameters [out] contains iteration info
  */
-void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_block, int verbose)
+void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_block, SolverInfo *si)
 {
-    int k = 0;                               // iteration number
-    double r0, res, tol2rel;                 // residuals
-    double coef_1, coef_2;                   // scalars
-    double st, t;                            // timing variables
-    bool converged = false;                  // convergence state
-    int ng = Gaps->ngap;                     // number of gaps
-    int m_block = N_block->tpltzblocks[0].n; // size of the data
-    int i;                                   // loop index
+    // initialize the SolverInfo struct
+    solverinfo_init(si);
 
-    // TODO: implement stopping criterion (divergence)
-    // TODO: store solver results in a SolverInfo structure passed as argument
+    // if (si->print)
+    //     solverinfo_print(si);
 
-    st = MPI_Wtime();
+    int i;                 // loop index
+    int k = 0;             // iteration number
+    double res;            // norm of residual
+    double coef_1, coef_2; // scalars
+    double wtime;          // timing variable
+    bool stop = false;     // stop iteration or continue
+
+    int ng = Gaps->ngap;               // number of gaps
+    int m = N_block->tpltzblocks[0].n; // size of the data
+
+    double *_r = NULL;
+    double *r = NULL;  // residual
+    double *p = NULL;  // search direction
+    double *z = NULL;  // M^{-1} * r
+    double *zp = NULL; // previous z
+    double *zt = NULL; // backup pointer for zp
+
+    // store starting time
+    si->start_time = MPI_Wtime();
 
     // reset gaps of the rhs
     if (ng > 0)
-    {
         reset_tod_gaps(tod_block, N_block, Gaps);
-    }
 
-    double *_r = malloc((sizeof *_r) * m_block);
-    double *r = malloc((sizeof *r) * m_block); // residual
+    _r = malloc((sizeof *_r) * m);
+    r = malloc((sizeof *r) * m);
 
     if (_r == NULL || r == NULL)
     {
-        puts("out of memory: allocation of time-domain vectors for tod weighting failed");
-        fflush(stdout);
-        exit(EXIT_FAILURE);
+        // free memory if possible
+        if (_r)
+            free(_r);
+        if (r)
+            free(r);
+
+        si->has_failed = true;
+        solverinfo_finalize(si);
+
+        return;
     }
 
-    for (i = 0; i < m_block; ++i)
+    for (i = 0; i < m; ++i)
     {
         // set initial guess
         // _r[i] = 0.;
@@ -167,190 +201,145 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
 
     // apply system matrix (_r = Nx0)
     if (ng > 0)
-    {
         gstbmmProd(N_block, _r, Gaps);
-    }
     else
-    {
         stbmmProd(N_block, _r);
-    }
 
     // compute initial residual (r = b - Nx0)
-    // check for instant convergence
     res = 0.0; // (r,r)
-    for (i = 0; i < m_block; ++i)
+    for (i = 0; i < m; ++i)
     {
         r[i] = r[i] - _r[i];
         res += r[i] * r[i];
     }
 
-    r0 = res;
-    tol2rel = PCG_TOEPLITZ_TOL * PCG_TOEPLITZ_TOL * res;
+    // update SolverInfo structure
+    wtime = MPI_Wtime();
+    solverinfo_update(si, &stop, k, res, wtime);
 
-    t = MPI_Wtime();
-
-    if (verbose > 0) /* print information on screen */
+    if (stop)
     {
-        printf("  apply_weights: k = %d, r0 = %e, time=%lf\n", k, r0, t - st);
-        fflush(stdout);
-    }
-
-    if (res < PCG_TOEPLITZ_TOL * PCG_TOEPLITZ_TOL)
-    {
-        // print info on screen
-        if (verbose > 0)
-        {
-            printf("  -> converged (%e < %e)\n", res, PCG_TOEPLITZ_TOL * PCG_TOEPLITZ_TOL);
-            fflush(stdout);
-        }
-
-        // return immediately
+        // one stop condition already met, no iteration
+        // free the allocated memory
         free(_r);
         free(r);
-        return;
-    }
-
-    double *p = malloc((sizeof *p) * m_block);   // search direction
-    double *z = malloc((sizeof *z) * m_block);   // M^{-1} * r
-    double *zp = malloc((sizeof *zp) * m_block); // previous z
-    double *zt = NULL;                           // backup pointer for zp
-
-    if (p == NULL || z == NULL || zp == NULL)
-    {
-        puts("out of memory: allocation of time-domain vectors for tod weighting failed");
-        fflush(stdout);
-        exit(EXIT_FAILURE);
-    }
-
-    // apply preconditioner (z0 = M^{-1} * r0)
-    for (i = 0; i < m_block; ++i)
-    {
-        z[i] = r[i];
-    }
-
-    if (ng > 0)
-    {
-        gstbmmProd(Nm1_block, z, Gaps);
     }
     else
     {
-        stbmmProd(Nm1_block, z);
-    }
+        // iterate to solve the system
 
-    // set initial search direction (p0 = z0)
-    for (i = 0; i < m_block; ++i)
-    {
-        p[i] = z[i];
-    }
+        // allocate buffers needed for the iteration
+        p = malloc((sizeof *p) * m);
+        z = malloc((sizeof *z) * m);
+        zp = malloc((sizeof *zp) * m);
 
-    for (k = 1; k < PCG_TOEPLITZ_KMAX + 1; ++k)
-    {
-        // apply system matrix (_r = Np)
-        for (i = 0; i < m_block; ++i)
+        if (p == NULL || z == NULL || zp == NULL)
         {
-            _r[i] = p[i];
+            // free memory if possible
+            if (p)
+                free(p);
+            if (z)
+                free(z);
+            if (zp)
+                free(zp);
+
+            si->has_failed = true;
+            solverinfo_finalize(si);
+
+            return;
         }
 
-        if (ng > 0)
-        {
-            gstbmmProd(N_block, _r, Gaps);
-        }
-        else
-        {
-            stbmmProd(N_block, _r);
-        }
-
-        // compute alpha = (r,z)/(p,Np)
-        coef_1 = 0.0; // (r,z)
-        coef_2 = 0.0; // (p,Np)
-        for (i = 0; i < m_block; ++i)
-        {
-            coef_1 += r[i] * z[i];
-            coef_2 += p[i] * _r[i];
-        }
-        
-        // swap pointers to store previous z before updating
-        zt = zp;
-        zp = z;
-        z = zt;
-
-        // update current vector (x = x + alpha * p)
-        // update residual (r = r - alpha * Np)
-        for (i = 0; i < m_block; ++i)
-        {
-            tod_block[i] = tod_block[i] + (coef_1 / coef_2) * p[i];
-            r[i] = r[i] - (coef_1 / coef_2) * _r[i];
+        // apply preconditioner (z0 = M^{-1} * r0)
+        for (i = 0; i < m; ++i)
             z[i] = r[i];
-        }
 
-        // apply preconditioner (z = M^{-1} r)
         if (ng > 0)
-        {
             gstbmmProd(Nm1_block, z, Gaps);
-        }
         else
-        {
             stbmmProd(Nm1_block, z);
-        }
 
-        // compute coeff for new search direction
-        coef_2 = 0.0; // new (r,z)
-        for (i = 0; i < m_block; ++i)
+        // set initial search direction (p0 = z0)
+        for (i = 0; i < m; ++i)
+            p[i] = z[i];
+
+        // iteration loop
+        while (!stop)
         {
-            // Fletcher-Reeves
-            // coef_2 += r[i] * z[i];
+            // we are doing one more iteration step
+            ++k;
 
-            // Polak-Ribière
-            coef_2 += r[i] * (z[i] - zp[i]);
+            // apply system matrix (_r = Np)
+            for (i = 0; i < m; ++i)
+                _r[i] = p[i];
+
+            if (ng > 0)
+                gstbmmProd(N_block, _r, Gaps);
+            else
+                stbmmProd(N_block, _r);
+
+            // compute alpha = (r,z)/(p,Np)
+            coef_1 = 0.0; // (r,z)
+            coef_2 = 0.0; // (p,Np)
+            for (i = 0; i < m; ++i)
+            {
+                coef_1 += r[i] * z[i];
+                coef_2 += p[i] * _r[i];
+            }
+
+            // swap pointers to store previous z before updating
+            zt = zp;
+            zp = z;
+            z = zt;
+
+            // update current vector (x = x + alpha * p)
+            // update residual (r = r - alpha * Np)
+            for (i = 0; i < m; ++i)
+            {
+                tod_block[i] = tod_block[i] + (coef_1 / coef_2) * p[i];
+                r[i] = r[i] - (coef_1 / coef_2) * _r[i];
+                z[i] = r[i];
+            }
+
+            // apply preconditioner (z = M^{-1} r)
+            if (ng > 0)
+                gstbmmProd(Nm1_block, z, Gaps);
+            else
+                stbmmProd(Nm1_block, z);
+
+            // compute coeff for new search direction
+            coef_2 = 0.0; // new (r,z)
+            for (i = 0; i < m; ++i)
+            {
+                // Fletcher-Reeves
+                // coef_2 += r[i] * z[i];
+
+                // Polak-Ribière
+                coef_2 += r[i] * (z[i] - zp[i]);
+            }
+
+            // update search direction
+            res = 0.0; // (r,r)
+            for (i = 0; i < m; ++i)
+            {
+                p[i] = z[i] + (coef_2 / coef_1) * p[i];
+                res += r[i] * r[i];
+            }
+
+            // update SolverInfo structure
+            // and check stop conditions
+            wtime = MPI_Wtime();
+            solverinfo_update(si, &stop, k, res, wtime);
         }
 
-        // update search direction
-        res = 0.0; // (r,r)
-        for (i = 0; i < m_block; ++i)
-        {
-            p[i] = z[i] + (coef_2 / coef_1) * p[i];
-            res += r[i] * r[i];
-        }
-
-        if (verbose > 0)
-        {
-            printf("  -> k = %d, res = %e, relative = %e\n", k, res, sqrt(res / r0));
-            fflush(stdout);
-        }
-
-        if (res < tol2rel)
-        {
-            t = MPI_Wtime();
-            converged = true;
-            break;
-        }
+        // free memory after the iteration
+        free(p);
+        free(_r);
+        free(r);
+        free(z);
+        free(zp);
     }
 
-    t = MPI_Wtime();
-
-    if (verbose > 0)
-    {
-        if (converged)
-        {
-            printf("  -> converged (%e < %e)\n", res, tol2rel);
-            printf("  -> i.e.      (%e < %e)\n", sqrt(res / r0), PCG_TOEPLITZ_TOL);
-            printf("  -> n_iter = %d, solve time = %lf s\n", k, t - st);
-        }
-        else
-        {
-            printf("  -> no convergence (%e > %e)\n", res, tol2rel);
-            printf("  -> i.e.           (%e > %e)\n", sqrt(res / r0), PCG_TOEPLITZ_TOL);
-            printf("  -> n_iter = %d, time = %lf s\n", k - 1, t - st);
-        }
-        fflush(stdout);
-    }
-
-    // free memory
-    free(p);
-    free(_r);
-    free(r);
-    free(z);
-    free(zp);
+    solverinfo_finalize(si);
 }
 
 void reset_tod_gaps(double *tod, Tpltz *N, Gap *Gaps)
@@ -360,6 +349,9 @@ void reset_tod_gaps(double *tod, Tpltz *N, Gap *Gaps)
 
 void PCG_global(Tpltz *N, Tpltz *Nm1, Gap *Gaps, double *tod, int m, int rank, int verbose)
 {
+    const double tol = 1e-6;
+    const int kmax = 100;
+
     int k = 0;               // iteration number
     double r0, res, tol2rel; // residuals
     double coef_1, coef_2;   // scalars
@@ -416,7 +408,7 @@ void PCG_global(Tpltz *N, Tpltz *Nm1, Gap *Gaps, double *tod, int m, int rank, i
     res = 0.0;
     MPI_Allreduce(&lval_1, &res, 1, MPI_DOUBLE, MPI_SUM, N->comm);
     r0 = res;
-    tol2rel = PCG_TOEPLITZ_TOL * PCG_TOEPLITZ_TOL * res;
+    tol2rel = tol * tol * res;
 
     t = MPI_Wtime();
 
@@ -426,12 +418,12 @@ void PCG_global(Tpltz *N, Tpltz *Nm1, Gap *Gaps, double *tod, int m, int rank, i
         fflush(stdout);
     }
 
-    if (res < PCG_TOEPLITZ_TOL * PCG_TOEPLITZ_TOL)
+    if (res < tol * tol)
     {
         // print info on screen
         if ((rank == 0) && (verbose > 0))
         {
-            printf("  -> converged (%e < %e)\n", res, PCG_TOEPLITZ_TOL * PCG_TOEPLITZ_TOL);
+            printf("  -> converged (%e < %e)\n", res, tol * tol);
             fflush(stdout);
         }
 
@@ -463,7 +455,7 @@ void PCG_global(Tpltz *N, Tpltz *Nm1, Gap *Gaps, double *tod, int m, int rank, i
     for (i = 0; i < m; ++i)
         p[i] = z[i];
 
-    for (k = 1; k < PCG_TOEPLITZ_KMAX + 1; ++k)
+    for (k = 1; k < kmax + 1; ++k)
     {
         // apply system matrix (_r = Np)
         for (i = 0; i < m; ++i)
@@ -537,7 +529,7 @@ void PCG_global(Tpltz *N, Tpltz *Nm1, Gap *Gaps, double *tod, int m, int rank, i
                 if (verbose > 0)
                 {
                     printf("  -> converged (%e < %e)\n", res, tol2rel);
-                    printf("  -> i.e.      (%e < %e)\n", sqrt(res / r0), PCG_TOEPLITZ_TOL);
+                    printf("  -> i.e.      (%e < %e)\n", sqrt(res / r0), tol);
                     printf("  -> n_iter = %d, solve time = %lf s\n", k, t - st);
                 }
                 else
