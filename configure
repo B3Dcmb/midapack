@@ -439,7 +439,7 @@ fi
 if [ $HEALPIX -eq 1 ]
 then
     echo 'setting healpix flag'
-    OPT=$OPT' -DHEALPIXDATA=\"${HEALPIXROOT}/share/healpix/\'
+    OPT=$OPT' -DHEALPIXDATA=${HEALPIXROOT}/share/healpix/'
 fi
 
 
