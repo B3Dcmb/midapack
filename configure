@@ -589,8 +589,8 @@ echo 'DIR = '$DIR > test/spherical_harmonics/Makefile
 echo 'PREFIX = '$PREFIX >> test/spherical_harmonics/Makefile
 
 echo 'MIDAPACK_LIB = ${PREFIX}/midapack/lib' >> test/spherical_harmonics/Makefile
-
-echo 'WIENERFILTERS_LIB = ${PREFIX}/midapack/lib' >> test/spherical_harmonics/Makefile
+echo 'MAPPRAISER_LIB = ${MAPPRAISER_ROOT}/lib' >> test/spherical_harmonics/Makefile
+# echo 'WIENERFILTERS_LIB = ${PREFIX}/midapack/lib' >> test/spherical_harmonics/Makefile
 
 if [ $MKL == 1 ]
 then

@@ -31,7 +31,7 @@ void init_files_struct_WF(Files_path_WIENER_FILTER *Files_path_WF_struct, char *
     Files_path_WF_struct->c_ell_path = c_ell_path;
     Files_path_WF_struct->use_mask_file = use_mask_file;
     Files_path_WF_struct->number_correlations = number_correlations;
-    Files_path_WF_struct->nside = nside;
+    // Files_path_WF_struct->nside = nside;
     Files_path_WF_struct->lmax_Wiener_Filter = lmax_Wiener_Filter;
 }
 
@@ -39,7 +39,8 @@ void init_files_struct_WF(Files_path_WIENER_FILTER *Files_path_WF_struct, char *
 void compute_full_map_nest2ring(double *map_nest, double *map_ring, int nside, int nstokes, int npix){
   // Compute S2HAT ring version of MAPPRAISER nest map map_nest
   // Expect map of nstokes*npix
-  int pixel_index, nstokes_index, ipix;
+  int pixel_index, nstokes_index;
+  long ipix;
 
   for( pixel_index=0; pixel_index<npix; pixel_index++) {
     nest2ring( nside, pixel_index, &ipix);
@@ -55,7 +56,8 @@ void compute_full_map_nest2ring(double *map_nest, double *map_ring, int nside, i
 void compute_full_map_ring2nest(double *map_ring, double *map_nest, int nside, int nstokes, int npix){
   // Compute MAPPRAISER nest version of S2HAT ring map map_ring
   // Expect map of nstokes*npix
-  int pixel_index;
+  int pixel_index, nstokes_index;
+  long ipix;
 
   for( pixel_index=0; pixel_index<npix; pixel_index++) {
     ring2nest( nside, pixel_index, &ipix);
@@ -113,7 +115,9 @@ void read_fits_mask(int nside, double *mask, char *path_mask_file, int col)
     //   nest2ring( nside, pixel_index, &ipix);
     //   mask[ipix] = (double)tmp[pixel_index];
     // }
-    compute_full_map_nest2ring(tmp, mask, nside);
+
+    compute_full_map_nest2ring(tmp, mask, nside, 1, npix);
+    // 1 is for the number of Stokes parameters, assumed to be 1 when reading the mask
 
   } else {
     for( pixel_index=0; pixel_index<npix; pixel_index++) mask[pixel_index] = (double)tmp[pixel_index];

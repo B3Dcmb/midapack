@@ -130,8 +130,8 @@ int get_inverse_covariance_matrix_3x3(S2HAT_parameters *S2HAT_params, double **i
     /* Function to obtain inverse of covariance matrix in harmonic domain, from given c_ells
     */
 
-    Files_path_WF_struct = *(S2HAT_params->Files_path_WF_struct);
-    Global_param_s2hat = *(S2HAT_params->Global_param_s2hat);
+    Files_path_WIENER_FILTER Files_path_WF_struct = *(S2HAT_params->Files_WF_struct);
+    S2HAT_GLOBAL_parameters Global_param_s2hat = *(S2HAT_params->Global_param_s2hat);
     
     double **covariance_matrix;
     int ell_value, index_1;
@@ -144,8 +144,8 @@ int get_inverse_covariance_matrix_3x3(S2HAT_parameters *S2HAT_params, double **i
 
     // printf("Test 4 \n");
     // fflush(stdout);
-    char *c_ell_path = Files_WF_struct.c_ell_path;
-    int number_correlations = Files_WF_struct.number_correlations;
+    char *c_ell_path = Files_path_WF_struct.c_ell_path;
+    int number_correlations = Files_path_WF_struct.number_correlations;
     get_covariance_matrix_3x3(c_ell_path, number_correlations, inverse_covariance_matrix, Global_param_s2hat);
 
     for(ell_value=0; ell_value<lmax+1; ell_value++){

@@ -68,7 +68,7 @@ typedef struct S2HAT_parameters{
     Files_path_WIENER_FILTER *Files_WF_struct;
 
     int size_alm;
-}
+} S2HAT_parameters;
 
 /* Get global s2hat structures which must be distributed to all processors*/
 int get_main_s2hat_global_parameters(int nside, char *maskfile_path, s2hat_pixeltype *pixelization_scheme, s2hat_scandef *scan_sky_structure_pixel, s2hat_pixparameters *pixpar, bool use_mask_file);
@@ -83,7 +83,7 @@ int init_MPI_struct_s2hat_local_parameters(S2HAT_LOCAL_parameters *Local_param_s
 int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters *Local_param_s2hat);
 
 /* Initaization of superctrure S2HAT_parameters */
-int init_s2hat_parameters_superstruct(Files_path_WIENER_FILTER *Files_WF_struct, int nside, int lmax_Wiener_Filter, S2HAT_parameters *S2HAT_params, int root);
+int init_s2hat_parameters_superstruct(Files_path_WIENER_FILTER *Files_WF_struct, int nside, S2HAT_parameters *S2HAT_params, int root);
 
 /* Use s2hat routines to broadcast s2hat global structures */
 void mpi_broadcast_s2hat_global_struc(S2HAT_GLOBAL_parameters *Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat);
@@ -109,8 +109,8 @@ void free_s2hat_parameters_struct(S2HAT_parameters *S2HAT_params);
 
 
 /* Change conventions between nest and ring distribution of maps */
-void compute_full_map_ring2nest(double *map_ring, double *map_nest, int nside);
-void compute_full_map_nest2ring(double *map_nest, double *map_ring, int nside)
+void compute_full_map_ring2nest(double *map_ring, double *map_nest, int nside, int nstokes, int npix);
+void compute_full_map_nest2ring(double *map_nest, double *map_ring, int nside, int nstokes, int npix);
 
 /* Define file support structure for Wiener_filter extension */
 void init_files_struct_WF(Files_path_WIENER_FILTER *Files_path_WF_struct, char *path_mask_file,  bool use_mask_file, int nside, int lmax_Wiener_Filter, char *c_ell_path, int number_correlations);
