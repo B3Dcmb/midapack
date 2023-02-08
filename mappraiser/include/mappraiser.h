@@ -1,7 +1,9 @@
-/** @file mappraiser.h
-    @brief <b> Declaration of the backbone routines of the map-making code.</b>
-    @author Hamza El Bouhargani
-    @date May 2019 */
+/**
+ * @file mappraiser.h
+ * @authors Hamza El Bouhargani, Simon Biquard
+ * @brief Declaration of the backbone routines of the map-making code.
+ * @date Jan 2023
+ */
 
 #ifndef MAPPRAISER_H
 #define MAPPRAISER_H
@@ -97,6 +99,7 @@ int ECG_GLS(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double *b, 
 #endif
 
 /* Noise weighting */
+
 void apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod);
 
 #endif /* MAPPRAISER_H */

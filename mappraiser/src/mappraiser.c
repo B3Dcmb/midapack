@@ -1,11 +1,9 @@
-// MAPPRAISER vdev
-// Massively parallel iterative map-making code using the Midapack library v1.2b, Nov 2012
-// The routine processes pointing, signal and noise data arrays and produces maps in fits files
-
-/** @file   mappraiser.c
-        @author Hamza El Bouhargani
-        @date   May 2019
-        @Last_update June 2020 by Aygul Jamal  */
+/**
+ * @file mappraiser.c
+ * @authors Hamza El Bouhargani, Aygul Jamal, Simon Biquard
+ * @brief Process pointing, signal and noise data arrays to produce maps in FITS format
+ * @date Jan 2023
+ */
 
 #include <stdlib.h>
 #include <stdio.h>

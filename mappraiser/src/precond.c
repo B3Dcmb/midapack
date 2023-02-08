@@ -1,12 +1,9 @@
-// MAPPRAISER preconditioner vdev
-// Routines for computing the diagonal, block-diagonal Jacobi, and Two-level preconditioners for the PCG
-// The routines also deal with degenerate pixels to ensure numerical stability of the system
-
-/** @file   precond.c
-        @author Hamza El Bouhargani
-        @date   May 2019
-        @credit  Adapted from work by Frederic Dauvergne
-        @Last_update January 2021 by Aygul Jamal */
+/**
+ * @file precond.c
+ * @authors Hamza El Bouhargani (adapted from Frederic Dauvergne), Aygul Jamal, Simon Biquard
+ * @brief Routines for computing the diagonal, block-diagonal Jacobi, and Two-level preconditioners for the PCG. Also deal with degenerate pixels to ensure numerical stability of the system.
+ * @date Jan 2023
+ */
 
 #include <stdlib.h>
 #include <stdio.h>

@@ -26,7 +26,7 @@ void solverinfo_print(SolverInfo *si)
     printf("  print              = %s\n", si->print ? "true" : "false");
 
     puts("Solver information:");
-    printf("  start_time    = %lf\n", si->start_time);
+    // printf("  start_time    = %lf\n", si->start_time);
     printf("  r0            = %e\n", si->r0);
     printf("  has_converged = %s\n", si->has_converged ? "true" : "false");
     printf("  has_diverged  = %s\n", si->has_diverged ? "true" : "false");
@@ -35,8 +35,15 @@ void solverinfo_print(SolverInfo *si)
     printf("  solve_time    = %lf s\n", si->solve_time);
     printf("  conv_rate     = %lf\n", si->conv_rate);
     printf("  res_norm      = %e\n", si->res_norm);
-
-    fflush(stdout);
+    if (si->store_hist)
+    {
+        fputs("  res_hist      = { ", stdout);
+        for (int j = 0; j < (si->n_iter) + 1; ++j)
+        {
+            printf("%lf ", si->res_hist[j]);
+        }
+        puts("}");
+    }
 }
 
 /// @brief Set default values for the solver parameters
@@ -137,7 +144,8 @@ void solverinfo_finalize(SolverInfo *si)
 {
     if ((si->n_iter < si->max_steps) && (si->store_hist))
     {
-        si->res_hist = realloc(si->res_hist, (sizeof si->res_hist) * si->n_iter);
+        // res_history has size n_iter + 1 !!!
+        si->res_hist = realloc(si->res_hist, (sizeof si->res_hist) * (si->n_iter + 1));
     }
 
     if (si->print)

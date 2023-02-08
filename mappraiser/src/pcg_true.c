@@ -1,13 +1,9 @@
-// Midapack library
-// mapmaking code example using the Midapack library - release 1.2b, Nov 2012
-// PCG routine applied to the map-making equation
-// This can use the block-diagonal jacobi or Two-level preconditionners
-
-/** @file   pcg_true.c
- @author Hamza El Bouhargani
- @date   May 2019
- @credit  Adapted from work by Frederic Dauvergne
- @Last_update June 2020 by Aygul Jamal */
+/**
+ * @file pcg_true.c
+ * @authors Hamza El Bouhargani (adapted from Frederic Dauvergne), Aygul Jamal, Simon Biquard
+ * @brief Preconditioned Conjugate Gradient algorithm applied to the map-making equation. Can use the block-diagonal Jacobi or Two-level preconditioners.
+ * @date Jan 2023
+ */
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -18,7 +14,6 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include "mappraiser.h"
-
 
 int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl, Gap *Gaps, int64_t gif)
 {
