@@ -18,6 +18,9 @@
 // #include <mkl.h>
 #include "fitsio.h"
 #include "midapack.h"
+#include "s2hat.h"
+#include "s2hat_tools.h"
+#include "domain_generalization.h"
 #include "mappraiser.h"
 
 int x2map_pol(double *mapI, double *mapQ, double *mapU, double *Cond, int *hits, int npix, double *x, int *lstid, double *cond, int *lhits, int xsize);
@@ -207,8 +210,23 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     // print Toeplitz parameters for information
     if (rank == 0)
     {
-        printf("[rank %d] Noise model: Banded block Toeplitz, half bandwidth = %d\n", rank, lambda_block_avg);
+        printf("[rank %d] Noise model: Banded block Toeplitz, half bandwidth = %d \n", rank, lambda_block_avg);
     }
+
+    Files_path_WIENER_FILTER *Files_path_WF_struct = NULL; // Initialization of Files_Wiener_filter structure
+    // Wiener filter file_paths extension initialization /////////////// 
+    S2HAT_parameters *S2HAT_params = (S2HAT_parameters *)malloc(1*sizeof(S2HAT_parameters));
+    if (bool_apply_filter==1)
+    {   
+        Files_path_WF_struct = (Files_path_WIENER_FILTER *)malloc(1*sizeof(Files_path_WIENER_FILTER)); // Initialization of Files_Wiener_filter structure
+        init_files_struct_WF(Files_path_WF_struct, path_mask_file, use_mask_file, nside, lmax_Wiener_Filter, c_ell_path, number_correlations);
+        // Attribution of paths of c_ells (for covariance matrix), the corresponding number of correlations included and mask_file as well as a bool (use_mask_file) to determine if a mask should be used or not
+    }
+    S2HAT_params->Files_WF_struct = Files_path_WF_struct;
+    PCG_var *PCG_variable = (PCG_var *) malloc(1*sizeof(PCG_var));
+    s2hat_dcomplex *local_alm = NULL;
+    double *local_map_pix = NULL;
+    initialize_PCG_var_struct(PCG_variable, local_map_pix, local_alm, domain_PCG_computation, bool_apply_filter, A.nnz, S2HAT_params);
 
     MPI_Barrier(comm);
     if (rank == 0)

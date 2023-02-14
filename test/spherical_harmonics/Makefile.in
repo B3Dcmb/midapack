@@ -2,6 +2,7 @@
 ##############   t e s t s   ############
 
 all:
+	mkdir -p $(MAPPRAISER_ROOT) $(MAPPRAISER_OBJ) $(MAPPRAISER_LIB)
 	make wiener_filter
 
 wiener_filter:

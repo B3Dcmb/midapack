@@ -57,6 +57,7 @@ typedef struct Files_path_WIENER_FILTER{
     char *maskfile_path; // Path to mask file, of dimensions [12*nside**2, 3] in fits format (write_maps of Healpy can be used)
     
     int lmax_Wiener_Filter; // lmax which will be considered in the application of Wiener filter
+    int nside; // Nside in order to read the maps
     char *c_ell_path; // Path for c_ells fits file, to construct CMB sky covariance matrix, in the form of a 1d vector of dimension [lmax,number_correlations] in column-wise ordering
     int number_correlations; // Number of correlations included in c_ell fits file, can be eitehr 4, TT, EE, BB and TE, or 6, TT, EE, BB, TE, TB and EB (in this order)
 } Files_path_WIENER_FILTER;
@@ -83,7 +84,7 @@ int init_MPI_struct_s2hat_local_parameters(S2HAT_LOCAL_parameters *Local_param_s
 int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters *Local_param_s2hat);
 
 /* Initaization of superctrure S2HAT_parameters */
-int init_s2hat_parameters_superstruct(Files_path_WIENER_FILTER *Files_WF_struct, int nside, S2HAT_parameters *S2HAT_params, int root);
+int init_s2hat_parameters_superstruct(Files_path_WIENER_FILTER *Files_WF_struct, S2HAT_parameters *S2HAT_params, int root);
 
 /* Use s2hat routines to broadcast s2hat global structures */
 void mpi_broadcast_s2hat_global_struc(S2HAT_GLOBAL_parameters *Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat);
@@ -157,8 +158,8 @@ int get_inverse_covariance_matrix_3x3(S2HAT_parameters *S2HAT_params, double **i
 
 
 /* tmp functions for communication */
-int all_reduce_to_single_map_mappraiser(Mat *A, double* x, int nside, double* out_val, int root);
+// int all_reduce_to_single_map_mappraiser(Mat *A, double* x, int nside, double* out_val, int root);
 
-int distribute_map_S2HAT_ordering(double* full_sky_map, double *local_map_s2hat, S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat);
+// int distribute_map_S2HAT_ordering(double* full_sky_map, double *local_map_s2hat, S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat);
 
-int brute_force_transfer_local_maps(Mat *A, double* local_pixel_map_MAPPRAISER, double *local_pixel_map_s2hat, S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat);
+// int brute_force_transfer_local_maps(Mat *A, double* local_pixel_map_MAPPRAISER, double *local_pixel_map_s2hat, S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat);

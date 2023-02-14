@@ -30,7 +30,7 @@ We add the covariance matrix $C$ to the PCG approach of the mapmaking problem, g
 
 $$ (C^{-1} + P^t N^{-1} P) a^{WF}_{\ell m} = P^t N^{-1} d$$
 
-We also apply this solution mostly in harmonic domain, with with $a^{WF}_{\ell m}$ as the variable updated by each iteration.
+We also apply this solution mostly in harmonic domain, with $a^{WF}_{\ell m}$ as the variable updated by each iteration.
 
 For now, we consider the preconditioner given by :
 

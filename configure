@@ -581,6 +581,11 @@ echo 'MAPPRAISER_ROOT = ${PREFIX}/mappraiser' >> test/mapmaking/mappraiser/src/M
 echo 'MAPPRAISER_OBJ = ${MAPPRAISER_ROOT}/obj' >> test/mapmaking/mappraiser/src/Makefile
 echo 'MAPPRAISER_LIB = ${MAPPRAISER_ROOT}/lib' >> test/mapmaking/mappraiser/src/Makefile
 
+echo 'HEALPIXROOT ='$HEALPIXROOT >> test/mapmaking/mappraiser/src/Makefile
+echo 'WIENERFILTER_INC = ${DIR}/test/spherical_harmonics' >> test/mapmaking/mappraiser/src/Makefile
+echo 'WIENERFILTER_LIB = ${WIENERFILTER_ROOT}/lib' >> test/mapmaking/mappraiser/src/Makefile
+echo 'S2HATROOT ='$S2HATROOT >> test/mapmaking/mappraiser/src/Makefile
+
 
 ### Spherical_harmonics extension ###
 
@@ -626,6 +631,19 @@ then
     LIB+=' '$MKL_LIB
 fi
 
+# link S2HAT and HEALPIX library (if needed)
+
+if [ $HEALPIX -eq 1 ]
+then
+    INC+=' '$HEALPIX_INC
+    LIB+=' '$HEALPIX_LIB
+fi
+
+if [ $S2HAT -eq 1 ]
+then
+    INC+=' '$S2HAT_INC
+    LIB+=' '$S2HAT_LIB
+fi
 echo 'INC = '$INC >> test/mapmaking/mappraiser/Makefile
 echo 'LIB = '$LIB >> test/mapmaking/mappraiser/Makefile
 echo 'CFITSIO_INC = '$CFITSIO_INC >> test/mapmaking/mappraiser/Makefile
@@ -635,22 +653,8 @@ echo 'INC = '$INC >> test/mapmaking/mappraiser/src/Makefile
 echo 'LIB = '$LIB >> test/mapmaking/mappraiser/src/Makefile
 echo 'CFITSIO_INC = '$CFITSIO_INC >> test/mapmaking/mappraiser/src/Makefile
 echo 'CFITSIO_LIB = '$CFITSIO_LIB >> test/mapmaking/mappraiser/src/Makefile
-
-# link S2HAT and HEALPIX library (if needed)
-
-if [ $S2HAT -eq 1 ]
-then
-    INC+=' '$S2HAT_INC
-    LIB+=' '$S2HAT_LIB
-fi
-
-
-if [ $HEALPIX -eq 1 ]
-then
-    INC+=' '$HEALPIX_INC
-    LIB+=' '$HEALPIX_LIB
-fi
-
+echo 'S2HAT_INC = '$S2HAT_INC >> test/mapmaking/mappraiser/src/Makefile
+echo 'HEALPIX_LIB = '$HEALPIX_LIB >> test/mapmaking/mappraiser/src/Makefile
 
 echo 'INC = '$INC >> test/spherical_harmonics/Makefile
 echo 'LIB = '$LIB >> test/spherical_harmonics/Makefile

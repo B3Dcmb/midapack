@@ -155,11 +155,11 @@ int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters Global_param_s2ha
 }
 
 
-int init_s2hat_parameters_superstruct(Files_path_WIENER_FILTER *Files_WF_struct, int nside, S2HAT_parameters *S2HAT_params, int root)
+int init_s2hat_parameters_superstruct(Files_path_WIENER_FILTER *Files_WF_struct, S2HAT_parameters *S2HAT_params, int root)
 {   // Initalize both S2HAT_GLOBAL_parameters and S2HAT_LOCAL_parameters for superstructure of S2HAT
     
     S2HAT_GLOBAL_parameters *Global_param_s2hat = (S2HAT_GLOBAL_parameters *) malloc( 1 * sizeof(S2HAT_GLOBAL_parameters));
-    init_s2hat_global_parameters(*Files_WF_struct, nside, Files_WF_struct->lmax_Wiener_Filter, Global_param_s2hat); 
+    init_s2hat_global_parameters(*Files_WF_struct, Files_WF_struct->nside, Files_WF_struct->lmax_Wiener_Filter, Global_param_s2hat); 
     // Initialization of Global_param_s2hat structure, for sky pixelization scheme and lmax_WF choice
 
 

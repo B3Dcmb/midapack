@@ -16,6 +16,11 @@
 #include <time.h>
 #include <string.h>
 #include <unistd.h>
+
+#include "midapack.h"
+#include "s2hat.h"
+#include "s2hat_tools.h"
+#include "domain_generalization.h"
 #include "mappraiser.h"
 
 int apply_weights(Tpltz *Nm1, double *tod);
@@ -74,7 +79,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, PCG_var *PCG_varia
 
     
     
-    build_precond(&p, &pixpond, &n, A, &Nm1, &PCG_variable, b, noise, cond, lhits, tol, Z_2lvl, S2HAT_params, precond);
+    build_precond(&p, &pixpond, &n, A, &Nm1, PCG_variable, b, noise, cond, lhits, tol, Z_2lvl, S2HAT_params, precond);
     // building preconditonner depending on the value of precond (0 for classic, 1 and 2 for two-level precond, 3 for Wiener-filtering precond)
 
     
@@ -97,9 +102,12 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, PCG_var *PCG_varia
             // For later: get mask with trash_pix for spherical harmonic transforms !!!! --- TO DO LATER 
         }
         int root=0; // Choice to put root rank to 0
-        init_s2hat_parameters_superstruct(Files_WF_struct, nside, PCG_variable->S2HAT_parameters, root);
+        init_s2hat_parameters_superstruct(S2HAT_params->Files_WF_struct, PCG_variable->S2HAT_parameters, root);
         // Initialization of S2HAT_parameters structure
 
+        S2HAT_GLOBAL_parameters *Global_param_s2hat = PCG_variable->S2HAT_parameters->Global_param_s2hat;
+        // The S2HAT_parameters structure has been initialized, definition of the varariable corresponding to the global S2HAT parameters which will be known by all mpi-tasks
+        
         // Prepare to allocate non-empty alm
         size_alm = (Global_param_s2hat->nlmax+1)*Global_param_s2hat->nmmax;
     }
@@ -121,23 +129,23 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, PCG_var *PCG_varia
 
     // Create PCG_var struct for h, the descent direction
     PCG_var *Descent_dir_var = (PCG_var *)malloc(1*sizeof(PCG_var)); // corresponds to g
-    initialize_PCG_var_struct(Descent_dir_var, h, NULL, PCG_variable->domain_PCG_computation, PCG_variable->bool_apply_filter, PCG_variable->S2HAT_params);
+    initialize_PCG_var_struct(Descent_dir_var, h, NULL, PCG_variable->domain_PCG_computation, PCG_variable->bool_apply_filter, PCG_variable->nstokes, PCG_variable->S2HAT_parameters);
     // Define Descent_dir_var = h (in pixel space), will allocate alm only if relevant, ie if PCG_variable->bool_apply_filter==1 or PCG_variable->domain_PCG_computation==1
 
     // Create PCG_var struct for g, the residual
     PCG_var *Residual_var = (PCG_var *)malloc(1*sizeof(PCG_var)); // corresponds to g
-    initialize_PCG_var_struct(Residual_var, g, NULL, PCG_variable->domain_PCG_computation, PCG_variable->bool_apply_filter, PCG_variable->S2HAT_params);
+    initialize_PCG_var_struct(Residual_var, g, NULL, PCG_variable->domain_PCG_computation, PCG_variable->bool_apply_filter, PCG_variable->nstokes, PCG_variable->S2HAT_parameters);
     // Define Residual_var = g (in pixel space), will allocate alm only if relevant, ie if PCG_variable->bool_apply_filter==1 or PCG_variable->domain_PCG_computation==1
 
     // Create PCG_var struct for gp, the residual of previous iteration
     PCG_var *Last_Iter_Res_var = (PCG_var *)malloc(1*sizeof(PCG_var)); // corresponds to Cg
-    initialize_PCG_var_struct(Last_Iter_Res_var, gp, NULL PCG_variable->domain_PCG_computation, PCG_variable->bool_apply_filter, PCG_variable->S2HAT_params);
+    initialize_PCG_var_struct(Last_Iter_Res_var, gp, NULL, PCG_variable->domain_PCG_computation, PCG_variable->bool_apply_filter, PCG_variable->nstokes, PCG_variable->S2HAT_parameters);
     // Define Last_Iter_Res_var = gp (in pixel space), will allocate alm only if relevant, ie if PCG_variable->bool_apply_filter==1 or PCG_variable->domain_PCG_computation==1
 
 
     // Create PCG_var struct for Cg, the preconditionned residual
     PCG_var *PrecRes_var = (PCG_var *)malloc(1*sizeof(PCG_var)); // corresponds to Cg
-    initialize_PCG_var_struct(PrecRes_var, Cg, NULL, PCG_variable->domain_PCG_computation, PCG_variable->bool_apply_filter, PCG_variable->S2HAT_params);
+    initialize_PCG_var_struct(PrecRes_var, Cg, NULL, PCG_variable->domain_PCG_computation, PCG_variable->bool_apply_filter, PCG_variable->nstokes, PCG_variable->S2HAT_parameters);
     // Define PrecRes_var = Cg (in pixel space), will allocate alm only if relevant, ie if PCG_variable->bool_apply_filter==1 or PCG_variable->domain_PCG_computation==1
 
     st = MPI_Wtime();
@@ -157,7 +165,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, PCG_var *PCG_varia
     update_PCG_var(Residual_var, A); // Update Residual_var
 
     // apply_precond(p, A, &Nm1, g, Cg);
-    apply_precond(p, A, &Nm1, Residual_var, PrecRes_var);
+    apply_precond(p, A, &Nm1, Residual_var->S2HAT_parameters, Residual_var, PrecRes_var);
     update_PCG_var(PrecRes_var, A); // Update PrecRes_var
 
     // for (j = 0; j < n; j++) // h = Cg
@@ -267,7 +275,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, PCG_var *PCG_varia
         update_PCG_var(Residual_var, A); // Update Residual_var
 
         // apply_precond(p, A, &Nm1, g, Cg);
-        apply_precond(p, A, &Nm1, Residual_var, PrecRes_var);
+        apply_precond(p, A, &Nm1, Residual_var->S2HAT_parameters, Residual_var, PrecRes_var);
 
 
 
@@ -363,6 +371,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, PCG_var *PCG_varia
     return 0;
 }
 
+
 /* Weights TOD data according to the adopted noise model*/
 int apply_weights(Tpltz *Nm1, double *tod)
 {
@@ -412,12 +421,15 @@ int apply_PNmP(Mat *A, double *h, Tpltz Nm1, double *AtNm1Ah){
     free(Ah);
 }
 
-int apply_sys_matrix(Mat *A, Tpltz Nm1, Precond *p, S2HAT_parameters *S2HAT_params, PCG_var *input_variable, PCG_var *output_variable)
+int apply_sys_matrix(Mat *A, Tpltz Nm1, struct Precond *p, S2HAT_parameters *S2HAT_params, PCG_var *input_variable, PCG_var *output_variable)
 {
     // Apply system of the PCG, depending of the value of output_variable->bool_apply_filter 
     // -> bool_apply_filter == 0, classic PCG is done with only application of  P^T N^{-1} P to input_variable in pixel space
     // -> bool_apply_filter == 1, application of  P^T N^{-1} P.input_variable (in pixel space) + C^{-1}.input_variable (in harmonic space)
 
+    int i;
+    double *new_local_variable_pix;
+    s2hat_dcomplex *local_alm_out;
 
     apply_PNmP(A, input_variable->local_map_pix, Nm1, output_variable->local_map_pix);
 
@@ -429,14 +441,14 @@ int apply_sys_matrix(Mat *A, Tpltz Nm1, Precond *p, S2HAT_parameters *S2HAT_para
 
         case 1:
         
-        apply_inv_covariance_matrix_to_alm(init_PCG_var->local_alm, out_PCG_var->local_alm, p->inverse_covariance_matrix, S2HAT_params);
+        apply_inv_covariance_matrix_to_alm(input_variable->local_alm, output_variable->local_alm, p->inverse_covariance_matrix, S2HAT_params);
 
         // Do the addition of (C^{-1} + P^T N^{-1} P) in pixel or harmonic space
-        switch (out_PCG_var->domain_PCG_computation)
+        switch (output_variable->domain_PCG_computation)
         {
             case 0: // Addition done in pixel domain
-            double *new_local_variable_pix = (double *)malloc(p->n*sizeof(double));
-            global_harmonic_2_map(new_local_variable_pix, output_variable->local_alm, A, S2HAT_params->Global_param_s2hat, S2HAT_params->Local_param_s2hat);
+            new_local_variable_pix = (double *)malloc(p->n*sizeof(double));
+            global_harmonic_2_map(new_local_variable_pix, output_variable->local_alm, A, *(S2HAT_params->Global_param_s2hat), *(S2HAT_params->Local_param_s2hat));
             // Transformation of a_lm back into pixel domain
 
             for (i = 0; i < p->n; ++i)
@@ -450,22 +462,21 @@ int apply_sys_matrix(Mat *A, Tpltz Nm1, Precond *p, S2HAT_parameters *S2HAT_para
 
 
             case 1:
-            s2hat_dcomplex *local_alm_out = (s2hat_dcomplex *) malloc( A->nnz * S2HAT_params->size_alm * sizeof(s2hat_dcomplex));
+            local_alm_out = (s2hat_dcomplex *) malloc( A->nnz * S2HAT_params->size_alm * sizeof(s2hat_dcomplex));
     
-            global_map_2_harmonic(output_variable->local_map_pix, local_alm_out, A, S2HAT_params->Global_param_s2hat, S2HAT_params->Local_param_s2hat); 
+            global_map_2_harmonic(output_variable->local_map_pix, local_alm_out, A, *(S2HAT_params->Global_param_s2hat), *(S2HAT_params->Local_param_s2hat));
             // Result in pixel transformed in harmonic
 
             for (i = 0; i < A->nnz * S2HAT_params->size_alm ; ++i)
             {
-                output_variable->local_alm[i] += local_alm_out[i]; // Adding C^(-1).input_variable and P N^{-1} P.input_variable
+                output_variable->local_alm[i].re += local_alm_out[i].re; // Adding C^(-1).input_variable and P N^{-1} P.input_variable
+                output_variable->local_alm[i].im += local_alm_out[i].im; // Adding C^(-1).input_variable and P N^{-1} P.input_variable
             }
 
             output_variable->does_map_pixel_need_update = 1; // Change done on harmonic domain, pixel domain need update
 
             free(local_alm_out);
-
         }
-
     }
 }
 
@@ -477,7 +488,7 @@ int compute_norm(double *norm_to_compute, double *vector_left, double *vector_ri
     int index;
     *norm_to_compute = 0.0;
     for (index = 0; index < size; index++)
-        *norm_to_compute += vector_left[i] * vector_right[i] * weighting_pond[i];
+        *norm_to_compute += vector_left[index] * vector_right[index] * weighting_pond[index];
 }
 
 int compute_norm_v2(double *norm_to_compute, double *vector_left, double *vector_right, double *vector_right_2, double *weighting_pond, int size)
@@ -487,7 +498,7 @@ int compute_norm_v2(double *norm_to_compute, double *vector_left, double *vector
     int index;
     *norm_to_compute = 0.0;
     for (index = 0; index < size; index++)
-        *norm_to_compute += vector_left[i] * (vector_right[i] - vector_right_2[i]) * weighting_pond[i];
+        *norm_to_compute += vector_left[index] * (vector_right[index] - vector_right_2[index]) * weighting_pond[index];
 }
 
 int swap_pointers(PCG_var *PCG_variable, PCG_var *PCG_variable_2)
