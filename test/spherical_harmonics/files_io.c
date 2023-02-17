@@ -31,7 +31,7 @@ void init_files_struct_WF(Files_path_WIENER_FILTER *Files_path_WF_struct, char *
     Files_path_WF_struct->c_ell_path = c_ell_path;
     Files_path_WF_struct->use_mask_file = use_mask_file;
     Files_path_WF_struct->number_correlations = number_correlations;
-    // Files_path_WF_struct->nside = nside;
+    Files_path_WF_struct->nside = nside;
     Files_path_WF_struct->lmax_Wiener_Filter = lmax_Wiener_Filter;
 }
 
@@ -127,7 +127,6 @@ void read_fits_mask(int nside, double *mask, char *path_mask_file, int col)
   // fflush(stdout);
 
   free( tmp);
-
 }
 
 void read_TQU_maps( int nside, double *map, char *infile, int nstokes)
@@ -141,14 +140,16 @@ void read_TQU_maps( int nside, double *map, char *infile, int nstokes)
   printf( "           data   : %s ", infile);
 
   read_fits_mask( nside, mapI, infile, 1);
-  printf( "( T ");
-  if( nstokes == 3) {
+  // printf( "( T ");
+  if (nstokes > 1){
     read_fits_mask( nside, mapQ, infile, 2);
-    printf( "Q ");
-    read_fits_mask( nside, mapU, infile, 3);
-    printf( "U ");
+    // printf( "Q ");
+    if( nstokes == 3) {
+      read_fits_mask( nside, mapU, infile, 3);
+      // printf( "U ");
     }
-  printf( ")\n");
+  }  
+  // printf( ")\n");
   fflush( stdout);
 }
 

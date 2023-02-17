@@ -1,4 +1,3 @@
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -62,6 +61,7 @@ int get_main_s2hat_global_parameters(int nside, char *maskfile_path, s2hat_pixel
     /* Scan pixelization will be used to avoid doing unecessary calculations */
         
     // printf( "F_sky = %f%%\n", (double)f_sky/(double)npix*100.); fflush(stdout);
+    // free(mask_binary); // ????? Problem ?
     return 0;
 }
 
@@ -88,15 +88,55 @@ int init_s2hat_global_parameters(Files_path_WIENER_FILTER Files_WF_struct, int n
     Global_param_s2hat->nmmax = lmax-1;
 }
 
-int init_MPI_struct_s2hat_local_parameters(S2HAT_LOCAL_parameters *Local_param_s2hat, int gangrank, int gangsize, int gangroot, MPI_Comm gangcomm){
-    /* Initialize MPI parameters of s2hat structure of local parameters, which will differ for all processors
-    Those local parameters are used to improve the computation efficiency
-    Full documentation here : https://apc.u-paris.fr/APC_CS/Recherche/Adamis/MIDAS09/software/s2hat/s2hat/docs/S2HATdocs.html */ 
+// int init_MPI_struct_s2hat_local_parameters(S2HAT_LOCAL_parameters *Local_param_s2hat, int gangrank, int gangsize, int gangroot, MPI_Comm gangcomm){
+//     /* Initialize MPI parameters of s2hat structure of local parameters, which will differ for all processors
+//     Those local parameters are used to improve the computation efficiency
+//     Full documentation here : https://apc.u-paris.fr/APC_CS/Recherche/Adamis/MIDAS09/software/s2hat/s2hat/docs/S2HATdocs.html */ 
 
-    Local_param_s2hat->gangrank = gangrank;
-    Local_param_s2hat->gangsize = gangsize;
-    Local_param_s2hat->gangroot = gangroot;
-    Local_param_s2hat->gangcomm = gangcomm;
+//     Local_param_s2hat->gangrank = gangrank;
+//     Local_param_s2hat->gangsize = gangsize;
+//     Local_param_s2hat->gangroot = gangroot;
+//     Local_param_s2hat->gangcomm = gangcomm;
+
+//     return 0;
+// }
+
+
+int init_MPI_struct_s2hat_local_parameters(S2HAT_LOCAL_parameters *Local_param_s2hat, int number_ranks_s2hat, MPI_Comm initcomm){
+    /* Initialize MPI parameters of s2hat structure of local parameters, which will differ for all processors
+    Create a MPI group with the processors which will be used for S2HAT operations
+    
+    Those local parameters are used to improve the computation efficiency
+    Full documentation here : https://apc.u-paris.fr/APC_CS/Recherche/Adamis/MIDAS09/software/s2hat/s2hat/docs/S2HATdocs.html */
+
+    int s2hat_rank, s2hat_size, s2hat_root;
+
+    int initrank, initsize;
+    int initroot = 0;
+
+    MPI_Comm_rank(initcomm, &initrank);
+    MPI_Comm_size(initcomm, &initsize);
+
+    MPI_Comm s2hat_comm;
+
+   
+    // Test case if we don't have to divide into two substructures of communicators
+    if (number_ranks_s2hat >= initsize){
+        mpi_create_subset(number_ranks_s2hat, initcomm, &s2hat_comm);
+
+        MPI_Comm_rank ( s2hat_comm, &s2hat_rank ); 
+        MPI_Comm_size ( s2hat_comm, &s2hat_size ); 
+    }
+    else{
+        s2hat_rank = initrank;
+        s2hat_size = initsize;
+        s2hat_comm = initcomm;
+    }
+
+    Local_param_s2hat->gangrank = s2hat_rank;
+    Local_param_s2hat->gangsize = s2hat_size;
+    Local_param_s2hat->gangroot = initroot;
+    Local_param_s2hat->gangcomm = s2hat_comm;
 
     return 0;
 }
@@ -155,7 +195,7 @@ int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters Global_param_s2ha
 }
 
 
-int init_s2hat_parameters_superstruct(Files_path_WIENER_FILTER *Files_WF_struct, S2HAT_parameters *S2HAT_params, int root)
+int init_s2hat_parameters_superstruct(Files_path_WIENER_FILTER *Files_WF_struct, S2HAT_parameters *S2HAT_params, MPI_Comm world_comm)
 {   // Initalize both S2HAT_GLOBAL_parameters and S2HAT_LOCAL_parameters for superstructure of S2HAT
     
     S2HAT_GLOBAL_parameters *Global_param_s2hat = (S2HAT_GLOBAL_parameters *) malloc( 1 * sizeof(S2HAT_GLOBAL_parameters));
@@ -164,7 +204,9 @@ int init_s2hat_parameters_superstruct(Files_path_WIENER_FILTER *Files_WF_struct,
 
 
     S2HAT_LOCAL_parameters *Local_param_s2hat = (S2HAT_LOCAL_parameters *) malloc( 1 * sizeof(S2HAT_LOCAL_parameters));
-    init_MPI_struct_s2hat_local_parameters(Local_param_s2hat, Local_param_s2hat->gangrank, Local_param_s2hat->gangsize, Local_param_s2hat->gangroot, Local_param_s2hat->gangcomm); 
+    // init_MPI_struct_s2hat_local_parameters(Local_param_s2hat, Local_param_s2hat->gangrank, Local_param_s2hat->gangsize, Local_param_s2hat->gangroot, Local_param_s2hat->gangcomm); 
+    init_MPI_struct_s2hat_local_parameters(Local_param_s2hat, Global_param_s2hat->scan_sky_structure_pixel.nringsobs, world_comm); 
+    
     init_s2hat_local_parameters_struct(*Global_param_s2hat, Local_param_s2hat);
     // Initialization of Local_param_s2hat structure, including MPI parameters, first/last rings studied, size of pixels cut sky per rank, etc. -- see Wiener filter extension directory for more details
 
@@ -210,12 +252,12 @@ int collect_partial_map_from_pixels(double* local_map_s2hat, double *output_subm
 
 
 
-void free_covariance_matrix(double ** covariance_matrix_3x3, int lmax){
+void free_covariance_matrix(double ** covariance_matrix_NxN, int lmax){
     int ell_value;
     for (ell_value=0; ell_value<lmax+1; ell_value++){
-        free(covariance_matrix_3x3[ell_value]);
+        free(covariance_matrix_NxN[ell_value]);
     }
-    free(covariance_matrix_3x3);    
+    free(covariance_matrix_NxN);    
 }
 
 void free_s2hat_GLOBAL_parameters_struct(S2HAT_GLOBAL_parameters *Global_param_s2hat){

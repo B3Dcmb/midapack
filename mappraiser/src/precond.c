@@ -1421,12 +1421,13 @@ void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat
         // double **inverse_covariance_matrix;
         p->inverse_covariance_matrix = calloc(lmax_WF, sizeof(double *));
         for(ell_value=0; ell_value<lmax_WF; ell_value++){
-            p->inverse_covariance_matrix[ell_value] = calloc(9,sizeof(double)); // 9 for each element of the covariance matrix [TT, TE, TB, ET, EE, EB, BT, BE, BB]
+            p->inverse_covariance_matrix[ell_value] = calloc(A->nnz * A->nnz,sizeof(double)); 
+            // (nstokes*nstokes) for each element of the covariance matrix either [TT], [EE, EB, BE, BB], or [TT, TE, TB, ET, EE, EB, BT, BE, BB]
         }
         
-        get_inverse_covariance_matrix_3x3(S2HAT_params, p->inverse_covariance_matrix);
+        get_inverse_covariance_matrix_NxN(S2HAT_params, p->inverse_covariance_matrix);
         /* The covariance matrix will be inverted separately for each of its ell_value,
-            In particular for each ell_value a 3*3 matrix [TT, TE, TB, ET, EE, EB, BT, BE, BB] will be inverted
+            In particular for each ell_value a N*N matrix [TT], [EE, EB, BE, BB], or [TT, TE, TB, ET, EE, EB, BT, BE, BB] will be inverted
         */        
     }
 
@@ -1474,7 +1475,7 @@ void apply_precond(struct Precond *p, const Mat *A, const Tpltz *Nm1, S2HAT_para
             MatVecProd(&(p->BJ_inv), init_PCG_var->local_map_pix, out_PCG_var->local_map_pix, 0);
             // Calculation on pixel domain of Pdiag(N)P
                 
-            apply_inv_covariance_matrix_to_alm(init_PCG_var->local_alm, out_PCG_var->local_alm, p->inverse_covariance_matrix, S2HAT_params); 
+            apply_inv_covariance_matrix_to_alm(init_PCG_var->local_alm, out_PCG_var->local_alm, p->inverse_covariance_matrix, init_PCG_var->nstokes, S2HAT_params); 
             // Multiplication of C^{-1} with vector a_lm
 
             // The addition C^{-1}.init_PCG_var + Pdiag(N)P.init_PCG_var will be done in the next step

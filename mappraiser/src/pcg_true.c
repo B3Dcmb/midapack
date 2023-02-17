@@ -102,7 +102,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, PCG_var *PCG_varia
             // For later: get mask with trash_pix for spherical harmonic transforms !!!! --- TO DO LATER 
         }
         int root=0; // Choice to put root rank to 0
-        init_s2hat_parameters_superstruct(S2HAT_params->Files_WF_struct, PCG_variable->S2HAT_parameters, root);
+        init_s2hat_parameters_superstruct(S2HAT_params->Files_WF_struct, PCG_variable->S2HAT_parameters, A->comm);
         // Initialization of S2HAT_parameters structure
 
         S2HAT_GLOBAL_parameters *Global_param_s2hat = PCG_variable->S2HAT_parameters->Global_param_s2hat;
@@ -441,7 +441,7 @@ int apply_sys_matrix(Mat *A, Tpltz Nm1, struct Precond *p, S2HAT_parameters *S2H
 
         case 1:
         
-        apply_inv_covariance_matrix_to_alm(input_variable->local_alm, output_variable->local_alm, p->inverse_covariance_matrix, S2HAT_params);
+        apply_inv_covariance_matrix_to_alm(input_variable->local_alm, output_variable->local_alm, p->inverse_covariance_matrix, input_variable->nstokes, S2HAT_params);
 
         // Do the addition of (C^{-1} + P^T N^{-1} P) in pixel or harmonic space
         switch (output_variable->domain_PCG_computation)

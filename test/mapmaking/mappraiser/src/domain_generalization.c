@@ -98,14 +98,17 @@ int brute_force_transfer_local_maps(Mat *A, double* local_pixel_map_MAPPRAISER, 
 }
 
 
-int global_map_2_harmonic(double* local_pixel_map_MAPPRAISER, s2hat_dcomplex *local_alm_s2hat, Mat *A, S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat){
+int global_map_2_harmonic(double* local_pixel_map_MAPPRAISER, s2hat_dcomplex *local_alm_s2hat, Mat *A, S2HAT_parameters *S2HAT_params) ){
     // Transform local_maps pixel distribution from MAPPRAISER into a harmonic S2HAT a_lm distribution
+
+    S2HAT_GLOBAL_parameters Global_param_s2hat = *(S2HAT_params->Global_param_s2hat);
+    S2HAT_LOCAL_parameters Local_param_s2hat = *(S2HAT_params->Local_param_s2hat);
 
     double *local_pixel_map_s2hat = (double *)malloc(Local_param_s2hat.map_size*sizeof(double));
     brute_force_transfer_local_maps(A, local_pixel_map_MAPPRAISER, local_pixel_map_s2hat, Global_param_s2hat, Local_param_s2hat);
     // Temporary transfer method
 
-    apply_pix2alm(local_pixel_map_s2hat, local_alm_s2hat, Global_param_s2hat, Local_param_s2hat);
+    apply_pix2alm(local_pixel_map_s2hat, local_alm_s2hat, A->nnz, S2HAT_params);
     free(local_alm_s2hat);
 }
 

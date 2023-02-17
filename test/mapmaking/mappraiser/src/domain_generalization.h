@@ -15,14 +15,12 @@ typedef struct PCG_var{
     // Specifications of the computation
     int domain_PCG_computation; // Domain chosen for PCG computation : 0 pixel, 1 harmonic
     int bool_apply_filter; // 0 no filter applied, 1 Wiener filter applied
-    int nstokes; // Number of Stokes parameters for the computation, 3 usually means T, Q, U
-
+    int nstokes; // Number of Stokes parameters for the computation, where we assume : 1 for intensity only, 2 for polarization only, 3 for everything (T, Q, U)
 
     // S2HAT structures necessary for harmonic domain
     S2HAT_parameters *S2HAT_parameters; 
     // contains : S2HAT_GLOBAL_parameters *Global_param_s2hat and S2HAT_LOCAL_parameters *Local_param_s2hat;
     // Note that all data_var will point to the same S2HAT_GLOBAL_parameters and S2HAT_LOCAL_parameters for each processor
-
 
     // Update flags to check if an update needs to be done, by retransforming pixel2alm or alm2pixel
     int does_map_pixel_need_update; // 0 no update needed, 1 need update from local_alm
