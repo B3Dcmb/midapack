@@ -448,7 +448,7 @@ int apply_sys_matrix(Mat *A, Tpltz Nm1, struct Precond *p, S2HAT_parameters *S2H
         {
             case 0: // Addition done in pixel domain
             new_local_variable_pix = (double *)malloc(p->n*sizeof(double));
-            global_harmonic_2_map(new_local_variable_pix, output_variable->local_alm, A, *(S2HAT_params->Global_param_s2hat), *(S2HAT_params->Local_param_s2hat));
+            global_harmonic_2_map(new_local_variable_pix, output_variable->local_alm, A, S2HAT_params);
             // Transformation of a_lm back into pixel domain
 
             for (i = 0; i < p->n; ++i)
@@ -464,7 +464,7 @@ int apply_sys_matrix(Mat *A, Tpltz Nm1, struct Precond *p, S2HAT_parameters *S2H
             case 1:
             local_alm_out = (s2hat_dcomplex *) malloc( A->nnz * S2HAT_params->size_alm * sizeof(s2hat_dcomplex));
     
-            global_map_2_harmonic(output_variable->local_map_pix, local_alm_out, A, *(S2HAT_params->Global_param_s2hat), *(S2HAT_params->Local_param_s2hat));
+            global_map_2_harmonic(output_variable->local_map_pix, local_alm_out, A, S2HAT_params);
             // Result in pixel transformed in harmonic
 
             for (i = 0; i < A->nnz * S2HAT_params->size_alm ; ++i)

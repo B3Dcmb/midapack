@@ -1327,7 +1327,7 @@ void Lanczos_eig(Mat *A, Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ, double *x
 }
 
 // General routine for constructing a preconditioner
-void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tpltz *Nm1, PCG_var *PCG_variable, double *b, const double *noise, double *cond, int *lhits, double tol, int Zn, int domain_PCG_computation, S2HAT_parameters *S2HAT_params, int precond)
+void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tpltz *Nm1, PCG_var *PCG_variable, double *b, const double *noise, double *cond, int *lhits, double tol, int Zn, S2HAT_parameters *S2HAT_params, int precond)
 {
     int rank, size, i;
     double st, t;
@@ -1425,7 +1425,7 @@ void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat
             // (nstokes*nstokes) for each element of the covariance matrix either [TT], [EE, EB, BE, BB], or [TT, TE, TB, ET, EE, EB, BT, BE, BB]
         }
         
-        get_inverse_covariance_matrix_NxN(S2HAT_params, p->inverse_covariance_matrix);
+        get_inverse_covariance_matrix_NxN(PCG_variable->nstokes, S2HAT_params, p->inverse_covariance_matrix);
         /* The covariance matrix will be inverted separately for each of its ell_value,
             In particular for each ell_value a N*N matrix [TT], [EE, EB, BE, BB], or [TT, TE, TB, ET, EE, EB, BT, BE, BB] will be inverted
         */        
@@ -1485,7 +1485,7 @@ void apply_precond(struct Precond *p, const Mat *A, const Tpltz *Nm1, S2HAT_para
                 case 0:
                 
                 new_local_variable_pix = (double *)malloc(p->n*sizeof(double));
-                global_harmonic_2_map(new_local_variable_pix, out_PCG_var->local_alm, A, *(S2HAT_params->Global_param_s2hat), *(S2HAT_params->Local_param_s2hat));
+                global_harmonic_2_map(new_local_variable_pix, out_PCG_var->local_alm, A, S2HAT_params);
                 // Transformation of a_lm back into pixel domain
                 for (i = 0; i < p->n; ++i)
                 {
@@ -1502,7 +1502,7 @@ void apply_precond(struct Precond *p, const Mat *A, const Tpltz *Nm1, S2HAT_para
                 s2hat_dcomplex *local_alm_out;
                 local_alm_out = (s2hat_dcomplex *) malloc( A->nnz*(S2HAT_params->Global_param_s2hat->nlmax+1)*S2HAT_params->Global_param_s2hat->nmmax * sizeof(s2hat_dcomplex));
     
-                global_map_2_harmonic(out_PCG_var->local_map_pix, local_alm_out, A, *(S2HAT_params->Global_param_s2hat), *(S2HAT_params->Local_param_s2hat));
+                global_map_2_harmonic(out_PCG_var->local_map_pix, local_alm_out, A, S2HAT_params);
                 // Result in pixel transformed in harmonic
 
                 for (i = 0; i < A->nnz*(S2HAT_params->Global_param_s2hat->nlmax+1)*S2HAT_params->Global_param_s2hat->nmmax ; ++i)

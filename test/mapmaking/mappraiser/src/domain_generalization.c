@@ -98,7 +98,7 @@ int brute_force_transfer_local_maps(Mat *A, double* local_pixel_map_MAPPRAISER, 
 }
 
 
-int global_map_2_harmonic(double* local_pixel_map_MAPPRAISER, s2hat_dcomplex *local_alm_s2hat, Mat *A, S2HAT_parameters *S2HAT_params) ){
+int global_map_2_harmonic(double* local_pixel_map_MAPPRAISER, s2hat_dcomplex *local_alm_s2hat, Mat *A, S2HAT_parameters *S2HAT_params){
     // Transform local_maps pixel distribution from MAPPRAISER into a harmonic S2HAT a_lm distribution
 
     S2HAT_GLOBAL_parameters Global_param_s2hat = *(S2HAT_params->Global_param_s2hat);
@@ -130,8 +130,10 @@ int global_map_2_harmonic(double* local_pixel_map_MAPPRAISER, s2hat_dcomplex *lo
 //     }
 // }
 
-int global_harmonic_2_map(double* local_pixel_map_MAPPRAISER, s2hat_dcomplex *local_alm_s2hat, Mat *A, S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat)
-{   return 0;
+int global_harmonic_2_map(double* local_pixel_map_MAPPRAISER, s2hat_dcomplex *local_alm_s2hat, Mat *A,  S2HAT_parameters *S2HAT_params){
+    S2HAT_GLOBAL_parameters Global_param_s2hat = *(S2HAT_params->Global_param_s2hat);
+    S2HAT_LOCAL_parameters Local_param_s2hat = *(S2HAT_params->Local_param_s2hat);
+   return 0;
 }
 
 
@@ -140,12 +142,12 @@ int update_PCG_var(PCG_var *PCG_variable, Mat *A)
 {   // Update either local_map_pix from local_alm or the inverse, or do nothing, depending on the update flags
     // Reset the update flags to 0 afterwards
     if (PCG_variable->does_map_pixel_need_update == 1){
-        global_harmonic_2_map(PCG_variable->local_map_pix, PCG_variable->local_alm, A, *(PCG_variable->S2HAT_parameters->Global_param_s2hat), *(PCG_variable->S2HAT_parameters->Local_param_s2hat));
+        global_harmonic_2_map(PCG_variable->local_map_pix, PCG_variable->local_alm, A, PCG_variable->S2HAT_parameters);
         PCG_variable->does_map_pixel_need_update = 0;
     }
 
     if ((PCG_variable->does_local_alm_need_update == 1) && (PCG_variable->local_alm != NULL)){
-        global_map_2_harmonic(PCG_variable->local_map_pix, PCG_variable->local_alm, A, *(PCG_variable->S2HAT_parameters->Global_param_s2hat), *(PCG_variable->S2HAT_parameters->Local_param_s2hat));
+        global_map_2_harmonic(PCG_variable->local_map_pix, PCG_variable->local_alm, A, PCG_variable->S2HAT_parameters);
         PCG_variable->does_local_alm_need_update = 0;
     }
 }
