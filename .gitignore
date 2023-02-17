@@ -52,3 +52,8 @@ test/mapmaking/mappraiser/src/Makefile
 # VSCode stuff
 .vscode/*
 *.code-workspace
+
+# SCons stuff
+.sconsign*
+.sconf_temp/*
+config.log
