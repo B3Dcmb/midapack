@@ -1,0 +1,21 @@
+Import('env')
+
+############################################################
+#
+# build midapack
+#
+
+obj = []
+subdirs_mida = ["mapmat", "toeplitz"]
+for subdir in subdirs_mida:
+    o = SConscript("%s/SConscript" % subdir)
+    obj.append(o)
+
+libmidapack = env.SharedLibrary(target="midapack", source=obj)
+
+############################################################
+#
+# build mappraiser
+#
+
+# SConscript("mappraiser/SConscript")

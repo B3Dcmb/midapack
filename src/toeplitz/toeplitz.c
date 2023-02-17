@@ -256,7 +256,7 @@ int define_nfft(int n_thread, int flag_nfft, int fixed_nfft)
 */
 int tpltz_init(int n, int lambda, int *nfft, int *blocksize, fftw_complex **T_fft, double *T, fftw_complex **V_fft, double **V_rfft, fftw_plan *plan_f, fftw_plan *plan_b, Flag flag_stgy)
 {
-  int n_thread;
+  int n_thread=1;
   double t1, t2;
 
   //Set the VERBOSE global variable
@@ -276,9 +276,9 @@ int tpltz_init(int n, int lambda, int *nfft, int *blocksize, fftw_complex **T_ff
 
 //  if ((NB_OMPTHREADS <= n_thread) && (NB_OMPTHREADS != 0))
 //    omp_set_num_threads(NB_OMPTHREADS);
-
+#ifdef W_OPENMP
   n_thread = omp_get_max_threads();
-
+#endif
 
   //initialize nfft
   *nfft = define_nfft(n_thread, flag_stgy.flag_nfft, flag_stgy.fixed_nfft);   //*nfft=n_thread;
@@ -405,7 +405,9 @@ int circ_init_fftw(double *T, int fft_size, int lambda, fftw_complex **T_fft)
   plan_f_T   = fftw_plan_dft_r2c_1d( fft_size, T_circ, *T_fft, circ_fftw_flag );
 
   //make T circulant
+#ifdef W_OPENMP
 #pragma omp parallel for
+#endif
   for(i=0; i<fft_size+2;i++)
     T_circ[i] = 0.0;
 
@@ -469,7 +471,9 @@ int copy_block(int ninrow, int nincol, double *Vin, int noutrow, int noutcol, do
   }
 
   if(set_zero_flag) {
+#ifdef W_OPENMP
 #pragma omp parallel for //private(i) num_threads(NB_OMPTHREADS_CPBLOCK)
+#endif
     for(i=0;i<noutrow*noutcol;i++)  //could use maybe memset but how about threading
       Vout[i] = 0.0;
   }
@@ -522,7 +526,9 @@ int scmm_direct(int fft_size, int nfft, fftw_complex *C_fft, int ncol, double *V
 //double t1, t2;
 //  t1=MPI_Wtime();
 
+#ifdef W_OPENMP
 #pragma omp parallel for private(idx) //num_threads(nfft)
+#endif
   for(i=0;i<ncol*sizeT;i++) {
     idx = i%sizeT;
     V_fft[i][0] = C_fft[idx][0]*V_fft[i][0]-C_fft[idx][1]*V_fft[i][1];
@@ -597,7 +603,9 @@ int scmm_basic(double **V, int blocksize, int m, fftw_complex *C_fft, double **C
                             //equal the number of simultaneous FFTs
 
 
+#ifdef W_OPENMP
 #pragma omp parallel for //num_threads(NB_OMPTHREADS_BASIC)//schedule(dynamic,1)
+#endif
   for( i=0;i<blocksize*ncol;i++)
     V_rfft[i] = 0.0;  //could use maybe memset but how about threading
 
@@ -1054,7 +1062,9 @@ int mpi_stmm(double **V, int n, int m, int id0, int l, double *T, int lambda, Fl
   int offset = 0;
   if (left!=MPI_PROC_NULL){
     offset = lambda;
+#ifdef W_OPENMP
 #pragma omp parallel for
+#endif
     for(i=offset;i<l+offset;i++)
       V1[i] = (*V)[i-offset]; }
 
@@ -1088,7 +1098,9 @@ int mpi_stmm(double **V, int n, int m, int id0, int l, double *T, int lambda, Fl
       return print_error_message (2, __FILE__, __LINE__);
     *V = V1;     }
   else { // 1--0 or 1--1
+#ifdef W_OPENMP
 #pragma omp parallel for
+#endif
     for(i=offset;i<l+offset;i++)
       (*V)[i-offset] = V1[i];    }
 

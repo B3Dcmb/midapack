@@ -89,7 +89,9 @@ int stmm_simple_basic(double **V, int n, int m, double *T, int lambda, double **
 
  for (k=0;k<m;k++) {
 
-#pragma omp parallel for shared(k,lambda,n) private(i,j,j_first,j_last,Tid)  
+#ifdef W_OPENMP
+#pragma omp parallel for shared(k,lambda,n) private(i,j,j_first,j_last,Tid)
+#endif
   for(i=0+offset_edges;i<n-offset_edges;i++) {
 
     (*TV)[i+k*n]=0;
@@ -215,6 +217,3 @@ int stmm_simple_core(double **V, int n, int m, double *T, int blocksize, int lam
 
   return status;
 }
-
-
-

@@ -348,7 +348,9 @@ int mpi_stbmm(double **V, int64_t nrow, int m, int m_rowwise, Block *tpltzblocks
 
 				for (j = 0; j < m_rowwise; j++)
 				{
+#ifdef W_OPENMP
 #pragma omp parallel for // num_threads(NB_OMPTHREADS_STBMM)
+#endif
 					for (i = 0; i < offset0; i++)
 						V1block[i + j * vblock_size] = LambdaIn[i + j * offset0];
 				}
@@ -360,7 +362,9 @@ int mpi_stbmm(double **V, int64_t nrow, int m, int m_rowwise, Block *tpltzblocks
 
 				for (j = 0; j < m_rowwise; j++)
 				{
+#ifdef W_OPENMP
 #pragma omp parallel for // num_threads(NB_OMPTHREADS_STBMM)
+#endif
 					for (i = 0; i < currentsize_middlepart; i++)
 						V1block[offset0 + i + j * vblock_size] = (*V)[i + vShft + j * n_rowwise];
 				}
@@ -369,7 +373,9 @@ int mpi_stbmm(double **V, int64_t nrow, int m, int m_rowwise, Block *tpltzblocks
 				{
 					for (j = 0; j < m_rowwise; j++)
 					{
+#ifdef W_OPENMP
 #pragma omp parallel for // num_threads(NB_OMPTHREADS_STBMM)
+#endif						
 						for (i = 0; i < offsetn; i++)
 						{
 							V1block[vblock_size - offsetn + i + j * vblock_size] = LambdaIn[i + lambdaIn_offset + j * offsetn];
@@ -390,7 +396,9 @@ int mpi_stbmm(double **V, int64_t nrow, int m, int m_rowwise, Block *tpltzblocks
 				int currentsize = min(vblock_size - offset0, local_V_size_new);
 				for (j = 0; j < m_rowwise; j++)
 				{
+#ifdef W_OPENMP
 #pragma omp parallel for // num_threads(NB_OMPTHREADS_STBMM)
+#endif
 					for (i = 0; i < currentsize; i++)
 						(*V)[vShft + i + j * n_rowwise] = V1block[offset0 + i + j * vblock_size];
 				}
@@ -419,7 +427,9 @@ int mpi_stbmm(double **V, int64_t nrow, int m, int m_rowwise, Block *tpltzblocks
 
 				for (j = 0; j < m_rowwise; j++)
 				{
+#ifdef W_OPENMP
 #pragma omp parallel for // num_threads(NB_OMPTHREADS_STBMM)
+#endif
 					for (i = 0; i < vblock_size; i++)
 						V1block[i + j * vblock_size] = (*V)[i + idv2 + j * n_rowwise];
 					//    V1block[i] = (*V)[i+idv1-offset0+vShft];
@@ -437,7 +447,9 @@ int mpi_stbmm(double **V, int64_t nrow, int m, int m_rowwise, Block *tpltzblocks
 
 				for (j = 0; j < m_rowwise; j++)
 				{
+#ifdef W_OPENMP
 #pragma omp parallel for // num_threads(NB_OMPTHREADS_STBMM)
+#endif
 					for (i = 0; i < vblock_size; i++)
 					{
 						(*V)[i + idv2 + j * n_rowwise] = V1block[i + j * vblock_size];
@@ -466,7 +478,9 @@ int mpi_stbmm(double **V, int64_t nrow, int m, int m_rowwise, Block *tpltzblocks
 
 				for (j = 0; j < m_rowwise; j++)
 				{
+#ifdef W_OPENMP
 #pragma omp parallel for // num_threads(NB_OMPTHREADS_STBMM)
+#endif
 					for (i = 0; i < vblock_size - offsetn; i++)
 						V1block[i + j * vblock_size] = (*V)[i + idv2 + j * n_rowwise];
 					//    V1block[i] = (*V)[i+idv1-offset0+vShft];
@@ -474,7 +488,9 @@ int mpi_stbmm(double **V, int64_t nrow, int m, int m_rowwise, Block *tpltzblocks
 
 				for (j = 0; j < m_rowwise; j++)
 				{
+#ifdef W_OPENMP
 #pragma omp parallel for // num_threads(NB_OMPTHREADS_STBMM)
+#endif
 					for (i = 0; i < offsetn; i++)
 						V1block[vblock_size - offsetn + i + j * vblock_size] = LambdaIn[i + lambdaIn_offset + j * offsetn];
 				}
@@ -492,7 +508,9 @@ int mpi_stbmm(double **V, int64_t nrow, int m, int m_rowwise, Block *tpltzblocks
 
 				for (j = 0; j < m_rowwise; j++)
 				{
+#ifdef W_OPENMP
 #pragma omp parallel for // num_threads(NB_OMPTHREADS_STBMM)
+#endif
 					for (i = 0; i < vnrank_size - offsetn; i++)
 					{
 						(*V)[idv2 + i + j * n_rowwise] = V1block[i + j * vblock_size];

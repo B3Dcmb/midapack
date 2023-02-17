@@ -189,7 +189,9 @@ int reset_gaps(double **V, int id0, int local_V_size, int m, int nrow, int m_row
 	for (j = 0; j < m; j++)
 	{
 
+#ifdef W_OPENMP
 #pragma omp parallel for private(i) schedule(dynamic, 1)
+#endif
 		for (k = 0; k < ngap; k++)
 			for (i = 0; i < lgap[k]; i++)
 				if (id0gap[k] + i + j * nrow >= id0 && id0gap[k] + i + j * nrow < id0 + local_V_size)

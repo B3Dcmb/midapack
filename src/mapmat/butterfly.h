@@ -4,6 +4,7 @@
     @author Pierre Cargemel
     @date April 2012*/
 
+#include <mpi.h>
 
 int butterfly_init(int *indices, int count, int **R, int *nR, int **S, int *nS, int **com_indices, int *com_count, int steps, MPI_Comm comm);
 

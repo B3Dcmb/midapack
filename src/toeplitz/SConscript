@@ -1,0 +1,17 @@
+Import('toeplitz_env')
+
+files = [
+    'toeplitz.c',
+    'toeplitz_seq.c',
+    'toeplitz_block.c',
+    'toeplitz_gappy.c',
+    'toeplitz_nofft.c',
+    'toeplitz_rshp.c',
+    'toeplitz_params.c',
+    'toeplitz_utils.c',
+    'toeplitz_wizard.c',
+]
+
+obj = toeplitz_env.SharedObject(source=files)
+
+Return('obj')

@@ -4,6 +4,8 @@
     @author Pierre Cargemel
     @date April 2012*/
 
+#include <mpi.h>
+
 int ring_init(int *indices, int count, int **R, int *nR, int **S, int *nS, int steps, MPI_Comm comm);
 
 int ring_reduce(int **R, int *nR, int nRmax, int **S, int *nS, int nSmax, double *val, double *res_val, int steps, MPI_Comm comm);
