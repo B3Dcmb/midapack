@@ -2,20 +2,34 @@
 ##############   t e s t s   ############
 
 all:
-	mkdir -p $(MAPPRAISER_ROOT) $(MAPPRAISER_OBJ) $(MAPPRAISER_LIB) $(MAPPRAISER_INC)
-	cp -r $(DIR)/test/mapmaking/mappraiser/python $(MAPPRAISER_ROOT)
-	make map
-	make library
+	make mappraiser
 
-map: ./src/
-	make -C ./src/
+mappraiser:
+	@echo "start compiling MAPPRAISER ........"
+	cp *.h $(MAPPRAISER_ROOT)/include
+	make $(MAPPRAISER_OBJ)/createToeplitz.o \
+	$(MAPPRAISER_OBJ)/precond.o \
+	$(MAPPRAISER_OBJ)/pcg_true.o \
+	$(MAPPRAISER_OBJ)/iofiles.o \
+	$(MAPPRAISER_OBJ)/mappraiser.o \
 
-library:
-	$(MPICC) $(LDFLAGS) $(MAPPRAISER_OBJ)/createToeplitz.o $(MAPPRAISER_OBJ)/precond.o $(MAPPRAISER_OBJ)/pcg_true.o $(MAPPRAISER_OBJ)/iofiles.o $(MAPPRAISER_OBJ)/mappraiser.o $(LIB) $(CFITSIO_LIB) -o $(MAPPRAISER_LIB)/libmappraiser.so
+$(MAPPRAISER_OBJ)/createToeplitz.o: createToeplitz.c
+	$(CC) -c $< $(INC) $(LIB) -o $@
+
+$(MAPPRAISER_OBJ)/precond.o: precond.c
+	$(CC) -c $< $(INC) $(LIB) -o $@
+
+$(MAPPRAISER_OBJ)/pcg_true.o: pcg_true.c
+	$(CC) -c $< $(INC) $(LIB) -o $@
+
+$(MAPPRAISER_OBJ)/iofiles.o: iofiles.c
+	$(CC) -c $< $(INC) $(LIB) $(CFITSIO_INC) $(CFITSIO_LIB) -o $@
+
+$(MAPPRAISER_OBJ)/mappraiser.o: mappraiser.c
+	$(CC) -c $< $(INC) $(LIB) $(CFITSIO_INC) $(CFITSIO_LIB) -o $@
+
 
 ##############   u t i l s   #############
 
 clean:
-	make clean -C ./src/
-	rm -f $(MAPPRAISER_LIB)/*midapack.so
-	rm -r $(MAPPRAISER_ROOT)
+	rm -f $(MAPPRAISER_OBJ)/*.o ;

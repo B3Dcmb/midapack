@@ -2,20 +2,40 @@
 ##############   t e s t s   ############
 
 all:
-	mkdir -p $(MAPPRAISER_ROOT) $(MAPPRAISER_OBJ) $(MAPPRAISER_LIB) $(MAPPRAISER_INC)
-	cp -r $(DIR)/test/mapmaking/mappraiser/python $(MAPPRAISER_ROOT)
-	make map
-	make library
+	make mappraiser
 
-map: ./src/
-	make -C ./src/
+mappraiser:
+	@echo "start compiling MAPPRAISER ........"
+	cp *.h $(MAPPRAISER_ROOT)/include
+	make $(MAPPRAISER_OBJ)/createToeplitz.o \
+	$(MAPPRAISER_OBJ)/precond.o \
+	$(MAPPRAISER_OBJ)/pcg_true.o \
+	$(MAPPRAISER_OBJ)/ecg.o \
+	$(MAPPRAISER_OBJ)/iofiles.o \
+	$(MAPPRAISER_OBJ)/mappraiser.o \
 
-library:
-	$(MPICC) $(LDFLAGS) $(MAPPRAISER_OBJ)/createToeplitz.o $(MAPPRAISER_OBJ)/precond.o $(MAPPRAISER_OBJ)/pcg_true.o $(MAPPRAISER_OBJ)/ecg.o $(MAPPRAISER_OBJ)/iofiles.o $(MAPPRAISER_OBJ)/mappraiser.o $(LIB) $(CFITSIO_LIB) $(LIBpreAlps) -o $(MAPPRAISER_LIB)/libmappraiser.so
+$(MAPPRAISER_OBJ)/createToeplitz.o: createToeplitz.c
+	$(CC) -c $< $(INC) $(LIB) -o $@
+
+$(MAPPRAISER_OBJ)/precond.o: precond.c
+	$(CC) -c $< $(INC) $(LIB) -o $@
+
+$(MAPPRAISER_OBJ)/pcg_true.o: pcg_true.c
+	$(CC) -c $< $(INC) $(LIB) -o $@
+
+$(MAPPRAISER_OBJ)/ecg.o: ecg.c
+	$(CC) -c $< $(INC) $(LIB) $(INCpreAlps) $(LIBpreAlps) -o $@
+
+$(MAPPRAISER_OBJ)/iofiles.o: iofiles.c
+	$(CC) -c $< $(INC) $(LIB) $(CFITSIO_INC) $(CFITSIO_LIB) -o $@
+
+$(MAPPRAISER_OBJ)/mappraiser.o: mappraiser.c
+	$(CC) -c $< $(INC) $(LIB) $(CFITSIO_INC) $(CFITSIO_LIB) -o $@
+
+# s4cmb_pipeline: createToeplitz.o precond.o s4cmb_pipeline.c iofiles.o pcg_true.o
+# 	$(CC) s4cmb_pipeline.c createToeplitz.o precond.o pcg_true.o iofiles.o $(INC) $(LIB) $(FFTW_LIB) -lm -o s4cmb_pcg -Wl,@/global/homes/t/tcimic/midapack/test/mapmaking/allinea-profiler.ld
 
 ##############   u t i l s   #############
 
 clean:
-	make clean -C ./src/
-	rm -f $(MAPPRAISER_LIB)/*midapack.so
-	rm -r $(MAPPRAISER_ROOT)
+	rm -f $(MAPPRAISER_OBJ)/*.o ;
