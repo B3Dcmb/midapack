@@ -17,20 +17,32 @@ set(
 )
 
 # Make an automatic library - will be static or dynamic based on user setting
-add_library(mapmat alm.c als.c bitop.c butterfly.c cindex.c csort.c mapmat.c mapmatc.c ring.c ${HEADER_LIST})
+add_library(
+    mapmat
+    alm.c
+    als.c
+    bitop.c
+    butterfly.c
+    cindex.c
+    csort.c
+    mapmat.c
+    mapmatc.c
+    ring.c
+    ${HEADER_LIST}
+)
 
 # We need this directory, and users of our library will need it too
 target_include_directories(mapmat PUBLIC ../../include/mapmat)
 
 # This depends on (header only) MPI and OpenMP
-target_link_libraries(mapmat PRIVATE MPI::MPI_C OpenMP::OpenMP_C)
+target_link_libraries(mapmat PRIVATE MPI::MPI_C OpenMP::OpenMP_C mida_compile_options)
 
 # # All users of this library will need at least C++11
 # target_compile_features(mapmat PUBLIC cxx_std_11)
 
 # IDEs should put the headers in a nice place
 source_group(
-    TREE "${PROJECT_SOURCE_DIR}/include"
-    PREFIX "Header Files"
+    TREE "${PROJECT_SOURCE_DIR}/include/mapmat"
+    PREFIX "mapmat Header Files"
     FILES ${HEADER_LIST}
 )
