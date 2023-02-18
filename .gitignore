@@ -54,10 +54,5 @@ test/mapmaking/mappraiser/src/Makefile
 .vscode/*
 *.code-workspace
 
-# SCons stuff
-.sconsign*
-.sconf_temp/*
-config.log
-
 # build products
 build/*
