@@ -9,6 +9,14 @@ project(
     LANGUAGES C
 )
 
+add_library(
+    midapack SHARED $<TARGET_OBJECTS:mapmat>
+                    $<TARGET_OBJECTS:toeplitz>
+)
+
+# in order to see the symbols from the static libraries
+# set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--export-all-symbols")
+
 # ----------------------------------------------------------------------------------------#
 # set language standards
 # ----------------------------------------------------------------------------------------#
@@ -118,31 +126,3 @@ add_subdirectory(src/mapmat)
 add_subdirectory(src/toeplitz)
 # add_subdirectory(src/mappraiser)
 # add_subdirectory(src/templates)
-
-# ###########################################################
-
-# # add_subdirectory( src/toeplitz )
-# # add_subdirectory( src/mappraiser )
-# list(APPEND EXTRA_LIBS mapmat)
-
-# # list( APPEND EXTRA_LIBS toeplitz )
-# # list( APPEND EXTRA_LIBS mappraiser )
-
-# # add midapack lib
-# add_library(midapack SHARED)
-
-# # add binary tree to the search path for include files
-# target_include_directories(midapack PUBLIC ${PROJECT_BINARY_DIR})
-# target_link_libraries(midapack PUBLIC ${EXTRA_LIBS})
-
-# ###########################################################
-
-# # The executable code is here
-# add_subdirectory(apps)
-
-# # Testing only available if this is the main app
-# # Emergency override MODERN_CMAKE_BUILD_TESTING provided as well
-# if((CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME OR MODERN_CMAKE_BUILD_TESTING)
-# AND BUILD_TESTING)
-# add_subdirectory(tests)
-# endif()

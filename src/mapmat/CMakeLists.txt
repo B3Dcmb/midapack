@@ -16,18 +16,18 @@ set(
     "${midapack_SOURCE_DIR}/include/mapmat/ring.h"
 )
 
-# Make an automatic library - will be static or dynamic based on user setting
+# Make an object library that will be used in the final libmidapack
 add_library(
     mapmat
-    alm.c
-    als.c
-    bitop.c
-    butterfly.c
-    cindex.c
-    csort.c
-    mapmat.c
-    mapmatc.c
-    ring.c
+    OBJECT alm.c
+           als.c
+           bitop.c
+           butterfly.c
+           cindex.c
+           csort.c
+           mapmat.c
+           mapmatc.c
+           ring.c
     ${HEADER_LIST}
 )
 
@@ -36,9 +36,6 @@ target_include_directories(mapmat PUBLIC ../../include/mapmat)
 
 # This depends on (header only) MPI and OpenMP
 target_link_libraries(mapmat PRIVATE MPI::MPI_C OpenMP::OpenMP_C mida_compile_options)
-
-# # All users of this library will need at least C++11
-# target_compile_features(mapmat PUBLIC cxx_std_11)
 
 # IDEs should put the headers in a nice place
 source_group(
