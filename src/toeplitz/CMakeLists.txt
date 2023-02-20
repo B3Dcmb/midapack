@@ -1,34 +1,39 @@
 set(
     HEADER_LIST
-    "${midapack_SOURCE_DIR}/include/toeplitz/toeplitz.h"
+    "${midapack_SOURCE_DIR}/include/midapack/toeplitz/toeplitz.h"
 )
 
-add_library(
+set(
+    SRC_LIST
+    "toeplitz.c"
+    "toeplitz_seq.c"
+    "toeplitz_block.c"
+    "toeplitz_gappy.c"
+    "toeplitz_nofft.c"
+    "toeplitz_rshp.c"
+    "toeplitz_params.c"
+    "toeplitz_utils.c"
+    "toeplitz_wizard.c"
+)
+
+add_library(toeplitz OBJECT ${SRC_LIST} ${HEADER_LIST})
+
+target_include_directories(toeplitz PRIVATE ${CMAKE_SOURCE_DIR}/include/midapack/toeplitz)
+
+# TODO: link to FFTW3 (not necessary at NERSC thanks to Cray compiler wrappers)
+target_link_libraries(
     toeplitz
-    OBJECT toeplitz.c
-           toeplitz_seq.c
-           toeplitz_block.c
-           toeplitz_gappy.c
-           toeplitz_nofft.c
-           toeplitz_rshp.c
-           toeplitz_params.c
-           toeplitz_utils.c
-           toeplitz_wizard.c
-    ${HEADER_LIST}
+    PRIVATE mida_compile_options
+            OpenMP::OpenMP_C
+    PUBLIC MPI::MPI_C
 )
-
-# We need this directory, and users of our library will need it too
-target_include_directories(toeplitz PUBLIC ../../include/toeplitz)
-
-# This depends on (header only) MPI and OpenMP
-target_link_libraries(toeplitz PRIVATE MPI::MPI_C OpenMP::OpenMP_C mida_compile_options)
 
 # All users of this library will need C99
 target_compile_features(toeplitz PUBLIC c_std_99)
 
 # IDEs should put the headers in a nice place
 source_group(
-    TREE "${PROJECT_SOURCE_DIR}/include/toeplitz"
+    TREE "${PROJECT_SOURCE_DIR}/include/midapack/toeplitz"
     PREFIX "toeplitz Header Files"
     FILES ${HEADER_LIST}
 )

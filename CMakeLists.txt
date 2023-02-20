@@ -17,6 +17,11 @@ add_library(
 # in order to see the symbols from the static libraries
 # set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--export-all-symbols")
 
+# TODO: add possibility to build static library instead?
+# option(BUILD_SHARED_LIBS "Build using shared libraries" ON)
+
+option(BUILD_MAPPRAISER "Build mappraiser mapmaking library" ON)
+
 # ----------------------------------------------------------------------------------------#
 # set language standards
 # ----------------------------------------------------------------------------------------#
@@ -34,6 +39,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE True)
 # ----------------------------------------------------------------------------------------#
 
 add_library(mida_compile_options INTERFACE)
+add_library(mapp_compile_options INTERFACE)
 
 find_package(MPI REQUIRED)
 find_package(OpenMP REQUIRED)
@@ -41,7 +47,7 @@ find_package(OpenMP REQUIRED)
 include(CheckCCompilerFlag)
 
 # ----------------------------------------------------------------------------------------#
-# macro that checks if flag if supported for C, if so add to mida_compile_options
+# macro that checks if flag if supported for C, if so add to mida/mapp_compile_options
 # ----------------------------------------------------------------------------------------#
 macro(ADD_C_FLAG_IF_AVAIL FLAG)
     if(NOT "${FLAG}" STREQUAL "")
@@ -56,6 +62,8 @@ macro(ADD_C_FLAG_IF_AVAIL FLAG)
 
         if(${FLAG_NAME})
             target_compile_options(mida_compile_options INTERFACE
+                $<$<COMPILE_LANGUAGE:C>:${FLAG}>)
+            target_compile_options(mapp_compile_options INTERFACE
                 $<$<COMPILE_LANGUAGE:C>:${FLAG}>)
         endif()
     endif()
@@ -108,11 +116,21 @@ if(USE_AVX512)
 endif()
 
 option(USE_MPI "Enable MPI features" ON)
-option(USE_OPENMP "Enable OpenMP multithreading" ON)
 
 if(USE_MPI)
     target_compile_definitions(mida_compile_options INTERFACE W_MPI)
+    target_compile_definitions(mapp_compile_options INTERFACE W_MPI)
 endif()
+
+# TODO: link MKL in the case where ECG is used
+option(USE_ECG "Build mappraiser with ECG solver" OFF)
+
+if(USE_ECG)
+    target_compile_definitions(mapp_compile_options INTERFACE W_ECG)
+endif()
+
+# FIXME: OpenMP -> undefined references / implicit definitions
+option(USE_OPENMP "Enable OpenMP multithreading" OFF)
 
 if(USE_OPENMP)
     target_compile_definitions(mida_compile_options INTERFACE W_OPENMP)
@@ -124,5 +142,38 @@ endif()
 
 add_subdirectory(src/mapmat)
 add_subdirectory(src/toeplitz)
-# add_subdirectory(src/mappraiser)
+if (BUILD_MAPPRAISER)
+    add_subdirectory(src/mappraiser)
+endif()
 # add_subdirectory(src/templates)
+
+# libmidapack's dependencies include those of its components
+target_link_libraries(midapack PUBLIC mapmat toeplitz)
+
+# ----------------------------------------------------------------------------------------#
+# install midapack and mappraiser libraries in prefix
+# ----------------------------------------------------------------------------------------#
+
+# what targets are we installing
+set(installable_libs midapack)
+if(TARGET mappraiser)
+    list(APPEND installable_libs mappraiser)
+endif()
+
+include(GNUInstallDirs)
+
+# install the libraries
+install(
+    TARGETS ${installable_libs}
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+# install the headers
+install(
+    DIRECTORY ${CMAKE_SOURCE_DIR}/include/
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+# install the Python files
+install(
+    DIRECTORY ${CMAKE_SOURCE_DIR}/python/
+    DESTINATION python
+)
