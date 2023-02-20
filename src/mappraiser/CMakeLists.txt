@@ -75,7 +75,7 @@ if(USE_MKL)
 else()
     # do not use MKL, so we look for another LAPACK implementation
     find_package(LAPACK REQUIRED)
-    target_link_libraries(mappraiser_base PUBLIC lapack)
+    target_link_libraries(mappraiser_base INTERFACE lapack)
 endif()
 
 add_library(mappraiser SHARED ${SRC_LIST} ${HEADER_LIST})
