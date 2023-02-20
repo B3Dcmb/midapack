@@ -31,24 +31,24 @@
 #ifndef MIDAPACK_H
 #define MIDAPACK_H
 
-#include <fftw3.h>
-#include <mpi.h>
+// #include <fftw3.h>
+// #include <mpi.h>
 
 //=========================================================================
 //=======================  Toeplitz algebra module ========================
 //=========================================================================
-// #include "../src/toeplitz/toeplitz.h"
-#include "toeplitz.h"
+#include "toeplitz/toeplitz.h"
+// #include "toeplitz.h"
 
 //=========================================================================
 //============================  Mapmat module =============================
 //=========================================================================
 
 //============================ mapmat =============================
-// #include "../src/mapmat/mapmat.h"
-#include "mapmat.h"
+#include "mapmat/mapmat.h"
+// #include "mapmat.h"
 //============================ mapmat coarse ======================
-// #include "../src/mapmat/mapmatc.h"
-#include "mapmatc.h"
+#include "mapmat/mapmatc.h"
+// #include "mapmatc.h"
 
 #endif /* MIDAPACK_H */

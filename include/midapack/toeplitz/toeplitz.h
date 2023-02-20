@@ -62,9 +62,10 @@
 #include <mpi.h>
 #endif
 
-#ifdef W_OPENMP
-#include <omp.h>
-#endif
+// OpenMP is a private dependency
+// #ifdef W_OPENMP
+// #include <omp.h>
+// #endif
 
 #include <fftw3.h>
 #include <stdlib.h>
