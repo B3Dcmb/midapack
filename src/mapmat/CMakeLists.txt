@@ -34,7 +34,7 @@ target_include_directories(mapmat PRIVATE ${CMAKE_SOURCE_DIR}/include/midapack/m
 
 target_link_libraries(
     mapmat
-    PRIVATE mida_compile_options
+    PRIVATE midapack_base
     PUBLIC MPI::MPI_C
 )
 

@@ -23,7 +23,7 @@ target_include_directories(toeplitz PRIVATE ${CMAKE_SOURCE_DIR}/include/midapack
 # TODO: link to FFTW3 (not necessary at NERSC thanks to Cray compiler wrappers)
 target_link_libraries(
     toeplitz
-    PRIVATE mida_compile_options
+    PRIVATE midapack_base
             OpenMP::OpenMP_C
     PUBLIC MPI::MPI_C
 )
