@@ -14,9 +14,6 @@ add_library(
                     $<TARGET_OBJECTS:toeplitz>
 )
 
-# in order to see the symbols from the static libraries
-# set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--export-all-symbols")
-
 # TODO: add possibility to build static library instead?
 # option(BUILD_SHARED_LIBS "Build using shared libraries" ON)
 
@@ -27,9 +24,7 @@ option(BUILD_MAPPRAISER "Build mappraiser mapmaking library" ON)
 # ----------------------------------------------------------------------------------------#
 
 set(CMAKE_C_STANDARD    99 CACHE STRING "C language standard")
-
 option(CMAKE_C_STANDARD_REQUIRED    "Require the C language standard to set"    ON)
-
 option(CMAKE_C_EXTENSIONS    "Enable/disable extensions, e.g. -std=gnu11 vs. -std=c11"    ON)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE True)

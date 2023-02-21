@@ -59,7 +59,7 @@ endif()
 
 if(USE_MKL)
     if(NOT DEFINED ENV{MKLROOT})
-        message(FATAL_ERROR "The environment variable MKLROOT must be set in order to use mkl routines.")
+        message(FATAL_ERROR "The environment variable MKLROOT is not set. To build mappraiser using MKL, you must first establish an Intel MKL environment.")
     else()
         # path to MKL library is provided
         target_compile_options(
@@ -75,7 +75,11 @@ if(USE_MKL)
 else()
     # do not use MKL, so we look for another LAPACK implementation
     find_package(LAPACK REQUIRED)
-    target_link_libraries(mappraiser_base INTERFACE lapack)
+    if(LAPACK_FOUND)
+        target_link_libraries(mappraiser_base INTERFACE LAPACK::LAPACK)
+    else()
+        message(FATAL_ERROR "Could not find a LAPACK implementation.")
+    endif()
 endif()
 
 add_library(mappraiser SHARED ${SRC_LIST} ${HEADER_LIST})

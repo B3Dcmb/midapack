@@ -32,7 +32,7 @@
 int getlocalW(const Mat *A, Tpltz *Nm1, double *vpixBlock, int *lhits)
 {
     int i, j, k, l;                                 // some indexes
-    int m = Nm1->local_V_size;                       // number of local time samples
+    int m = Nm1->local_V_size;                      // number of local time samples
     int nnz = A->nnz;                               // number of non-zero entries
     int n_valid = A->lcount - (A->trash_pix) * nnz; // size of map-domain objects
 
@@ -518,8 +518,8 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, 
     int info, nb, lda;
     double anorm, rcond;
 
-    int iw[3];
-    double w[18];
+    int ipiv[3];
+    // double w[18];
     double x[9];
     nb = 3;
     lda = 3;
@@ -620,21 +620,26 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, 
         // Compute the reciprocal of the condition number of the block
 
         /* Computes the norm of x */
-        anorm = dlange_("1", &nb, &nb, x, &lda, w);
+        // anorm = dlange_("1", &nb, &nb, x, &lda, w);
+        anorm = LAPACKE_dlange(LAPACK_ROW_MAJOR, "1", nb, nb, x, lda);
 
         /* Modifies x in place with a LU decomposition */
-        dgetrf_(&nb, &nb, x, &lda, iw, &info);
-        // if (info != 0) fprintf(stderr, "failure with error %d\n", info);
+        // dgetrf_(&nb, &nb, x, &lda, iw, &info);
+        info = LAPACKE_dgetrf(LAPACK_ROW_MAJOR, nb, nb, x, lda, ipiv);
+        if (info != 0)
+            fprintf(stderr, "LAPACKE_dgetrf failure with error %d\n", info);
 
         /* Computes the reciprocal norm */
-        dgecon_("1", &nb, x, &lda, &anorm, &rcond, w, iw, &info);
-        // if (info != 0) fprintf(stderr, "failure with error %d\n", info);
+        // dgecon_("1", &nb, x, &lda, &anorm, &rcond, w, iw, &info);
+        info = LAPACKE_dgecon(LAPACK_ROW_MAJOR, "1", nb, x, anorm, lda, &rcond);
+        if (info != 0)
+            fprintf(stderr, "LAPACKE_dgecon failure with error %d\n", info);
 
         cond[(int)i / 9] = rcond;
 
         // Compute det
         // TODO: This should take into account the fact that the blocks are symmetric
-        //  and generalize beyond the 3x3 case
+        // and generalize beyond the 3x3 case
         det = block[0][0] * (block[1][1] * block[2][2] - block[2][1] * block[1][2]) -
               block[0][1] * (block[1][0] * block[2][2] - block[1][2] * block[2][0]) +
               block[0][2] * (block[1][0] * block[2][1] - block[1][1] * block[2][0]);
@@ -671,7 +676,7 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, 
 
             // Search for the corresponding gap samples
             j = A->id_last_pix[uncut_pixel_index]; // last index of time sample pointing to degenerate pixel
-            
+
             // Point the last gap sample to trash pixel
             for (k = 0; k < nnz; k++)
             {
@@ -866,9 +871,9 @@ void inverse_svd(int m, int n, int lda, double *a)
         b[i * n + i] = 1;
 
     info = LAPACKE_dgelss(LAPACK_ROW_MAJOR, m, n, n, a, n, b, n, s, eps, &rank);
-
     if (info != 0)
-        printf("LAPACK_dgelss does not work.\n");
+        fprintf(stderr, "LAPACKE_dgelss failure with error %d.\n", info);
+
     memcpy(a, b, (m * n) * sizeof(double));
     free(b);
 }
