@@ -51,7 +51,20 @@ int init_butterfly_communication(Butterfly_struct *Butterfly_struc, Mat *A, int 
     butterfly_init(A->lindices + (A->nnz) * (A->trash_pix), A->lcount - (A->nnz) * (A->trash_pix), Butterfly_struc->R, Butterfly_struc->nR, Butterfly_struc->S, Butterfly_struc->nS, &(A->com_indices), &(A->com_count), Butterfly_struc->steps, comm);
     butterfly_init(int *indices, int count, int **R, int *nR, int **S, int *nS, int **com_indices, int *com_count, int steps, MPI_Comm comm)
 
-    butterfly_reshuffle_init(indices_in, count_in, indices_out, count_out, Butterfly_struc->R, Butterfly_struc->nR, Butterfly_struc->S, Butterfly_struc->nS, int **com_indices, int *com_count, Butterfly_struc->steps, comm);
+    butterfly_reshuffle_init(indices_in, count_in, indices_out, count_out, Butterfly_struc->R, Butterfly_struc->nR, Butterfly_struc->S, Butterfly_struc->nS, &(Butterfly_struc->com_indices), &(Butterfly_struc->com_count), Butterfly_struc->steps, comm);
+
+
+
+
+
+    m2m(lvalues, A->lindices + (A->nnz) * (A->trash_pix), nbr_values, com_val, A->com_indices, A->com_count);
+    butterfly_reduce(A->R, A->nR, nRmax, A->S, A->nS, nSmax, com_val, A->steps, A->comm);
+    m2m(com_val, A->com_indices, A->com_count, vpixDiag, A->lindices + (A->nnz) * (A->trash_pix), nbr_values);
+
+    modified_butterfly_reduce(int **R, int *nR, int nRmax, int **S, int *nS, int nSmax, double *val, int steps, MPI_Comm comm)
+    
+    butterfly_reshuffle(int **R, int *nR, int nRmax, int **S, int *nS, int nSmax, double *val, int steps, MPI_Comm comm)
+    butterfly_reshuffle(Butterfly_struc->R, Butterfly_struc->nR, nRmax, Butterfly_struc->S, Butterfly_struc->nS, nSmax, double *val, Butterfly_struc->steps, comm)
 
 
 
