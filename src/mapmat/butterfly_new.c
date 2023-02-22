@@ -11,15 +11,11 @@
 
 #include "als.h"
 #include "alm.h"
+#include "butterfly.h"
 
-
-int generalized_butterfly_reduce(int **R, int *nR, int nRmax, int **S, int *nS, int nSmax, double *val, int steps, MPI_Comm comm);
-int butterfly_reshuffle(int **R, int *nR, int nRmax, int **S, int *nS, int nSmax, double *val, int steps, MPI_Comm comm);
-int butterfly_reduce_init(int *indices, int count, int **R, int *nR, int **S, int *nS, int **com_indices, int *com_count, int steps, MPI_Comm comm);
-int butterfly_reshuffle_init(int *indices_in, int count_in, int *indices_out, int count_out, int **R, int *nR, int **S, int *nS, int **com_indices, int *com_count, int steps, MPI_Comm comm);
-int generalized_set_or(int *A1, int n1, int *A2, int n2, int *A1orA2);
+int modified_set_or(int *A1, int n1, int *A2, int n2, int *A1orA2);
 // int set_and(int *A1, int n1, int *A2, int n2, int *A1andA2);
-int generalized_card_or(int *A1, int n1, int *A2, int n2);
+int modified_card_or(int *A1, int n1, int *A2, int n2);
 // void m2s(double *mapval, double *submapval, int *subset, int count);
 // void subset2map(int *A, int nA, int *subA, int nsubA);
 // void s2m_sum(double *mapval, double *submapval, int *subset, int count);
@@ -57,9 +53,9 @@ int butterfly_reduce_init(int *indices, int count, int **R, int *nR, int **S, in
       memcpy( S[k], indices, nS[k]*sizeof(int));        /* copy *my* pixel indices to the send (really receive ?!) buffer NEEDS TO BE MODIFIED with final pix numbers ?! */
     }
     else{      						/* S^k := S^{k-1} \cup R^{k-1} */
-      nS[k] = generalized_card_or(S[k-1], nS[k-1], I[steps-k], nI[steps-k]);
+      nS[k] = modified_card_or(S[k-1], nS[k-1], I[steps-k], nI[steps-k]);
       S[k] = (int *) malloc(nS[k] * sizeof(int));
-      generalized_set_or(S[k-1], nS[k-1], I[steps-k], nI[steps-k], S[k]);
+      modified_set_or(S[k-1], nS[k-1], I[steps-k], nI[steps-k], S[k]);
     }
 
     MPI_Irecv(&nI[steps-k-1], 1, MPI_INT, rk, tag, comm, &r_request);	/* receive number of indices */
@@ -94,9 +90,9 @@ int butterfly_reduce_init(int *indices, int count, int **R, int *nR, int **S, in
       memcpy( J[k], indices, nJ[k]*sizeof(int));
     }
     else{
-      nJ[k] = generalized_card_or(J[k-1], nJ[k-1], R[k-1], nR[k-1]);
+      nJ[k] = modified_card_or(J[k-1], nJ[k-1], R[k-1], nR[k-1]);
       J[k] = (int *) malloc(nJ[k] * sizeof(int));
-      generalized_set_or(J[k-1], nJ[k-1], R[k-1], nR[k-1], J[k]);  /* J^k=R^k-1 \cup J^k-1 */
+      modified_set_or(J[k-1], nJ[k-1], R[k-1], nR[k-1], J[k]);  /* J^k=R^k-1 \cup J^k-1 */
       free(R[k-1]);
     }
     if(k!=steps-1){
@@ -131,7 +127,7 @@ int butterfly_reduce_init(int *indices, int count, int **R, int *nR, int **S, in
     free(I[k]);
     free(J[k]);
 
-    MPI_Irecv(&nR[k],1, MPI_INT, rk, tag, comm, &r_request);	/* receive size */
+    MPI_Irecv(&nR[k], 1, MPI_INT, rk, tag, comm, &r_request);	/* receive size */
     MPI_Isend(&nS[k], 1, MPI_INT, sk, tag, comm, &s_request);	/* send size */
     MPI_Wait(&r_request, MPI_STATUS_IGNORE);
     MPI_Wait(&s_request, MPI_STATUS_IGNORE);
@@ -157,9 +153,9 @@ int butterfly_reduce_init(int *indices, int count, int **R, int *nR, int **S, in
   nU = (int *) malloc(steps*sizeof(int));
 
   for(k=0; k<steps; k++){
-    nUSR[k] = generalized_card_or(S[k], nS[k], R[k], nR[k]);
+    nUSR[k] = modified_card_or(S[k], nS[k], R[k], nR[k]);
     USR[k] = (int *) malloc(nUSR[k]*sizeof(int));
-    generalized_set_or(S[k], nS[k], R[k], nR[k], USR[k]);
+    modified_set_or(S[k], nS[k], R[k], nR[k], USR[k]);
   }
   for(k=0; k<steps; k++){
     if(k==0){
@@ -168,9 +164,9 @@ int butterfly_reduce_init(int *indices, int count, int **R, int *nR, int **S, in
       memcpy( U[k], USR[k], nU[k]*sizeof(int));
     }
     else{
-      nU[k] = generalized_card_or(U[k-1], nU[k-1], USR[k], nUSR[k]);
+      nU[k] = modified_card_or(U[k-1], nU[k-1], USR[k], nUSR[k]);
       U[k] = (int *) malloc(nU[k]*sizeof(int *));
-      generalized_set_or(U[k-1], nU[k-1], USR[k], nUSR[k], U[k]);
+      modified_set_or(U[k-1], nU[k-1], USR[k], nUSR[k], U[k]);
     }
   }
   *com_count=nU[steps-1];
@@ -224,10 +220,10 @@ int butterfly_reshuffle_init(int *indices_in, int count_in, int *indices_out, in
       }
     }
     else{      						/* S^k := S^{k-1} \cup R^{k-1} */
-      nS[k] = generalized_card_or(S[k-1], nS[k-1], I[steps-k], nI[steps-k]);
+      nS[k] = modified_card_or(S[k-1], nS[k-1], I[steps-k], nI[steps-k]);
       if( nS[k]) {
-	S[k] = (int *) malloc(nS[k] * sizeof(int));
-        generalized_set_or(S[k-1], nS[k-1], I[steps-k], nI[steps-k], S[k]);
+	    S[k] = (int *) malloc(nS[k] * sizeof(int));
+        modified_set_or(S[k-1], nS[k-1], I[steps-k], nI[steps-k], S[k]);
       }
     }
 
@@ -265,10 +261,10 @@ int butterfly_reshuffle_init(int *indices_in, int count_in, int *indices_out, in
       }
     }
     else{
-      nJ[k] = generalized_card_or(J[k-1], nJ[k-1], R[k-1], nR[k-1]);
+      nJ[k] = modified_card_or(J[k-1], nJ[k-1], R[k-1], nR[k-1]);
       if(nJ[k]) {
          J[k] = (int *) malloc(nJ[k] * sizeof(int));
-         generalized_set_or(J[k-1], nJ[k-1], R[k-1], nR[k-1], J[k]);  /* J^k=R^k-1 \cup J^k-1 */
+         modified_set_or(J[k-1], nJ[k-1], R[k-1], nR[k-1], J[k]);  /* J^k=R^k-1 \cup J^k-1 */
       }
       free(R[k-1]);
     }
@@ -306,7 +302,7 @@ int butterfly_reshuffle_init(int *indices_in, int count_in, int *indices_out, in
     if(nI[k]) free(I[k]);
     if(nJ[k]) free(J[k]);
 
-    MPI_Irecv(&nR[k],1, MPI_INT, rk, tag, comm, &r_request);	/* receive size */
+    MPI_Irecv(&nR[k], 1, MPI_INT, rk, tag, comm, &r_request);	/* receive size */
     MPI_Isend(&nS[k], 1, MPI_INT, sk, tag, comm, &s_request);	/* send size */
     MPI_Wait(&r_request, MPI_STATUS_IGNORE);
     MPI_Wait(&s_request, MPI_STATUS_IGNORE);
@@ -332,25 +328,25 @@ int butterfly_reshuffle_init(int *indices_in, int count_in, int *indices_out, in
   nU = (int *) malloc(steps*sizeof(int));
 
   for(k=0; k<steps; k++){
-    nUSR[k] = generalized_card_or(S[k], nS[k], R[k], nR[k]);
+    nUSR[k] = modified_card_or(S[k], nS[k], R[k], nR[k]);
     if( nUSR[k]) {
        USR[k] = (int *) malloc(nUSR[k]*sizeof(int));
-       generalized_set_or(S[k], nS[k], R[k], nR[k], USR[k]);
+       modified_set_or(S[k], nS[k], R[k], nR[k], USR[k]);
     }
   }
   for(k=0; k<steps; k++){
     if(k==0){
       nU[k]=nUSR[k];
       if( nU[k]) {
-	      U[k] = (int *) malloc(nU[k] * sizeof(int));
+	    U[k] = (int *) malloc(nU[k] * sizeof(int));
         memcpy( U[k], USR[k], nU[k]*sizeof(int));
       }
     }
     else{
-      nU[k] = generalized_card_or(U[k-1], nU[k-1], USR[k], nUSR[k]);
+      nU[k] = modified_card_or(U[k-1], nU[k-1], USR[k], nUSR[k]);
       if( nU[k]) {
         U[k] = (int *) malloc(nU[k]*sizeof(int *));
-        generalized_set_or(U[k-1], nU[k-1], USR[k], nUSR[k], U[k]);
+        modified_set_or(U[k-1], nU[k-1], USR[k], nUSR[k], U[k]);
       }
     }
   }
@@ -375,7 +371,7 @@ int butterfly_reshuffle_init(int *indices_in, int count_in, int *indices_out, in
  return 0;
 }
 
-int generalized_butterfly_reduce(int **R, int *nR, int nRmax, int **S, int *nS, int nSmax, double *val, int steps, MPI_Comm comm){
+int modified_butterfly_reduce(int **R, int *nR, int nRmax, int **S, int *nS, int nSmax, double *val, int steps, MPI_Comm comm){
   /* double st, t; */
   /* t=0.0; */
 
@@ -492,7 +488,7 @@ int butterfly_reshuffle(int **R, int *nR, int nRmax, int **S, int *nS, int nSmax
 //   }
 // }
 
-int generalized_set_or(int *A1, int n1, int *A2, int n2, int *A1orA2){
+int modified_set_or(int *A1, int n1, int *A2, int n2, int *A1orA2){
 
   /* added cases when either n1 or n2 are zero. One of which *has to* be nonzero. - rs 2022/06/09 */
 
@@ -560,7 +556,7 @@ int generalized_set_or(int *A1, int n1, int *A2, int n2, int *A1orA2){
 //   return k;
 // }
 
-int generalized_card_or(int *A1, int n1, int *A2, int n2){
+int modified_card_or(int *A1, int n1, int *A2, int n2){
 
   /* acounts for cases with either n1 or n2 or both equal to zero - rs 2022/06/09 */
 

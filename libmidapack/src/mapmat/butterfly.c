@@ -191,7 +191,7 @@ int butterfly_init(int *indices, int count, int **R, int *nR, int **S, int *nS, 
   free(USR);
   free(U);
 
- return 0;
+  return 0;
 }
 
 

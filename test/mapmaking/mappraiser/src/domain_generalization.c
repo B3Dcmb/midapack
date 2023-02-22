@@ -38,6 +38,26 @@ int initialize_PCG_var_struct(PCG_var *PCG_variable, double *local_map_pix, s2ha
 }
 
 
+int init_butterfly_communication(Butterfly_struct *Butterfly_struc, Mat *A, int *indices_in, int count_in, int *indices_out, int count_out, MPI_Comm comm)
+{
+    int size;
+    MPI_Comm_size(comm, &size);
+
+    Butterfly_struc->steps = log_2(size);
+    Butterfly_struc->S = (int **)malloc(Butterfly_struc->steps * sizeof(int *)); // allocate sending maps tab
+    Butterfly_struc->R = (int **)malloc(Butterfly_struc->steps * sizeof(int *)); // allocate receiving maps tab
+    Butterfly_struc->nS = (int *)malloc(Butterfly_struc->steps * sizeof(int));   // allocate sending map sizes tab
+    Butterfly_struc->nR = (int *)malloc(Butterfly_struc->steps * sizeof(int));   // allocate receiving map size tab
+    butterfly_init(A->lindices + (A->nnz) * (A->trash_pix), A->lcount - (A->nnz) * (A->trash_pix), Butterfly_struc->R, Butterfly_struc->nR, Butterfly_struc->S, Butterfly_struc->nS, &(A->com_indices), &(A->com_count), Butterfly_struc->steps, comm);
+    butterfly_init(int *indices, int count, int **R, int *nR, int **S, int *nS, int **com_indices, int *com_count, int steps, MPI_Comm comm)
+
+    butterfly_reshuffle_init(indices_in, count_in, indices_out, count_out, Butterfly_struc->R, Butterfly_struc->nR, Butterfly_struc->S, Butterfly_struc->nS, int **com_indices, int *com_count, Butterfly_struc->steps, comm);
+
+
+
+
+}
+
 
 
 /* Taken from greedyreduce in mapmat.c, case ALLREDUCE
