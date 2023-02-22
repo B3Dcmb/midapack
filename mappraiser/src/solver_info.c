@@ -1,5 +1,5 @@
 /**
- * @file noise_weighting.c
+ * @file solver_info.c
  * @author Simon Biquard
  * @brief Implementation of routines for the SolverInfo structure.
  * @version 0.1
@@ -12,8 +12,8 @@
 #include <math.h>
 #include "solver_info.h"
 
-/// @brief Print information on the structure
-/// @param si pointer to the struct
+/// @brief Print current solver parameters and information
+/// @param si SolverInfo struct
 void solverinfo_print(SolverInfo *si)
 {
     puts("Solver parameters:");
@@ -47,7 +47,7 @@ void solverinfo_print(SolverInfo *si)
 }
 
 /// @brief Set default values for the solver parameters
-/// @param si pointer to the struct
+/// @param si SolverInfo struct
 void solverinfo_set_defaults(SolverInfo *si)
 {
     si->max_steps = 100;
@@ -60,8 +60,8 @@ void solverinfo_set_defaults(SolverInfo *si)
     si->print = false;
 }
 
-/// @brief Initialize/allocate output variables of the solver, print initial message if needed
-/// @param si pointer to the struct
+/// @brief Initialise/allocate output variables of the solver, print initial message if needed
+/// @param si SolverInfo struct
 void solverinfo_init(SolverInfo *si)
 {
     si->has_converged = false;
@@ -84,7 +84,7 @@ void solverinfo_init(SolverInfo *si)
 
 /// @brief Update the SolverInfo structure depending on the iteration state
 /// and determine if the iteration is to be continued or stopped.
-/// @param si [in/out] pointer to the struct
+/// @param si [in/out] SolverInfo struct
 /// @param stop [out] continue or stop the iteration
 /// @param step_nbr [in] current iteration number
 /// @param res [in] current residual norm
@@ -139,7 +139,7 @@ void solverinfo_update(SolverInfo *si, bool *stop, int step_nbr, double res, dou
 }
 
 /// @brief Reallocate history buffer and print results on screen if needed
-/// @param si pointer to the struct
+/// @param si SolverInfo struct
 void solverinfo_finalize(SolverInfo *si)
 {
     if ((si->n_iter < si->max_steps) && (si->store_hist))
@@ -177,7 +177,7 @@ void solverinfo_finalize(SolverInfo *si)
 }
 
 /// @brief Free any allocated buffer inside the structure
-/// @param si pointer to the struct
+/// @param si SolverInfo struct
 void solverinfo_free(SolverInfo *si)
 {
     if (si->res_hist)

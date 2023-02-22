@@ -1,5 +1,5 @@
 /**
- * @file noise_weighting.c
+ * @file solver_info.h
  * @author Simon Biquard
  * @brief Declaration of the SolverInfo structure and routine prototypes.
  * @version 0.1
@@ -11,7 +11,7 @@
 #ifndef SOLVER_INFO_H
 #define SOLVER_INFO_H
 
-/// @brief Structure for solver parameters/output
+/// @brief Struct for solver parameters/output
 struct solverinfo_t
 {
     int max_steps;         // maximal number of iteration steps

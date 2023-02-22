@@ -19,7 +19,7 @@
 
 void reset_tod_gaps(double *tod, Tpltz *N, Gap *Gaps);
 void set_tpltz_struct(Tpltz *single_block_struct, Tpltz *full_struct, Block *block);
-void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_block, SolverInfo *si);
+void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_block, double *x0, SolverInfo *si);
 void PCG_global(Tpltz *N, Tpltz *Nm1, Gap *Gaps, double *tod, int m, int rank, int verbose);
 
 /**
@@ -83,7 +83,7 @@ void apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod)
 
             // if (rank == 0)
             // {
-            //     printf("process toeplitz block %d of %d\n", i+1, N->nb_blocks_loc);
+            //     printf("process toeplitz block %d/%d\n", i, (N->nb_blocks_loc) - 1);
             //     printf("  block.n = %d\n", block.n);
             //     printf("  block.idv = %ld\n", block.idv);
             //     printf("  offset = %d\n", t_id);
@@ -98,7 +98,7 @@ void apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod)
             tod_block = (tod + t_id);
 
             // apply the weights with a PCG
-            PCG_single_block(&N_block, &Nm1_block, Gaps, tod_block, &si);
+            PCG_single_block(&N_block, &Nm1_block, Gaps, tod_block, NULL, &si);
 
             // do something with solver output
             //
@@ -113,6 +113,10 @@ void apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod)
     }
 }
 
+/// @brief Initialize a dedicated Tpltz structure for a single data block
+/// @param single_block_struct [out] Tpltz structure to initialize
+/// @param full_struct [in] Tpltz structure of the whole data
+/// @param block [in] the Block structure representing the single data block
 void set_tpltz_struct(Tpltz *single_block_struct, Tpltz *full_struct, Block *block)
 {
     single_block_struct->nrow = full_struct->nrow; // does not matter anyway
@@ -124,8 +128,6 @@ void set_tpltz_struct(Tpltz *single_block_struct, Tpltz *full_struct, Block *blo
     single_block_struct->idp = block->idv;
     single_block_struct->local_V_size = block->n;
     single_block_struct->flag_stgy = full_struct->flag_stgy;
-
-    // TODO: can not set to NULL, maybe create a communicator with only 1 process?
     single_block_struct->comm = full_struct->comm;
 }
 
@@ -137,9 +139,10 @@ void set_tpltz_struct(Tpltz *single_block_struct, Tpltz *full_struct, Block *blo
  * @param Nm1_block [in] Tpltz structure of the single inverse block
  * @param Gaps [in] structure of the timestream gaps
  * @param tod_block [in] pointer to the RHS vector [out] solution of the system
+ * @param x0 [in] starting vector; if NULL, the RHS is used as initial guess
  * @param si SolverInfo structure [in] contains solver parameters [out] contains iteration info
  */
-void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_block, SolverInfo *si)
+void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_block, double *x0, SolverInfo *si)
 {
     // initialize the SolverInfo struct
     solverinfo_init(si);
@@ -147,12 +150,13 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
     // if (si->print)
     //     solverinfo_print(si);
 
-    int i;                 // loop index
-    int k = 0;             // iteration number
-    double res;            // norm of residual
-    double coef_1, coef_2; // scalars
-    double wtime;          // timing variable
-    bool stop = false;     // stop iteration or continue
+    int i;                          // loop index
+    int k = 0;                      // iteration number
+    double res;                     // norm of residual
+    double coef_1, coef_2;          // scalars
+    double wtime;                   // timing variable
+    bool stop = false;              // stop iteration or continue
+    bool init_guess = (x0 == NULL); // starting vector provided or not
 
     int ng = Gaps->ngap;               // number of gaps
     int m = N_block->tpltzblocks[0].n; // size of the data
@@ -190,12 +194,22 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
 
     for (i = 0; i < m; ++i)
     {
-        // set initial guess
-        // _r[i] = 0.;
-        _r[i] = tod_block[i];
+        if (init_guess)
+        {
+            // use starting vector if provided
+            _r[i] = x0[i];
+        }
+        else
+        {
+            // else, use the RHS as initial guess
+            // one might also simply initialise at zero
+            _r[i] = tod_block[i];
+        }
 
-        // need rhs to compute first residual
+        // store the RHS, needed to compute the initial residual
         r[i] = tod_block[i];
+
+        // set TOD to starting vector
         tod_block[i] = _r[i];
     }
 

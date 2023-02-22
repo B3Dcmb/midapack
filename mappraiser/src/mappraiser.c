@@ -373,6 +373,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     free(cond);
     free(lhits);
     free(tpltzblocks);
+    free(tpltzblocks_N);
     free(Gaps.id0gap);
     free(Gaps.lgap);
     MPI_Barrier(comm);
