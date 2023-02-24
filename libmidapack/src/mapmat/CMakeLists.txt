@@ -1,16 +1,22 @@
+# MAPMAT
+# - object library (only compile the source files)
+# - will be linked by the midapack target
+
 # Note that headers are optional, and do not affect add_library, but they will not
 # show up in IDEs unless they are listed in add_library.
+set(mapmat_INCLUDE_DIR "${PROJECT_SOURCE_DIR}/include/mapmat")
+
 set(
     HEADER_LIST
-    "${midapack_SOURCE_DIR}/include/midapack/mapmat/alm.h"
-    "${midapack_SOURCE_DIR}/include/midapack/mapmat/als.h"
-    "${midapack_SOURCE_DIR}/include/midapack/mapmat/bitop.h"
-    "${midapack_SOURCE_DIR}/include/midapack/mapmat/butterfly.h"
-    "${midapack_SOURCE_DIR}/include/midapack/mapmat/cindex.h"
-    "${midapack_SOURCE_DIR}/include/midapack/mapmat/csort.h"
-    "${midapack_SOURCE_DIR}/include/midapack/mapmat/mapmat.h"
-    "${midapack_SOURCE_DIR}/include/midapack/mapmat/mapmatc.h"
-    "${midapack_SOURCE_DIR}/include/midapack/mapmat/ring.h"
+    "${mapmat_INCLUDE_DIR}/alm.h"
+    "${mapmat_INCLUDE_DIR}/als.h"
+    "${mapmat_INCLUDE_DIR}/bitop.h"
+    "${mapmat_INCLUDE_DIR}/butterfly.h"
+    "${mapmat_INCLUDE_DIR}/cindex.h"
+    "${mapmat_INCLUDE_DIR}/csort.h"
+    "${mapmat_INCLUDE_DIR}/mapmat.h"
+    "${mapmat_INCLUDE_DIR}/mapmatc.h"
+    "${mapmat_INCLUDE_DIR}/ring.h"
 )
 
 set(
@@ -30,17 +36,13 @@ set(
 # Dependencies will be propagated to libmidapack when linking the object library
 add_library(mapmat OBJECT ${SRC_LIST} ${HEADER_LIST})
 
-target_include_directories(mapmat PRIVATE ${CMAKE_SOURCE_DIR}/include/midapack/mapmat)
+target_include_directories(mapmat PRIVATE ${mapmat_INCLUDE_DIR})
 
-target_link_libraries(
-    mapmat
-    PRIVATE midapack_base
-    PUBLIC MPI::MPI_C
-)
+target_link_libraries(mapmat midapack_base)
 
 # IDEs should put the headers in a nice place
-source_group(
-    TREE "../../include/mapmat"
-    PREFIX "mapmat Header Files"
-    FILES ${HEADER_LIST}
-)
+#source_group(
+#    TREE "../../include/mapmat"
+#    PREFIX "mapmat Header Files"
+#    FILES ${HEADER_LIST}
+#)

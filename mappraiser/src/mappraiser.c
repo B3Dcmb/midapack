@@ -225,7 +225,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     }
     else if (solver == 1)
     {
-#ifdef W_ECG
+#ifdef WITH_ECG
         ECG_GLS(outpath, ref, &A, &Nm1, x, signal, noise, cond, lhits, tol, maxiter, enlFac, ortho_alg, bs_red);
 #else
         if (rank == 0)

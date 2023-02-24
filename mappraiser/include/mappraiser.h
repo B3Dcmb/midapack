@@ -83,7 +83,7 @@ int get_pixshare_pond(Mat *A, double *pixpond);
 int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl);
 
 // ECG routine
-#ifdef W_ECG
+#ifdef WITH_ECG
 int ECG_GLS(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int maxIter, int enlFac, int ortho_alg, int bs_red);
 #endif
 
