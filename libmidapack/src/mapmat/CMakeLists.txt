@@ -40,7 +40,7 @@ target_link_libraries(
 
 # IDEs should put the headers in a nice place
 source_group(
-    TREE "${PROJECT_SOURCE_DIR}/include/midapack/mapmat"
+    TREE "../../include/mapmat"
     PREFIX "mapmat Header Files"
     FILES ${HEADER_LIST}
 )

@@ -140,10 +140,10 @@ endif()
 # add project subdirectories
 # ----------------------------------------------------------------------------------------#
 
-add_subdirectory(src/mapmat)
-add_subdirectory(src/toeplitz)
+add_subdirectory(libmidapack/src/mapmat)
+add_subdirectory(libmidapack/src/toeplitz)
 if (BUILD_MAPPRAISER)
-    add_subdirectory(src/mappraiser)
+    add_subdirectory(mappraiser)
 endif()
 # add_subdirectory(src/templates)
 

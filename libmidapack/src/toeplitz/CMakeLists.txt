@@ -33,7 +33,7 @@ target_compile_features(toeplitz PUBLIC c_std_99)
 
 # IDEs should put the headers in a nice place
 source_group(
-    TREE "${PROJECT_SOURCE_DIR}/include/midapack/toeplitz"
+    TREE "../../include/toeplitz"
     PREFIX "toeplitz Header Files"
     FILES ${HEADER_LIST}
 )
