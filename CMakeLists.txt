@@ -9,8 +9,7 @@
 # General configuration
 # ----------------------------------------------------------------------------------------#
 
-# Version 3.18 introduces LAPACK::LAPACK
-cmake_minimum_required(VERSION 3.18...3.25)
+cmake_minimum_required(VERSION 3.14...3.25)
 
 # Project name and a few useful settings
 project(midapack
@@ -53,7 +52,3 @@ find_package(FFTW REQUIRED)
 # ----------------------------------------------------------------------------------------#
 
 add_subdirectory(libmidapack/src)
-
-# exclude mappraiser-related targets from the build by default
-# users have to specify they want to build mappraiser when calling cmake
-add_subdirectory(mappraiser EXCLUDE_FROM_ALL)
