@@ -17,9 +17,9 @@ Ensure these libraries are available on your system.
 To build the library and install it at a given location (prefix), execute the commands:
 
 ```
-cmake -S . -B build_midapack --install-prefix <path>
-cmake --build build_midapack
-cmake --install build_midapack
+cmake -S . -B build --install-prefix <path>
+cmake --build build
+cmake --install build
 ```
 
 The shared library will then be found at `prefix/lib/libmidapack.so` and the headers in `prefix/include/midapack`.
@@ -40,21 +40,28 @@ To build the examples binaries for the library, do:
 
 Mappraiser has an independent build system, as it will eventually be moved to an other git repository.
 
-The library can be installed by specifying the source directory from the root of the repository:
+It can be installed from the mappraiser subdirectory, *once midapack is installed*:
 
 ```
-cmake -S mappraiser -B build_mappraiser --install-prefix <path>
-cmake --build build_mappraiser
-cmake --install build_mappraiser
+cd mappraiser
+cmake -S . -B build --install-prefix <path>
+cmake --build build
+cmake --install build
 ```
 
 ### Dependencies
 
 Mappraiser requires the following libraries:
 
+- MIDAPACK
 - MPI
 - LAPACK
 - CFITSIO
+
+For the installation to work properly, make sure that the environment variable `MIDAPACKROOT` is set to whatever installation prefix was used when installing midapack.
+
+The user may want to use a LAPACK implementation provided by Intel MKL (Math Kernel Library).
+If so, the feature may be enabled by passing the option `-D USE_MKL=ON`.
 
 ### ECG solver
 
@@ -65,11 +72,11 @@ In that case, Mappraiser will also need:
 - preAlps (https://github.com/NLAFET/preAlps)
 - METIS
 
-Both libraries' locations need to be specified with environment variables `<library>ROOT`, for example by executing
+Both libraries' locations are to be specified through environment variables `<library>ROOT`, which can be set for a one-time use:
 
 ```
-PREALPSROOT=<path> METISROOT=<path> cmake -S mappraiser [...]
+PREALPSROOT=<path> METISROOT=<path> cmake [...]
 ```
 
-In that case, since preAlps is compiled with the Intel Kernel Math Library, Mappraiser will search for an
+In that case, since preAlps is compiled with Intel MKL, Mappraiser will search for an
 MKL-provided LAPACK implementation.

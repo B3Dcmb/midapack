@@ -48,3 +48,4 @@ libmidapack/test/*
 
 # build products
 build/*
+mappraiser/build/*

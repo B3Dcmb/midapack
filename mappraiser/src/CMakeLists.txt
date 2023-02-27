@@ -35,9 +35,14 @@ target_include_directories(mappraiser PRIVATE
 # dependencies
 # ----------------------------------------------------------------------------------------#
 
+# MIDAPACK
+
+target_link_libraries(mappraiser PUBLIC midapack_dep)
+
 # MPI
 
 if (MPI_FOUND)
+    target_compile_definitions(mappraiser PRIVATE W_MPI)
     target_link_libraries(mappraiser PUBLIC MPI::MPI_C)
 endif ()
 
@@ -178,7 +183,8 @@ include(GNUInstallDirs)
 
 # install the libraries
 install(TARGETS mappraiser
-        DESTINATION ${CMAKE_INSTALL_LIBDIR})
+        DESTINATION lib)
+        #DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 # install the headers
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/
