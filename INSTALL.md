@@ -58,7 +58,8 @@ Mappraiser requires the following libraries:
 - LAPACK
 - CFITSIO
 
-For the installation to work properly, make sure that the environment variable `MIDAPACKROOT` is set to whatever installation prefix was used when installing midapack.
+Typically the path to the Midapack installation can be provided by adding the hint `-D MIDAPACK_DIR <path>`
+to the first cmake command.
 
 The user may want to use a LAPACK implementation provided by Intel MKL (Math Kernel Library).
 If so, the feature may be enabled by passing the option `-D USE_MKL=ON`.
@@ -72,7 +73,8 @@ In that case, Mappraiser will also need:
 - preAlps (https://github.com/NLAFET/preAlps)
 - METIS
 
-Both libraries' locations are to be specified through environment variables `<library>ROOT`, which can be set for a one-time use:
+Both libraries' locations are to be specified through environment variables `<library>ROOT`, which can be set for a
+one-time use:
 
 ```
 PREALPSROOT=<path> METISROOT=<path> cmake [...]

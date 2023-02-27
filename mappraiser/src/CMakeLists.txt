@@ -37,13 +37,27 @@ target_include_directories(mappraiser PRIVATE
 
 # MIDAPACK
 
-target_link_libraries(mappraiser PUBLIC midapack_dep)
+if (MIDAPACK_FOUND)
+    target_include_directories(mappraiser PRIVATE "${MIDAPACK_INCLUDES}")
+    target_link_libraries(mappraiser PUBLIC "${MIDAPACK_LIBRARIES}")
+else ()
+    message(FATAL_ERROR "Could not find midapack. Consider providing a hint (-D MIDAPACK_DIR <path>).")
+endif ()
 
 # MPI
 
 if (MPI_FOUND)
     target_compile_definitions(mappraiser PRIVATE W_MPI)
     target_link_libraries(mappraiser PUBLIC MPI::MPI_C)
+endif ()
+
+# CFITSIO
+
+if (CFITSIO_FOUND)
+    target_include_directories(mappraiser PRIVATE "${CFITSIO_INCLUDES}")
+    target_link_libraries(mappraiser PUBLIC "${CFITSIO_LIBRARIES}")
+else ()
+    message(FATAL_ERROR "Could not find cfitsio. Consider providing a hint (-D CFITSIO_DIR <path>).")
 endif ()
 
 # preAlps and metis
@@ -53,43 +67,23 @@ if (ECG)
     target_link_libraries(mappraiser PRIVATE ecg_deps)
 endif ()
 
-# METIS
-#[[
-if (METIS_FOUND)
-    target_link_libraries(mappraiser PRIVATE ${METIS_LIBRARY})
-endif (METIS_FOUND)
-]]
-
 # MKL
 
 if (MKL_FOUND)
     target_compile_definitions(mappraiser PRIVATE HAVE_MKL)
     target_include_directories(mappraiser PUBLIC "${MKL_INCLUDE_DIRS}")
     target_link_libraries(mappraiser PUBLIC "${MKL_LIBRARIES}")
-    #    # If we are using GNU compilers, we will need to internally set the threading layer
-    #    # to use GNU.  Otherwise, assume we are using Intel threads.
-    #    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    #        target_compile_definitions(toast PRIVATE USE_MKL_GNU_THREADS=1)
-    #    else()
-    #        target_compile_definitions(toast PRIVATE USE_MKL_INTEL_THREADS=1)
-    #    endif()
 endif ()
 
 # BLAS/LAPACK
 
 if (LAPACK_FOUND)
-    #target_compile_definitions(mappraiser PRIVATE HAVE_LAPACK=1)
-    #target_compile_definitions(mappraiser PRIVATE "LAPACK_NAMES_${LAPACK_NAMES}")
     set_target_properties(mappraiser PROPERTIES LINK_FLAGS
                           "${LAPACK_LINKER_FLAGS}" #${BLAS_LINKER_FLAGS}"
                           )
     target_link_libraries(mappraiser PUBLIC "${LAPACK_LIBRARIES}")
     #target_link_libraries(mappraiser "${BLAS_LIBRARIES}")
 endif (LAPACK_FOUND)
-
-# CFITSIO
-
-target_link_libraries(mappraiser PUBLIC cfitsio)
 
 # MIDAPACK
 
@@ -184,7 +178,7 @@ include(GNUInstallDirs)
 # install the libraries
 install(TARGETS mappraiser
         DESTINATION lib)
-        #DESTINATION ${CMAKE_INSTALL_LIBDIR})
+#DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 # install the headers
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/

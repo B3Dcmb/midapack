@@ -35,28 +35,11 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 # External packages
 # ----------------------------------------------------------------------------------------#
 
+find_package(MIDAPACK)
+
 find_package(MPI REQUIRED)
 
-if (NOT DEFINED ENV{MIDAPACKROOT})
-    message(FATAL_ERROR "Set the environment variable MIDAPACKROOT to indicate the path to the midapack library.")
-else ()
-    # interface library to link against midapack
-    add_library(midapack_dep INTERFACE)
-    
-    # add midapack as imported target
-    add_library(midapack SHARED IMPORTED)
-    set_property(TARGET midapack
-                 PROPERTY IMPORTED_LOCATION $ENV{MIDAPACKROOT}/lib/libmidapack.so)
-
-    # link the interface lib against midapack
-    target_compile_options(midapack_dep
-                 INTERFACE
-                 -I$ENV{MIDAPACKROOT}/include/midapack
-                 -I$ENV{MIDAPACKROOT}/include/midapack/mapmat
-                 -I$ENV{MIDAPACKROOT}/include/midapack/toeplitz
-                 )
-    target_link_libraries(midapack_dep INTERFACE midapack)
-endif ()
+find_package(CFITSIO)
 
 option(ECG "Build mappraiser with ECG solver" OFF)
 option(USE_MKL "Use MKL as provider for BLAS/LAPACK libraries" OFF)
@@ -66,7 +49,7 @@ if (ECG)
     set(USE_MKL ON)
 
     # preAlps + metis dependencies
-    # TODO can this be simplified / moved to a cmake module?
+    # TODO simplify and move to a cmake module
 
     # create interface library with ECG dependencies
     add_library(ecg_deps INTERFACE)
@@ -142,8 +125,6 @@ else ()
     find_package(BLAS)
     find_package(LAPACK REQUIRED)
 endif ()
-
-# TODO need to look for cfitsio
 
 # ----------------------------------------------------------------------------------------#
 # Subdirectories
