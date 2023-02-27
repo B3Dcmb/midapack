@@ -85,10 +85,6 @@ if (LAPACK_FOUND)
     #target_link_libraries(mappraiser "${BLAS_LIBRARIES}")
 endif (LAPACK_FOUND)
 
-# MIDAPACK
-
-target_link_libraries(mappraiser PUBLIC midapack)
-
 # ----------------------------------------------------------------------------------------#
 # compile options
 # ----------------------------------------------------------------------------------------#
