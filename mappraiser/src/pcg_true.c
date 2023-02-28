@@ -64,7 +64,6 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, PCG_var *PCG_varia
     // Size of the alm tables if no harmonic transform or Wiener filtert is applied, for initialisation
     int size_alm = 0;
     // Changed if harmonic transforms used or Wiener filter applied
-    
 
     FILE *fp;
 
@@ -77,12 +76,8 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, PCG_var *PCG_varia
     if (Z_2lvl == 0)
         Z_2lvl = size;
 
-    
-    
     build_precond(&p, &pixpond, &n, A, &Nm1, PCG_variable, b, noise, cond, lhits, tol, Z_2lvl, S2HAT_params, precond);
     // building preconditonner depending on the value of precond (0 for classic, 1 and 2 for two-level precond, 3 for Wiener-filtering precond)
-
-    
 
     t = MPI_Wtime();
     if (rank == 0)
@@ -97,7 +92,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, PCG_var *PCG_varia
     if ( (PCG_variable->bool_apply_filter == 1) || (PCG_variable->domain_PCG_computation == 1)){ // Initialize both with WF or for harmonic transforms in general
         if (rank == 0)
         {
-            printf("### Initializing Wiener Filter extension \n");
+            printf("### Initializing Wiener Filter extension for harmonic operations \n");
 
             // For later: get mask with trash_pix for spherical harmonic transforms !!!! --- TO DO LATER 
         }
@@ -107,7 +102,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, PCG_var *PCG_varia
 
         S2HAT_GLOBAL_parameters *Global_param_s2hat = PCG_variable->S2HAT_parameters->Global_param_s2hat;
         // The S2HAT_parameters structure has been initialized, definition of the varariable corresponding to the global S2HAT parameters which will be known by all mpi-tasks
-        
+
         // Prepare to allocate non-empty alm
         size_alm = (Global_param_s2hat->nlmax+1)*Global_param_s2hat->nmmax;
     }

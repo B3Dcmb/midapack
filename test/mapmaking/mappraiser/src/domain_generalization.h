@@ -6,15 +6,6 @@
 // #include "s2hat.h"
 // For later : add if/if_not for including or not s2hat
 
-typedef struct Butterfly_struct{
-
-    int		*com_indices, com_count;// communicated indices, and size
-    int		steps;			// number of steps in the butterfly scheme
-    int		*nS, *nR;		// number of indices (to send and to receive); size = steps
-    int		**R, **S;		// sending or receiving indices 
-
-} Butterfly_struct;
-
 
 typedef struct PCG_var{
     /* Local parameters of S2HAT, dependent on each processor */
@@ -39,6 +30,19 @@ typedef struct PCG_var{
     // Also note that in case we want to update from other domains of computation, the flags can take other values 2, 3, ...
 
 } PCG_var;
+
+typedef struct Butterfly_struct{
+
+    int		*com_indices, com_count; // communicated indices, and size
+    int		steps;			         // number of steps in the butterfly scheme
+    int		*nS, *nR;		         // number of indices (to send and to receive); size = steps
+    int		**R, **S;		         // sending or receiving indices
+
+    int classic_or_reshuffle_butterfly; 
+    // Flag to indicate if classic or reshuffled butterfly is used, e.g. if we expect the pixel distributions prior and after communication to be the same or different
+    // 0 for classic butterfly scheme with same pixel distributions prior/after ; 1 for after
+} Butterfly_struct;
+
 
 /* Initalize PCG_var structure */
 int initialize_PCG_var_struct(PCG_var *PCG_variable, double *local_map_pix, s2hat_dcomplex *local_alm, int domain_PCG_computation, int bool_apply_filter, int nstokes, S2HAT_parameters *S2HAT_params);

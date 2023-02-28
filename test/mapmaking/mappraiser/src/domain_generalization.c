@@ -38,115 +38,196 @@ int initialize_PCG_var_struct(PCG_var *PCG_variable, double *local_map_pix, s2ha
 }
 
 
-int init_butterfly_communication(Butterfly_struct *Butterfly_struc, Mat *A, int *indices_in, int count_in, int *indices_out, int count_out, MPI_Comm comm)
+int init_butterfly_communication(Butterfly_struct *Butterfly_obj, int *indices_in, int count_in, int *indices_out, int count_out, int flag_classic_or_reshuffle_butterfly, MPI_Comm comm)
 {
+    // Initialize the butterfly communication
     int size;
     MPI_Comm_size(comm, &size);
 
-    Butterfly_struc->steps = log_2(size);
-    Butterfly_struc->S = (int **)malloc(Butterfly_struc->steps * sizeof(int *)); // allocate sending maps tab
-    Butterfly_struc->R = (int **)malloc(Butterfly_struc->steps * sizeof(int *)); // allocate receiving maps tab
-    Butterfly_struc->nS = (int *)malloc(Butterfly_struc->steps * sizeof(int));   // allocate sending map sizes tab
-    Butterfly_struc->nR = (int *)malloc(Butterfly_struc->steps * sizeof(int));   // allocate receiving map size tab
-    butterfly_init(A->lindices + (A->nnz) * (A->trash_pix), A->lcount - (A->nnz) * (A->trash_pix), Butterfly_struc->R, Butterfly_struc->nR, Butterfly_struc->S, Butterfly_struc->nS, &(A->com_indices), &(A->com_count), Butterfly_struc->steps, comm);
-    butterfly_init(int *indices, int count, int **R, int *nR, int **S, int *nS, int **com_indices, int *com_count, int steps, MPI_Comm comm)
+    Butterfly_obj->classic_or_reshuffle_butterfly = flag_classic_or_reshuffle_butterfly;
+    // 0 if classic butterfly, e.g. if pixel distributions are the same before/after ; 1 if reshuffle butterfly
 
-    butterfly_reshuffle_init(indices_in, count_in, indices_out, count_out, Butterfly_struc->R, Butterfly_struc->nR, Butterfly_struc->S, Butterfly_struc->nS, &(Butterfly_struc->com_indices), &(Butterfly_struc->com_count), Butterfly_struc->steps, comm);
+    Butterfly_obj->steps = log_2(size);
+    Butterfly_obj->S = (int **)malloc(Butterfly_obj->steps * sizeof(int *)); // allocate sending maps tab
+    Butterfly_obj->R = (int **)malloc(Butterfly_obj->steps * sizeof(int *)); // allocate receiving maps tab
+    Butterfly_obj->nS = (int *)malloc(Butterfly_obj->steps * sizeof(int));   // allocate sending map sizes tab
+    Butterfly_obj->nR = (int *)malloc(Butterfly_obj->steps * sizeof(int));   // allocate receiving map size tab
+    // butterfly_init(A->lindices + (A->nnz) * (A->trash_pix), A->lcount - (A->nnz) * (A->trash_pix), A->R, A->nR, A->S, A->nS, &(A->com_indices), &(A->com_count), A->steps, comm);
 
+    switch(flag_classic_or_reshuffle_butterfly)
+    {
+        case 0: // Classic butterfly
 
+            butterfly_reduce_init(indices_in, count_in, Butterfly_obj->R, Butterfly_obj->nR, Butterfly_obj->S, Butterfly_obj->nS, &(Butterfly_obj->com_indices), &(Butterfly_obj->com_count), Butterfly_obj->steps, comm);
 
+        case 1: // Reshuffle butterfly
 
-
-    m2m(lvalues, A->lindices + (A->nnz) * (A->trash_pix), nbr_values, com_val, A->com_indices, A->com_count);
-    butterfly_reduce(A->R, A->nR, nRmax, A->S, A->nS, nSmax, com_val, A->steps, A->comm);
-    m2m(com_val, A->com_indices, A->com_count, vpixDiag, A->lindices + (A->nnz) * (A->trash_pix), nbr_values);
-
-    modified_butterfly_reduce(int **R, int *nR, int nRmax, int **S, int *nS, int nSmax, double *val, int steps, MPI_Comm comm)
-    
-    butterfly_reshuffle(int **R, int *nR, int nRmax, int **S, int *nS, int nSmax, double *val, int steps, MPI_Comm comm)
-    butterfly_reshuffle(Butterfly_struc->R, Butterfly_struc->nR, nRmax, Butterfly_struc->S, Butterfly_struc->nS, nSmax, double *val, Butterfly_struc->steps, comm)
-
-
-
-
-}
-
-
-
-/* Taken from greedyreduce in mapmat.c, case ALLREDUCE
-    Reduce all pixel sky maps distributed among different procs to a single full sky map
-*/
-// int all_reduce_to_single_map_mappraiser(Mat *A, PCG_var *PCG_variable, int nside, double* output_fullsky_map, int root){
-int all_reduce_to_single_map_mappraiser(Mat *A, double* local_map_pix, int nside, double* output_fullsky_map, int root){
-    int i;
-    double *lvalues;
-    lvalues = (double *) malloc((A->lcount-(A->nnz)*(A->trash_pix)) *sizeof(double));	//allocate and set to 0.0 local values
-    // memcpy(lvalues, PCG_variable->local_map_pix, (A->lcount-(A->nnz)*(A->trash_pix)) *sizeof(double));		//copy local values into result values
-    memcpy(lvalues, local_map_pix, (A->lcount-(A->nnz)*(A->trash_pix)) *sizeof(double));		//copy local values into result values
-    double *com_val;
-
-    long int npix = 12*nside*nside;
-
-    com_val=(double *) calloc( 3*npix,sizeof(double)); // Npix or less because of trash_pix ? To check later
-
-    s2m(com_val, lvalues, &(A->lindices[(A->nnz)*(A->trash_pix)]), A->lcount-(A->nnz)*(A->trash_pix)); 
-    
-    /*for(i=0; i < A->com_count; i++){
-        printf("%lf ", com_val[i]);
-    } */
-    // MPI_Allreduce(com_val, output_fullsky_map, 3*npix, MPI_DOUBLE, MPI_SUM, A->comm);	//maximum index
-    MPI_Reduce(com_val, output_fullsky_map, 3*npix, MPI_DOUBLE, MPI_SUM, root, A->comm);	//maximum index
-
-    free(lvalues);
-    free(com_val);
-
-    // Here, the output_fullsky_map is in nest ordering, ordering as [nstokes, npix] in column-wise ordering
-}
-
-
-
-int brute_force_transfer_local_maps(Mat *A, double* local_pixel_map_MAPPRAISER, double *local_pixel_map_s2hat, S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat){
-    // Temporary transfer method, which compile every thing and redistribute everything
-
-    int nside = Global_param_s2hat.nside;
-    double* full_sky_map;
-
-    int npix = 12*nside*nside;
-
-    double *full_sky_map_ring = (double *) malloc( 3*npix *sizeof(double));
-
-    if (Local_param_s2hat.gangroot == Local_param_s2hat.gangrank){
-        double *full_sky_map_nest = (double *) malloc( 3*npix *sizeof(double));
-        all_reduce_to_single_map_mappraiser(A, local_pixel_map_MAPPRAISER, nside, full_sky_map_nest, Local_param_s2hat.gangroot);
-
-        
-        compute_full_map_nest2ring(full_sky_map_nest, full_sky_map_ring, nside, A->nnz, npix);
-        // Change ordering of full_sky_map to have what S2HAT expects, from MAPPRAISER nest [nstokes, npix] to S2HAT ring [nstokes, npix]
-        free(full_sky_map_nest);
+            butterfly_reshuffle_init(indices_in, count_in, indices_out, count_out, Butterfly_obj->R, Butterfly_obj->nR, Butterfly_obj->S, Butterfly_obj->nS, &(Butterfly_obj->com_indices), &(Butterfly_obj->com_count), Butterfly_obj->steps, comm);
     }
 
-    distribute_full_sky_map_into_local_maps_S2HAT(full_sky_map_ring, local_pixel_map_s2hat, Global_param_s2hat, Local_param_s2hat, A->nnz);
-    // Distribute global full sky map into local maps in each processors
-    free(full_sky_map_ring);
+    return 0;
 }
 
 
+int init_harmonic_superstruct(int *indices_out, int count_out, Files_path_WIENER_FILTER *Files_WF_struct, S2HAT_parameters *S2HAT_params, Butterfly_struct *TOD2alm_butterfly, Butterfly_struct *alm2MAPP_butterfly, MPI_Comm world_comm)
+{
+    /* Initalize all structures necessary for harmonic structures : S2HAT_params for S2HAT operations, and the 2 Butterfly_struct TOD2alm_butterfly and alm2MAPP_butterfly for communication purposes
+       indices_out and count_out correspond to the pixel distribution with the scheme prefered for TOD operation, which we call the "PCG pixel distribution scheme"
+    */
+    int i;
+    int flag_classic_butterfly = 0, flag_reshuffle_butterfly = 1;
+    long int number_pixels_local;
+    long int *pixel_numbered_ring;
+    
+
+    init_s2hat_parameters_superstruct(Files_WF_struct, S2HAT_params, world_comm);
+    // Initialize S2HAT structures
+    
+    number_pixels_local = S2HAT_params->Local_param_s2hat->last_pixel_number - S2HAT_params->Local_param_s2hat->first_pixel_number;
+    pixel_numbered_ring = S2HAT_params->Local_param_s2hat->pixel_numbered_ring;
+
+    // Make pointers on pixel numbers in RING scheme for S2HAT !!!!!!
+    
+    init_butterfly_communication(TOD2alm_butterfly, pixel_numbered_ring, number_pixels_local, NULL, 0, flag_classic_butterfly, world_comm);
+    // Communication from TOD into pixel map in RING scheme, for harmonic operation purposes
+
+    init_butterfly_communication(alm2MAPP_butterfly, pixel_numbered_ring, number_pixels_local, indices_out, count_out, flag_reshuffle_butterfly, world_comm);
+    // Communication from ring scheme pixel map in the PCG pixel distribution scheme
+
+}
+
+int butterfly_communication(int *indices_in, int count_in, double *values_to_communicate, Butterfly_struct *Butterfly_obj, MPI_Comm comm)
+{
+    // Perform the butterfly communication
+    int k;
+    int nSmax, nRmax;
+    double *com_val;
+
+    for (k = 0; k < Butterfly_obj->steps; k++) /*compute max communication buffer size*/
+    {
+        if (Butterfly_obj->nR[k] > nRmax)
+            nRmax = Butterfly_obj->nR[k];
+        if (Butterfly_obj->nS[k] > nSmax)
+            nSmax = Butterfly_obj->nS[k];
+    }
+    
+    /* Copy value */
+    com_val = (double *)malloc(Butterfly_obj->com_count * sizeof(double));
+    for (i = 0; i < Butterfly_obj->com_count; i++)
+        com_val[i] = 0.0;
+    m2m(values_to_communicate, indices_in, count_in, com_val, Butterfly_struct->com_indices, Butterfly_struct->com_count);
+
+    switch(flag_classic_or_reshuffle_butterfly)
+    {
+        case 0: // Classic butterfly
+            modified_butterfly_reduce(Butterfly_obj->R, Butterfly_obj->nR, nRmax, Butterfly_obj->S, Butterfly_obj->nS, nSmax, com_val, Butterfly_obj->steps, comm);
+
+        case 1: // Reshuffle butterfly
+            butterfly_reshuffle(Butterfly_obj->R, Butterfly_obj->nR, nRmax, Butterfly_obj->S, Butterfly_obj->nS, nSmax, com_val, Butterfly_obj->steps, comm);
+    }
+
+    m2m(com_val, Butterfly_struct->com_indices, Butterfly_struct->com_count, values_to_communicate, indices_in, count_in);
+    free(com_val);
+}
+
+
+int global_TOD_2_harmonic(double* local_pixel_map_MAPPRAISER, s2hat_dcomplex *local_alm_s2hat, Mat *A, S2HAT_parameters *S2HAT_params){
+//     // Transform local_maps pixel distribution from MAPPRAISER into a harmonic S2HAT a_lm distribution
+
+    S2HAT_GLOBAL_parameters Global_param_s2hat = S2HAT_params->Global_param_s2hat;
+    S2HAT_LOCAL_parameters Local_param_s2hat = S2HAT_params->Local_param_s2hat;
+
+    return 0;
+}
+
 int global_map_2_harmonic(double* local_pixel_map_MAPPRAISER, s2hat_dcomplex *local_alm_s2hat, Mat *A, S2HAT_parameters *S2HAT_params){
-    // Transform local_maps pixel distribution from MAPPRAISER into a harmonic S2HAT a_lm distribution
+//     // Transform local_maps pixel distribution from MAPPRAISER into a harmonic S2HAT a_lm distribution
 
     S2HAT_GLOBAL_parameters Global_param_s2hat = *(S2HAT_params->Global_param_s2hat);
     S2HAT_LOCAL_parameters Local_param_s2hat = *(S2HAT_params->Local_param_s2hat);
 
-    double *local_pixel_map_s2hat = (double *)malloc(Local_param_s2hat.map_size*sizeof(double));
-    brute_force_transfer_local_maps(A, local_pixel_map_MAPPRAISER, local_pixel_map_s2hat, Global_param_s2hat, Local_param_s2hat);
-    // Temporary transfer method
-
-    apply_pix2alm(local_pixel_map_s2hat, local_alm_s2hat, A->nnz, S2HAT_params);
-    free(local_alm_s2hat);
+    return 0;
 }
 
+int global_harmonic_2_map(double* local_pixel_map_MAPPRAISER, s2hat_dcomplex *local_alm_s2hat, Mat *A,  S2HAT_parameters *S2HAT_params){
+    S2HAT_GLOBAL_parameters Global_param_s2hat = *(S2HAT_params->Global_param_s2hat);
+    S2HAT_LOCAL_parameters Local_param_s2hat = *(S2HAT_params->Local_param_s2hat);
+    
+
+    return 0;
+}
+
+// /* Taken from greedyreduce in mapmat.c, case ALLREDUCE
+//     Reduce all pixel sky maps distributed among different procs to a single full sky map
+// */
+// // int all_reduce_to_single_map_mappraiser(Mat *A, PCG_var *PCG_variable, int nside, double* output_fullsky_map, int root){
+// int all_reduce_to_single_map_mappraiser(Mat *A, double* local_map_pix, int nside, double* output_fullsky_map, int root){
+//     int i;
+//     double *lvalues;
+//     lvalues = (double *) malloc((A->lcount-(A->nnz)*(A->trash_pix)) *sizeof(double));	//allocate and set to 0.0 local values
+//     // memcpy(lvalues, PCG_variable->local_map_pix, (A->lcount-(A->nnz)*(A->trash_pix)) *sizeof(double));		//copy local values into result values
+//     memcpy(lvalues, local_map_pix, (A->lcount-(A->nnz)*(A->trash_pix)) *sizeof(double));		//copy local values into result values
+//     double *com_val;
+
+//     long int npix = 12*nside*nside;
+
+//     com_val=(double *) calloc( 3*npix,sizeof(double)); // Npix or less because of trash_pix ? To check later
+
+//     s2m(com_val, lvalues, &(A->lindices[(A->nnz)*(A->trash_pix)]), A->lcount-(A->nnz)*(A->trash_pix)); 
+    
+//     /*for(i=0; i < A->com_count; i++){
+//         printf("%lf ", com_val[i]);
+//     } */
+//     // MPI_Allreduce(com_val, output_fullsky_map, 3*npix, MPI_DOUBLE, MPI_SUM, A->comm);	//maximum index
+//     MPI_Reduce(com_val, output_fullsky_map, 3*npix, MPI_DOUBLE, MPI_SUM, root, A->comm);	//maximum index
+
+//     free(lvalues);
+//     free(com_val);
+
+//     // Here, the output_fullsky_map is in nest ordering, ordering as [nstokes, npix] in column-wise ordering
+// }
 
 
+
+// int brute_force_transfer_local_maps(Mat *A, double* local_pixel_map_MAPPRAISER, double *local_pixel_map_s2hat, S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat){
+//     // Temporary transfer method, which compile every thing and redistribute everything
+
+//     int nside = Global_param_s2hat.nside;
+//     double* full_sky_map;
+
+//     int npix = 12*nside*nside;
+
+//     double *full_sky_map_ring = (double *) malloc( 3*npix *sizeof(double));
+
+//     if (Local_param_s2hat.gangroot == Local_param_s2hat.gangrank){
+//         double *full_sky_map_nest = (double *) malloc( 3*npix *sizeof(double));
+//         all_reduce_to_single_map_mappraiser(A, local_pixel_map_MAPPRAISER, nside, full_sky_map_nest, Local_param_s2hat.gangroot);
+
+        
+//         compute_full_map_nest2ring(full_sky_map_nest, full_sky_map_ring, nside, A->nnz, npix);
+//         // Change ordering of full_sky_map to have what S2HAT expects, from MAPPRAISER nest [nstokes, npix] to S2HAT ring [nstokes, npix]
+//         free(full_sky_map_nest);
+//     }
+
+//     distribute_full_sky_map_into_local_maps_S2HAT(full_sky_map_ring, local_pixel_map_s2hat, Global_param_s2hat, Local_param_s2hat, A->nnz);
+//     // Distribute global full sky map into local maps in each processors
+//     free(full_sky_map_ring);
+// }
+
+
+// int global_map_2_harmonic(double* local_pixel_map_MAPPRAISER, s2hat_dcomplex *local_alm_s2hat, Mat *A, S2HAT_parameters *S2HAT_params){
+//     // Transform local_maps pixel distribution from MAPPRAISER into a harmonic S2HAT a_lm distribution
+
+//     S2HAT_GLOBAL_parameters Global_param_s2hat = *(S2HAT_params->Global_param_s2hat);
+//     S2HAT_LOCAL_parameters Local_param_s2hat = *(S2HAT_params->Local_param_s2hat);
+
+//     double *local_pixel_map_s2hat = (double *)malloc(Local_param_s2hat.map_size*sizeof(double));
+//     brute_force_transfer_local_maps(A, local_pixel_map_MAPPRAISER, local_pixel_map_s2hat, Global_param_s2hat, Local_param_s2hat);
+//     // Temporary transfer method
+
+//     apply_pix2alm(local_pixel_map_s2hat, local_alm_s2hat, A->nnz, S2HAT_params);
+//     free(local_alm_s2hat);
+// }
 
 /* Maybe useless ? */
 // int obtain_pixel_distrib_from_S2HAT(Mat *A, int nside, int *lindices_ring_ordering, int flag_to_sort_output)
@@ -163,11 +244,6 @@ int global_map_2_harmonic(double* local_pixel_map_MAPPRAISER, s2hat_dcomplex *lo
 //     }
 // }
 
-int global_harmonic_2_map(double* local_pixel_map_MAPPRAISER, s2hat_dcomplex *local_alm_s2hat, Mat *A,  S2HAT_parameters *S2HAT_params){
-    S2HAT_GLOBAL_parameters Global_param_s2hat = *(S2HAT_params->Global_param_s2hat);
-    S2HAT_LOCAL_parameters Local_param_s2hat = *(S2HAT_params->Local_param_s2hat);
-   return 0;
-}
 
 
 

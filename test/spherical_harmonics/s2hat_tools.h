@@ -41,6 +41,11 @@ typedef struct S2HAT_LOCAL_parameters{
     int map_size;
     int* mvals; // size given by nmvals
 
+    // For butterfly communication scheme -- in RING scheme
+    int first_pixel_number;
+    int last_pixel_number;
+    long int *pixel_numbered_ring; // Pointer to the ordered pixel in RING scheme which the process will consider for S2HAT operations
+
 
     // Tools to precompute Legendre functions, but not taken into account by s2hat if plms=0, which is the default behaviour we choose
     int plms;

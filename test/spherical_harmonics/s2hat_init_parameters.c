@@ -88,19 +88,6 @@ int init_s2hat_global_parameters(Files_path_WIENER_FILTER Files_WF_struct, int n
     Global_param_s2hat->nmmax = lmax-1;
 }
 
-// int init_MPI_struct_s2hat_local_parameters(S2HAT_LOCAL_parameters *Local_param_s2hat, int gangrank, int gangsize, int gangroot, MPI_Comm gangcomm){
-//     /* Initialize MPI parameters of s2hat structure of local parameters, which will differ for all processors
-//     Those local parameters are used to improve the computation efficiency
-//     Full documentation here : https://apc.u-paris.fr/APC_CS/Recherche/Adamis/MIDAS09/software/s2hat/s2hat/docs/S2HATdocs.html */ 
-
-//     Local_param_s2hat->gangrank = gangrank;
-//     Local_param_s2hat->gangsize = gangsize;
-//     Local_param_s2hat->gangroot = gangroot;
-//     Local_param_s2hat->gangcomm = gangcomm;
-
-//     return 0;
-// }
-
 
 int init_MPI_struct_s2hat_local_parameters(S2HAT_LOCAL_parameters *Local_param_s2hat, int number_ranks_s2hat, MPI_Comm initcomm){
     /* Initialize MPI parameters of s2hat structure of local parameters, which will differ for all processors
@@ -149,6 +136,7 @@ int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters Global_param_s2ha
 
     Those local parameters are used to improve the computation efficiency
     Full documentation here : https://apc.u-paris.fr/APC_CS/Recherche/Adamis/MIDAS09/software/s2hat/s2hat/docs/S2HATdocs.html */ 
+    long int *pixel_numbered_ring;
     s2hat_pixeltype pixelization_scheme = Global_param_s2hat.pixelization_scheme;
     s2hat_scandef scan_sky_structure_pixel = Global_param_s2hat.scan_sky_structure_pixel;
     int nlmax = Global_param_s2hat.nlmax;
@@ -182,13 +170,33 @@ int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters Global_param_s2ha
     // printf("--------Mvalues obtained ! - %d : %d \n", Local_param_s2hat->gangrank, mvals[0]);
     // fflush(stdout);
 
-    Local_param_s2hat->plms = plms;
+    Local_param_s2hat->first_pixel_number = Global_param_s2hat.pixelization_scheme.fpix[first_ring];
+    Local_param_s2hat->last_pixel_number = Global_param_s2hat.pixelization_scheme.fpix[last_ring]; // -1 ???
+
+    first_pixel_number_ring = Global_param_s2hat.pixelization_scheme.fpix[first_ring];
+    // Getting first pixel number of ring probed by local proc, in S2HAT convention
+    last_pixel_number_ring = Global_param_s2hat.pixelization_scheme.fpix[last_ring]; 
+    // Getting last pixel number of ring probed by local proc, in S2HAT convention
+    number_pixels_local = last_pixel_number - first_pixel_number;
+    
+    
+    pixel_numbered_ring = (long int *)malloc(number_pixels_local * sizeof(long int));
+    for(i=0; i<number_pixels_local; i++)
+    {
+        pixel_numbered_ring[i] = i + first_pixel_number;
+    }
+    
+    Local_param_s2hat->pixel_numbered_ring = pixel_numbered_ring;
+
+ 
 
     Local_param_s2hat->nmvals = nmvals;
     Local_param_s2hat->first_ring = first_ring;
     Local_param_s2hat->last_ring = last_ring;
     Local_param_s2hat->map_size = map_size;
-    Local_param_s2hat->nplm = nplm;
+    
+    Local_param_s2hat->plms = plms; // Structures for storing Legendre polynomials, by default put to 0 and not used
+    Local_param_s2hat->nplm = nplm; // Structures for storing Legendre polynomials, by default put to 0 and not used
 
     Local_param_s2hat->mvals = mvals;
     return 0;
