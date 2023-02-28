@@ -1256,33 +1256,19 @@ void Lanczos_eig(Mat *A, Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ, double *x
         }
     }
 
-    //[Ritz_vectors, Ritz_values] = eig(T)
-    // Ritz_values contains the eigenvalues of the matrix A in ascending order.
-
     st = MPI_Wtime();
 
-    // lapack_int LAPACKE_dsyev(int matrix_layout, char jobz, char uplo, int n, double* a, int lda, double* w);
+    // Compute the eigenvalues and eigenvectors of T using LAPACKE_dsyev
 
+    // int LAPACKE_dsyev(int matrix_layout, char jobz, char uplo, int n, double* a, int lda, double* w);
+
+    work = calloc(k, sizeof work);
     info = LAPACKE_dsyev(LAPACK_ROW_MAJOR, 'V', 'U', K, T, K, work);
     if (info != 0)
         fprintf(stderr, "[rank %d] LAPACKE_dsyev failure with error %d\n", rank, info);
 
-/*
-    transpose_nn(T, K);
-
-    // int dsyev_(char *jobz, char *uplo, int *n, double *a, int *lda, double *w, double *work, int *lwork, int *info)
-
-    dsyev_("Vectors", "Upper", &K, T, &K, Ritz_values, &wkopt, &lwork, &info);
-
-    lwork = (int) wkopt;
-    work = (double *) malloc(lwork * sizeof(double));
-
-    dsyev_("Vectors", "Upper", &K, T, &K, Ritz_values, work, &lwork, &info);
-
-    // free(work);
-
-    transpose_nn(T, K);
-*/
+    // Free allocated buffer (contains eigenvalues, but we only need the eigenvectors)
+    free(work);
 
     t = MPI_Wtime();
     if (rank == 0) {
