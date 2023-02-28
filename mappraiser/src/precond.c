@@ -458,7 +458,6 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, 
     double anorm, rcond;
 
     int ipiv[3];
-    // double w[18];
     double x[9];
     nb = 3;
     lda = 3;
@@ -546,18 +545,15 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, 
         // Compute the reciprocal of the condition number of the block
 
         /* Computes the norm of x */
-        // anorm = dlange_("1", &nb, &nb, x, &lda, w);
-        anorm = LAPACKE_dlange(LAPACK_ROW_MAJOR, '1', nb, nb, x, lda);
+        anorm = LAPACKE_dlange(LAPACK_COL_MAJOR, '1', nb, nb, x, lda);
 
         /* Modifies x in place with a LU decomposition */
-        // dgetrf_(&nb, &nb, x, &lda, iw, &info);
-        info = LAPACKE_dgetrf(LAPACK_ROW_MAJOR, nb, nb, x, lda, ipiv);
+        info = LAPACKE_dgetrf(LAPACK_COL_MAJOR, nb, nb, x, lda, ipiv);
         if (info != 0)
             fprintf(stderr, "[rank %d] LAPACKE_dgetrf failure with error %d\n", rank, info);
 
         /* Computes the reciprocal norm */
-        // dgecon_("1", &nb, x, &lda, &anorm, &rcond, w, iw, &info);
-        info = LAPACKE_dgecon(LAPACK_ROW_MAJOR, '1', nb, x, anorm, lda, &rcond);
+        info = LAPACKE_dgecon(LAPACK_COL_MAJOR, '1', nb, x, lda, anorm, &rcond);
         if (info != 0)
             fprintf(stderr, "[rank %d] LAPACKE_dgecon failure with error %d\n", rank, info);
 
@@ -1262,7 +1258,7 @@ void Lanczos_eig(Mat *A, Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ, double *x
 
     // int LAPACKE_dsyev(int matrix_layout, char jobz, char uplo, int n, double* a, int lda, double* w);
 
-    work = calloc(k, sizeof work);
+    work = calloc(K, sizeof work);
     info = LAPACKE_dsyev(LAPACK_ROW_MAJOR, 'V', 'U', K, T, K, work);
     if (info != 0)
         fprintf(stderr, "[rank %d] LAPACKE_dsyev failure with error %d\n", rank, info);
