@@ -62,6 +62,8 @@ struct Precond
     double *Qtx; // size Zn
     double *w;   // size Zn
 };
+typedef struct Precond Precond;
+
 // Block-Jacobi preconditioner
 int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, double *cond, int *lhits);
 
@@ -77,7 +79,7 @@ void free_precond(struct Precond **in_out_p);
 /* PCG routines */
 
 // Pixel share ponderation to deal with overlapping pixels between multiple MPI procs
-int get_pixshare_pond(Mat *A, double *pixpond);
+void get_pixshare_pond(Mat *A, double *pixpond);
 
 // PCG routine
 int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl);

@@ -36,7 +36,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double
     double ro, gamma, coeff;       // scalars
     double g2pix, g2pixp, g2pix_polak;
 
-    struct Precond *p = NULL;
+    Precond *p = NULL;
     double *pixpond;
 
     // if we want to use the true norm to compute the residual
