@@ -58,7 +58,7 @@ Mappraiser requires the following libraries:
 - LAPACK
 - CFITSIO
 
-Typically the path to the Midapack installation can be provided by adding the hint `-D MIDAPACK_DIR <path>`
+Typically the path to the Midapack installation can be provided by adding the hint `-D MIDAPACK_DIR=<path>`
 to the first cmake command.
 
 The user may want to use a LAPACK implementation provided by Intel MKL (Math Kernel Library).
