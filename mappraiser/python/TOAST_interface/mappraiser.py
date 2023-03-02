@@ -136,7 +136,12 @@ class Mappraiser(Operator):
     noise_name = Unicode(
         "noise",
         allow_none=True,
-        help="Observation detdata key for noise data",
+        help="Observation detdata key for noise data (if None, triggers noiseless mode)",
+    )
+
+    noiseless = Bool(
+        False,
+        help="Activate noiseless mode"
     )
 
     det_flags = Unicode(
@@ -452,8 +457,13 @@ class Mappraiser(Operator):
         # Parameters for mappraiser C library
         # 'path_output' and 'ref' already provided as script arguments to toast_so_sim
 
+        # Check if noiseless mode is activated
+        if self.noiseless:
+            self.noise_name = None
+
         # No noise: half bandwidth of noise model must be set to 1
         if self.noise_name is None:
+            self.noiseless = True
             params["Lambda"] = 1
         else:
             params["Lambda"] = self.bandwidth
@@ -918,8 +928,10 @@ class Mappraiser(Operator):
         # For the moment, in the absence of a gap-filling procedure in MAPPRAISER, we separate signal and noise in the simulations
 
         # Check if the simulation contains any noise at all.
-        if self.noise_name is None:
-            msg = "{} noise_name = None -> noise buffer filled with zeros".format(self._logprefix)
+        if self.noiseless:
+            msg = "{} Noiseless mode -> noise buffer filled with zeros".format(
+                self._logprefix
+            )
             log.info_rank(
                 msg,
                 data.comm.comm_world,
@@ -996,7 +1008,7 @@ class Mappraiser(Operator):
             self._mappraiser_invtt = self._mappraiser_invtt_raw.array()
 
         # Compute invtt
-        if self.noise_name is not None:
+        if not self.noiseless:
             compute_invtt(
                 len(data.obs),
                 len(all_dets),
