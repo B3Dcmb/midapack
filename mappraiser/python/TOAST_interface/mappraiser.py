@@ -229,16 +229,15 @@ class Mappraiser(Operator):
     bandwidth = Int(16384, help="Half-bandwidth for the noise model")
 
     # additional parameters for the solver (C library)
-    # TODO: fill in missing help info
-    solver = Int(0, help="Choice of mapmaking solver (0 = PCG, 1 = ECG)")
-    z_2lvl = Int(0, help="Dimension of deflation subspace for 2lvl preconditioners")
-    precond = Int(0, help="Choice of preconditioner (0 = BJ, 1 = 2lvl a priori, 2 = 2lvl a posteriori")
-    ortho_alg = Int(1, help="")
-    ptcomm_flag = Int(6, help="")
+    solver = Int(0, help="Choose mapmaking solver (0->PCG, 1->ECG)")
+    z_2lvl = Int(0, help="Size of 2lvl deflation space")
+    precond = Int(0, help="Choose preconditioner (0->BJ, 1->2lvl a priori, 2->2lvl a posteriori")
+    ortho_alg = Int(1, help="Orthogonalization scheme for ECG (O->odir, 1->omin)")
+    ptcomm_flag = Int(6, help="Choose collective communication scheme")
     tol = Float(1e-6, help="Convergence threshold for the iterative solver")
     maxiter = Int(3000, help="Maximum number of iterations allowed for the solver")
-    enlFac = Int(1, help="")
-    bs_red = Int(0, help="")
+    enlFac = Int(1, help="Enlargement factor for ECG")
+    bs_red = Int(0, help="Use dynamic search reduction")
 
     @traitlets.validate("shared_flag_mask")
     def _check_shared_flag_mask(self, proposal):
