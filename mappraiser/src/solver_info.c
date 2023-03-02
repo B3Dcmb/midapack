@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <math.h>
-#include "solver_info.h"
+#include "mappraiser/solver_info.h"
 
 /// @brief Print current solver parameters and information
 /// @param si SolverInfo struct

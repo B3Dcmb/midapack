@@ -8,7 +8,7 @@
 
 #include <stdlib.h>
 #include <math.h>
-#include "random.h"
+#include "mappraiser/random.h"
 
 //------------------------------------------------------------*
 // struct Random routines

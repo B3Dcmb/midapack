@@ -15,7 +15,6 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include "mappraiser.h"
-#include "solver_info.h"
 
 void reset_tod_gaps(double *tod, Tpltz *N, Gap *Gaps);
 void set_tpltz_struct(Tpltz *single_block_struct, Tpltz *full_struct, Block *block);

@@ -7,6 +7,7 @@
  */
 
 #include <stdlib.h>
+#include <stdbool.h>
 
 #ifndef RANDOM_H
 #define RANDOM_H

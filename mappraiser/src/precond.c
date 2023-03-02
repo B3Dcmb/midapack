@@ -1375,7 +1375,7 @@ void Lanczos_eig(Mat *A, Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ, double *x
 
 // General routine for constructing a preconditioner
 void build_precond(Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tpltz *Nm1, double **in_out_x,
-                   double *b, const double *noise, double *cond, int *lhits, double tol, int Zn, int precond,
+                   double *b, double *noise, double *cond, int *lhits, double tol, int Zn, int precond,
                    Gap *Gaps, int64_t gif) {
     int rank, size, i;
     double st, t;
