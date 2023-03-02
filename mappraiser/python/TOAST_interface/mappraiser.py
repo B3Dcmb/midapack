@@ -226,10 +226,6 @@ class Mappraiser(Operator):
 
     save_psd = Bool(False, help="Save noise PSD information during inv_tt computation.")
 
-    nperseg = Int(
-        0, help="If 0, set nperseg = timestream length to compute the noise periodograms. If > 0, nperseg = Lambda."
-    )
-
     bandwidth = Int(16384, help="Half-bandwidth for the noise model")
 
     # additional parameters for the solver (C library)
