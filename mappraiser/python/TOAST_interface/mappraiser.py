@@ -477,9 +477,14 @@ class Mappraiser(Operator):
         
         # Parameters for mappraiser C library
         # 'path_output' and 'ref' already provided as script arguments to toast_so_sim
+
+        # Check if noiseless mode is activated
+        if self.noiseless:
+            self.noise_name = None
         
         # No noise: half bandwidth of noise model must be set to 1
         if self.noise_name is None:
+            self.noiseless = True
             params["Lambda"] = 1
         else:
             params["Lambda"] = self.bandwidth
