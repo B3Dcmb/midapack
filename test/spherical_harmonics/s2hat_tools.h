@@ -57,8 +57,8 @@ typedef enum { false, true } bool;
 
 typedef struct Files_path_WIENER_FILTER{
     /* Global parameters of S2HAT, to give to all processors */
-    bool use_mask_file; // Boolean  to determine if a mask is used or not ; if not, maskfile_path will not be considered
-    char *maskfile_path; // Path to mask file, of dimensions [12*nside**2, 3] in fits format (write_maps of Healpy can be used)
+    // bool use_mask_file; // Boolean  to determine if a mask is used or not ; if not, maskfile_path will not be considered
+    // char *maskfile_path; // Path to mask file, of dimensions [12*nside**2, 3] in fits format (write_maps of Healpy can be used)
     
     int lmax_Wiener_Filter; // lmax which will be considered in the application of Wiener filter
     int nside; // Nside in order to read the maps

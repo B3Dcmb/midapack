@@ -15,7 +15,7 @@
 
 
 
-int get_main_s2hat_global_parameters(int nside, int *mask_binary s2hat_pixeltype *pixelization_scheme, s2hat_scandef *scan_sky_structure_pixel, s2hat_pixparameters *pixpar){
+int get_main_s2hat_global_parameters(int nside, int *mask_binary, s2hat_pixeltype *pixelization_scheme, s2hat_scandef *scan_sky_structure_pixel, s2hat_pixparameters *pixpar){
     /* Get s2hat structure which must be distributed by all processors
     All processors must have those same s2hat structure 
     Full documentation here : https://apc.u-paris.fr/APC_CS/Recherche/Adamis/MIDAS09/software/s2hat/s2hat/docs/S2HATdocs.html */ 
@@ -63,9 +63,7 @@ int get_main_s2hat_global_parameters(int nside, int *mask_binary s2hat_pixeltype
         }
         f_sky = npix;
     }
-    else{
-        
-    }
+    
     // printf( " //// Setting s2hat structure \n"); fflush(stdout);
 
     set_pixelization(pixchoice, *pixpar, pixelization_scheme);   /* Set C pixelization structure */
@@ -78,7 +76,7 @@ int get_main_s2hat_global_parameters(int nside, int *mask_binary s2hat_pixeltype
 }
 
 
-int init_s2hat_global_parameters(Files_path_WIENER_FILTER Files_WF_struct, int lmax, S2HAT_GLOBAL_parameters *Global_param_s2hat){
+int init_s2hat_global_parameters(Files_path_WIENER_FILTER Files_WF_struct, int *mask_binary, int lmax, S2HAT_GLOBAL_parameters *Global_param_s2hat){
     /* Create s2hat structure of global parameters of s2hat, which must be distributed to all processors
     All processors must have those same s2hat structure 
     Full documentation here : https://apc.u-paris.fr/APC_CS/Recherche/Adamis/MIDAS09/software/s2hat/s2hat/docs/S2HATdocs.html */ 
@@ -86,11 +84,11 @@ int init_s2hat_global_parameters(Files_path_WIENER_FILTER Files_WF_struct, int l
     s2hat_pixeltype pixelization_scheme;
     s2hat_scandef scan_sky_structure_pixel;
     s2hat_pixparameters pixpar;
-    char *maskfile_path = Files_WF_struct.maskfile_path;
-    bool use_mask_file = Files_WF_struct.use_mask_file;
+    // char *maskfile_path = Files_WF_struct.maskfile_path;
+    // bool use_mask_file = Files_WF_struct.use_mask_file;
     int nside = Files_WF_struct.nside;
     
-    get_main_s2hat_global_parameters(nside, maskfile_path, &pixelization_scheme, &scan_sky_structure_pixel, &pixpar, use_mask_file);
+    get_main_s2hat_global_parameters(nside, mask_binary, &pixelization_scheme, &scan_sky_structure_pixel, &pixpar);
 
     Global_param_s2hat->pixelization_scheme = pixelization_scheme;
     Global_param_s2hat->scan_sky_structure_pixel = scan_sky_structure_pixel;
@@ -226,11 +224,11 @@ int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters Global_param_s2ha
 }
 
 
-int init_s2hat_parameters_superstruct(Files_path_WIENER_FILTER *Files_WF_struct, int nstokes, S2HAT_parameters *S2HAT_params, MPI_Comm world_comm)
+int init_s2hat_parameters_superstruct(Files_path_WIENER_FILTER *Files_WF_struct, int *mask_binary, int nstokes, S2HAT_parameters *S2HAT_params, MPI_Comm world_comm)
 {   // Initalize both S2HAT_GLOBAL_parameters and S2HAT_LOCAL_parameters for superstructure of S2HAT
     
     S2HAT_GLOBAL_parameters *Global_param_s2hat = (S2HAT_GLOBAL_parameters *) malloc( 1 * sizeof(S2HAT_GLOBAL_parameters));
-    init_s2hat_global_parameters(*Files_WF_struct, Files_WF_struct->lmax_Wiener_Filter, Global_param_s2hat); 
+    init_s2hat_global_parameters(*Files_WF_struct, mask_binary, Files_WF_struct->lmax_Wiener_Filter, Global_param_s2hat); 
     // Initialization of Global_param_s2hat structure, for sky pixelization scheme and lmax_WF choice
 
 
@@ -313,3 +311,4 @@ void free_s2hat_parameters_struct(S2HAT_parameters *S2HAT_params){
 
     free(S2HAT_params);
 }
+

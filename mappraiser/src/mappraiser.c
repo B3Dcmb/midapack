@@ -219,14 +219,17 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     if (bool_apply_filter==1)
     {   
         Files_path_WF_struct = (Files_path_WIENER_FILTER *)malloc(1*sizeof(Files_path_WIENER_FILTER)); // Initialization of Files_Wiener_filter structure
-        init_files_struct_WF(Files_path_WF_struct, path_mask_file, use_mask_file, nside, lmax_Wiener_Filter, c_ell_path, number_correlations);
+        init_files_struct_WF(Files_path_WF_struct, path_mask_file, nside, lmax_Wiener_Filter, c_ell_path, number_correlations);
         // Attribution of paths of c_ells (for covariance matrix), the corresponding number of correlations included and mask_file as well as a bool (use_mask_file) to determine if a mask should be used or not
     }
+
     S2HAT_params->Files_WF_struct = Files_path_WF_struct;
     PCG_var *PCG_variable = (PCG_var *) malloc(1*sizeof(PCG_var));
-    s2hat_dcomplex *local_alm = NULL;
+    // s2hat_dcomplex *local_alm = NULL;
     double *local_map_pix = NULL;
-    initialize_PCG_var_struct(PCG_variable, local_map_pix, local_alm, domain_PCG_computation, bool_apply_filter, A.nnz, S2HAT_params);
+    initialize_PCG_var_struct(PCG_variable, local_map_pix, domain_PCG_computation, bool_apply_filter, A.nnz, S2HAT_params);
+
+    int is_pixel_scheme_ring = 0; // Pixel scheme from TOAST is not ring but nest
 
     MPI_Barrier(comm);
     if (rank == 0)
@@ -239,7 +242,8 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     // Conjugate Gradient
     if (solver == 0)
     {
-        PCG_GLS_true(outpath, ref, &A, &Nm1, x, signal, noise, cond, lhits, tol, maxiter, precond, Z_2lvl);
+        // PCG_GLS_true(outpath, ref, &A, Nm1, x, signal, noise, cond, lhits, tol, maxiter, precond, Z_2lvl, *Files_path_WF_struct, domain_PCG_computation, bool_apply_filter);
+        PCG_GLS_true(outpath, ref, &A, Nm1, PCG_variable, signal, noise, cond, lhits, tol, maxiter, precond, Z_2lvl, is_pixel_scheme_ring, S2HAT_params);
     }
     else if (solver == 1)
     {

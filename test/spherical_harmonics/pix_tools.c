@@ -86,7 +86,7 @@ int get_projectors_ring_and_nest(int *indices_nest, int *ordered_indices_ring, i
   }
 
   free(indices_ring);
-  free(ordered_indices_ring);
+  // free(ordered_indices_ring);
 }
 
 int project_values_into_different_scheme(double *values_in, int number_values, int *projector_in2out, double *values_out)

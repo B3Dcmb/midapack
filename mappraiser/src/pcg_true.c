@@ -39,7 +39,7 @@ int compute_norm_v2(double *norm_to_compute, double *vector_left, double *vector
 int swap_pointers(PCG_var *PCG_variable, PCG_var *PCG_variable_2);
 
 /** Perform PCG routine **/
-int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, PCG_var *PCG_variable, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl, S2HAT_parameters *S2HAT_params)
+int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, PCG_var *PCG_variable, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl, int is_pixel_scheme_ring, S2HAT_parameters *S2HAT_params)
 {
     int i, j, k; // some indexes
     int m, n;    // number of local time samples, number of local pixels
@@ -57,6 +57,9 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, PCG_var *PCG_varia
 
     Precond *p = NULL;
     double *pixpond;
+    
+    Butterfly_struct *MAPP2ring_butterfly;
+    Butterfly_struct *ring2MAPP_butterfly:
 
     // if we want to use the true norm to compute the residual
     int TRUE_NORM = 1; // 0: No ; 1: Yes
@@ -100,9 +103,9 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, PCG_var *PCG_varia
         init_s2hat_parameters_superstruct(S2HAT_params->Files_WF_struct, PCG_variable->S2HAT_parameters, A->comm);
         // Initialization of S2HAT_parameters structure
 
-        Butterfly_struct *MAPP2ring_butterfly
-        Butterfly_struct *ring2MAPP_butterfly
-        init_harmonic_superstruct(is_pixel_scheme_ring, A, S2HAT_params->Files_WF_struct, PCG_variable->S2HAT_parameters, Butterfly_struct *MAPP2ring_butterfly, Butterfly_struct *ring2MAPP_butterfly);
+        Butterfly_struct *MAPP2ring_butterfly = (Butterfly_struct *)malloc(1*sizeof(Butterfly_struct));
+        Butterfly_struct *ring2MAPP_butterfly = (Butterfly_struct *)malloc(1*sizeof(Butterfly_struct)):
+        init_harmonic_superstruct(is_pixel_scheme_ring, A, S2HAT_params->Files_WF_struct, PCG_variable->S2HAT_parameters, MAPP2ring_butterfly, ring2MAPP_butterfly);
         // Initialization of S2HAT_parameters structure
 
         S2HAT_GLOBAL_parameters *Global_param_s2hat = PCG_variable->S2HAT_parameters->Global_param_s2hat;
