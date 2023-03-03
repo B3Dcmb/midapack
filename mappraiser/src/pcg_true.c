@@ -39,7 +39,7 @@ int compute_norm_v2(double *norm_to_compute, double *vector_left, double *vector
 int swap_pointers(PCG_var *PCG_variable, PCG_var *PCG_variable_2);
 
 /** Perform PCG routine **/
-int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, PCG_var *PCG_variable, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl, int is_pixel_scheme_ring, S2HAT_parameters *S2HAT_params)
+int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, PCG_var *PCG_variable, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl, int is_pixel_scheme_ring, S2HAT_parameters *S2HAT_params)
 {
     int i, j, k; // some indexes
     int m, n;    // number of local time samples, number of local pixels

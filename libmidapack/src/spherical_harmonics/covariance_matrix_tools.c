@@ -6,7 +6,7 @@
 #include <string.h>
 
 // choose header based on compilation option
-#ifdef W_MKL
+#ifdef HAVE_MKL
 #include <mkl.h>
 #else
 #include <lapacke.h>

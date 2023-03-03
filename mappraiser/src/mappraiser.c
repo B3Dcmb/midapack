@@ -243,7 +243,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     if (solver == 0)
     {
         // PCG_GLS_true(outpath, ref, &A, Nm1, x, signal, noise, cond, lhits, tol, maxiter, precond, Z_2lvl, *Files_path_WF_struct, domain_PCG_computation, bool_apply_filter);
-        PCG_GLS_true(outpath, ref, &A, Nm1, PCG_variable, signal, noise, cond, lhits, tol, maxiter, precond, Z_2lvl, is_pixel_scheme_ring, S2HAT_params);
+        PCG_GLS_true(outpath, ref, &A, &Nm1, PCG_variable, signal, noise, cond, lhits, tol, maxiter, precond, Z_2lvl, is_pixel_scheme_ring, S2HAT_params);
     }
     else if (solver == 1)
     {
