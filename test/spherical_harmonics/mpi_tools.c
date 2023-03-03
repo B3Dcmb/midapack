@@ -43,3 +43,27 @@ int mpi_create_subset(int number_ranks_to_divive, MPI_Comm initcomm, MPI_Comm *s
 
     return 0;
 }
+
+int all_reduce_to_all_indices_mappraiser(int *indices_pixel_local, int number_pixel_local, int nside, int* all_sky_pixels_observed, int root, MPI_Comm world_comm)
+{
+    /* Will get the number_pixel_local first pixels of indices_pixel_local to build */
+    int i;
+    int *copy_ell_indices;
+    int *com_val;
+
+    long int npix = 12*nside*nside;
+
+    com_val=(int *) calloc( npix,sizeof(int)); // Npix or less because of trash_pix ? To check later
+
+    for (i=0; i<number_pixel_local; i++)
+    {
+        com_val[indices_pixel_local[i]] = 1;
+    }
+
+    // s2m(com_val, indices_ones, indices_pixel_local, number_pixel_local); 
+    MPI_Reduce(com_val, all_sky_pixels_observed, npix, MPI_INT, MPI_SUM, root, world_comm);	//maximum index
+
+    free(copy_ell_indices);
+    free(com_val);
+    return 0;
+}

@@ -11,7 +11,7 @@ typedef struct PCG_var{
     /* Local parameters of S2HAT, dependent on each processor */
 
     double *local_map_pix; // Local map in pixel domain, with MAPPRAISER convention
-    s2hat_dcomplex *local_alm; // Local alm in harmonic domain, with S2HAT convention
+    // s2hat_dcomplex *local_alm; // Local alm in harmonic domain, with S2HAT convention
 
     // Specifications of the computation
     int domain_PCG_computation; // Domain chosen for PCG computation : 0 pixel, 1 harmonic
@@ -24,11 +24,10 @@ typedef struct PCG_var{
     // Note that all data_var will point to the same S2HAT_GLOBAL_parameters and S2HAT_LOCAL_parameters for each processor
 
     // Update flags to check if an update needs to be done, by retransforming pixel2alm or alm2pixel
-    int does_map_pixel_need_update; // 0 no update needed, 1 need update from local_alm
-    int does_local_alm_need_update; /// 0 no update needed, 1 need update from local_map_pix
+    // int does_map_pixel_need_update; // 0 no update needed, 1 need update from local_alm
+    // int does_local_alm_need_update; /// 0 no update needed, 1 need update from local_map_pix
     // Beware, those updates can be communication costly
     // Also note that in case we want to update from other domains of computation, the flags can take other values 2, 3, ...
-
 } PCG_var;
 
 typedef struct Butterfly_struct{
@@ -41,6 +40,16 @@ typedef struct Butterfly_struct{
     int classic_or_reshuffle_butterfly; 
     // Flag to indicate if classic or reshuffled butterfly is used, e.g. if we expect the pixel distributions prior and after communication to be the same or different
     // 0 for classic butterfly scheme with same pixel distributions prior/after ; 1 for after
+
+    int do_we_need_to_project_into_different_scheme;
+    // Flag to indicate if we need to project the input pixel distribution into a different scheme
+    
+    int *projector_values;
+    // Projector for local values of map : allows to project the values from one pixel distribution to another
+    
+    int *ordered_indices;
+    // Stored ordered indices, only used for ring2nest and nest2ring transitions in which case it corresponds to 
+    
 } Butterfly_struct;
 
 

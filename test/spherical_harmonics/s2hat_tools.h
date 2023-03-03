@@ -118,11 +118,13 @@ void free_s2hat_LOCAL_parameters_struct(S2HAT_LOCAL_parameters *Local_param_s2ha
 /* Free superstructure around S2HAT */
 void free_s2hat_parameters_struct(S2HAT_parameters *S2HAT_params);
 
-
+/* Change conventions between ring and nest distribution of maps */
+int convert_indices_nest2ring(double *indices_nest, double *indices_ring, long int number_of_indices);
+int convert_indices_ring2nest(double *indices_ring, double *indices_nest, long int number_of_indices);
 
 /* Change conventions between nest and ring distribution of maps */
-void compute_full_map_ring2nest(double *map_ring, double *map_nest, int nside, int nstokes, int npix);
-void compute_full_map_nest2ring(double *map_nest, double *map_ring, int nside, int nstokes, int npix);
+void convert_full_map_ring2nest(double *map_ring, double *map_nest, int nside, int nstokes, int npix);
+void convert_full_map_nest2ring(double *map_nest, double *map_ring, int nside, int nstokes, int npix);
 
 /* Define file support structure for Wiener_filter extension */
 void init_files_struct_WF(Files_path_WIENER_FILTER *Files_path_WF_struct, char *path_mask_file,  bool use_mask_file, int nside, int lmax_Wiener_Filter, char *c_ell_path, int number_correlations);
@@ -140,10 +142,10 @@ void make_mask_binary(double* mask, int* mask_binary, int *f_sky, long npix);
 void read_fits_cells(int lmax, int number_correl, double *c_ell_array, char *path_list_file, int col);
 
 /* Transform alm coefficients local_alm into a pixel map local_map_pix */
-int apply_alm2pix(s2hat_dcomplex *local_alm, double *local_map_pix, int nstokes, S2HAT_parameters *S2HAT_params);
+int apply_alm2pix(s2hat_dcomplex *local_alm, double *local_map_pix, S2HAT_parameters *S2HAT_params);
 
 /* Transform local pixel map into local alm coefficients */
-int apply_pix2alm(double *local_map_pix, s2hat_dcomplex *local_alm, int nstokes, S2HAT_parameters *S2HAT_params);
+int apply_pix2alm(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parameters *S2HAT_params);
 
 /* Gather all local_map to obtain a full_sky_map */
 // int gather_map(double *local_map_pix, double *full_sky_map, S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat);

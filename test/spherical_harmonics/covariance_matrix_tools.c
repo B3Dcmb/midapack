@@ -48,7 +48,8 @@ int alm2cls(s2hat_dcomplex* local_alm, double *c_ell_array, int nspec, int nstok
 
     // c_ell_array = (double *) calloc( nstokes*(lmax+1), sizeof(double));
     // printf("Test - gangrank %d", Local_param_s2hat.gangrank);
-    collect_cls(nmaps, mapnum, ncomp, lmax, Local_param_s2hat.nmvals, Local_param_s2hat.mvals, lda, 
+    if (Local_param_s2hat.gangrank == -1)
+        collect_cls(nmaps, mapnum, ncomp, lmax, Local_param_s2hat.nmvals, Local_param_s2hat.mvals, lda, 
                 local_alm, nspec, c_ell_array, Local_param_s2hat.gangrank, Local_param_s2hat.gangsize, Local_param_s2hat.gangroot, Local_param_s2hat.gangcomm);
     // printf("Test2 - gangrank %d %f %f", Local_param_s2hat.gangrank, *(c_ell_array), *(c_ell_array+lmax-1));
 

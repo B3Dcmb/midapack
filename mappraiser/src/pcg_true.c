@@ -156,8 +156,8 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, PCG_var *PCG_varia
 
     // TrMatVecProd(A, _g, g, 0); // g = At _g
     TrMatVecProd(A, _g, Residual_var->local_map_pix, 0); // Residual_var = g = At _g
-    Residual_var->does_local_alm_need_update = 1; // Prepare to update local_alm
-    update_PCG_var(Residual_var, A); // Update Residual_var
+    // Residual_var->does_local_alm_need_update = 1; // Prepare to update local_alm
+    // update_PCG_var(Residual_var, A); // Update Residual_var
 
     // apply_precond(p, A, &Nm1, g, Cg);
     apply_precond(p, A, &Nm1, Residual_var->S2HAT_parameters, Residual_var, PrecRes_var);

@@ -1428,7 +1428,7 @@ void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat
         get_inverse_covariance_matrix_NxN(PCG_variable->nstokes, S2HAT_params, p->inverse_covariance_matrix);
         /* The covariance matrix will be inverted separately for each of its ell_value,
             In particular for each ell_value a N*N matrix [TT], [EE, EB, BE, BB], or [TT, TE, TB, ET, EE, EB, BT, BE, BB] will be inverted
-        */        
+        */
     }
 
     *out_p = p;
@@ -1443,13 +1443,14 @@ void apply_precond(struct Precond *p, const Mat *A, const Tpltz *Nm1, S2HAT_para
 {
     int i;
     double *new_local_variable_pix;
+    s2hat_dcomplex *local_alm;
 
     switch(p->precond) {
         case 0 :
             // BJ
             MatVecProd(&(p->BJ_inv), init_PCG_var->local_map_pix, out_PCG_var->local_map_pix, 0);
 
-            out_PCG_var->does_local_alm_need_update = 1; // Change done on pixel domain, harmonic domain need update
+            // out_PCG_var->does_local_alm_need_update = 1; // Change done on pixel domain, harmonic domain need update
 
         case 1 :
         case 2 :
@@ -1469,12 +1470,14 @@ void apply_precond(struct Precond *p, const Mat *A, const Tpltz *Nm1, S2HAT_para
             {
                 out_PCG_var->local_map_pix[i] += p->Qg[i];
             }
-            out_PCG_var->does_local_alm_need_update = 1; // Change done on pixel domain, harmonic domain need update
+            // out_PCG_var->does_local_alm_need_update = 1; // Change done on pixel domain, harmonic domain need update
         case 3 : // Preconditionner C^{-1} + Pdiag(N^-1)P
 
             MatVecProd(&(p->BJ_inv), init_PCG_var->local_map_pix, out_PCG_var->local_map_pix, 0);
             // Calculation on pixel domain of Pdiag(N)P
-                
+            
+            local_alm = (s2hat_dcomplex *) malloc( A->nnz*(S2HAT_params->Global_param_s2hat->nlmax+1)*S2HAT_params->Global_param_s2hat->nmmax * sizeof(s2hat_dcomplex));
+
             apply_inv_covariance_matrix_to_alm(init_PCG_var->local_alm, out_PCG_var->local_alm, p->inverse_covariance_matrix, init_PCG_var->nstokes, S2HAT_params); 
             // Multiplication of C^{-1} with vector a_lm
 

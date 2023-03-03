@@ -36,39 +36,6 @@ void init_files_struct_WF(Files_path_WIENER_FILTER *Files_path_WF_struct, char *
 }
 
 
-void compute_full_map_nest2ring(double *map_nest, double *map_ring, int nside, int nstokes, int npix){
-  // Compute S2HAT ring version of MAPPRAISER nest map map_nest
-  // Expect map of nstokes*npix
-  int pixel_index, nstokes_index;
-  long ipix;
-
-  for( pixel_index=0; pixel_index<npix; pixel_index++) {
-    nest2ring( nside, pixel_index, &ipix);
-    for (nstokes_index=0; nstokes_index<nstokes; nstokes_index++){
-      map_ring[ipix + nstokes_index*npix] = map_nest[pixel_index*nstokes + nstokes_index];
-      // Change map in ring ordering with S2HAT convention [npix, stokes]
-      // into map in nest ordering, with MAPPRAISER convention [nstokes, npix] in column-wise ordering
-    }
-  }
-}
-
-
-void compute_full_map_ring2nest(double *map_ring, double *map_nest, int nside, int nstokes, int npix){
-  // Compute MAPPRAISER nest version of S2HAT ring map map_ring
-  // Expect map of nstokes*npix
-  int pixel_index, nstokes_index;
-  long ipix;
-
-  for( pixel_index=0; pixel_index<npix; pixel_index++) {
-    ring2nest( nside, pixel_index, &ipix);
-    for (nstokes_index=0; nstokes_index<nstokes; nstokes_index++){
-      map_nest[ipix*nstokes + nstokes_index] = map_ring[pixel_index + nstokes_index*npix];
-      // Change map in nest ordering, with MAPPRAISER convention [nstokes, npix]
-      // into map in ring ordering with S2HAT convention [npix, stokes] in column-wise ordering
-    }
-  }
-}
-
 void read_fits_mask(int nside, double *mask, char *path_mask_file, int col)
 /* Function from Xpure, to obtain array from mask path
     MAYBE TO CHANGE (maybe simplify) */
@@ -152,22 +119,6 @@ void read_TQU_maps( int nside, double *map, char *infile, int nstokes)
   // printf( ")\n");
   fflush( stdout);
 }
-
-
-
-void make_mask_binary(double* mask, int* mask_binary, int *f_sky, long npix){
-  /* Function to transform the mask into binary (composed of 0 and 1 on pixel sky)*/
-  long pixel;
-  // mask_binary = (int *) calloc( npix, sizeof( int));
-  // printf("Tmp test %ld \n", npix);
-  for( pixel=0; pixel<npix; pixel++)
-      if( mask[pixel] != 0) {
-          mask_binary[pixel] = 1;
-          // printf("Tmp test %ld \t", pixel,  );
-          *f_sky = *f_sky + 1;
-      }
-  }
-
 
 
 
