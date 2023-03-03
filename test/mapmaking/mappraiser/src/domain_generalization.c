@@ -66,7 +66,7 @@ int init_butterfly_communication(Butterfly_struct *Butterfly_obj, int *indices_i
 }
 
 
-int init_harmonic_superstruct(int is_pixel_scheme_MAPPRAISER_ring, Mat *A, Files_path_WIENER_FILTER *Files_WF_struct, S2HAT_parameters *S2HAT_params, Butterfly_struct *MAPP2ring_butterfly, Butterfly_struct *ring2MAPP_butterfly, MPI_Comm world_comm)
+int init_harmonic_superstruct(int is_pixel_scheme_MAPPRAISER_ring, Mat *A, Files_path_WIENER_FILTER *Files_WF_struct, S2HAT_parameters *S2HAT_params, Butterfly_struct *MAPP2ring_butterfly, Butterfly_struct *ring2MAPP_butterfly)
 {
     /* Initalize all structures necessary for harmonic structures : S2HAT_params for S2HAT operations, and the 2 Butterfly_struct MAPP2ring_butterfly and ring2MAPP_butterfly for communication purposes
        indices_out and count_out correspond to the pixel distribution with the scheme prefered for TOD operation, which we call the "PCG pixel distribution scheme"
@@ -82,7 +82,7 @@ int init_harmonic_superstruct(int is_pixel_scheme_MAPPRAISER_ring, Mat *A, Files
     int number_pixels_MAPPRAISER = A->lcount - (A->nnz) * (A->trash_pix);
     // Will pixels be co-added ? lindices won't
 
-    init_s2hat_parameters_superstruct(Files_WF_struct, S2HAT_params, world_comm);
+    init_s2hat_parameters_superstruct(Files_WF_struct, S2HAT_params, A->comm);
     // Initialize S2HAT structures
 
     map_size = S2HAT_params->Local_param_s2hat->map_size; // Local map size
@@ -115,11 +115,11 @@ int init_harmonic_superstruct(int is_pixel_scheme_MAPPRAISER_ring, Mat *A, Files
     // init_butterfly_communication(TOD2alm_butterfly, pixel_numbered_ring, number_pixels_local, NULL, 0, flag_classic_butterfly, world_comm);
     // // Communication from TOD into pixel map in RING scheme, for harmonic operation purposes
 
-    init_butterfly_communication(ring2MAPP_butterfly, pixel_numbered_ring, map_size, indices_local_MAPPRAISER, number_pixels_MAPPRAISER, flag_reshuffle_butterfly, world_comm);
+    init_butterfly_communication(ring2MAPP_butterfly, pixel_numbered_ring, map_size, indices_local_MAPPRAISER, number_pixels_MAPPRAISER, flag_reshuffle_butterfly, A->comm);
     // Communication from ring scheme pixel map in the PCG pixel distribution scheme
     
 
-    init_butterfly_communication(MAPP2ring_butterfly, indices_local_MAPPRAISER, number_pixels_MAPPRAISER, pixel_numbered_ring, map_size, flag_reshuffle_butterfly, world_comm);
+    init_butterfly_communication(MAPP2ring_butterfly, indices_local_MAPPRAISER, number_pixels_MAPPRAISER, pixel_numbered_ring, map_size, flag_reshuffle_butterfly, A->comm);
     // Communication from ring scheme pixel map in the PCG pixel distribution scheme
 }
 

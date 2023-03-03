@@ -100,6 +100,11 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz Nm1, PCG_var *PCG_varia
         init_s2hat_parameters_superstruct(S2HAT_params->Files_WF_struct, PCG_variable->S2HAT_parameters, A->comm);
         // Initialization of S2HAT_parameters structure
 
+        Butterfly_struct *MAPP2ring_butterfly
+        Butterfly_struct *ring2MAPP_butterfly
+        init_harmonic_superstruct(is_pixel_scheme_ring, A, S2HAT_params->Files_WF_struct, PCG_variable->S2HAT_parameters, Butterfly_struct *MAPP2ring_butterfly, Butterfly_struct *ring2MAPP_butterfly);
+        // Initialization of S2HAT_parameters structure
+
         S2HAT_GLOBAL_parameters *Global_param_s2hat = PCG_variable->S2HAT_parameters->Global_param_s2hat;
         // The S2HAT_parameters structure has been initialized, definition of the varariable corresponding to the global S2HAT parameters which will be known by all mpi-tasks
 
