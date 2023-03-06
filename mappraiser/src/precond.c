@@ -1327,7 +1327,7 @@ void Lanczos_eig(Mat *A, Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ, double *x
 }
 
 // General routine for constructing a preconditioner
-void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tpltz *Nm1, PCG_var *PCG_variable, double *b, const double *noise, double *cond, int *lhits, double tol, int Zn, S2HAT_parameters *S2HAT_params, int precond)
+void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tpltz *Nm1, PCG_var *PCG_variable, double *b, const double *noise, double *cond, int *lhits, double tol, int Zn, Harmonic_superstruct *Harmonic_sup, int precond)
 {
     int rank, size, i;
     double st, t;
@@ -1416,7 +1416,7 @@ void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat
 
     if (precond == 3) // Wiener Filter preconditionner : C^{-1} + P^t diag(N^-1) P
     {
-        int lmax_WF = S2HAT_params->Files_WF_struct->lmax_Wiener_Filter; // Convention by S2HAT
+        int lmax_WF = Harmonic_sup->S2HAT_params->Files_WF_struct->lmax_Wiener_Filter; // Convention by S2HAT
         int ell_value;
         // double **inverse_covariance_matrix;
         p->inverse_covariance_matrix = calloc(lmax_WF, sizeof(double *));
@@ -1425,7 +1425,7 @@ void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat
             // (nstokes*nstokes) for each element of the covariance matrix either [TT], [EE, EB, BE, BB], or [TT, TE, TB, ET, EE, EB, BT, BE, BB]
         }
         
-        get_inverse_covariance_matrix_NxN(PCG_variable->nstokes, S2HAT_params, p->inverse_covariance_matrix);
+        get_inverse_covariance_matrix_NxN(PCG_variable->nstokes, Harmonic_sup->S2HAT_params, p->inverse_covariance_matrix);
         /* The covariance matrix will be inverted separately for each of its ell_value,
             In particular for each ell_value a N*N matrix [TT], [EE, EB, BE, BB], or [TT, TE, TB, ET, EE, EB, BT, BE, BB] will be inverted
         */
@@ -1439,7 +1439,7 @@ void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat
 }
 
 // General routine for applying the preconditioner to a map vector
-void apply_precond(struct Precond *p, const Mat *A, const Tpltz *Nm1, S2HAT_parameters *S2HAT_params, PCG_var *init_PCG_var, PCG_var *out_PCG_var)
+void apply_precond(struct Precond *p, const Mat *A, const Tpltz *Nm1, Harmonic_superstruct *Harmonic_sup, PCG_var *init_PCG_var, PCG_var *out_PCG_var)
 {
     int i;
     double *new_local_variable_pix;
@@ -1476,9 +1476,10 @@ void apply_precond(struct Precond *p, const Mat *A, const Tpltz *Nm1, S2HAT_para
             MatVecProd(&(p->BJ_inv), init_PCG_var->local_map_pix, out_PCG_var->local_map_pix, 0);
             // Calculation on pixel domain of Pdiag(N)P
             
-            local_alm = (s2hat_dcomplex *) malloc( A->nnz*(S2HAT_params->Global_param_s2hat->nlmax+1)*S2HAT_params->Global_param_s2hat->nmmax * sizeof(s2hat_dcomplex));
+            local_alm_in = (s2hat_dcomplex *) malloc( A->nnz*(Harmonic_sup->S2HAT_params->Global_param_s2hat->nlmax+1)*Harmonic_sup->S2HAT_params->Global_param_s2hat->nmmax * sizeof(s2hat_dcomplex));
+            local_alm_out = (s2hat_dcomplex *) malloc( A->nnz*(Harmonic_sup->S2HAT_params->Global_param_s2hat->nlmax+1)*Harmonic_sup->S2HAT_params->Global_param_s2hat->nmmax * sizeof(s2hat_dcomplex));
 
-            apply_inv_covariance_matrix_to_alm(init_PCG_var->local_alm, out_PCG_var->local_alm, p->inverse_covariance_matrix, init_PCG_var->nstokes, S2HAT_params); 
+            apply_inv_covariance_matrix_to_alm(local_alm_in, local_alm_out, p->inverse_covariance_matrix, init_PCG_var->nstokes, Harmonic_sup->S2HAT_params); 
             // Multiplication of C^{-1} with vector a_lm
 
             // The addition C^{-1}.init_PCG_var + Pdiag(N)P.init_PCG_var will be done in the next step
@@ -1488,7 +1489,7 @@ void apply_precond(struct Precond *p, const Mat *A, const Tpltz *Nm1, S2HAT_para
                 case 0:
                 
                 new_local_variable_pix = (double *)malloc(p->n*sizeof(double));
-                global_harmonic_2_map(new_local_variable_pix, out_PCG_var->local_alm, A, S2HAT_params);
+                global_harmonic_2_map(local_alm_out, new_local_variable_pix, A, Harmonic_sup);
                 // Transformation of a_lm back into pixel domain
                 for (i = 0; i < p->n; ++i)
                 {
@@ -1496,26 +1497,26 @@ void apply_precond(struct Precond *p, const Mat *A, const Tpltz *Nm1, S2HAT_para
                 }
                 free(new_local_variable_pix);
 
-                out_PCG_var->does_local_alm_need_update = 1; // Change done on pixel domain, harmonic domain need update
+                // out_PCG_var->does_local_alm_need_update = 1; // Change done on pixel domain, harmonic domain need update
                 // init_PCG_var = init_local_pix;
                 // out_PCG_var = out_local_pix;
 
                 case 1:
                 
                 s2hat_dcomplex *local_alm_out;
-                local_alm_out = (s2hat_dcomplex *) malloc( A->nnz*(S2HAT_params->Global_param_s2hat->nlmax+1)*S2HAT_params->Global_param_s2hat->nmmax * sizeof(s2hat_dcomplex));
+                local_alm_out = (s2hat_dcomplex *) malloc( A->nnz*(Harmonic_sup->S2HAT_params->Global_param_s2hat->nlmax+1)*Harmonic_sup->S2HAT_params->Global_param_s2hat->nmmax * sizeof(s2hat_dcomplex));
     
-                global_map_2_harmonic(out_PCG_var->local_map_pix, local_alm_out, A, S2HAT_params);
+                global_map_2_harmonic(out_PCG_var->local_map_pix, local_alm_out, A, Harmonic_sup);
                 // Result in pixel transformed in harmonic
 
-                for (i = 0; i < A->nnz*(S2HAT_params->Global_param_s2hat->nlmax+1)*S2HAT_params->Global_param_s2hat->nmmax ; ++i)
+                for (i = 0; i < A->nnz*(Harmonic_sup->S2HAT_params->Global_param_s2hat->nlmax+1)*Harmonic_sup->S2HAT_params->Global_param_s2hat->nmmax ; ++i)
                 {
                     out_PCG_var->local_alm[i].re += local_alm_out[i].re ; // Adding C^(-1)init_PCG_var and Pdiag(N)Px
                     out_PCG_var->local_alm[i].im += local_alm_out[i].im ; // Adding C^(-1)init_PCG_var and Pdiag(N)Px
                 }
                 // out_PCG_var->local_alm = local_alm_out; // Putting the final result in local_alm_out
 
-                out_PCG_var->does_map_pixel_need_update = 1; // Change done on harmonic domain, pixel domain need update
+                // out_PCG_var->does_map_pixel_need_update = 1; // Change done on harmonic domain, pixel domain need update
 
                 free(local_alm_out);
 

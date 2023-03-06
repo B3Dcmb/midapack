@@ -11,7 +11,7 @@
 #include "domain_generalization.h"
 
 
-int initialize_PCG_var_struct(PCG_var *PCG_variable, double *local_map_pix, int domain_PCG_computation, int bool_apply_filter, int nstokes, S2HAT_parameters *S2HAT_params)
+int initialize_PCG_var_struct(PCG_var *PCG_variable, double *local_map_pix, int domain_PCG_computation, int bool_apply_filter, int nstokes)
 {   // Initalize PCG_var structure with S2HAT parameters and flags, before attribution of the data
 
     PCG_variable->local_map_pix = local_map_pix; // Local map in pixel domain, with MAPPRAISER convention
@@ -28,7 +28,7 @@ int initialize_PCG_var_struct(PCG_var *PCG_variable, double *local_map_pix, int 
     PCG_variable->nstokes = nstokes; // Number of Stokes parameters for the computation, 3 usually means T, Q, U
 
     // S2HAT structures necessary for harmonic domain
-    PCG_variable->S2HAT_parameters = S2HAT_params;
+    // PCG_variable->S2HAT_parameters = S2HAT_params;
     // Contains S2HAT_parameters->Global_param_s2hat and S2HAT_parameters->Local_param_s2hat
 
     // Initialize update flags to 0 "no update needed"
@@ -67,7 +67,7 @@ int init_butterfly_communication(Butterfly_struct *Butterfly_obj, int *indices_i
 }
 
 
-int init_harmonic_superstruct(int is_pixel_scheme_MAPPRAISER_ring, Mat *A, Files_path_WIENER_FILTER *Files_WF_struct, S2HAT_parameters *S2HAT_params, Butterfly_struct *MAPP2ring_butterfly, Butterfly_struct *ring2MAPP_butterfly, int *mask_binary)
+int init_harmonic_superstruct(int is_pixel_scheme_MAPPRAISER_ring, Mat *A, Harmonic_superstruct *Harm_struct, int *mask_binary)
 {
     /* Initalize all structures necessary for harmonic structures : S2HAT_params for S2HAT operations, and the 2 Butterfly_struct MAPP2ring_butterfly and ring2MAPP_butterfly for communication purposes
        indices_out and count_out correspond to the pixel distribution with the scheme prefered for TOD operation, which we call the "PCG pixel distribution scheme"
@@ -80,6 +80,9 @@ int init_harmonic_superstruct(int is_pixel_scheme_MAPPRAISER_ring, Mat *A, Files
     long int number_pixels_local, number_pixel_total;
     long int *indices_local_MAPPRAISER_ring; // New numbering of pixels used by MAPPRAISER in ring scheme, contained in local proc
     long int *pixel_numbered_ring;
+
+    Butterfly_struct *MAPP2ring_butterfly = (Butterfly_struct *)malloc(1*sizeof(Butterfly_struct));
+    Butterfly_struct *ring2MAPP_butterfly = (Butterfly_struct *)malloc(1*sizeof(Butterfly_struct)):
     
     int *indices_local_MAPPRAISER = A->lindices + (A->nnz) * (A->trash_pix); // Indices 
     int number_pixels_MAPPRAISER = A->lcount - (A->nnz) * (A->trash_pix);
@@ -87,32 +90,46 @@ int init_harmonic_superstruct(int is_pixel_scheme_MAPPRAISER_ring, Mat *A, Files
 
     init_s2hat_parameters_superstruct(Files_WF_struct, mask_binary, A->nnz, S2HAT_params, A->comm);
     // Initialize S2HAT structures
+   
 
     map_size = S2HAT_params->Local_param_s2hat->map_size; // Local map size
     
-    if (is_pixel_scheme_MAPPRAISER_ring != 0)
-    {
-        // We work with a ring distribution
-        number_pixel_total = 12*nside*nside;
-        // indices_local_MAPPRAISER_ring = indices_local_MAPPRAISER;
-        for (i=0; i<number_pixels_MAPPRAISER; i++)
-            indices_local_MAPPRAISER_ring[i] = (indices_local_MAPPRAISER[i]%(S2HAT_params->nstokes))*number_pixel_total + indices_local_MAPPRAISER[i]/(S2HAT_params->nstokes)
-    }
-    else // If the pixel distribution is not in ring distribution, then it is expected to be in nest pixel distribution and we need to change it
-    {   
-        // We work with a nest distribution
-        indices_local_MAPPRAISER_ring = (long int *)malloc(map_size*sizeof(long int));
+    // if (is_pixel_scheme_MAPPRAISER_ring != 0)
+    // {
+    //     // We work with a ring distribution
+    //     number_pixel_total = 12*nside*nside;
+    //     // indices_local_MAPPRAISER_ring = indices_local_MAPPRAISER;
+    //     for (i=0; i<number_pixels_MAPPRAISER; i++)
+    //         indices_local_MAPPRAISER_ring[i] = (indices_local_MAPPRAISER[i]%(S2HAT_params->nstokes))*number_pixel_total + indices_local_MAPPRAISER[i]/(S2HAT_params->nstokes)
+    // }
+    // else // If the pixel distribution is not in ring distribution, then it is expected to be in nest pixel distribution and we need to change it
+    // {   
+    //     // We work with a nest distribution
+    //     indices_local_MAPPRAISER_ring = (long int *)malloc(map_size*sizeof(long int));
 
-        get_projectors_ring_and_nest(indices_local_MAPPRAISER, indices_local_MAPPRAISER_ring, number_pixels_MAPPRAISER, projector_ring2nest, projector_nest2ring, S2HAT_params->nstokes)
-        // If nest distribution with MAPPRAISER convention, convert the indices into ring distribution with S2HAT convention
+    //     get_projectors_ring_and_nest(indices_local_MAPPRAISER, indices_local_MAPPRAISER_ring, number_pixels_MAPPRAISER, projector_ring2nest, projector_nest2ring, S2HAT_params->nstokes)
+    //     // If nest distribution with MAPPRAISER convention, convert the indices into ring distribution with S2HAT convention
         
-        ring2MAPP_butterfly->projector_values = projector_ring2nest;
-        MAPP2ring_butterfly->projector_values = projector_nest2ring;
-        // Define the projectors
+    //     ring2MAPP_butterfly->projector_values = projector_ring2nest;
+    //     MAPP2ring_butterfly->projector_values = projector_nest2ring;
+    //     // Define the projectors
 
-        ring2MAPP_butterfly->ordered_indices = indices_local_MAPPRAISER_ring; // Get ordered indices ring for future purpose
-        MAPP2ring_butterfly->ordered_indices = indices_local_MAPPRAISER_ring; // Get ordered indices ring for future purpose
-    }
+    //     ring2MAPP_butterfly->ordered_indices = indices_local_MAPPRAISER_ring; // Get ordered indices ring for future purpose
+    //     MAPP2ring_butterfly->ordered_indices = indices_local_MAPPRAISER_ring; // Get ordered indices ring for future purpose
+    // }
+
+    ndices_local_MAPPRAISER_ring = (long int *)malloc(map_size*sizeof(long int));
+
+    get_projectors_ring_and_nest(indices_local_MAPPRAISER, indices_local_MAPPRAISER_ring, number_pixels_MAPPRAISER, projector_ring2nest, projector_nest2ring, S2HAT_params->nstokes)
+    // If nest distribution with MAPPRAISER convention, convert the indices into ring distribution with S2HAT convention
+    
+    ring2MAPP_butterfly->projector_values = projector_ring2nest;
+    MAPP2ring_butterfly->projector_values = projector_nest2ring;
+    // Define the projectors
+
+    ring2MAPP_butterfly->ordered_indices = indices_local_MAPPRAISER_ring; // Get ordered indices ring for future purpose
+    MAPP2ring_butterfly->ordered_indices = indices_local_MAPPRAISER_ring; // Get ordered indices ring for future purpose
+
     
     MAPP2ring_butterfly->indices_local_MAPPRAISER_ring = indices_local_MAPPRAISER_ring;
 
@@ -127,6 +144,16 @@ int init_harmonic_superstruct(int is_pixel_scheme_MAPPRAISER_ring, Mat *A, Files
 
     init_butterfly_communication(MAPP2ring_butterfly, indices_local_MAPPRAISER, number_pixels_MAPPRAISER, pixel_numbered_ring, map_size, flag_reshuffle_butterfly, A->comm);
     // Communication from ring scheme pixel map in the PCG pixel distribution scheme
+
+
+    
+    /* Attributing the Harmonic superstruc variables*/
+    Harmonic_superstruct->S2HAT_parameters = S2HAT_params;
+    // Attributing the S2HAT superstructure to Harmonic superstructure
+
+    Harmonic_superstruct->S2HAT_to_MAPPRAISER = ring2MAPP_butterfly;
+    Harmonic_superstruct->MAPPRAISER_to_S2HAT = MAPP2ring_butterfly;
+    // Attributing the Butterfly structures to Harmonic superstructure
 }
 
 int butterfly_communication(double *values_to_communicate, int *indices_in, int count_in, double *values_out, double *indices_out, int count_out, Butterfly_struct *Butterfly_obj, MPI_Comm comm)
@@ -181,11 +208,12 @@ int butterfly_communication(double *values_to_communicate, int *indices_in, int 
 }
 
 
-int global_map_2_harmonic(Butterfly_struct *Butterfly_map2harmonic, double* local_pixel_map_MAPPRAISER, s2hat_dcomplex *local_alm_s2hat, Mat *A, S2HAT_parameters *S2HAT_params){
+int global_map_2_harmonic(double* local_pixel_map_MAPPRAISER, s2hat_dcomplex *local_alm_s2hat, Mat *A, Harmonic_superstruct *Harmonic_sup){
 //     // Transform local_maps pixel distribution from MAPPRAISER into a harmonic S2HAT a_lm distribution
 
-    S2HAT_GLOBAL_parameters Global_param_s2hat = *(S2HAT_params->Global_param_s2hat);
-    S2HAT_LOCAL_parameters Local_param_s2hat = *(S2HAT_params->Local_param_s2hat);
+    S2HAT_GLOBAL_parameters Global_param_s2hat = *(Harmonic_sup->S2HAT_params->Global_param_s2hat);
+    S2HAT_LOCAL_parameters Local_param_s2hat = *(Harmonic_sup->S2HAT_params->Local_param_s2hat);
+    Butterfly_struct *Butterfly_map2harmonic = Harmonic_sup->MAPPRAISER_to_S2HAT;
 
     double *local_pixel_map_ring = (double *)calloc(Local_param_s2hat->map_size, sizeof(double));
 
@@ -194,21 +222,22 @@ int global_map_2_harmonic(Butterfly_struct *Butterfly_map2harmonic, double* loca
                             local_pixel_map_ring, Local_param_s2hat->pixel_numbered_ring, Local_param_s2hat->map_size, 
                             Butterfly_map2harmonic, A->comm);
 
-    apply_pix2alm(local_pixel_map_ring, local_alm_s2hat, S2HAT_params);
+    apply_pix2alm(local_pixel_map_ring, local_alm_s2hat, Harmonic_sup->S2HAT_params);
 
     free(local_pixel_map_ring);
 
     return 0;
 }
 
-int global_harmonic_2_map(Butterfly_struct *Butterfly_harmonic2map, double* local_pixel_map_MAPPRAISER, s2hat_dcomplex *local_alm_s2hat, Mat *A,  S2HAT_parameters *S2HAT_params){
-    S2HAT_GLOBAL_parameters Global_param_s2hat = *(S2HAT_params->Global_param_s2hat);
-    S2HAT_LOCAL_parameters Local_param_s2hat = *(S2HAT_params->Local_param_s2hat);
+int global_harmonic_2_map(s2hat_dcomplex *local_alm_s2hat, double* local_pixel_map_MAPPRAISER, Mat *A,  Harmonic_superstruct *Harmonic_sup){
+    S2HAT_GLOBAL_parameters Global_param_s2hat = *(Harmonic_sup->S2HAT_params->Global_param_s2hat);
+    S2HAT_LOCAL_parameters Local_param_s2hat = *(Harmonic_sup->S2HAT_params->Local_param_s2hat);
+    Butterfly_struct *Butterfly_harmonic2map = Harmonic_sup->MAPPRAISER_to_S2HAT;
     
     double *local_map_pix_ring = (double *)calloc(Local_param_s2hat->map_size, sizeof(double));
     double *local_pixel_map_MAPPRAISER_ring = (double *)calloc((A->lcount - (A->nnz) * (A->trash_pix)),sizeof(double));    
 
-    apply_alm2pix(local_alm_s2hat, local_map_pix_ring, S2HAT_params);
+    apply_alm2pix(local_alm_s2hat, local_map_pix_ring, Harmonic_sup->S2HAT_params);
     
     butterfly_communication(local_pixel_map_ring, Local_param_s2hat->pixel_numbered_ring, Local_param_s2hat->map_size, 
                             local_pixel_map_MAPPRAISER_ring, Butterfly_harmonic2map->ordered_indices, A->lcount - (A->nnz) * (A->trash_pix), 
@@ -239,12 +268,24 @@ int free_Butterfly_struct(Butterfly_struct *Butterfly_obj)
     free(Butterfly_obj);
 }
 
+int free_harmonic_superstruct(Harmonic_superstruct *Harmonic_sup)
+{
+    if (Harmonic_sup->S2HAT_to_MAPPRAISER != NULL)
+    {
+        free_Butterfly_struct(Harmonic_sup->S2HAT_to_MAPPRAISER);
+        free_Butterfly_struct(Harmonic_sup->MAPPRAISER_to_S2HAT);
+    }
+
+    if (Harmonic_sup->S2HAT_parameters != NULL)
+        free_s2hat_parameters_struct(Harmonic_sup->S2HAT_parameters);
+}
+
 int free_PCG_var(PCG_var *PCG_var_obj)
 {
     free(PCG_var_obj->local_map_pix);
 
-    if (PCG_var_obj->S2HAT_parameters != NULL)
-        free_s2hat_parameters_struct(PCG_var_obj->S2HAT_parameters);
+    // if (PCG_var_obj->S2HAT_parameters != NULL)
+    //     free_s2hat_parameters_struct(PCG_var_obj->S2HAT_parameters);
     
 
     free(PCG_var_obj);
@@ -336,5 +377,4 @@ int get_mask_from_indices(Mat *A, int *mask_binary, int nside, int root)
         if (mask_binary[i] != 0)
             mask_binary = 1;
     }
-
 }

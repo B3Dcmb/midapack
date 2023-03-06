@@ -34,6 +34,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 option(DISABLE_MPI OFF)
 option(DISABLE_OPENMP ON)
+option(DISABLE_HARMONICS OFF)
 
 # Search for MPI and OpenMP if we want to use them
 if (NOT DISABLE_MPI)
@@ -46,6 +47,10 @@ endif ()
 
 # Search for FFTW (necessary for toeplitz module)
 find_package(FFTW REQUIRED)
+
+if (NOT DISABLE_HARMONICS)
+    # search s2hat ...
+endif ()
 
 # ----------------------------------------------------------------------------------------#
 # Subdirectories

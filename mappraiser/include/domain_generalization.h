@@ -6,6 +6,7 @@
 // #include "s2hat.h"
 // For later : add if/if_not for including or not s2hat
 
+typedef struct Harmonic_superstruct Harmonic_superstruct;
 
 typedef struct PCG_var{
     /* Local parameters of S2HAT, dependent on each processor */
@@ -18,17 +19,13 @@ typedef struct PCG_var{
     int bool_apply_filter; // 0 no filter applied, 1 Wiener filter applied
     int nstokes; // Number of Stokes parameters for the computation, where we assume : 1 for intensity only, 2 for polarization only, 3 for everything (T, Q, U)
 
-    // S2HAT structures necessary for harmonic domain
-    S2HAT_parameters *S2HAT_parameters; 
-    // contains : S2HAT_GLOBAL_parameters *Global_param_s2hat and S2HAT_LOCAL_parameters *Local_param_s2hat;
-    // Note that all data_var will point to the same S2HAT_GLOBAL_parameters and S2HAT_LOCAL_parameters for each processor
-
     // Update flags to check if an update needs to be done, by retransforming pixel2alm or alm2pixel
     // int does_map_pixel_need_update; // 0 no update needed, 1 need update from local_alm
     // int does_local_alm_need_update; /// 0 no update needed, 1 need update from local_map_pix
     // Beware, those updates can be communication costly
     // Also note that in case we want to update from other domains of computation, the flags can take other values 2, 3, ...
 } PCG_var;
+
 
 typedef struct Butterfly_struct{
 
@@ -48,9 +45,21 @@ typedef struct Butterfly_struct{
     // Projector for local values of map : allows to project the values from one pixel distribution to another
     
     int *ordered_indices;
-    // Stored ordered indices, only used for ring2nest and nest2ring transitions in which case it corresponds to 
-    
+    // Stored ordered indices, only used for ring2nest and nest2ring transitions in which case it corresponds to ordered ring indices
 } Butterfly_struct;
+
+struct Harmonic_superstruct{
+    /* Harmonic superstructure for harmonic operations, defined here using S2HAT */
+
+    // S2HAT structures necessary for harmonic domain
+    S2HAT_parameters *S2HAT_parameters;
+    // contains : S2HAT_GLOBAL_parameters *Global_param_s2hat and S2HAT_LOCAL_parameters *Local_param_s2hat;
+    // Note that all data_var will point to the same S2HAT_GLOBAL_parameters and S2HAT_LOCAL_parameters for each processor
+
+    Butterfly_struct *S2HAT_to_MAPPRAISER;
+    Butterfly_struct *MAPPRAISER_to_S2HAT;
+    // Structures to use butterfly scheme, here to store the necessary structures to transition ring2nest and nest2ring
+};
 
 
 /* Initalize PCG_var structure */

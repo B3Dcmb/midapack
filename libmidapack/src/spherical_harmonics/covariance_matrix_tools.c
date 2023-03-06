@@ -20,42 +20,6 @@
 
 
 
-int alm2cls(s2hat_dcomplex* local_alm, double *c_ell_array, int nspec, int nstokes, S2HAT_parameters *S2HAT_params){
-    /* Transform alm to c_ell coefficients
-     local_alm is a 4-dimensional array in the form :
-        (1:nstokes,0:nlmax,0:nmvals-1,1:nmaps), if lda == nstokes;      (HEALpix convention)
-        (0:nlmax,0:nmvals-1,1:nstokes,1:nmaps), if lda == nlmax;      (S2HAT convention)
-    Here the HEALpix convention has been chosen
-
-    Output :  c_ell_array in the ordering [0:nlmax,1:nspec] with nspec corresponding to TT, EE, BB, TE, TB, EB
-              If nspec = 6; // All 6 spectras TT, EE, BB, TE, TB, EB computed
-    */
-
-    S2HAT_GLOBAL_parameters Global_param_s2hat = *(S2HAT_params->Global_param_s2hat);
-    S2HAT_LOCAL_parameters Local_param_s2hat = *(S2HAT_params->Local_param_s2hat);
-
-    int lmax = Global_param_s2hat.nlmax;
-    int ell= 0;
-    
-    // int nstokes = 3;
-    int nmaps = 1;
-    int mapnum = 0;
-    int ncomp = nstokes; // Number for alm components (T, E, B)
-    
-    int lda = ncomp; // Healpix convention chosen
-
-    // int nspec = 6; // All 6 spectras TT, EE, BB, TE, TB, EB computed
-
-    // c_ell_array = (double *) calloc( nstokes*(lmax+1), sizeof(double));
-    // printf("Test - gangrank %d", Local_param_s2hat.gangrank);
-    if (Local_param_s2hat.gangrank == -1)
-        collect_cls(nmaps, mapnum, ncomp, lmax, Local_param_s2hat.nmvals, Local_param_s2hat.mvals, lda, 
-                local_alm, nspec, c_ell_array, Local_param_s2hat.gangrank, Local_param_s2hat.gangsize, Local_param_s2hat.gangroot, Local_param_s2hat.gangcomm);
-    // printf("Test2 - gangrank %d %f %f", Local_param_s2hat.gangrank, *(c_ell_array), *(c_ell_array+lmax-1));
-
-    return 0;
-}
-
 int get_inverse_matrix(int order_matrix, double* matrix_to_be_inverted){
     int errorHandler;
     int pivotArray[order_matrix];

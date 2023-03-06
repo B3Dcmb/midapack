@@ -11,6 +11,7 @@ add_library(midapack SHARED)
 add_subdirectory(mapmat)
 add_subdirectory(toeplitz)
 # add_subdirectory(templates)
+add_subdirectory(spherical_harmonics)
 
 # ----------------------------------------------------------------------------------------#
 # header files
@@ -20,6 +21,7 @@ target_include_directories(midapack PRIVATE
                            "../include"
                            "../include/mapmat"
                            "../include/toeplitz"
+                           "../include/spherical_harmonics"
                            )
 
 #target_include_directories(midapack PUBLIC
@@ -44,6 +46,17 @@ if (OpenMP_FOUND)
     target_compile_definitions(midapack PRIVATE W_OPENMP)
     target_link_libraries(midapack PUBLIC OpenMP::OpenMP_C)
 endif ()
+
+# # Healpix
+
+# if (HEALPIX_FOUND)
+target_include_directories(midapack PRIVATE $ENV{HEALPIX_ROOT}/include)
+target_include_directories(midapack PRIVATE $ENV{S2HATROOT}/include)
+target_link_libraries(midapack PRIVATE "-L${S2HATROOT}/lib/cori/intel/ -ls2hat_std")
+target_link_libraries(midapack PRIVATE "-L${HEALPIX_ROOT}/lib")
+target_compile_definitions(midapack PRIVATE "-DHEALPIXDATA=${HEALPIXROOT}/share/healpix/")
+# endif ()
+
 
 # FFTW (for toeplitz module)
 
