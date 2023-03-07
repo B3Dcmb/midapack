@@ -47,14 +47,15 @@ if (OpenMP_FOUND)
     target_link_libraries(midapack PUBLIC OpenMP::OpenMP_C)
 endif ()
 
-# # Healpix
+# # Healpix/S2HAT
 
 # if (HEALPIX_FOUND)
-target_include_directories(midapack PRIVATE $ENV{HEALPIX_ROOT}/include)
+# set(HEADER_FILES ${HEALPIXROOT}"/include/chealpix.h")
+target_include_directories(midapack PRIVATE $ENV{HEALPIXROOT}/include)
 target_include_directories(midapack PRIVATE $ENV{S2HATROOT}/include)
-target_link_libraries(midapack PRIVATE "-L${S2HATROOT}/lib/cori/intel/ -ls2hat_std")
-target_link_libraries(midapack PRIVATE "-L${HEALPIX_ROOT}/lib")
-target_compile_definitions(midapack PRIVATE "-DHEALPIXDATA=${HEALPIXROOT}/share/healpix/")
+target_link_libraries(midapack PRIVATE $ENV{S2HATROOT}/lib/cori/intel/libs2hat_std.a )
+target_link_libraries(midapack PRIVATE $ENV{HEALPIXROOT}/lib/libchealpix.a)
+target_compile_definitions(midapack PRIVATE "-DHEALPIXDATA=${HEALPIXROOT}share/healpix/ -ls2hat_std")
 # endif ()
 
 
@@ -68,6 +69,22 @@ if (FFTW_FOUND)
     #        target_compile_definitions(midapack PRIVATE HAVE_FFTW_THREADS=1)
     #    endif(FFTW_DOUBLE_THREADS_LIB_FOUND)
 endif (FFTW_FOUND)
+
+if (USE_MKL)
+    find_package(MKL REQUIRED)
+endif ()
+
+if (MKL_FOUND)
+    # Use MKL for BLAS / LAPACK
+    set(BLAS_LIBRARIES "${MKL_LIBRARIES}")
+    set(LAPACK_LIBRARIES "${MKL_LIBRARIES}")
+    set(BLAS_FOUND TRUE)
+    set(LAPACK_FOUND TRUE)
+else ()
+    # We need a BLAS/LAPACK implementation other than MKL
+    find_package(BLAS)
+    find_package(LAPACK REQUIRED)
+endif ()
 
 # ----------------------------------------------------------------------------------------#
 # compile options

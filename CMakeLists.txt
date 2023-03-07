@@ -35,6 +35,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 option(DISABLE_MPI OFF)
 option(DISABLE_OPENMP ON)
 option(DISABLE_HARMONICS OFF)
+option(USE_MKL "Use MKL as provider for BLAS/LAPACK libraries" ON)
 
 # Search for MPI and OpenMP if we want to use them
 if (NOT DISABLE_MPI)

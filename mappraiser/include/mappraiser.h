@@ -6,7 +6,9 @@
 #ifndef MAPPRAISER_H
 #define MAPPRAISER_H
 
+// #include "s2hat.h"
 #include "midapack.h"
+#include "domain_generalization.h"
 
 /* Define the banded block Toeplitz matrix */
 
@@ -61,6 +63,9 @@ struct Precond
     double *AQg; // size n
     double *Qtx; // size Zn
     double *w;   // size Zn
+
+    double **inverse_covariance_matrix;
+    // Inverse of the covariance matrix in the form [ell][nstokes*nstokes]
 };
 typedef struct Precond Precond;
 
@@ -69,9 +74,9 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, 
 
 // Preconditioner constructor
 // void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tpltz *Nm1, PCG_var *PCG_variable, double *b, const double *noise, double *cond, int *lhits, double tol, int Zn, S2HAT_parameters *S2HAT_params, int precond);
-void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tpltz *Nm1, PCG_var *PCG_variable, double *b, const double *noise, double *cond, int *lhits, double tol, int Zn, S2HAT_parameters *S2HAT_params, int precond);
+void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tpltz *Nm1, PCG_var *PCG_variable, double *b, const double *noise, double *cond, int *lhits, double tol, int Zn, Harmonic_superstruct *Harmonic_sup, int precond);
 // Product of the preconditioner with a map vector
-void apply_precond(struct Precond *p, const Mat *A, const Tpltz *Nm1, S2HAT_parameters *S2HAT_params, PCG_var *init_PCG_var, PCG_var *out_PCG_var);
+void apply_precond(struct Precond *p, const Mat *A, const Tpltz *Nm1, Harmonic_superstruct *Harmonic_sup, PCG_var *init_PCG_var, PCG_var *out_PCG_var);
 
 // Free memory of the preconditioner
 void free_precond(struct Precond **in_out_p);
@@ -82,7 +87,7 @@ void free_precond(struct Precond **in_out_p);
 void get_pixshare_pond(Mat *A, double *pixpond);
 
 // PCG routine
-int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, PCG_var *PCG_variable, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl, Harmonic_superstruct *Harmonic_sup);
+int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, PCG_var *PCG_variable, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl, int is_pixel_scheme_ring, int nside, Harmonic_superstruct *Harmonic_sup);
 
 // ECG routine
 #ifdef WITH_ECG

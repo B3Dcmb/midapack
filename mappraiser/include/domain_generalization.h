@@ -5,6 +5,8 @@
 
 // #include "s2hat.h"
 // For later : add if/if_not for including or not s2hat
+// #include "spherical_harmonics/s2hat_tools.h"
+#include "midapack.h"
 
 typedef struct Harmonic_superstruct Harmonic_superstruct;
 
@@ -63,11 +65,16 @@ struct Harmonic_superstruct{
 
 
 /* Initalize PCG_var structure */
-int initialize_PCG_var_struct(PCG_var *PCG_variable, double *local_map_pix, s2hat_dcomplex *local_alm, int domain_PCG_computation, int bool_apply_filter, int nstokes, S2HAT_parameters *S2HAT_params);
+int initialize_PCG_var_struct(PCG_var *PCG_variable, double *local_map_pix, int domain_PCG_computation, int bool_apply_filter, int nstokes);
+
+/* Initialize harmonic superstructure */
+int init_harmonic_superstruct(int is_pixel_scheme_MAPPRAISER_ring, Mat *A, Harmonic_superstruct *Harm_struct, int *mask_binary);
 
 /* Transforms local map pixels into local alm in harmonic domain and vice-versa*/
-int global_map_2_harmonic(double* local_pixel_map_MAPPRAISER, s2hat_dcomplex *local_alm_s2hat, Mat *A, S2HAT_parameters *S2HAT_params);
-int global_harmonic_2_map(double* local_pixel_map_MAPPRAISER, s2hat_dcomplex *local_alm_s2hat, Mat *A, S2HAT_parameters *S2HAT_params);
+int global_map_2_harmonic(double* local_pixel_map_MAPPRAISER, s2hat_dcomplex *local_alm_s2hat, Mat *A, Harmonic_superstruct *Harmonic_sup);
+int global_harmonic_2_map(s2hat_dcomplex *local_alm_s2hat, double* local_pixel_map_MAPPRAISER, Mat *A,  Harmonic_superstruct *Harmonic_sup);
 
 /* Update PCG_var structure */
-int update_PCG_var(PCG_var *PCG_variable, Mat *A);
+// int update_PCG_var(PCG_var *PCG_variable, Mat *A);
+
+int get_mask_from_indices(Mat *A, int *mask_binary, int nside, int root);

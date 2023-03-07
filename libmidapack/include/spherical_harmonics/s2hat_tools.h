@@ -5,8 +5,10 @@
  
  /* Full documentation for S2HAT here : https://apc.u-paris.fr/APC_CS/Recherche/Adamis/MIDAS09/software/s2hat/s2hat/docs/S2HATdocs.html */ 
     
-// #include <mpi.h>
-// #include "s2hat.h"
+#ifdef W_MPI
+#include <mpi.h>
+#endif
+#include "s2hat.h"
 // #include "midapack.h"
 
 
@@ -53,7 +55,7 @@ typedef struct S2HAT_LOCAL_parameters{
 } S2HAT_LOCAL_parameters;
 
 
-typedef enum { false, true } bool;
+// typedef enum { false, true } bool;
 
 typedef struct Files_path_WIENER_FILTER{
     /* Global parameters of S2HAT, to give to all processors */
@@ -83,19 +85,19 @@ int mpi_create_subset(int number_ranks_to_divive, MPI_Comm initcomm, MPI_Comm *s
 
 
 /* Get global s2hat structures which must be distributed to all processors*/
-int get_main_s2hat_global_parameters(int nside, char *maskfile_path, s2hat_pixeltype *pixelization_scheme, s2hat_scandef *scan_sky_structure_pixel, s2hat_pixparameters *pixpar, bool use_mask_file);
+int get_main_s2hat_global_parameters(int nside, int *maskfile_binary, s2hat_pixeltype *pixelization_scheme, s2hat_scandef *scan_sky_structure_pixel, s2hat_pixparameters *pixpar);
 
 /* Create wrapper structure s2hat of local parameters of s2hat, which will differ for all processors */
-int init_s2hat_global_parameters(Files_path_WIENER_FILTER Files_WF_struct, int nside, int lmax, S2HAT_GLOBAL_parameters *Global_param_s2hat);
+int init_s2hat_global_parameters(Files_path_WIENER_FILTER Files_WF_struct, int *mask_binary, int lmax, S2HAT_GLOBAL_parameters *Global_param_s2hat);
 
 /* Initialize MPI parameters of local parameters wrapper structure of s2hat, which will differ for all processors */
 int init_MPI_struct_s2hat_local_parameters(S2HAT_LOCAL_parameters *Local_param_s2hat, int number_ranks_s2hat, MPI_Comm initcomm);
 
 /* Create wrapper structure of local parameters wrapper structure of s2hat, which will differ for all processors, and assuming MPI structure already assigned */
-int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters *Local_param_s2hat);
+int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters Global_param_s2hat, int nstokes, S2HAT_LOCAL_parameters *Local_param_s2hat);
 
 /* Initaization of superctrure S2HAT_parameters */
-int init_s2hat_parameters_superstruct(Files_path_WIENER_FILTER *Files_WF_struct, S2HAT_parameters *S2HAT_params, int root);
+int init_s2hat_parameters_superstruct(Files_path_WIENER_FILTER *Files_WF_struct, int *mask_binary, int nstokes, S2HAT_parameters *S2HAT_params, MPI_Comm world_comm);
 
 /* Use s2hat routines to broadcast s2hat global structures */
 void mpi_broadcast_s2hat_global_struc(S2HAT_GLOBAL_parameters *Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat);
@@ -118,16 +120,10 @@ void free_s2hat_LOCAL_parameters_struct(S2HAT_LOCAL_parameters *Local_param_s2ha
 /* Free superstructure around S2HAT */
 void free_s2hat_parameters_struct(S2HAT_parameters *S2HAT_params);
 
-/* Change conventions between ring and nest distribution of maps */
-int convert_indices_nest2ring(double *indices_nest, double *indices_ring, long int number_of_indices);
-int convert_indices_ring2nest(double *indices_ring, double *indices_nest, long int number_of_indices);
 
-/* Change conventions between nest and ring distribution of maps */
-void convert_full_map_ring2nest(double *map_ring, double *map_nest, int nside, int nstokes, int npix);
-void convert_full_map_nest2ring(double *map_nest, double *map_ring, int nside, int nstokes, int npix);
 
 /* Define file support structure for Wiener_filter extension */
-void init_files_struct_WF(Files_path_WIENER_FILTER *Files_path_WF_struct, char *path_mask_file,  bool use_mask_file, int nside, int lmax_Wiener_Filter, char *c_ell_path, int number_correlations);
+void init_files_struct_WF(Files_path_WIENER_FILTER *Files_path_WF_struct, int nside, int lmax_Wiener_Filter, char *c_ell_path, int number_correlations);
 
 /* Function to read file corresponding to the mask */
 void read_fits_mask(int nside, double *mask, char *path_mask_file, int col);
@@ -170,9 +166,22 @@ int get_covariance_matrix_NxN(char *c_ell_path, int number_correl, int nstokes, 
 int get_inverse_covariance_matrix_NxN(int nstokes, S2HAT_parameters *S2HAT_params, double **inverse_covariance_matrix);
 
 
-/* tmp functions for communication */
-// int all_reduce_to_single_map_mappraiser(Mat *A, double* x, int nside, double* out_val, int root);
 
-// int distribute_map_S2HAT_ordering(double* full_sky_map, double *local_map_s2hat, S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat);
+/* PIX TOOLS*/
+void make_mask_binary(double* mask, int* mask_binary, int *f_sky, long npix);
 
-// int brute_force_transfer_local_maps(Mat *A, double* local_pixel_map_MAPPRAISER, double *local_pixel_map_s2hat, S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat);
+int convert_indices_nest2ring(int *indices_nest, int *indices_ring, long int number_of_indices, int nstokes, int nside);
+// Convert indices nest2ring assuming MAPPRAISER convention for NEST (TQUTQUTQU) and S2HAT convention for RING (TTTTQQQQUUU)
+
+int convert_indices_ring2nest(int *indices_ring, int *indices_nest, long int number_of_indices, int nstokes, int nside);
+// Convert indices nest2rring2nesting assuming S2HAT convention for RING (TTTTQQQQUUU) and MAPPRAISER convention for NEST (TQUTQUTQU)
+
+int get_projectors_ring_and_nest(int *indices_nest, int *ordered_indices_ring, int size_indices, int nstokes, int nside, int *projector_ring2nest, int *projector_nest2ring);
+// Get projectors for ring2nest and nest2ring for maps on a specific proc
+
+int project_values_into_different_scheme(double *values_in, int number_values, int *projector_in2out, double *values_out);
+// Use the projectors found in get_projectors_ring_and_nest to project the maps in 1 scheme or the other
+
+void convert_full_map_nest2ring(double *map_nest, double *map_ring, int nside, int nstokes, int npix);
+void convert_full_map_ring2nest(double *map_ring, double *map_nest, int nside, int nstokes, int npix);
+// Convert full maps from ring2nest or nest2ring assuming S2HAT convention for RING (TTTTQQQQUUU) and MAPPRAISER convention for NEST (TQUTQUTQU)

@@ -17,15 +17,15 @@
 #include <unistd.h>
 // #include <mkl.h>
 #include "fitsio.h"
-#include "midapack.h"
-#include "s2hat.h"
-#include "s2hat_tools.h"
-#include "domain_generalization.h"
+// #include "midapack.h"
+// #include "s2hat.h"
+// #include "s2hat_tools.h"
+// #include "domain_generalization.h"
 #include "mappraiser.h"
 
 int x2map_pol(double *mapI, double *mapQ, double *mapU, double *Cond, int *hits, int npix, double *x, int *lstid, double *cond, int *lhits, int xsize);
 
-void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int Z_2lvl, int pointing_commflag, double tol, int maxiter, int enlFac, int ortho_alg, int bs_red, int nside, void *data_size_proc, int nb_blocks_loc, void *local_blocks_sizes, int Nnz, void *pix, void *pixweights, void *signal, double *noise, int lambda, double *invtt)
+void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int Z_2lvl, int pointing_commflag, double tol, int maxiter, int enlFac, int ortho_alg, int bs_red, int nside, void *data_size_proc, int nb_blocks_loc, void *local_blocks_sizes, int Nnz, void *pix, void *pixweights, void *signal, double *noise, int lambda, double *invtt, int bool_apply_filter, int domain_PCG_computation, int lmax_Wiener_Filter, char *c_ell_path, int number_correlations)
 {
     int64_t M;             // Global number of rows
     int m, Nb_t_Intervals; // local number of rows of the pointing matrix A, nbr of stationary intervals
@@ -214,15 +214,17 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     }
 
     // Files_path_WIENER_FILTER *Files_path_WF_struct = NULL; // Initialization of Files_Wiener_filter structure
-    // Wiener filter file_paths extension initialization /////////////// 
-    S2HAT_parameters *S2HAT_params = (S2HAT_parameters *)malloc(1*sizeof(S2HAT_parameters));
+    // Wiener filter file_paths extension initialization ///////////////
+    Harmonic_superstruct *Harmonic_sup = NULL;
+    S2HAT_parameters *S2HAT_params = NULL;
     
     if ((bool_apply_filter == 1) || (domain_PCG_computation == 0))
     {   
-        Harmonic_superstruct *Harmonic_sup = (Harmonic_superstruct *)malloc(1*sizeof(Harmonic_superstruct));
-        Harmonic_sup->S2HAT_params = (S2HAT_parameters *)malloc(1*sizeof(S2HAT_parameters));
-        Harmonic_sup->S2HAT_params->Files_WF_struct = (Files_path_WIENER_FILTER *)malloc(1*sizeof(Files_path_WIENER_FILTER)); // Initialization of Files_Wiener_filter structure
-        init_files_struct_WF(Harmonic_sup->S2HAT_params->Files_WF_struct, path_mask_file, nside, lmax_Wiener_Filter, c_ell_path, number_correlations);
+        Harmonic_sup = (Harmonic_superstruct *)malloc(1*sizeof(Harmonic_superstruct));
+        S2HAT_params = (S2HAT_parameters *)malloc(1*sizeof(S2HAT_parameters));
+        Harmonic_sup->S2HAT_parameters = (S2HAT_parameters *)malloc(1*sizeof(S2HAT_parameters));
+        Harmonic_sup->S2HAT_parameters->Files_WF_struct = (Files_path_WIENER_FILTER *)malloc(1*sizeof(Files_path_WIENER_FILTER)); // Initialization of Files_Wiener_filter structure
+        init_files_struct_WF(Harmonic_sup->S2HAT_parameters->Files_WF_struct, nside, lmax_Wiener_Filter, c_ell_path, number_correlations);
         // Attribution of paths of c_ells (for covariance matrix), the corresponding number of correlations included and mask_file as well as a bool (use_mask_file) to determine if a mask should be used or not
     }
 
@@ -246,7 +248,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     if (solver == 0)
     {
         // PCG_GLS_true(outpath, ref, &A, Nm1, x, signal, noise, cond, lhits, tol, maxiter, precond, Z_2lvl, *Files_path_WF_struct, domain_PCG_computation, bool_apply_filter);
-        PCG_GLS_true(outpath, ref, &A, &Nm1, PCG_variable, signal, noise, cond, lhits, tol, maxiter, precond, Z_2lvl, is_pixel_scheme_ring, Harmonic_sup);
+        PCG_GLS_true(outpath, ref, &A, &Nm1, PCG_variable, signal, noise, cond, lhits, tol, maxiter, precond, Z_2lvl, is_pixel_scheme_ring, nside, Harmonic_sup);
     }
     else if (solver == 1)
     {

@@ -9,8 +9,8 @@
 #include <chealpix.h>
 #include <fitsio.h>
 #include <unistd.h>
-#include "s2hat.h"
-#include "midapack.h"
+// #include "s2hat.h"
+// #include "midapack.h"
 #include "s2hat_tools.h"
 
 #define EXIT_INFO(Y,Z,args...) { FILE *X=stdout; fprintf( X, "[%s:%d] "Z,__func__, __LINE__, ##args); fflush(X); MPI_Abort( MPI_COMM_WORLD, Y); exit(Y); }
@@ -27,8 +27,8 @@ void init_files_struct_WF(Files_path_WIENER_FILTER *Files_path_WF_struct, int ns
                             4 : TT, EE, BB and TE are given in this order
                             6 : TT, EE, BB, TE, TB and EB are given in this order
   */
-    Files_path_WF_struct->maskfile_path = path_mask_file;
-    // Files_path_WF_struct->c_ell_path = c_ell_path;
+    // Files_path_WF_struct->maskfile_path = path_mask_file;
+    Files_path_WF_struct->c_ell_path = c_ell_path;
     // Files_path_WF_struct->use_mask_file = use_mask_file;
     Files_path_WF_struct->number_correlations = number_correlations;
     Files_path_WF_struct->nside = nside;
@@ -78,12 +78,10 @@ void read_fits_mask(int nside, double *mask, char *path_mask_file, int col)
   /* revert if NESTED */
   if( !strcmp( ordering, "NESTED")) {
     printf( "NEST -> RING\n");
-    // for( pixel_index=0; pixel_index<npix; pixel_index++) {
-    //   nest2ring( nside, pixel_index, &ipix);
-    //   mask[ipix] = (double)tmp[pixel_index];
-    // }
-
-    compute_full_map_nest2ring(tmp, mask, nside, 1, npix);
+    for( pixel_index=0; pixel_index<npix; pixel_index++) {
+      nest2ring( nside, pixel_index, &ipix);
+      mask[ipix] = (double)tmp[pixel_index];
+    }
     // 1 is for the number of Stokes parameters, assumed to be 1 when reading the mask
 
   } else {

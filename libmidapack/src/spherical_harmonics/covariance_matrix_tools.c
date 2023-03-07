@@ -14,8 +14,8 @@
 
 // #include "fitsio.h"
 #include <unistd.h>
-#include "s2hat.h"
-#include "midapack.h"
+// #include "s2hat.h"
+// #include "midapack.h"
 #include "s2hat_tools.h"
 
 
@@ -36,6 +36,7 @@ int get_inverse_matrix(int order_matrix, double* matrix_to_be_inverted){
     dgetri_(&order_matrix, matrix_to_be_inverted, &lda, pivotArray, work, &lwork, &errorHandler);
     // Inversion of system matrix_to_be_inverted
     // printf("Inversion of matrix with dgetri : %d should be zero\n", errorHandler);
+    return 0;
 }
 
 

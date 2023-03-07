@@ -5,10 +5,10 @@
 #include <stdlib.h>
 #include <string.h>
 // #include <chealpix.h>
-#include "s2hat.h"
+// #include "s2hat.h"
 #include "midapack.h"
-#include "s2hat_tools.h"
-#include "domain_generalization.h"
+// #include "s2hat_tools.h"
+// #include "domain_generalization.h"
 
 
 int initialize_PCG_var_struct(PCG_var *PCG_variable, double *local_map_pix, int domain_PCG_computation, int bool_apply_filter, int nstokes)

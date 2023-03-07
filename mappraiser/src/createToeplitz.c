@@ -8,9 +8,9 @@
 #include <stdio.h>
 #include <math.h>
 #include <time.h>
-#include "s2hat.h"
-#include "s2hat_tools.h"
-#include "domain_generalization.h"
+// #include "s2hat.h"
+// #include "s2hat_tools.h"
+// #include "domain_generalization.h"
 #include "mappraiser.h"
 
 char CHAR_RW = '\0'; // global variable for write mode

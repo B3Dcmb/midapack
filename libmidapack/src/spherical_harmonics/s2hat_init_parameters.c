@@ -8,8 +8,8 @@
 // #include "fitsio.h"
 #include <unistd.h>
 
-#include "s2hat.h"
-#include "midapack.h"
+// #include "s2hat.h"
+// #include "midapack.h"
 #include "s2hat_tools.h"
 
 
@@ -21,7 +21,7 @@ int get_main_s2hat_global_parameters(int nside, int *mask_binary, s2hat_pixeltyp
     Full documentation here : https://apc.u-paris.fr/APC_CS/Recherche/Adamis/MIDAS09/software/s2hat/s2hat/docs/S2HATdocs.html */ 
     
     double *mask;
-    int *mask_binary;
+    // int *mask_binary;
     int f_sky=0;
     long npix = nside*nside*12;
 
@@ -97,6 +97,8 @@ int init_s2hat_global_parameters(Files_path_WIENER_FILTER Files_WF_struct, int *
     Global_param_s2hat->nside = nside;
     Global_param_s2hat->nlmax = lmax-1; // S2HAT will generate alms between 0 and nlmax included, so we have to give lamx decreased by 1 to get the lmax requested
     Global_param_s2hat->nmmax = lmax-1;
+
+    return 0;
 }
 
 
@@ -157,9 +159,9 @@ int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters Global_param_s2ha
     s2hat_scandef scan_sky_structure_pixel = Global_param_s2hat.scan_sky_structure_pixel;
     int nlmax = Global_param_s2hat.nlmax;
     int nmmax = Global_param_s2hat.nmmax;
-    long int number_pixel_total = 12*((Global_param_s2hat.nside)**2);
+    long int number_pixel_total = 12*((Global_param_s2hat.nside)*(Global_param_s2hat.nside)), first_pixel_number_ring, last_pixel_number_ring, number_pixels_local;
 
-    int plms=0, nmvals, first_ring, last_ring, map_size;
+    int i, j, plms=0, nmvals, first_ring, last_ring, map_size;
 
     long int nplm;
     int *mvals;
@@ -194,14 +196,14 @@ int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters Global_param_s2ha
         // Getting first pixel number of ring probed by local proc, in S2HAT convention
         last_pixel_number_ring = Global_param_s2hat.pixelization_scheme.fpix[last_ring]; 
         // Getting last pixel number of ring probed by local proc, in S2HAT convention
-        number_pixels_local = last_pixel_number - first_pixel_number;
+        number_pixels_local = last_pixel_number_ring - first_pixel_number_ring;
         
         
         pixel_numbered_ring = (long int *)malloc(number_pixels_local*nstokes * sizeof(long int));
         for(i=0; i<number_pixels_local; i++)
         {
             for (j=0; j<nstokes; j++)
-                pixel_numbered_ring[i + j*number_pixels_local] = i + first_pixel_number + j*number_pixel_total;
+                pixel_numbered_ring[i + j*number_pixels_local] = i + first_pixel_number_ring + j*number_pixel_total;
         }
         
         Local_param_s2hat->pixel_numbered_ring = pixel_numbered_ring;
@@ -245,6 +247,8 @@ int init_s2hat_parameters_superstruct(Files_path_WIENER_FILTER *Files_WF_struct,
 
     S2HAT_params->size_alm = (Global_param_s2hat->nlmax+1)*Global_param_s2hat->nmmax;
     S2HAT_params->nstokes = nstokes;
+
+    return 0;
 }
 
 
@@ -279,6 +283,8 @@ int collect_partial_map_from_pixels(double* local_map_s2hat, double *output_subm
         output_submap, Local_param_s2hat.first_ring, Local_param_s2hat.last_ring, submap_size, local_map_s2hat, 
         Local_param_s2hat.gangrank, Local_param_s2hat.gangsize, Local_param_s2hat.gangroot, Local_param_s2hat.gangcomm);
     // 1 map given, 0 is the number of the map
+
+    return 0;
 }
 
 

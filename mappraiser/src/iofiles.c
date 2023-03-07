@@ -12,11 +12,11 @@
 #include <mpi.h>
 #include <time.h>
 #include <string.h>
-#include "midapack.h"
-#include "s2hat.h"
-#include "s2hat_tools.h"
-#include "domain_generalization.h"
-#include "mappraiser.h"
+// #include "midapack.h"
+// #include "s2hat.h"
+// #include "s2hat_tools.h"
+// #include "domain_generalization.h"
+// #include "mappraiser.h"
 #include "fitsio.h"
 #include <stdbool.h>
 #include <errno.h>

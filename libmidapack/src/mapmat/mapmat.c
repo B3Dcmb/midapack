@@ -993,6 +993,8 @@ int greedyreduce(Mat *A, double *x)
 	switch (A->flag)
 	{
 	case BUTTERFLY:
+		nRmax = A->nR[0];
+		nSmax = A->nS[0];
 		for (k = 0; k < A->steps; k++) // compute max communication buffer size
 			if (A->nR[k] > nRmax)
 				nRmax = A->nR[k];

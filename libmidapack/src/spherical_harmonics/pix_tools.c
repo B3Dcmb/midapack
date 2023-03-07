@@ -9,9 +9,10 @@
 // #include "fitsio.h"
 #include <unistd.h>
 
-#include "s2hat.h"
+#include <chealpix.h>
+// #include "s2hat.h"
 #include "midapack.h"
-#include "s2hat_tools.h"
+// #include "s2hat_tools.h"
 
 
 void make_mask_binary(double* mask, int* mask_binary, int *f_sky, long npix){
@@ -34,7 +35,7 @@ int convert_indices_nest2ring(int *indices_nest, int *indices_ring, long int num
   long int ipix, indice_transformed, npix = 12*nside*nside;
   for( ipix=0; ipix<number_of_indices; ipix++) {
     nest2ring(nside, indices_nest[ipix]/nstokes, &indice_transformed);
-    indices_nest[ipix] = indice_transformed + (indices_ring[ipix]%nstokes)*npix;
+    indices_ring[ipix] = indice_transformed + (indices_nest[ipix]%nstokes)*npix;
     // Change indices in nest ordering into indices in ring ordering
   }
   return 0;
@@ -47,24 +48,25 @@ int convert_indices_ring2nest(int *indices_ring, int *indices_nest, long int num
   long int ipix, indice_transformed, npix = 12*nside*nside;
 
   for( ipix=0; ipix<number_of_indices; ipix++) {
-    ring2nest(nside, indices_ring[ipix]/nstokes, &indice_transformed);
-    indices_nest[ipix] = indice_transformed + (indices_ring[ipix]%nstokes)*npix;
+    ring2nest(nside, indices_ring[ipix]%npix, &indice_transformed);
+    // indices_nest[ipix] = indice_transformed + (indices_ring[ipix]%nstokes)*npix;
+    indices_nest[ipix] = indice_transformed*nstokes + indices_ring[ipix]%npix;
     // Change indices in ring ordering into indices in nest ordering
   }
   return 0;
 }
 
 
-int get_projectors_ring_and_nest(int *indices_nest, int *ordered_indices_ring, int size_indices, int nstokes, int *projector_ring2nest, int *projector_nest2ring)
+int get_projectors_ring_and_nest(int *indices_nest, int *ordered_indices_ring, int size_indices, int nstokes, int nside, int *projector_ring2nest, int *projector_nest2ring)
 {
   /* Build projectors to convert indices_nest from the nest pixel distribution to ring pixel distribution,
      then reorder them so that the indices in ring order are monotonous 
      The indices_nest are expected to be not have any redundancy */
 
   int i, j;
-  const int *indices_ring = (int *)malloc(size_indices*sizeof(int));
+  int *indices_ring = (int *)malloc(size_indices*sizeof(int));
 
-  convert_indices_nest2ring(indices_nest, indices_ring, size_indices, nstokes);
+  convert_indices_nest2ring(indices_nest, indices_ring, size_indices, nstokes, nside);
 
   memcpy(ordered_indices_ring, indices_ring, size_indices);
 
@@ -87,6 +89,7 @@ int get_projectors_ring_and_nest(int *indices_nest, int *ordered_indices_ring, i
 
   free(indices_ring);
   // free(ordered_indices_ring);
+  return 0;
 }
 
 int project_values_into_different_scheme(double *values_in, int number_values, int *projector_in2out, double *values_out)
@@ -94,6 +97,8 @@ int project_values_into_different_scheme(double *values_in, int number_values, i
   int i;
   for (i=0; i<number_values; i++)
     values_out[i] = values_in[projector_in2out[i]];
+  
+  return 0;
 }
 
 void convert_full_map_nest2ring(double *map_nest, double *map_ring, int nside, int nstokes, int npix){

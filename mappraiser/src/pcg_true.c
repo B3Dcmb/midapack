@@ -18,17 +18,17 @@
 #include <unistd.h>
 
 #include "midapack.h"
-#include "s2hat.h"
-#include "s2hat_tools.h"
-#include "domain_generalization.h"
+// #include "s2hat.h"
+// #include "s2hat_tools.h"
+// #include "domain_generalization.h"
 #include "mappraiser.h"
 
 int apply_weights(Tpltz *Nm1, double *tod);
 
-int apply_PNmP(Mat *A, double *h, Tpltz Nm1, double *AtNm1Ah);
+int apply_PNmP(Mat *A, double *h, Tpltz *Nm1, double *AtNm1Ah);
 // Apply P^t(N^-1)P to the local pixel map h, with output AtNm1Ah
 
-int apply_sys_matrix(Mat *A, Tpltz Nm1, struct Precond *p, Harmonic_superstruct *Harmonic_sup, PCG_var *input_variable, PCG_var *output_variable);
+int apply_sys_matrix(Mat *A, Tpltz *Nm1, struct Precond *p, Harmonic_superstruct *Harmonic_sup, PCG_var *input_variable, PCG_var *output_variable);
 
 int compute_norm(double *norm_to_compute, double *vector_left, double *vector_right, double *weighting_pond, int size);
 // Compute norm of vector_left with vector_right
@@ -39,7 +39,7 @@ int compute_norm_v2(double *norm_to_compute, double *vector_left, double *vector
 int swap_pointers(PCG_var *PCG_variable, PCG_var *PCG_variable_2);
 
 /** Perform PCG routine **/
-int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, PCG_var *PCG_variable, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl, int is_pixel_scheme_ring, Harmonic_superstruct *Harmonic_sup)
+int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, PCG_var *PCG_variable, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl, int is_pixel_scheme_ring, int nside, Harmonic_superstruct *Harmonic_sup)
 {
     int i, j, k; // some indexes
     int m, n;    // number of local time samples, number of local pixels
@@ -78,7 +78,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, PCG_var *PCG_vari
     if (Z_2lvl == 0)
         Z_2lvl = size;
 
-    build_precond(&p, &pixpond, &n, A, &Nm1, PCG_variable, b, noise, cond, lhits, tol, Z_2lvl, Harmonic_sup, precond);
+    build_precond(&p, &pixpond, &n, A, Nm1, PCG_variable, b, noise, cond, lhits, tol, Z_2lvl, Harmonic_sup, precond);
     // building preconditonner depending on the value of precond (0 for classic, 1 and 2 for two-level precond, 3 for Wiener-filtering precond)
 
     t = MPI_Wtime();
@@ -106,7 +106,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, PCG_var *PCG_vari
 
         get_mask_from_indices(A, mask_binary, nside, 0);
 
-        init_harmonic_superstruct(is_pixel_scheme_ring, A, Harmonic_sup->S2HAT_parameters, mask_binary);
+        init_harmonic_superstruct(is_pixel_scheme_ring, A, Harmonic_sup, mask_binary);
         free(mask_binary);
         // Initialization of S2HAT_parameters structure
 
@@ -170,7 +170,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, PCG_var *PCG_vari
     // update_PCG_var(Residual_var, A); // Update Residual_var
 
     // apply_precond(p, A, &Nm1, g, Cg);
-    apply_precond(p, A, &Nm1, Harmonic_sup, Residual_var, PrecRes_var);
+    apply_precond(p, A, Nm1, Harmonic_sup, Residual_var, PrecRes_var);
     // update_PCG_var(PrecRes_var, A); // Update PrecRes_var
 
     // for (j = 0; j < n; j++) // h = Cg
@@ -280,7 +280,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, PCG_var *PCG_vari
         // update_PCG_var(Residual_var, A); // Update Residual_var
 
         // apply_precond(p, A, &Nm1, g, Cg);
-        apply_precond(p, A, &Nm1, Harmonic_sup, Residual_var, PrecRes_var);
+        apply_precond(p, A, Nm1, Harmonic_sup, Residual_var, PrecRes_var);
 
 
 
@@ -405,7 +405,7 @@ int apply_weights(Tpltz *Nm1, double *tod)
 }
 
 
-int apply_PNmP(Mat *A, double *h, Tpltz Nm1, double *AtNm1Ah){
+int apply_PNmP(Mat *A, double *h, Tpltz *Nm1, double *AtNm1Ah){
     /*  Apply P^T N^{-1} P to vector h ; 
         return the result in AtNm1Ah
         
@@ -424,9 +424,10 @@ int apply_PNmP(Mat *A, double *h, Tpltz Nm1, double *AtNm1Ah){
     TrMatVecProd(A, Nm1Ah, AtNm1Ah, 0); // AtNm1Ah = At Nm1Ah
 
     free(Ah);
+    return 0;
 }
 
-int apply_sys_matrix(Mat *A, Tpltz Nm1, struct Precond *p, Harmonic_superstruct *Harmonic_sup, PCG_var *input_variable, PCG_var *output_variable)
+int apply_sys_matrix(Mat *A, Tpltz *Nm1, struct Precond *p, Harmonic_superstruct *Harmonic_sup, PCG_var *input_variable, PCG_var *output_variable)
 {
     // Apply system of the PCG, depending of the value of output_variable->bool_apply_filter 
     // -> bool_apply_filter == 0, classic PCG is done with only application of  P^T N^{-1} P to input_variable in pixel space
@@ -486,6 +487,7 @@ int apply_sys_matrix(Mat *A, Tpltz Nm1, struct Precond *p, Harmonic_superstruct 
             // free(local_alm_out);
         }
     }
+    return 0;
 }
 
 
@@ -497,6 +499,8 @@ int compute_norm(double *norm_to_compute, double *vector_left, double *vector_ri
     *norm_to_compute = 0.0;
     for (index = 0; index < size; index++)
         *norm_to_compute += vector_left[index] * vector_right[index] * weighting_pond[index];
+
+    return 0;
 }
 
 int compute_norm_v2(double *norm_to_compute, double *vector_left, double *vector_right, double *vector_right_2, double *weighting_pond, int size)
@@ -507,6 +511,8 @@ int compute_norm_v2(double *norm_to_compute, double *vector_left, double *vector
     *norm_to_compute = 0.0;
     for (index = 0; index < size; index++)
         *norm_to_compute += vector_left[index] * (vector_right[index] - vector_right_2[index]) * weighting_pond[index];
+    
+    return 0;
 }
 
 int swap_pointers(PCG_var *PCG_variable, PCG_var *PCG_variable_2)
@@ -529,4 +535,5 @@ int swap_pointers(PCG_var *PCG_variable, PCG_var *PCG_variable_2)
     PCG_variable_2->local_map_pix = var_exchange_pix;
     // PCG_variable_2->local_alm = var_exchange_alm;
 
+    return 0;
 }
