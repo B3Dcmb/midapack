@@ -15,6 +15,7 @@
 #include <time.h>
 #include <string.h>
 #include <assert.h>
+// #include <stdbool.h>
 
 // choose header based on compilation option
 #ifdef HAVE_MKL
@@ -447,6 +448,15 @@ void get_pixshare_pond(Mat *A, double *pixpond) {
         pixpond[i] = 1. / pixpond[i];
 }
 
+// void print_matrix( char* desc, int m, int n, double* a, int lda ) {
+//         int i, j;
+//         printf( "\n %s\n", desc );
+//         for( i = 0; i < m; i++ ) {
+//                 for( j = 0; j < n; j++ ) printf( " %6.2f", a[i+j*lda] );
+//                 printf( "\n" );
+//         }
+// }
+
 // Block diagonal jacobi preconditioner with degenerate pixels pre-processing
 int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, double *cond, int *lhits) {
     int i, j, k; // some indexes
@@ -542,21 +552,35 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, 
         }
 
         // Compute the reciprocal of the condition number of the block
+        // bool dgetrf_fail = false;
 
         /* Computes the norm of x */
         anorm = LAPACKE_dlange(LAPACK_COL_MAJOR, '1', nb, nb, x, lda);
 
         /* Modifies x in place with a LU decomposition */
         info = LAPACKE_dgetrf(LAPACK_COL_MAJOR, nb, nb, x, lda, ipiv);
-        if (info != 0)
-            fprintf(stderr, "[rank %d] LAPACKE_dgetrf failure with error %d\n", rank, info);
+        if (info < 0) {
+            fprintf(stderr, "[rank %d] LAPACKE_dgetrf: %d-th argument had an illegal value\n", rank, -info);
+        } else if (info > 0) {
+            // dgetrf_fail = true;
+            // don't print any error message
+            // presumably, this happens when the block is singular
+            // the rcond value will be zero, so the pixel will be removed
+            // fprintf(stderr, "[rank %d] LAPACKE_dgetrf: %d-th diagonal value is exactly zero\n", rank, info);
+        }
 
         /* Computes the reciprocal norm */
         info = LAPACKE_dgecon(LAPACK_COL_MAJOR, '1', nb, x, lda, anorm, &rcond);
         if (info != 0)
-            fprintf(stderr, "[rank %d] LAPACKE_dgecon failure with error %d\n", rank, info);
+            fprintf(stderr, "[rank %d] LAPACKE_dgecon: %d-th argument had an illegal value\n", rank, -info);
 
         cond[(int) i / 9] = rcond;
+
+        // if (dgetrf_fail) {
+        //     printf("rcond = %lf ", rcond);
+        //     print_matrix("3x3 block", 3, 3, x, 3);
+        //     fflush(stdout);
+        // }
 
         // Compute det
         // TODO: This should take into account the fact that the blocks are symmetric
