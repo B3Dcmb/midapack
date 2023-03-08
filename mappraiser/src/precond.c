@@ -354,7 +354,7 @@ int commScheme(Mat *A, double *vpixDiag, int pflag) {
         }
         alltoallv_reduce(A->R, A->nR, nRtot, A->S, A->nS, nStot, lvalues, vpixDiag, A->steps, A->comm);
     } else {
-        printf("\n\n####### ERROR! : Incorrect communication scheme #######\n\n");
+        fprintf(stderr, "\n\n####### ERROR! : Incorrect communication scheme #######\n\n");
         exit(1);
     }
 #endif
@@ -474,9 +474,8 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, 
     vpixBlock = (double *) malloc(n * nnz * sizeof(double));
     vpixBlock_inv = (double *) malloc(n * nnz * sizeof(double));
     hits_proc = (double *) malloc(n * sizeof(double));
-    if (indices_new == NULL || vpixBlock_loc == NULL || vpixBlock == NULL || vpixBlock_inv == NULL ||
-        hits_proc == NULL) {
-        printf("Out of memory: memory allocation failed");
+    if (vpixBlock_loc == NULL || vpixBlock == NULL || vpixBlock_inv == NULL || hits_proc == NULL) {
+        fprintf(stderr, "Out of memory: allocation of vpixBlock_loc, vpixBlock, vpixBlock_inv or hits_proc failed");
         exit(1);
     }
 
@@ -640,7 +639,7 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, 
         tmp1 = (int *) realloc(lhits, (int) n / nnz * sizeof(int));
         tmp3 = (double *) realloc(cond, (int) n / nnz * sizeof(double));
         if (tmp1 == NULL || tmp2 == NULL || tmp3 == NULL || tmp4 == NULL) {
-            printf("[rank %d] Out of memory: reallocation of preconditioner blocks, hits or rcond maps failed", rank);
+            fprintf(stderr, "[rank %d] Out of memory: reallocation of preconditioner blocks, hits or rcond maps failed", rank);
             exit(1);
         } else {
             vpixBlock = tmp2;
@@ -666,6 +665,11 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, 
 
     // Define Block-Jacobi preconditioner indices
     indices_new = (int *) malloc(n * nnz * sizeof(int));
+    if (indices_new == NULL) {
+        fprintf(stderr, "[rank %d] Out of memory: allocation of indices_new failed", rank);
+        exit(1);
+    }
+
     for (i = 0; i < n; i++) {
         for (j = 0; j < nnz; j++) {
             indices_new[i * nnz + j] = A->lindices[nnz * (A->trash_pix) + nnz * ((int) i / nnz) + j];
@@ -1346,7 +1350,7 @@ void build_precond(Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tp
     // Reallocate memory for well-conditioned map
     x = realloc(*in_out_x, p->n * sizeof(double));
     if (x == NULL) {
-        printf("Out of memory: map reallocation failed");
+        fprintf(stderr, "Out of memory: map reallocation failed");
         exit(1);
     }
 
@@ -1376,9 +1380,9 @@ void build_precond(Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tp
 
             // Invalid precond
         else {
-            printf("Whoops! Incorrect preconditioner parameter, please check documentation and try again: %d\n",
+            fprintf(stderr, "Whoops! Incorrect preconditioner parameter, please check documentation and try again: %d\n",
                    precond);
-            printf("Quick reminder: precond = 0 -> BD, precond = 1 -> 2lvl a priori, precond = 2 -> 2lvl a posteriori\n");
+            fprintf(stderr, "Quick reminder: precond = 0 -> BD, precond = 1 -> 2lvl a priori, precond = 2 -> 2lvl a posteriori\n");
             exit(1);
         }
 
