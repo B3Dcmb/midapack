@@ -13,6 +13,7 @@ from toast.observation import default_values as defaults
 from toast.pixels import PixelData, PixelDistribution
 from toast.vis import set_matplotlib_backend
 from toast.tests._helpers import (
+    close_data,
     create_fake_sky,
     create_satellite_data,
     fake_flags,
@@ -20,6 +21,7 @@ from toast.tests._helpers import (
 from toast.tests.mpi import MPITestCase
 
 from . import mappraiser
+
 
 def create_outdir(mpicomm, subdir=None):
     """Create the top level output directory and per-test subdir.
@@ -202,25 +204,20 @@ class MappraiserTest(MPITestCase):
 
         # Run mappraiser on this
 
-        # Mappraiser assumes constant sample rate- just get it from the noise model for
-        # the first detector.
-        sample_rate = data.obs[0]["noise_model"].rate(data.obs[0].local_detectors[0])
-
-        pars = {}
-        pars["fsample"] = sample_rate
-        pars["nside"] = pixels.nside
-        pars["path_output"] = self.outdir
-        pars["ref"] = "run0"
-        pars["Lambda"] = 16
-        pars["solver"] = 0
-        pars["precond"] = 0
-        pars["Z_2lvl"] = 0
-        pars["ptcomm_flag"] = 6
-        pars["tol"] = 1e-6
-        pars["maxiter"] = 500
-        pars["enlFac"] = 1
-        pars["ortho_alg"] = 1
-        pars["bs_red"] = 0
+        pars = {
+            "path_output": self.outdir,
+            "ref": "run0",
+            "Lambda": 1,
+            "solver": 0,
+            "precond": 0,
+            "Z_2lvl": 0,
+            "ptcomm_flag": 6,
+            "tol": 1e-6,
+            "maxiter": 500,
+            "enlFac": 1,
+            "ortho_alg": 1,
+            "bs_red": 0
+        }
 
         # FIXME: add a view here once our test data includes it
 
@@ -275,5 +272,4 @@ class MappraiserTest(MPITestCase):
         #         # print(f"check_rms = {check_rms}, det rms = {rms[ob.name][det]}")
         #         self.assertTrue(0.9 * check_rms < rms[ob.name][det])
 
-        del data
-        return
+        close_data(data)

@@ -5,15 +5,14 @@ import numpy as np
 import traitlets
 from astropy import units as u
 
-from toast.mpi import MPI, use_mpi
+from toast.mpi import use_mpi
 from toast.observation import default_values as defaults
 from toast.templates import Offset
 from toast.timing import function_timer
 from toast.traits import Bool, Dict, Instance, Int, Float, Unicode, trait_docs
-from toast.utils import Environment, GlobalTimers, Logger, Timer, dtype_to_aligned
+from toast.utils import Environment, Logger, Timer, dtype_to_aligned
 from toast.ops.delete import Delete
 from toast.ops.mapmaker import MapMaker
-from toast.ops.memory_counter import MemoryCounter
 from toast.ops.operator import Operator
 
 import toml
@@ -179,7 +178,7 @@ class Mappraiser(Operator):
         help="This must be an instance of a Stokes weights operator",
     )
 
-    #! N.B: this is not supported for the moment.
+    # ! N.B: this is not supported for the moment.
     view = Unicode(
         None, allow_none=True, help="Use this view of the data in all observations"
     )
@@ -205,7 +204,7 @@ class Mappraiser(Operator):
         help="If True, restore detector data to observations on completion",
     )
 
-    #! N.B: not supported for the moment
+    # ! N.B: not supported for the moment
     mcmode = Bool(
         False,
         help="If true, Madam will store auxiliary information such as pixel matrices and noise filter",
@@ -435,8 +434,27 @@ class Mappraiser(Operator):
                 #     params[k] = v
                 params[k] = v
 
+        params.update({
+            "Lambda": self.bandwidth,
+            "solver": self.solver,
+            "precond": self.precond,
+            "Z_2lvl": self.z_2lvl,
+            "ptcomm_flag": self.ptcomm_flag,
+            "tol": np.double(self.tol),
+            "maxiter": self.maxiter,
+            "enlFac": self.enlFac,
+            "ortho_alg": self.ortho_alg,
+            "bs_red": self.bs_red,
+        })
+
+        # params dictionary overrides operator traits for mappraiser C library arguments
         if self.params is not None:
             params.update(self.params)
+
+        for key in "path_output", "ref":
+            if key not in params:
+                msg = f"You must set the '{key}' key of mappraiser.params before calling exec()"
+                raise RuntimeError(msg)
 
         if "fsample" not in params:
             params["fsample"] = data.obs[0].telescope.focalplane.sample_rate.to_value(
@@ -454,37 +472,20 @@ class Mappraiser(Operator):
         # else:
         #     params["write_tod"] = False
 
-        # Parameters for mappraiser C library
-        # 'path_output' and 'ref' already provided as script arguments to toast_so_sim
-
         # Check if noiseless mode is activated
         if self.noiseless:
             self.noise_name = None
 
         # No noise: half bandwidth of noise model must be set to 1
         if self.noise_name is None:
-            self.noiseless = True
             params["Lambda"] = 1
-        else:
-            params["Lambda"] = self.bandwidth
-
-        params.update({
-            "solver": self.solver,
-            "precond": self.precond,
-            "Z_2lvl": self.z_2lvl,
-            "ptcomm_flag": self.ptcomm_flag,
-            "tol": np.double(self.tol),
-            "maxiter": self.maxiter,
-            "enlFac": self.enlFac,
-            "ortho_alg": self.ortho_alg,
-            "bs_red": self.bs_red,
-        })
+            self.noiseless = True
 
         # Log the libmappraiser parameters that were used.
         if data.comm.world_rank == 0:
             with open(
-                os.path.join(params["path_output"], "mappraiser_args_log.toml"),
-                "w",
+                    os.path.join(params["path_output"], "mappraiser_args_log.toml"),
+                    "w",
             ) as f:
                 toml.dump(params, f)
 
@@ -543,7 +544,7 @@ class Mappraiser(Operator):
         )
 
         log.info_rank(
-            f"{self._logprefix} Destriped data in",
+            f"{self._logprefix} Processed time data in",
             comm=data.comm.comm_world,
             timer=timer,
         )
@@ -735,16 +736,16 @@ class Mappraiser(Operator):
 
     @function_timer
     def _stage_data(
-        self,
-        params,
-        data,
-        all_dets,
-        nsamp,
-        nnz,
-        nnz_full,
-        nnz_stride,
-        interval_starts,
-        psd_freqs,
+            self,
+            params,
+            data,
+            all_dets,
+            nsamp,
+            nnz,
+            nnz_full,
+            nnz_stride,
+            interval_starts,
+            psd_freqs,
     ):
         """Create mappraiser-compatible buffers.
         Collect the data into Mappraiser buffers.  If we are purging TOAST data to save
@@ -1046,7 +1047,7 @@ class Mappraiser(Operator):
             # We do not have the pointing yet.
             self._mappraiser_pixels_raw, self._mappraiser_pixels = stage_in_turns(
                 data,
-              nodecomm,
+                nodecomm,
                 n_copy_groups,
                 nsamp,
                 self.view,
@@ -1069,7 +1070,10 @@ class Mappraiser(Operator):
             for i in range(nnz):
                 self._mappraiser_pixels[i::nnz] += i
 
-            self._mappraiser_pixweights_raw, self._mappraiser_pixweights = stage_in_turns(
+            (
+                self._mappraiser_pixweights_raw,
+                self._mappraiser_pixweights,
+            ) = stage_in_turns(
                 data,
                 nodecomm,
                 n_copy_groups,
@@ -1161,15 +1165,15 @@ class Mappraiser(Operator):
 
     @function_timer
     def _unstage_data(
-        self,
-        params,
-        data,
-        all_dets,
-        nsamp,
-        nnz,
-        nnz_full,
-        interval_starts,
-        signal_dtype,
+            self,
+            params,
+            data,
+            all_dets,
+            nsamp,
+            nnz,
+            nnz_full,
+            interval_starts,
+            signal_dtype,
     ):
         """
         Restore data to TOAST observations.
