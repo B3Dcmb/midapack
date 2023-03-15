@@ -5,15 +5,14 @@ import numpy as np
 import traitlets
 from astropy import units as u
 
-from toast.mpi import MPI, use_mpi
+from toast.mpi import use_mpi
 from toast.observation import default_values as defaults
 from toast.templates import Offset
 from toast.timing import function_timer
 from toast.traits import Bool, Dict, Instance, Int, Float, Unicode, trait_docs
-from toast.utils import Environment, GlobalTimers, Logger, Timer, dtype_to_aligned
+from toast.utils import Environment, Logger, Timer, dtype_to_aligned
 from toast.ops.delete import Delete
 from toast.ops.mapmaker import MapMaker
-from toast.ops.memory_counter import MemoryCounter
 from toast.ops.operator import Operator
 
 import toml
@@ -179,7 +178,7 @@ class Mappraiser(Operator):
         help="This must be an instance of a Stokes weights operator",
     )
 
-    #! N.B: this is not supported for the moment.
+    # ! N.B: this is not supported for the moment.
     view = Unicode(
         None, allow_none=True, help="Use this view of the data in all observations"
     )
@@ -205,7 +204,7 @@ class Mappraiser(Operator):
         help="If True, restore detector data to observations on completion",
     )
 
-    #! N.B: not supported for the moment
+    # ! N.B: not supported for the moment
     mcmode = Bool(
         False,
         help="If true, Madam will store auxiliary information such as pixel matrices and noise filter",
@@ -234,23 +233,10 @@ class Mappraiser(Operator):
     apod_window_type = Unicode(
         "chebwin", help="Type of apodisation window to use during noise PSD estimation"
     )
-    
+
     nperseg = Int(
         0, help="If 0, set nperseg = timestream length to compute the noise periodograms. If > 0, nperseg = Lambda."
     )
-    
-    bandwidth = Int(16384, help="Half-bandwidth for the noise model")
-    
-    # additional parameters for the solver (C library)
-    solver = Int(0, help="Choose mapmaking solver (0->PCG, 1->ECG)")
-    z_2lvl = Int(0, help="Size of 2lvl deflation space")
-    precond = Int(0, help="Choose preconditioner (0->BJ, 1->2lvl a priori, 2->2lvl a posteriori")
-    ortho_alg = Int(1, help="Orthogonalization scheme for ECG (O->odir, 1->omin)")
-    ptcomm_flag = Int(6, help="Choose collective communication scheme")
-    tol = Float(1e-6, help="Convergence threshold for the iterative solver")
-    maxiter = Int(3000, help="Maximum number of iterations allowed for the solver")
-    enlFac = Int(1, help="Enlargement factor for ECG")
-    bs_red = Int(0, help="Use dynamic search reduction")
 
     bandwidth = Int(16384, help="Half-bandwidth for the noise model")
 
@@ -456,8 +442,27 @@ class Mappraiser(Operator):
                 #     params[k] = v
                 params[k] = v
 
+        params.update({
+            "Lambda": self.bandwidth,
+            "solver": self.solver,
+            "precond": self.precond,
+            "Z_2lvl": self.z_2lvl,
+            "ptcomm_flag": self.ptcomm_flag,
+            "tol": np.double(self.tol),
+            "maxiter": self.maxiter,
+            "enlFac": self.enlFac,
+            "ortho_alg": self.ortho_alg,
+            "bs_red": self.bs_red,
+        })
+
+        # params dictionary overrides operator traits for mappraiser C library arguments
         if self.params is not None:
             params.update(self.params)
+
+        for key in "path_output", "ref":
+            if key not in params:
+                msg = f"You must set the '{key}' key of mappraiser.params before calling exec()"
+                raise RuntimeError(msg)
 
         if "fsample" not in params:
             params["fsample"] = data.obs[0].telescope.focalplane.sample_rate.to_value(
@@ -474,43 +479,6 @@ class Mappraiser(Operator):
         #     params["write_tod"] = True
         # else:
         #     params["write_tod"] = False
-        
-        # Parameters for mappraiser C library
-        # 'path_output' and 'ref' already provided as script arguments to toast_so_sim
-
-        # Check if noiseless mode is activated
-        if self.noiseless:
-            self.noise_name = None
-        
-        # No noise: half bandwidth of noise model must be set to 1
-        if self.noise_name is None:
-            self.noiseless = True
-            params["Lambda"] = 1
-        else:
-            params["Lambda"] = self.bandwidth
-        
-        params.update({
-            "solver": self.solver,
-            "precond": self.precond,
-            "Z_2lvl": self.z_2lvl,
-            "ptcomm_flag": self.ptcomm_flag,
-            "tol": np.double(self.tol),
-            "maxiter": self.maxiter,
-            "enlFac": self.enlFac,
-            "ortho_alg": self.ortho_alg,
-            "bs_red": self.bs_red,
-        })
-        
-        # Log the libmappraiser parameters that were used.
-        if data.comm.world_rank == 0:
-            with open(
-                os.path.join(params["path_output"], "mappraiser_args_log.toml"),
-                "w",
-            ) as f:
-                toml.dump(params, f)
-
-        # Parameters for mappraiser C library
-        # 'path_output' and 'ref' already provided as script arguments to toast_so_sim
 
         # Check if noiseless mode is activated
         if self.noiseless:
@@ -518,28 +486,14 @@ class Mappraiser(Operator):
 
         # No noise: half bandwidth of noise model must be set to 1
         if self.noise_name is None:
-            self.noiseless = True
             params["Lambda"] = 1
-        else:
-            params["Lambda"] = self.bandwidth
-
-        params.update({
-            "solver": self.solver,
-            "precond": self.precond,
-            "Z_2lvl": self.z_2lvl,
-            "ptcomm_flag": self.ptcomm_flag,
-            "tol": np.double(self.tol),
-            "maxiter": self.maxiter,
-            "enlFac": self.enlFac,
-            "ortho_alg": self.ortho_alg,
-            "bs_red": self.bs_red,
-        })
+            self.noiseless = True
 
         # Log the libmappraiser parameters that were used.
         if data.comm.world_rank == 0:
             with open(
-                os.path.join(params["path_output"], "mappraiser_args_log.toml"),
-                "w",
+                    os.path.join(params["path_output"], "mappraiser_args_log.toml"),
+                    "w",
             ) as f:
                 toml.dump(params, f)
 
@@ -599,7 +553,7 @@ class Mappraiser(Operator):
         )
 
         log.info_rank(
-            f"{self._logprefix} Destriped data in",
+            f"{self._logprefix} Processed time data in",
             comm=data.comm.comm_world,
             timer=timer,
         )
@@ -791,16 +745,16 @@ class Mappraiser(Operator):
 
     @function_timer
     def _stage_data(
-        self,
-        params,
-        data,
-        all_dets,
-        nsamp,
-        nnz,
-        nnz_full,
-        nnz_stride,
-        interval_starts,
-        psd_freqs,
+            self,
+            params,
+            data,
+            all_dets,
+            nsamp,
+            nnz,
+            nnz_full,
+            nnz_stride,
+            interval_starts,
+            psd_freqs,
     ):
         """Create mappraiser-compatible buffers.
         Collect the data into Mappraiser buffers.  If we are purging TOAST data to save
@@ -1227,15 +1181,15 @@ class Mappraiser(Operator):
 
     @function_timer
     def _unstage_data(
-        self,
-        params,
-        data,
-        all_dets,
-        nsamp,
-        nnz,
-        nnz_full,
-        interval_starts,
-        signal_dtype,
+            self,
+            params,
+            data,
+            all_dets,
+            nsamp,
+            nnz,
+            nnz_full,
+            interval_starts,
+            signal_dtype,
     ):
         """
         Restore data to TOAST observations.
