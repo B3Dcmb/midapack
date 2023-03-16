@@ -41,7 +41,6 @@ endif ()
 # OpenMP
 
 if (OpenMP_FOUND)
-    target_compile_definitions(midapack PRIVATE W_OPENMP)
     target_link_libraries(midapack PUBLIC OpenMP::OpenMP_C)
 endif ()
 

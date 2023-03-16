@@ -54,7 +54,7 @@ endif("${isSystemDir}" STREQUAL "-1")
 # ----------------------------------------------------------------------------------------#
 
 option(DISABLE_MPI OFF)
-option(DISABLE_OPENMP ON)
+option(DISABLE_OPENMP OFF)
 
 # Search for MPI and OpenMP if we want to use them
 if (NOT DISABLE_MPI)
