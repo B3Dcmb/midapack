@@ -155,7 +155,7 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
     double coef_1, coef_2;          // scalars
     double wtime;                   // timing variable
     bool stop = false;              // stop iteration or continue
-    bool init_guess = (x0 == NULL); // starting vector provided or not
+    bool init_guess = (x0 != NULL); // starting vector provided or not
 
     int ng = Gaps->ngap;               // number of gaps
     int m = N_block->tpltzblocks[0].n; // size of the data
