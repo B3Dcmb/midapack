@@ -4,6 +4,8 @@
     @author Pierre Cargemel
     @date April 2012*/
 
+#ifndef MAPMAT_BUTTERFLY_EXTRA_H
+#define MAPMAT_BUTTERFLY_EXTRA_H
 
 int butterfly_init(int *indices, int count, int **R, int *nR, int **S, int *nS, int **com_indices, int *com_count, int steps, MPI_Comm comm);
 
@@ -14,3 +16,5 @@ int truebutterfly_init(int *indices, int count, int **R, int *nR, int **S, int *
 double truebutterfly_reduce(int **R, int *nR, int  nRmax, int **S, int *nS, int nSmax, double *val, int steps, MPI_Comm comm);
 
 double butterfly_reduce_b(int **R, int *nR, int nRmax, int **S, int *nS, int nSmax, double *val, int b, int steps, MPI_Comm comm);
+
+#endif //MAPMAT_BUTTERFLY_EXTRA_H

@@ -7,7 +7,11 @@
 /** @brief <b>Set some map values into a submap values array </b>
     @param mapval array of values
     @param submapval  array of values 
-    @return array of indices*/ 
+    @return array of indices*/
+
+#ifndef MAPMAT_ALM_H
+#define MAPMAT_ALM_H
+
 void m2s(double *mapval, double *submapval, int *subset, int count);
 
 void s2m_sum(double *mapval, double *submapval, int *subset, int count);
@@ -25,3 +29,5 @@ int m2m(double *vA1, int *A1, int n1, double *vA2, int *A2, int n2);
 int m2m_sum(double *vA1, int *A1, int n1, double *vA2, int *A2, int n2);
 
 int m2m_sum_i(int *vA1, int *A1, int n1, int *vA2, int *A2, int n2);
+
+#endif //MAPMAT_ALM_H

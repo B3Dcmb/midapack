@@ -21,8 +21,6 @@
 #include "csort.h"
 #include "ring.h"
 
-
-
 #define NONE 0
 #define RING 1
 #define BUTTERFLY 2
@@ -38,8 +36,6 @@
 #define SEQ 0
 #define OMP 1
 #define GPU 2
-
-
 
 /** @brief Matrix structure
     @n A* = (A0* | A1* | ... | Ap-1* )
@@ -104,7 +100,7 @@ int MatInfo(Mat *A, int master, char* filename);
 
 int greedyreduce(Mat *A, double* x);
 
-#endif /* MAPMAT_H */
+#endif //MAPMAT_H
 
 // Doxygen definitions
 

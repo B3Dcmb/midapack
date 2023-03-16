@@ -13,8 +13,6 @@
 #include "csort.h"
 #include "ring.h"
 
-
-
 #define NONE 0
 #define RING 1
 #define BUTTERFLY 2
@@ -23,8 +21,6 @@
 #define SEQ 0
 #define OMP 1
 #define GPU 2
-
-
 
 /** @brief Matrix structure
     @n A* = (A0* | A1* | ... | Ap-1* )
@@ -67,4 +63,4 @@ int CMatVecProd(CMat *A, double *x, double *y, int pflag);
 
 int CTrMatVecProd(CMat *A, double *y, double* x, int pflag);
 
-#endif /* MAPMATC_H */
+#endif //MAPMATC_H

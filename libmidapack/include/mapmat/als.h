@@ -4,6 +4,8 @@
     @author Pierre Cargemel
     @date April 2012*/
 
+#ifndef MAPMAT_ALS_H
+#define MAPMAT_ALS_H
 
 int card(int *A, int nA);
 
@@ -20,3 +22,5 @@ int set_or(int *A1, int n1, int *A2, int n2, int *A1orA2);
 int set_and(int *A1, int n1, int *A2, int n2, int *A1andA2);
 
 void subset2map(int *A, int nA, int *subA, int nsubA);
+
+#endif //MAPMAT_ALS_H
