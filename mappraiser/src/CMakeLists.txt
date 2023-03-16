@@ -9,9 +9,12 @@ add_library(mappraiser SHARED)
 target_sources(mappraiser PRIVATE
                "createToeplitz.c"
                "iofiles.c"
+               "mapping.c"
                "mappraiser.c"
+               "noise_weighting.c"
                "pcg_true.c"
                "precond.c"
+               "solver_info.c"
                )
 
 if (ECG)
