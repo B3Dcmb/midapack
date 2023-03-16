@@ -14,6 +14,7 @@
 #include "mappraiser/precond.h"
 #include "mappraiser/pcg_true.h"
 #include "mappraiser/noise_weighting.h"
+#include "mappraiser/gap_filling.h"
 
 int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N,
                  double *x, double *b, double *noise, double *cond, int *lhits,

@@ -15,8 +15,8 @@ set(mappraiser_SOURCES
     pcg_true.c
     precond.c
     solver_info.c
-#    gap_filling.c
-#    rng.c
+    gap_filling.cpp
+    rng.cpp
     )
 
 if (ECG)
@@ -32,7 +32,7 @@ target_sources(mappraiser PRIVATE ${mappraiser_SOURCES})
 target_include_directories(mappraiser PRIVATE
                            "../include"
                            "../include/mappraiser"
-#                           "Random123"
+                           "Random123"
                            )
 
 #target_include_directories(mappraiser PUBLIC

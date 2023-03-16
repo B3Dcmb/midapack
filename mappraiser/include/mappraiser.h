@@ -17,7 +17,7 @@
 #include "mappraiser/precond.h"
 #include "mappraiser/solver_info.h"
 
-//#include "mappraiser/gap_filling.h"
-//#include "mappraiser/rng.h"
+#include "mappraiser/gap_filling.h"
+#include "mappraiser/rng.h"
 
 #endif //MAPPRAISER_H
