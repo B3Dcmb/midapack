@@ -10,13 +10,12 @@
 #include <mpi.h>
 #include <unistd.h>
 #include <midapack.h>
-#include "fitsio.h"
+#include <fitsio.h>
 
-//#include "mappraiser/mapping.h"
-//#include "mappraiser/create_toeplitz.h"
-//#include "mappraiser/pcg_true.h"
-//#include "mappraiser/iofiles.h"
-#include "mappraiser.h"
+#include "mappraiser/mapping.h"
+#include "mappraiser/create_toeplitz.h"
+#include "mappraiser/pcg_true.h"
+#include "mappraiser/iofiles.h"
 
 int x2map_pol(double *mapI, double *mapQ, double *mapU, double *Cond, int *hits, double *x, int *lstid,
               double *cond, int *lhits, int xsize);

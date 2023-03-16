@@ -8,10 +8,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "fitsio.h"
+#include <fitsio.h>
 
-//#include "mappraiser.iofiles.h"
-#include "mappraiser.h"
+#include "mappraiser/iofiles.h"
 
 char *WORKDIR;
 int IOVERBOSE = 0;
