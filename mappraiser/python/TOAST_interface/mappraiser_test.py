@@ -207,7 +207,7 @@ class MappraiserTest(MPITestCase):
         pars = {
             "path_output": self.outdir,
             "ref": "run0",
-            "Lambda": 1,
+            "Lambda": 16,
             "solver": 0,
             "precond": 0,
             "Z_2lvl": 0,
