@@ -6,20 +6,24 @@ add_library(mappraiser SHARED)
 # sources files
 # ----------------------------------------------------------------------------------------#
 
-target_sources(mappraiser PRIVATE
-               "createToeplitz.c"
-               "iofiles.c"
-               "mapping.c"
-               "mappraiser.c"
-               "noise_weighting.c"
-               "pcg_true.c"
-               "precond.c"
-               "solver_info.c"
-               )
+set(mappraiser_SOURCES
+    create_toeplitz.c
+    iofiles.c
+    mapping.c
+    mappraiser.c
+    noise_weighting.c
+    pcg_true.c
+    precond.c
+    solver_info.c
+#    gap_filling.c
+#    rng.c
+    )
 
 if (ECG)
-    target_sources(mappraiser PRIVATE "ecg.c")
+    list(mappraiser_SOURCES APPEND "ecg.c")
 endif ()
+
+target_sources(mappraiser PRIVATE ${mappraiser_SOURCES})
 
 # ----------------------------------------------------------------------------------------#
 # header files
@@ -27,6 +31,8 @@ endif ()
 
 target_include_directories(mappraiser PRIVATE
                            "../include"
+                           "../include/mappraiser"
+#                           "Random123"
                            )
 
 #target_include_directories(mappraiser PUBLIC
@@ -51,7 +57,7 @@ endif ()
 
 if (MPI_FOUND)
     target_compile_definitions(mappraiser PRIVATE W_MPI)
-    target_link_libraries(mappraiser PUBLIC MPI::MPI_C)
+    target_link_libraries(mappraiser PUBLIC MPI::MPI_C MPI::MPI_CXX)
 endif ()
 
 # CFITSIO
@@ -73,16 +79,16 @@ endif ()
 # MKL
 
 if (MKL_FOUND)
-    target_compile_definitions(mappraiser PRIVATE HAVE_MKL)
+    target_compile_definitions(mappraiser PUBLIC HAVE_MKL)
     target_include_directories(mappraiser PUBLIC "${MKL_INCLUDE_DIRS}")
     target_link_libraries(mappraiser PUBLIC "${MKL_LIBRARIES}")
 elseif (LAPACK_FOUND)
     # BLAS/LAPACK
-    #set_target_properties(mappraiser PROPERTIES LINK_FLAGS
-    #                      "${LAPACK_LINKER_FLAGS}" #${BLAS_LINKER_FLAGS}"
-    #                      )
-    #target_link_libraries(mappraiser PUBLIC "${LAPACK_LIBRARIES}")
-    #target_link_libraries(mappraiser "${BLAS_LIBRARIES}")
+#    set_target_properties(mappraiser PROPERTIES LINK_FLAGS
+#                          "${LAPACK_LINKER_FLAGS} ${BLAS_LINKER_FLAGS}"
+#                          )
+#    target_link_libraries(mappraiser PUBLIC "${LAPACK_LIBRARIES}")
+#    target_link_libraries(mappraiser PUBLIC "${BLAS_LIBRARIES}")
     target_link_libraries(mappraiser PUBLIC LAPACK::LAPACK)
 endif ()
 

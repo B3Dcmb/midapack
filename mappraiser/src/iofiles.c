@@ -1,21 +1,16 @@
-// MAPPRAISER utils vdev
-// Utilitary IO routines for the mapmaking example. This does not contain healpix dependency.
-
-/** @file   iofiles.c
-    @author Frederic Dauvergne
-    @date   November 2012
-    @last_update May 2019 by Hamza El Bouhargani */
+/**
+ * @file   iofiles.c
+ * @author Frederic Dauvergne
+ * @date   November 2012
+ * @last_update May 2019 by Hamza El Bouhargani
+ */
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <math.h>
-#include <mpi.h>
-#include <time.h>
 #include <string.h>
-#include <stdbool.h>
-#include <errno.h>
-#include <unistd.h>
 #include "fitsio.h"
+
+//#include "mappraiser.iofiles.h"
 #include "mappraiser.h"
 
 char *WORKDIR;
@@ -23,8 +18,7 @@ int IOVERBOSE = 0;
 
 // Copied from HEALPix write_healpix_map routine with little tweaks to pass datatypes in arguments
 void write_map(void *signal, int type, long nside, const char *filename,
-               char nest, const char *coordsys)
-{
+               char nest, const char *coordsys) {
     fitsfile *fptr; /* pointer to the FITS file, defined in fitsio.h */
     int status = 0, hdutype;
 
@@ -65,8 +59,7 @@ void write_map(void *signal, int type, long nside, const char *filename,
     printerror(status);
 }
 
-static void printerror(int status)
-{
+static void printerror(int status) {
     if (status == 0)
         return;
 
@@ -74,8 +67,7 @@ static void printerror(int status)
     UTIL_FAIL("FITS error");
 }
 
-static void setCoordSysHP(char coordsys, char *coordsys9)
-{
+static void setCoordSysHP(char coordsys, char *coordsys9) {
     strcpy(coordsys9, "C       ");
     if (coordsys == 'G')
         strcpy(coordsys9, "G       ");
@@ -89,14 +81,12 @@ static void setCoordSysHP(char coordsys, char *coordsys9)
 }
 
 static void util_fail_(const char *file, int line, const char *func,
-                       const char *msg)
-{
+                       const char *msg) {
     fprintf(stderr, "%s, %i (%s):\n%s\n", file, line, func, msg);
     exit(1);
 }
 
-int ioReadfile(int block_size, int part_id, unsigned int *point_data, double *signal)
-{
+int ioReadfile(int block_size, int part_id, unsigned int *point_data, double *signal) {
     int i;
 
     char p_vectorFile[256];
@@ -111,8 +101,7 @@ int ioReadfile(int block_size, int part_id, unsigned int *point_data, double *si
     sprintf(p_vectorFile, "%s%s%01d.dat", WORKDIR, p_vectorFileNameBasis, part_id);
     sprintf(s_vectorFile, "%s%s%01d.dat", WORKDIR, s_vectorFileNameBasis, part_id);
 
-    if (IOVERBOSE > 1)
-    {
+    if (IOVERBOSE > 1) {
         printf(" Pointing file name: %s\n", p_vectorFile);
         printf("   Signal file name: %s\n", s_vectorFile);
     }
@@ -128,8 +117,8 @@ int ioReadfile(int block_size, int part_id, unsigned int *point_data, double *si
     return 0;
 }
 
-int ioReadfile_pol(int jump, int loop, int block_size, int part_id, unsigned int *point_data, double *signal, double *pol_ang)
-{
+int ioReadfile_pol(int jump, int loop, int block_size, int part_id, unsigned int *point_data, double *signal,
+                   double *pol_ang) {
     int i;
 
     char p_vectorFile[256];
@@ -148,8 +137,7 @@ int ioReadfile_pol(int jump, int loop, int block_size, int part_id, unsigned int
     sprintf(s_vectorFile, "%s%s%01d.dat", WORKDIR, s_vectorFileNameBasis, part_id);
     sprintf(pol_vectorFile, "%s%s%01d.dat", WORKDIR, pol_vectorFileNameBasis, part_id);
 
-    if (IOVERBOSE > 1)
-    {
+    if (IOVERBOSE > 1) {
         printf(" Pointing file name: %s\n", p_vectorFile);
         printf("   Signal file name: %s\n", s_vectorFile);
         printf(" Polarisation angles file name: %s\n", pol_vectorFile);
@@ -173,8 +161,8 @@ int ioReadfile_pol(int jump, int loop, int block_size, int part_id, unsigned int
     return 0;
 }
 
-int ioReadTOAST_data(int jump, int loop, int block_size, int part_id, unsigned int *point_data, double *signal, double *wghts)
-{
+int ioReadTOAST_data(int jump, int loop, int block_size, int part_id, unsigned int *point_data, double *signal,
+                     double *wghts) {
     int i;
 
     char p_vectorFile[256];
@@ -193,8 +181,7 @@ int ioReadTOAST_data(int jump, int loop, int block_size, int part_id, unsigned i
     sprintf(s_vectorFile, "%s%s%01d.dat", WORKDIR, s_vectorFileNameBasis, part_id);
     sprintf(wght_vectorFile, "%s%s%01d.dat", WORKDIR, wght_vectorFileNameBasis, part_id);
 
-    if (IOVERBOSE > 1)
-    {
+    if (IOVERBOSE > 1) {
         printf(" Pixels file name: %s\n", p_vectorFile);
         printf("   Signal file name: %s\n", s_vectorFile);
         printf(" Pointing weights file name: %s\n", wght_vectorFile);
@@ -218,8 +205,7 @@ int ioReadTOAST_data(int jump, int loop, int block_size, int part_id, unsigned i
     return 0;
 }
 
-int ioReadfilePure(int block_size, int part_id, unsigned int *point_data, double *signal)
-{
+int ioReadfilePure(int block_size, int part_id, unsigned int *point_data, double *signal) {
     int i;
 
     char p_vectorFile[256];
@@ -248,14 +234,13 @@ int ioReadfilePure(int block_size, int part_id, unsigned int *point_data, double
     return 0;
 }
 
-int ioReadrandom(int block_size, int part_id, unsigned int *point_data, double *signal)
-{
+int ioReadrandom(int block_size, int part_id, unsigned int *point_data, double *signal) {
     int i;
 
     // Random generator:
     srand(part_id); // initialize the random generator
     for (i = 0; i < block_size; i++)
-        signal[i] = 1.0 + (10 * ((double)rand()) / RAND_MAX - 1);
+        signal[i] = 1.0 + (10 * ((double) rand()) / RAND_MAX - 1);
 
     for (i = 0; i < block_size; i++)
         point_data[i] = i;
@@ -263,8 +248,7 @@ int ioReadrandom(int block_size, int part_id, unsigned int *point_data, double *
     return 0;
 }
 
-int ioReadTpltzfile(int lambda, double *Tblock)
-{
+int ioReadTpltzfile(int lambda, double *Tblock) {
 
     int i;
 
@@ -285,8 +269,7 @@ int ioReadTpltzfile(int lambda, double *Tblock)
     return 0;
 }
 
-int ioReadTpltzrandom(int lambda, double *Tblock)
-{
+int ioReadTpltzrandom(int lambda, double *Tblock) {
     //        int i;
     // double lambdareduce=10;
     //
@@ -307,8 +290,7 @@ int ioReadTpltzrandom(int lambda, double *Tblock)
     return 0;
 }
 
-int ioWritebinfile(int mapsize, int mappart_id, int *lstid, double *map, double *cond, int *lhits)
-{
+int ioWritebinfile(int mapsize, int mappart_id, int *lstid, double *map, double *cond, int *lhits) {
     int i;
 
     char lstid_vectorFile[256];
@@ -335,11 +317,11 @@ int ioWritebinfile(int mapsize, int mappart_id, int *lstid, double *map, double 
     fclose(fp);
 
     fp = fopen(lhits_vectorFile, "wb");
-    fwrite(lhits, sizeof(int), (int)(mapsize / 3), fp);
+    fwrite(lhits, sizeof(int), (int) (mapsize / 3), fp);
     fclose(fp);
 
     fp = fopen(cond_vectorFile, "wb");
-    fwrite(cond, sizeof(double), (int)(mapsize / 3), fp);
+    fwrite(cond, sizeof(double), (int) (mapsize / 3), fp);
     fclose(fp);
 
     fp = fopen(x_vectorFile, "wb");
@@ -349,8 +331,7 @@ int ioWritebinfile(int mapsize, int mappart_id, int *lstid, double *map, double 
     return 0;
 }
 
-int ioReadbinfile(int mapsize, int mappart_id, int *lstid, double *map, double *cond, int *lhits)
-{
+int ioReadbinfile(int mapsize, int mappart_id, int *lstid, double *map, double *cond, int *lhits) {
 
     int i;
 
@@ -380,11 +361,11 @@ int ioReadbinfile(int mapsize, int mappart_id, int *lstid, double *map, double *
     fclose(fp);
 
     fp = fopen(lhits_vectorFile, "rb");
-    fread(lhits, sizeof(int), (int)(mapsize / 3), fp);
+    fread(lhits, sizeof(int), (int) (mapsize / 3), fp);
     fclose(fp);
 
     fp = fopen(cond_vectorFile, "rb");
-    fread(cond, sizeof(double), (int)(mapsize / 3), fp);
+    fread(cond, sizeof(double), (int) (mapsize / 3), fp);
     fclose(fp);
 
     fp = fopen(x_vectorFile, "rb");

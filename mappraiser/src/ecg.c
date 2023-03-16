@@ -23,7 +23,9 @@
 /* MKL */
 #include <mkl.h>
 /* MAPPRAISER */
-#include "mappraiser.h"
+#include "mappraiser/ecg.h"
+#include "mappraiser/precond.h"
+#include "mappraiser/pcg_true.h" // for get_pixshare_pond routine
 /* preAlps */
 #include "overlap_ecg.h"
 /*****************************************************************************/

@@ -1,17 +1,9 @@
-/**
- * @file solver_info.h
- * @author Simon Biquard
- * @brief Declaration of the SolverInfo structure and routine prototypes.
- * @version 0.1
- * @date Jan 2023
- */
+#ifndef MAPPRAISER_SOLVER_INFO_H
+#define MAPPRAISER_SOLVER_INFO_H
 
 #include <stdlib.h>
+#include <stdbool.h>
 
-#ifndef SOLVER_INFO_H
-#define SOLVER_INFO_H
-
-/// @brief Struct for solver parameters/output
 struct solverinfo_t
 {
     int max_steps;         // maximal number of iteration steps
@@ -44,4 +36,4 @@ void solverinfo_update(SolverInfo *si, bool *stop, int step_nbr, double res, dou
 void solverinfo_finalize(SolverInfo *si);
 void solverinfo_free(SolverInfo *si);
 
-#endif /* SOLVER_INFO_H */
+#endif //MAPPRAISER_SOLVER_INFO_H

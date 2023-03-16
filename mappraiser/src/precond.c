@@ -1,20 +1,21 @@
 /**
  * @file precond.c
- * @authors Hamza El Bouhargani (adapted from Frederic Dauvergne), Aygul Jamal, Simon Biquard
- * @brief Routines for computing the diagonal, block-diagonal Jacobi, and Two-level preconditioners for the PCG. Also deal with degenerate pixels to ensure numerical stability of the system.
- * @date Jan 2023
+ * @authors Hamza El Bouhargani (adapted from Frederic Dauvergne), Aygul Jamal
+ * @brief Routines for computing the diagonal, block-diagonal Jacobi, and Two-level preconditioners for the PCG.
+ * Also deal with degenerate pixels to ensure numerical stability of the system.
+ * @date May 2019
+ * @last_update Mar 2023 by Simon Biquard
  */
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
 #include <mpi.h>
-#include <time.h>
 #include <string.h>
 #include <assert.h>
 // #include <stdbool.h>
 
-// choose header based on compilation option
+// choose header based on preprocessor directive
 #ifdef HAVE_MKL
 #include <mkl.h>
 #else
@@ -23,7 +24,8 @@
 
 #endif
 
-#include "mappraiser.h"
+#include "mappraiser/precond.h"
+#include "mappraiser/mapping.h"
 
 #define eps 1.0e-15
 

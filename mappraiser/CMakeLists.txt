@@ -116,13 +116,13 @@ endif ()
 
 if (MKL_FOUND)
     # Use MKL for BLAS / LAPACK
-    set(BLAS_LIBRARIES "${MKL_LIBRARIES}")
+#    set(BLAS_LIBRARIES "${MKL_LIBRARIES}")
     set(LAPACK_LIBRARIES "${MKL_LIBRARIES}")
-    set(BLAS_FOUND TRUE)
+#    set(BLAS_FOUND TRUE)
     set(LAPACK_FOUND TRUE)
 else ()
     # We need a BLAS/LAPACK implementation other than MKL
-    find_package(BLAS)
+#    find_package(BLAS)
     find_package(LAPACK REQUIRED)
 endif ()
 

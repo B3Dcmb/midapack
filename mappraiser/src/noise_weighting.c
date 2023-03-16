@@ -1,24 +1,22 @@
 /**
  * @file noise_weighting.c
  * @author Simon Biquard
- * @brief Perform the inverse noise weighting of the mapmaking procedure with an iterative approach.
- * @version 0.1
- * @date Jan 2023
+ * @brief Inverse noise weighting of the map-making procedure with an iterative approach
+ * @date Nov 2022
+ * @last_update Jan 2023
  */
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
 #include <mpi.h>
-#include <time.h>
-#include <string.h>
-#include <unistd.h>
 #include <stdbool.h>
-#include "mappraiser.h"
+
+#include "mappraiser/noise_weighting.h"
+#include "mappraiser/solver_info.h"
 
 void reset_tod_gaps(double *tod, Tpltz *N, Gap *Gaps);
-void set_tpltz_struct(Tpltz *single_block_struct, Tpltz *full_struct, Block *block);
-void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_block, double *x0, SolverInfo *si);
+void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_block, const double *x0, SolverInfo *si);
 void PCG_global(Tpltz *N, Tpltz *Nm1, Gap *Gaps, double *tod, int m, int rank, int verbose);
 
 /**
@@ -141,7 +139,7 @@ void set_tpltz_struct(Tpltz *single_block_struct, Tpltz *full_struct, Block *blo
  * @param x0 [in] starting vector; if NULL, the RHS is used as initial guess
  * @param si SolverInfo structure [in] contains solver parameters [out] contains iteration info
  */
-void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_block, double *x0, SolverInfo *si)
+void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_block, const double *x0, SolverInfo *si)
 {
     // initialize the SolverInfo struct
     solverinfo_init(si);
@@ -201,7 +199,7 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
         else
         {
             // else, use the RHS as initial guess
-            // one might also simply initialise at zero
+            // one might also simply initialize at zero
             _r[i] = tod_block[i];
         }
 

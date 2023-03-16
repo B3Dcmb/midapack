@@ -6,10 +6,9 @@
  * @date Jan 2023
  */
 
-#include <stdlib.h>
 #include <stdio.h>
-#include <stdbool.h>
 #include <math.h>
+
 #include "mappraiser/solver_info.h"
 
 /// @brief Print current solver parameters and information

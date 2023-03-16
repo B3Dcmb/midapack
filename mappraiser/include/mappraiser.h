@@ -8,24 +8,17 @@
 #ifndef MAPPRAISER_H
 #define MAPPRAISER_H
 
-#include "midapack.h"
-#include "mappraiser/random.h"
+#include "mappraiser/create_toeplitz.h"
+#include "mappraiser/ecg.h"
+//#include "mappraiser/iofiles.h"
+#include "mappraiser/mapping.h"
+#include "mappraiser/noise_weighting.h"
+#include "mappraiser/pcg_true.h"
+#include "mappraiser/precond.h"
 #include "mappraiser/solver_info.h"
 
-/* Define the banded block Toeplitz matrix */
-
-int
-defineTpltz_avg(Tpltz *Nm1, int64_t nrow, int m_cw, int m_rw, Block *tpltzblocks, int nb_blocks_loc, int nb_blocks_tot,
-                int64_t idp, int local_V_size, Flag flag_stgy, MPI_Comm comm);
-
-int defineBlocks_avg(Block *tpltzblocks, double *T, int nb_blocks_loc, void *local_blocks_sizes, int lambda_block_avg,
-                     int64_t id0);
-
-/* Build the pixel-to-time-domain mapping and measure the timestream gaps */
-
-int build_pixel_to_time_domain_mapping(Mat *A);
-
-void build_gap_struct(int64_t gif, Gap *Gaps, Mat *A);
+//#include "mappraiser/gap_filling.h"
+//#include "mappraiser/rng.h"
 
 /* IO routines */
 
@@ -55,60 +48,4 @@ static void printerror(int status);
 void write_map(void *signal, int type, long nside, const char *filename,
                char nest, const char *coordsys);
 
-/* Preconditioner routines */
-
-struct Precond {
-    int precond; // 0 = BJ, 1 = 2lvl a priori, 2 = 2lvl a posteriori
-    int n;
-    int Zn;
-    Mat BJ_inv;
-    Mat BJ;
-    double *pixpond;
-
-    /* 2 lvl only (NULL otherwise) */
-    double **Z;
-    double **AZ;
-    double *Em1; // size Zn*Zn
-    double *Qg;  // size n
-    double *AQg; // size n
-    double *Qtx; // size Zn
-    double *w;   // size Zn
-};
-typedef struct Precond Precond;
-
-// Block-Jacobi preconditioner
-int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, double *noise, double *cond, int *lhits,
-                           Gap *Gaps, int64_t gif);
-
-// Preconditioner constructor
-void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tpltz *Nm1, double **in_out_x,
-                   double *b, double *noise, double *cond, int *lhits, double tol, int Zn, int precond, Gap *Gaps,
-                   int64_t gif);
-
-// Product of the preconditioner with a map vector
-void apply_precond(struct Precond *p, const Mat *A, Tpltz *Nm1, double *g, double *Cg);
-
-// Free memory of the preconditioner
-void free_precond(struct Precond **in_out_p);
-
-/* PCG routines */
-
-// Pixel share ponderation to deal with overlapping pixels between multiple MPI procs
-void get_pixshare_pond(Mat *A, double *pixpond);
-
-// PCG routine
-int
-PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double *x, double *b, double *noise, double *cond,
-             int *lhits, double tol, int K, int precond, int Z_2lvl, Gap *Gaps, int64_t gif);
-
-// ECG routine
-#ifdef WITH_ECG
-int ECG_GLS(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double *b, double *noise, double *cond, int *lhits,
-            double tol, int maxIter, int enlFac, int ortho_alg, int bs_red, Gap *Gaps, int64_t gif);
-#endif
-
-/* Noise weighting */
-
-void apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod);
-
-#endif /* MAPPRAISER_H */
+#endif //MAPPRAISER_H
