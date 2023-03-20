@@ -2,7 +2,7 @@
 
 This repo contains two projects: Midapack and Mappraiser.
 
-They are built using cmake (>= 3.18). Try `cmake --help` in case of doubt.
+They are built using cmake. Try `cmake --help` in case of doubt.
 
 ## Midapack
 
@@ -17,10 +17,11 @@ Ensure these libraries are available on your system.
 To build the library and install it at a given location (prefix), execute the commands:
 
 ```
-cmake -S . -B build --install-prefix <path>
+cmake -S . -B build -DCMAKE_INSTALL_PREFIX=<prefix>
 cmake --build build
 cmake --install build
 ```
+(cmake >= 3.21 also has the command-line option `--install-prefix`)
 
 The shared library will then be found at `prefix/lib/libmidapack.so` and the headers in `prefix/include/midapack`.
 
@@ -44,7 +45,7 @@ It can be installed from the mappraiser subdirectory, *once midapack is installe
 
 ```
 cd mappraiser
-cmake -S . -B build --install-prefix <path>
+cmake -S . -B build --install-prefix=<prefix>
 cmake --build build
 cmake --install build
 ```
@@ -59,7 +60,7 @@ Mappraiser requires the following libraries:
 - CFITSIO
 
 Typically the path to the Midapack installation can be provided by adding the hint `-D MIDAPACK_DIR=<path>`
-to the first cmake command.
+to the first cmake command, or by adding `<prefix>/lib` to `$LD_LIBRARY_PATH`.
 
 The user may want to use a LAPACK implementation provided by Intel MKL (Math Kernel Library).
 If so, the feature may be enabled by passing the option `-D USE_MKL=ON`.
@@ -82,3 +83,31 @@ PREALPSROOT=<path> METISROOT=<path> cmake [...]
 
 In that case, since preAlps is compiled with Intel MKL, Mappraiser will search for an
 MKL-provided LAPACK implementation.
+
+### Python
+
+The mappraiser library comes with a Python wrapper and an interface to the TOAST library
+(https://github.com/hpc4cmb/toast). These files are installed in `CMAKE_INSTALL_PREFIX/python`.
+
+It may then be useful to prepend this path to your `PYTHONPATH` by having this line in your `.bashrc`
+```
+export PYTHONPATH="${PREFIX}/python:${PYTHONPATH}"
+```
+
+## Testing the installation
+
+If TOAST is installed on your system, you may test your mappraiser installation by executing the following script:
+```
+import toast.mpi
+from TOAST_interface import mappraiser_test
+
+def main():
+    mt = mappraiser_test.MappraiserTest()
+    mt.setUp()
+    mt.test_mappraiser_interface()
+
+if __name__ == "__main__":
+    world, procs, rank = toast.mpi.get_world()
+    with toast.mpi.exception_guard(comm=world):
+        main()
+```
