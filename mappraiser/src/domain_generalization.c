@@ -32,8 +32,8 @@ int initialize_PCG_var_struct(PCG_var *PCG_variable, double *local_map_pix, int 
     // Contains S2HAT_parameters->Global_param_s2hat and S2HAT_parameters->Local_param_s2hat
 
     // Initialize update flags to 0 "no update needed"
-    PCG_variable->does_map_pixel_need_update = 0; // 0 no update needed, 1 need update from local_alm
-    PCG_variable->does_local_alm_need_update = 0; // 0 no update needed, 1 need update from local_map_pix
+    // PCG_variable->does_map_pixel_need_update = 0; // 0 no update needed, 1 need update from local_alm
+    // PCG_variable->does_local_alm_need_update = 0; // 0 no update needed, 1 need update from local_map_pix
     return 0;
 }
 
@@ -187,7 +187,7 @@ int butterfly_communication(double *values_to_communicate, int *indices_in, int 
         values_ordered = (double *)malloc(count_in*sizeof(double));
         // Project the nest distribution into rings
         project_values_into_different_scheme(values_to_communicate, count_in, Butterfly_struct->projector_values, values_ordered);
-        
+
         m2m(values_ordered, Butterfly_obj->ordered_indices, count_in, com_val, Butterfly_struct->com_indices, Butterfly_struct->com_count);
     }
 
