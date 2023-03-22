@@ -201,7 +201,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N,
         if (res <= tol2rel) {
             if (rank == 0) {
                 printf("--> converged (%e < %e) \n", res, tol2rel);
-                printf("--> i.e. \t (%e < %e) \n", res_rel, tol);
+                printf("--> i.e.      (%e < %e) \n", res_rel, tol);
                 printf("--> solve time = %lf \n", solve_time);
                 fclose(fp);
             }

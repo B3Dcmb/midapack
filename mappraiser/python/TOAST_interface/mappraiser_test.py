@@ -213,7 +213,7 @@ class MappraiserTest(MPITestCase):
             "Z_2lvl": 0,
             "ptcomm_flag": 6,
             "tol": 1e-6,
-            "maxiter": 500,
+            "maxiter": 50,
             "enlFac": 1,
             "ortho_alg": 1,
             "bs_red": 0
