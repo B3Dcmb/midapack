@@ -10,7 +10,7 @@
 #include <unistd.h>
 
 #include <chealpix.h>
-// #include "s2hat.h"
+#include "s2hat.h"
 #include "midapack.h"
 // #include "s2hat_tools.h"
 
@@ -25,6 +25,9 @@ void make_mask_binary(double* mask, int* mask_binary, int *f_sky, long npix){
           mask_binary[pixel] = 1;
           // printf("Tmp test %ld \t", pixel,  );
           *f_sky = *f_sky + 1;
+      }
+      else{
+        mask_binary[pixel] = 0;
       }
   }
 

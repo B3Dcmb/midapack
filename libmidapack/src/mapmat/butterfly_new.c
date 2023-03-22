@@ -7,7 +7,7 @@
 #include "sys/stat.h"
 #include "sys/param.h"
 #ifdef W_MPI
-#include "mpi.h"
+#include <mpi.h>
 
 #include "als.h"
 #include "alm.h"

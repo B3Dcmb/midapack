@@ -36,9 +36,15 @@ For now, we consider the preconditioner given by :
 
 $$ M = (P^t diag(N^{-1}) P)^{-1} + C^{-1} $$
 
+## Use of the harmonic operations
+
+In order to perform the harmonic operations, we use S2HAT which an algorithm to efficiently compute spherical harmonics operations. It proceeds by using the pixel scheme as ring scheme, and dividing them on each MPI process i.e. each MPI process will have at least one ring. Then, it optimizes spherical 
+
+As a reminder, the ring scheme proceeds by dividing the pixels in the sky into $4*NSIDE -1$, the rings being distributed symmetrically to the equatorial ring.
+
 
 ## Notes
 
-- You may need to add a link to S2HAT in your `.bashrc`, in the form `S2HATROOT=/global/homes/f/fabbian/software/s2hat_v2.55_beta`. For now, it is supported through the home of Giulio Fabbian, but it will be recompiled in `common/software`, or eventually directly added to MIDAPACK.
+- You may need to add a link to S2HAT in your `.bashrc`, in the form `S2HATROOT=path/to/s2hat`
 - When applying `apply_pix2alm` and its reverse `apply_alm2pix` to a map you generated, make sure the map was generated with a definite $\ell_{max}$, and in particular, if a pixel white noise is applied to the map, make sure it is band-limited, for instance with a beam with $\ell_{max}$ you defined.
 - The two arguments which will be needed by the user are : a mask of the map (if not defined, it will just be a full map of the sky full of 1); a list of $c_\ell$ which will be used as the CMB covariance assumption for the Wiener filtering. It is important to note that **the $c_\ell$ file must be constructed with the same $\ell_{max} which the user is supposed to give as a parameter, otherwise the file won't be read correctly**. It is also worth noting the user can either provide 4 correlations (TT, EE, BB, TE), or 6 (TT, EE, BB, TE, TB, EB), in this order.

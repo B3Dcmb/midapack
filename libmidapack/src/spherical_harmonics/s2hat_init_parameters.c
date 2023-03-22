@@ -8,7 +8,7 @@
 // #include "fitsio.h"
 #include <unistd.h>
 
-// #include "s2hat.h"
+#include "s2hat.h"
 // #include "midapack.h"
 #include "s2hat_tools.h"
 
@@ -31,29 +31,7 @@ int get_main_s2hat_global_parameters(int nside, int *mask_binary, s2hat_pixeltyp
     pixpar->par1 = nside; /* NSIDE if HEALPIX convention is used for the transforms, 
     see https://apc.u-paris.fr/APC_CS/Recherche/Adamis/MIDAS09/software/s2hat/s2hat/docs/Cmanual/CsetPixelization.html */
 
-    // printf("Pixchoice : %d \n", pixpar->par1);
 
-    // printf( " //// Define s2hat structures\n"); 
-
-    // if (use_mask_file){
-    //     // printf( " //// Reading mask\n");
-    //     mask = (double *) malloc( npix*sizeof(double));
-    //     read_fits_mask( nside, mask, maskfile_path, 1); /* Retrieve mask */
-
-    //     mask_binary = (int *) malloc( npix*sizeof(int));
-    //     make_mask_binary(mask, mask_binary, &f_sky, npix); /* Make mask binary (only with 0 and 1) */
-
-    //     free(mask);
-    // }
-    // else{
-    //     // printf( " //// No use of mask - fill fake mask with 1 \n");
-    //     mask_binary = (int *) malloc( npix*sizeof(int));
-    //     int index;
-    //     for (index=0;index<npix;index++){
-    //         mask_binary[index] = 1;
-    //     }
-    //     f_sky = npix;
-    // }
     if (mask_binary == NULL){
         // printf( " //// Reading mask\n");
         mask_binary = (int *) malloc( npix*sizeof(int));
@@ -121,7 +99,7 @@ int init_MPI_struct_s2hat_local_parameters(S2HAT_LOCAL_parameters *Local_param_s
 
    
     // Test case if we don't have to divide into two substructures of communicators
-    if (number_ranks_s2hat >= initsize){
+    if (number_ranks_s2hat < initsize){
         mpi_create_subset(number_ranks_s2hat, initcomm, &s2hat_comm);
 
         MPI_Comm_rank ( s2hat_comm, &s2hat_rank ); 
@@ -162,6 +140,7 @@ int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters Global_param_s2ha
     long int number_pixel_total = 12*((Global_param_s2hat.nside)*(Global_param_s2hat.nside)), first_pixel_number_ring, last_pixel_number_ring, number_pixels_local;
 
     int i, j, plms=0, nmvals, first_ring, last_ring, map_size;
+    int first_pixel_south_hermisphere;
 
     long int nplm;
     int *mvals;
@@ -189,23 +168,39 @@ int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters Global_param_s2ha
         // printf("--------Mvalues obtained ! - %d : %d \n", Local_param_s2hat->gangrank, mvals[0]);
         // fflush(stdout);
 
-        Local_param_s2hat->first_pixel_number = Global_param_s2hat.pixelization_scheme.fpix[first_ring];
-        Local_param_s2hat->last_pixel_number = Global_param_s2hat.pixelization_scheme.fpix[last_ring]; // -1 ???
+        Local_param_s2hat->first_pixel_number = Global_param_s2hat.pixelization_scheme.fpix[first_ring-1];
+        Local_param_s2hat->last_pixel_number = Global_param_s2hat.pixelization_scheme.fpix[last_ring-1] + Global_param_s2hat.pixelization_scheme.nph[last_ring-1];
+        // The last expression correspond to the indice of the first pixel of the last ring (given by fpix[last_ring - 1]),
+        // to which we add the number of pixels within the last ring (given by nph[last_ring - 1])
 
-        first_pixel_number_ring = Global_param_s2hat.pixelization_scheme.fpix[first_ring];
+        first_pixel_number_ring = Global_param_s2hat.pixelization_scheme.fpix[first_ring-1];
         // Getting first pixel number of ring probed by local proc, in S2HAT convention
-        last_pixel_number_ring = Global_param_s2hat.pixelization_scheme.fpix[last_ring]; 
+        last_pixel_number_ring = Global_param_s2hat.pixelization_scheme.fpix[last_ring-1] + Global_param_s2hat.pixelization_scheme.nph[last_ring-1]; 
         // Getting last pixel number of ring probed by local proc, in S2HAT convention
         number_pixels_local = last_pixel_number_ring - first_pixel_number_ring;
         
         
-        pixel_numbered_ring = (long int *)malloc(number_pixels_local*nstokes * sizeof(long int));
+        pixel_numbered_ring = (long int *)malloc(map_size*nstokes * sizeof(long int));
         for(i=0; i<number_pixels_local; i++)
         {
             for (j=0; j<nstokes; j++)
-                pixel_numbered_ring[i + j*number_pixels_local] = i + first_pixel_number_ring + j*number_pixel_total;
+                pixel_numbered_ring[i + j*map_size] = i + first_pixel_number_ring + j*number_pixel_total;
         }
-        
+
+        first_pixel_south_hermisphere =  number_pixel_total -  last_pixel_number_ring;
+        if (last_ring == Global_param_s2hat.pixelization_scheme.nringsall)
+        {
+            first_pixel_south_hermisphere += Global_param_s2hat.pixelization_scheme.nph[last_ring-1];
+            // If last_ring is equal to the nringsall, which includes the northern rings and the equatorial ring,
+            // Then the last ring corresponds to the equatorial ring, which has already been viewed, and we need to avoid redistributing its pixel numberings
+        }
+
+        for(i=first_pixel_south_hermisphere; i<number_pixels_local; i++)
+        {
+            for (j=0; j<nstokes; j++)
+                pixel_numbered_ring[ i + j*map_size] = i + first_pixel_south_hermisphere + j*number_pixel_total;
+        }
+
         Local_param_s2hat->pixel_numbered_ring = pixel_numbered_ring;
 
         Local_param_s2hat->nmvals = nmvals;

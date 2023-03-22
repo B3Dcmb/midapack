@@ -7,12 +7,13 @@
 #include <string.h>
 // #include <mkl.h>
 // #include "fitsio.h"
+// #include <mpi.h>
 #include <unistd.h>
 #include "s2hat.h"
 // #include <chealpix.h>
 
-// #include "midapack.h"
-#include "spherical_harmonics/s2hat_tools.h"
+#include "midapack.h"
+// #include "spherical_harmonics/s2hat_tools.h"
 // #include "../../include/spherical_harmonics/s2hat_tools.h"
 
 
@@ -23,11 +24,8 @@
 // /* Create wrapper structure s2hat of local parameters of s2hat, which will differ for all processors */
 // int init_s2hat_global_parameters(Files_path_WIENER_FILTER Files_WF_struct, int *mask_binary, int lmax, S2HAT_GLOBAL_parameters *Global_param_s2hat);
 
-// int main_S2HAT_GLOBAL_parameters(){
-int main(){
-
-    int *mask_binary;
-
+int main_S2HAT_GLOBAL_parameters(){
+// int main(){
     int f_sky, npix;
     int i_index;
 
@@ -38,20 +36,29 @@ int main(){
     s2hat_pixparameters pixpar;
 
     int *maskfile_binary = NULL;
-    
+
+    double *mapval, *submapval;
+    int *subset, *fsky, count;
+
     get_main_s2hat_global_parameters(nside, maskfile_binary, &pixelization_scheme, &scan_sky_structure_pixel, &pixpar);
 
     printf("Test get_main_s2hat_global_parameters :\n");
-    printf(" pixelization_scheme :  type %d, npixsall %d, nphmx %d, nringsall %d \n", pixelization_scheme.type, pixelization_scheme.npixsall, pixelization_scheme.nphmx, pixelization_scheme.nringsall);
-    // nph %d, fpix %d, kphi %f, qwqht %f,   :\n", );
-    printf(" scan_sky_structure_pixel :  npixsobs %d, nringsobs %d \n", scan_sky_structure_pixel.npixsobs, scan_sky_structure_pixel.nringsobs);
+    printf(" pixelization_scheme :  type %ld, npixsall %ld, nphmx %ld, nringsall %ld \n", pixelization_scheme.type, pixelization_scheme.npixsall, pixelization_scheme.nphmx, pixelization_scheme.nringsall);
+    // nph %ld, fpix %ld, kphi %f, qwqht %f,   :\n", );
+    printf(" scan_sky_structure_pixel :  npixsobs %ld, nringsobs %ld \n", scan_sky_structure_pixel.npixsobs, scan_sky_structure_pixel.nringsobs);
     printf(" pixpar :  par1 %d   par2 %d \n", pixpar.par1, pixpar.par2);
     fflush(stdout);
 
     destroy_pixelization(pixelization_scheme);
     destroy_scan(scan_sky_structure_pixel);
 
-    int lmax = 1535;
+    /* ________________________ */
+    int i, lmax = 1535;
+    int *mask_binary = calloc(12*nside*nside, sizeof(int));
+
+    int number_of_pixels_one_ring = 8;//6*512;
+    for(i=0; i<number_of_pixels_one_ring; i++)
+        mask_binary[i+10*number_of_pixels_one_ring]=1;
 
     Files_path_WIENER_FILTER *Files_path_WF_struct;
     Files_path_WF_struct = malloc( 1 * sizeof(Files_path_WIENER_FILTER));
@@ -68,156 +75,178 @@ int main(){
     s2hat_scandef scan_sky_structure_pixel_2 = Global_param_s2hat->scan_sky_structure_pixel;
     s2hat_pixparameters pixpar_2 = Global_param_s2hat->pixpar;
     printf("###### Test init_s2hat_global_parameters :\n");
-    printf(" pixelization_scheme :  type %d, npixsall %d, nphmx %d, nringsall %d \n", pixelization_scheme_2.type, pixelization_scheme_2.npixsall, pixelization_scheme_2.nphmx, pixelization_scheme_2.nringsall);
-    // nph %d, fpix %d, kphi %f, qwqht %f,   :\n", );
-    printf(" scan_sky_structure_pixel :  npixsobs %d, nringsobs %d \n", scan_sky_structure_pixel_2.npixsobs, scan_sky_structure_pixel_2.nringsobs);
+    printf(" pixelization_scheme :  type %ld, npixsall %ld, nphmx %ld, nringsall %ld \n", pixelization_scheme_2.type, pixelization_scheme_2.npixsall, pixelization_scheme_2.nphmx, pixelization_scheme_2.nringsall);
+    // nph %ld, fpix %ld, kphi %f, qwqht %f,   :\n", );
+    printf(" scan_sky_structure_pixel :  npixsobs %ld, nringsobs %ld \n", scan_sky_structure_pixel_2.npixsobs, scan_sky_structure_pixel_2.nringsobs);
     printf(" pixpar :  par1 %d   par2 %d \n", pixpar_2.par1, pixpar_2.par2);
     fflush(stdout);
     free_s2hat_GLOBAL_parameters_struct(Global_param_s2hat);
+    free(Files_path_WF_struct);
     return 0;
 }
 
 
 
 
-// // void make_mask_binary(double* mask, int* mask_binary, int *f_sky, int npix);
-// int main_test_make_binary_mask(){
-//     double *test_mask;
-//     int *test_mask_binary;
-//     int npix;
-//     int i_index;
-//     int f_sky = 0;
+// void make_mask_binary(double* mask, int* mask_binary, int *f_sky, int npix);
+int main_test_make_binary_mask(){
+    double *test_mask;
+    int *test_mask_binary;
+    int npix;
+    int i_index;
+    int f_sky = 0;
 
-//     npix = 30;
-//     npix = 15;
-//     test_mask = calloc( npix, sizeof(double));
-//     for(i_index=0;i_index<npix; i_index++){
-//         test_mask[i_index] = i_index;
-//         // test_mask[i_index] = 1;
-//     }
-//     test_mask[3] = 0;
-//     test_mask[10] = 0;
-//     // test_mask[20] = 0;
-//     // test_mask[21] = 0;
+    npix = 30;
+    npix = 15;
+    test_mask = calloc( npix, sizeof(double));
+    for(i_index=0;i_index<npix; i_index++){
+        test_mask[i_index] = i_index;
+        // test_mask[i_index] = 1;
+    }
+    test_mask[0] = 0;
+    test_mask[3] = 0;
+    test_mask[10] = 0;
+    // test_mask[20] = 0;
+    // test_mask[21] = 0;
 
-//     test_mask_binary = malloc( npix*sizeof(int));
-//     make_mask_binary(test_mask, test_mask_binary, &f_sky, npix);
+    test_mask_binary = malloc( npix*sizeof(int));
+    make_mask_binary(test_mask, test_mask_binary, &f_sky, npix);
 
-//     printf("Binary mask with f_sky= %d \n", f_sky);
-//     for(i_index=0;i_index<npix; i_index++){
-//         printf(" %d %f %d \t", i_index, test_mask[i_index], test_mask_binary[i_index]);
-//     }
-//     printf("\n");
-//     fflush(stdout);
-//     free(test_mask);
-//     free(test_mask_binary);
-//     return 0;
-// }
-
-
-
+    printf("Binary mask with f_sky= %d \n", f_sky);
+    for(i_index=0;i_index<npix; i_index++){
+        printf(" -- %d %f %d -- \t", i_index, test_mask[i_index], test_mask_binary[i_index]);
+    }
+    printf("\n");
+    fflush(stdout);
+    free(test_mask);
+    free(test_mask_binary);
+    return 0;
+}
 
 
 
-// // S2HAT_LOCAL_parameters;
-
-// // /* Create wrapper structure of s2hat of local parameters of s2hat, which will differ for all processors */
-// // int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters *Local_param_s2hat, int *mvals, int gangrank, int gangsize, int gangroot, MPI_Comm gangcomm);
 
 
-// // /* Use s2hat routines to broadcast s2hat global structures */
-// // void mpi_broadcast_s2hat_global_struc(S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat, int gangroot);
+
+// S2HAT_LOCAL_parameters;
 
 // int main_S2HAT_LOCAL_parameters(int argc, char** argv){
-// // int main(int argc, char** argv){
+int main(int argc, char** argv){
     
-//     // char *path_mask = "/global/cscratch1/sd/mag/Masks_files/SO_wH.fits";
-//     char *path_mask = "/global/cscratch1/sd/mag/Masks_files/No_Mask.fits";
-//     int *mask_binary;
+    // char *path_mask = "/global/cscratch1/sd/mag/Masks_files/SO_wH.fits";
+    char *path_mask = "/global/cscratch1/sd/mag/Masks_files/No_Mask.fits";
+    // int *mask_binary;
 
-//     int f_sky, npix;
-//     int i_index;
+    int f_sky, npix;
+    int i_index;
 
-//     int nside = 512;
-//     // int lmax = 1535;
-//     int lmax = 1024;
+    int nside = 512;
+    // int lmax = 1535;
+    int lmax = 1024;
     
-//     S2HAT_GLOBAL_parameters *Global_param_s2hat;
-//     S2HAT_LOCAL_parameters *Local_param_s2hat;
+    S2HAT_GLOBAL_parameters *Global_param_s2hat;
+    S2HAT_LOCAL_parameters *Local_param_s2hat;
     
-//     int rank, nprocs;
-//     int root, gangroot;
-//     MPI_Comm gangcomm;
-//     MPI_Comm root_comm;
+    int rank, nprocs;
+    int root, gangroot;
+    MPI_Comm gangcomm;
+    MPI_Comm root_comm;
 
-//     root=0;
-//     gangroot=0;
+    root=0;
+    gangroot=0;
 
-//     MPI_Init( &argc, &argv);
-//     MPI_Comm_rank( MPI_COMM_WORLD, &rank);
-//     MPI_Comm_size( MPI_COMM_WORLD, &nprocs);
+    MPI_Init( &argc, &argv);
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    MPI_Comm_size( MPI_COMM_WORLD, &nprocs);
 
-//     printf("Initializing MPI %d %d \n", rank, nprocs);
-//     fflush(stdout);
+    printf("Initializing MPI %d %d \n", rank, nprocs);
+    fflush(stdout);
 
-//     int gangrank = rank;
-//     int gangsize = nprocs;
-//     gangcomm = MPI_COMM_WORLD;
+    int gangrank = rank;
+    int gangsize = nprocs;
+    gangcomm = MPI_COMM_WORLD;
 
+    Files_path_WIENER_FILTER *Files_path_WF_struct;
+    Files_path_WF_struct = malloc( 1 * sizeof(Files_path_WIENER_FILTER));
+    char *c_ell_path = "/global/homes/m/mag/midapack/test/spherical_harmonics/test_functions/c_ell_file_lmax_4.fits"; //// TO PUT !!!!
+    int number_correlations = 6; // TO MODIFY LATER !!!!!!!
+    // printf("Getting into init WF \n"); fflush(stdout);    
+    init_files_struct_WF(Files_path_WF_struct, nside, lmax, c_ell_path, number_correlations);
+
+    Global_param_s2hat = malloc( 1 * sizeof(S2HAT_GLOBAL_parameters));
+    printf("Initializing Global_param_s2hat \n"); fflush(stdout);
     
-//     Global_param_s2hat = malloc( 1 * sizeof(S2HAT_GLOBAL_parameters));
-//     printf("Initializing Global_param_s2hat \n");
-//     fflush(stdout);
-
-//     if (rank == root){
-//         init_s2hat_global_parameters(path_mask, nside, lmax, Global_param_s2hat, true);
-//     }
+    int *mask_binary=NULL;// = calloc(12*nside*nside, sizeof(int));
+    // int i, ga0, number_of_pixels_one_ring = 8;//6*512;
+    // for(i=0; i<number_of_pixels_one_ring; i++)
+    //     mask_binary[i+gap*number_of_pixels_one_ring]=1;
+    init_s2hat_global_parameters(*Files_path_WF_struct, mask_binary, lmax, Global_param_s2hat);
     
-//     Local_param_s2hat = malloc( 1 * sizeof(S2HAT_LOCAL_parameters));
-//     printf("Initializing Local_param_s2hat - rank %d \n", gangrank);
-//     fflush(stdout);
-//     init_MPI_struct_s2hat_local_parameters(Local_param_s2hat, gangrank, gangsize, gangroot, gangcomm);
-//     printf(" MPI  : gangrank %d, gangsize %d, gangroot %d \n", gangrank, gangsize, gangroot);
-//     printf(" %d - MPI struct in s2hat_local : gangrank %d, gangsize %d, gangroot %d \n", gangrank, Local_param_s2hat->gangrank, Local_param_s2hat->gangsize, Local_param_s2hat->gangroot);
-//     fflush(stdout);
     
-//     mpi_broadcast_s2hat_global_struc(Global_param_s2hat, *Local_param_s2hat);
-//     printf(" %d - S2HAT structures broadcasted ! \n", gangrank);
-//     fflush(stdout);
+    Local_param_s2hat = malloc( 1 * sizeof(S2HAT_LOCAL_parameters));
+    printf("Initializing Local_param_s2hat - rank %d \n", gangrank); fflush(stdout);
 
-//     s2hat_pixeltype pixelization_scheme_2 = Global_param_s2hat->pixelization_scheme;
-//     s2hat_scandef scan_sky_structure_pixel_2 = Global_param_s2hat->scan_sky_structure_pixel;
-//     s2hat_pixparameters pixpar_2 = Global_param_s2hat->pixpar;
-//     printf("###### Test init_s2hat_global_parameters - %d \n", gangrank);
-//     printf(" %d - pixelization_scheme :  type %d, npixsall %d, nphmx %d, nringsall %d \n", gangrank, pixelization_scheme_2.type, pixelization_scheme_2.npixsall, pixelization_scheme_2.nphmx, pixelization_scheme_2.nringsall);
-//     // nph %d, fpix %d, kphi %f, qwqht %f,   :\n", );
-//     printf(" %d - scan_sky_structure_pixel :  npixsobs %d, nringsobs %d \n", gangrank, scan_sky_structure_pixel_2.npixsobs, scan_sky_structure_pixel_2.nringsobs);
-//     printf(" %d - pixpar :  par1 %d   par2 %d \n", gangrank, pixpar_2.par1, pixpar_2.par2);
-//     fflush(stdout);
+    int number_ranks_s2hat = Global_param_s2hat->scan_sky_structure_pixel.nringsobs;
+    // init_MPI_struct_s2hat_local_parameters(Local_param_s2hat, gangrank, gangsize, gangroot, gangcomm);
+    init_MPI_struct_s2hat_local_parameters(Local_param_s2hat, number_ranks_s2hat, MPI_COMM_WORLD);
+    printf(" MPI  : rank %d, size %d, root %d \n", gangrank, gangsize, gangroot);
+    printf(" %d - MPI struct in s2hat_local : gangrank %d, gangsize %d, gangroot %d \n", gangrank, Local_param_s2hat->gangrank, Local_param_s2hat->gangsize, Local_param_s2hat->gangroot);
+    fflush(stdout);
+    
+    mpi_broadcast_s2hat_global_struc(Global_param_s2hat, *Local_param_s2hat); // Broadcast global parameters to all procs ?
+    printf(" %d - S2HAT structures broadcasted ! \n", gangrank);
+    fflush(stdout);
 
-//     init_s2hat_local_parameters_struct(*Global_param_s2hat, Local_param_s2hat);
+    s2hat_pixeltype pixelization_scheme_2 = Global_param_s2hat->pixelization_scheme;
+    s2hat_scandef scan_sky_structure_pixel_2 = Global_param_s2hat->scan_sky_structure_pixel;
+    s2hat_pixparameters pixpar_2 = Global_param_s2hat->pixpar;
+    printf("###### Test init_s2hat_global_parameters - %d \n", gangrank);
+    printf(" %d - pixelization_scheme :  type %ld, npixsall %ld, nphmx %ld, nringsall %ld \n", gangrank, pixelization_scheme_2.type, pixelization_scheme_2.npixsall, pixelization_scheme_2.nphmx, pixelization_scheme_2.nringsall);
+    // nph %d, fpix %d, kphi %f, qwqht %f,   :\n", );
+    printf(" %d - scan_sky_structure_pixel :  npixsobs %ld, nringsobs %ld \n", gangrank, scan_sky_structure_pixel_2.npixsobs, scan_sky_structure_pixel_2.nringsobs);
+    printf(" %d - pixpar :  par1 %d   par2 %d \n", gangrank, pixpar_2.par1, pixpar_2.par2);
+    fflush(stdout);
 
-//     printf("###### Test init_s2hat_local_parameters :\n");
-//     printf(" MPI  : gangrank %d, gangsize %d, gangroot %d \n", gangrank, gangsize, gangroot);
-//     printf(" %d - MPI struct in s2hat_local : gangrank %d, gangsize %d, gangroot %d \n", gangrank, Local_param_s2hat->gangrank, Local_param_s2hat->gangsize, Local_param_s2hat->gangroot);
-//     printf(" %d - pixelization_scheme :  plms %d, nmvals %d, first_ring %d, last_ring %d, map_size %d, nplm %ld, mvals[0] %d \n", gangrank,
-//             Local_param_s2hat->plms, Local_param_s2hat->nmvals, Local_param_s2hat->first_ring, Local_param_s2hat->last_ring, Local_param_s2hat->map_size, Local_param_s2hat->nplm,
-//             Local_param_s2hat->mvals[0]);
-//     fflush(stdout);
+    int nstokes = 3;
+    init_s2hat_local_parameters_struct(*Global_param_s2hat, nstokes, Local_param_s2hat);
 
-//     free_s2hat_GLOBAL_parameters_struct(Global_param_s2hat);
-//     printf("Test free 1 - %d \n", gangrank);
-//     fflush(stdout);
-//     free_s2hat_LOCAL_parameters_struct(Local_param_s2hat);
-//     printf("Test free 2 - %d \n", gangrank);
-//     fflush(stdout);
+    int first_to_last_pixel = Local_param_s2hat->last_pixel_number - Local_param_s2hat->first_pixel_number;
+    printf("###### Test init_s2hat_local_parameters :\n");
+    printf(" MPI  : gangrank %d, gangsize %d, gangroot %d \n", gangrank, gangsize, gangroot);
+    printf(" %d - MPI struct in s2hat_local : gangrank %d, gangsize %d, gangroot %d \n", gangrank, Local_param_s2hat->gangrank, Local_param_s2hat->gangsize, Local_param_s2hat->gangroot);fflush(stdout);
+    printf(" %d - pixelization_scheme :  plms %d, nmvals %d, first_ring %d, last_ring %d, map_size %d, nplm %ld, mvals[0] %d \n", Local_param_s2hat->gangrank,
+            Local_param_s2hat->plms, Local_param_s2hat->nmvals, Local_param_s2hat->first_ring, Local_param_s2hat->last_ring, Local_param_s2hat->map_size, Local_param_s2hat->nplm,
+            Local_param_s2hat->mvals[0]);fflush(stdout);
+    printf(" %d - pixel numbers :  first_pixel_number %d, last_pixel_number %d \n", Local_param_s2hat->gangrank,
+            Local_param_s2hat->first_pixel_number, Local_param_s2hat->last_pixel_number);
+    printf(" %d - pixel order :  first_order_pixel %ld, last_order_pixel/2 %ld, last_order_pixel %ld \n", Local_param_s2hat->gangrank,
+            Local_param_s2hat->pixel_numbered_ring[0], Local_param_s2hat->pixel_numbered_ring[first_to_last_pixel/2], Local_param_s2hat->pixel_numbered_ring[first_to_last_pixel-1]);
+    printf(" %d ## - test pixel numbers :  first_pixel_number %ld, last_pixel_number %ld, last_pixel_number+1 %ld, number_pixel_local %ld,  map_size %d \n", Local_param_s2hat->gangrank,
+            Global_param_s2hat->pixelization_scheme.fpix[Local_param_s2hat->first_ring-1], Global_param_s2hat->pixelization_scheme.fpix[Local_param_s2hat->last_ring-1],
+            Global_param_s2hat->pixelization_scheme.fpix[Local_param_s2hat->last_ring],
+            Global_param_s2hat->pixelization_scheme.fpix[Local_param_s2hat->last_ring-1] - Global_param_s2hat->pixelization_scheme.fpix[Local_param_s2hat->first_ring-1],
+            Local_param_s2hat->map_size);
+    printf(" %d ## - test numbers ring pixels :  first_ring_number %ld, last_ring_number %ld, last_ring_number+1 %ld, \n", Local_param_s2hat->gangrank,
+            Global_param_s2hat->pixelization_scheme.nph[Local_param_s2hat->first_ring-1], Global_param_s2hat->pixelization_scheme.nph[Local_param_s2hat->last_ring-1],
+            Global_param_s2hat->pixelization_scheme.nph[Local_param_s2hat->last_ring]);
+    printf(" %d ## - size of pixel rings : %ld, \n", Local_param_s2hat->gangrank,
+            Global_param_s2hat->pixelization_scheme.fpix[Local_param_s2hat->last_ring-1] - Global_param_s2hat->pixelization_scheme.fpix[Local_param_s2hat->first_ring-1]
+            + Global_param_s2hat->pixelization_scheme.nph[Local_param_s2hat->last_ring]);
+    fflush(stdout);
 
-//     MPI_Finalize();
-//     printf("Test finish ! - %d \n", gangrank);
-//     fflush(stdout);
+    // free_s2hat_GLOBAL_parameters_struct(Global_param_s2hat);
+    printf("Test free 1 - %d \n", gangrank);
+    fflush(stdout);
+    // free_s2hat_LOCAL_parameters_struct(Local_param_s2hat);
+    printf("Test free 2 - %d \n", gangrank);
+    fflush(stdout);
 
-//     return 0;
-// }
+    MPI_Finalize();
+    printf("Test finish ! - %d \n", gangrank);
+    fflush(stdout);
+
+    return 0;
+}
 
 
 // int main_S2HAT_LOCAL_parameters_v2(int argc, char** argv){        

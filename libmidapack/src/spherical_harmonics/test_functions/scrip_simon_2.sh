@@ -7,7 +7,15 @@ INC='-I${PREFIX}/include/midapack -libmidapack -I${S2HATROOT}/include'
 LIB='-lmidapack -L${PREFIX}/lib -lcfitsio -L${S2HATROOT}/lib/cori/intel/ -ls2hat_std'
 ### main_test_make_binary_mask
 # cc test_spherical_harmonics_2.c  -I${S2HATROOT}/include -I${CFITSIOROOT}/include -L${S2HATROOT}/lib/cori/intel/ -ls2hat_std -L${CFITSIOROOT}/lib -lcfitsio -o test_functions/test_spherical_harmonics_2
-cc test_spherical_harmonics_2.c  -I${DIR}/include -lmidapack -L${PREFIX}/midapack/lib -I${S2HATROOT}/include -L${PREFIX}/lib -lcfitsio -L${S2HATROOT}/lib/cori/intel/ -ls2hat_std  -o test_functions/test_spherical_harmonics_2
+
+cc test_spherical_harmonics_2.c -Wall -I${PREFIX}/include/midapack -L${PREFIX}/lib -lmidapack -I${S2HATROOT}/include -lcfitsio -L${S2HATROOT}/lib/cori/intel/ -ls2hat_std  -o test_functions/test_spherical_harmonics_2
+
+
+
+
+
+#### OLD
+cc test_spherical_harmonics_2.c  -I${PREFIX}/include/midapack -lmidapack -L${PREFIX}/lib -I${S2HATROOT}/include -lcfitsio -L${S2HATROOT}/lib/cori/intel/ -ls2hat_std  -o test_functions/test_spherical_harmonics_2
 
 
 ### main_S2HAT_GLOBAL_parameters

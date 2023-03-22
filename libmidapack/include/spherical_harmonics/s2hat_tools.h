@@ -8,7 +8,7 @@
 #ifdef W_MPI
 #include <mpi.h>
 #endif
-#include "s2hat.h"
+// #include "s2hat.h"
 // #include "midapack.h"
 
 
@@ -47,6 +47,7 @@ typedef struct S2HAT_LOCAL_parameters{
     int first_pixel_number;
     int last_pixel_number;
     long int *pixel_numbered_ring; // Pointer to the ordered pixel in RING scheme which the process will consider for S2HAT operations
+    // The pixels considered here will only be given for a set of rings in the Northern hemisphere + the equatorial ring
 
 
     // Tools to precompute Legendre functions, but not taken into account by s2hat if plms=0, which is the default behaviour we choose
@@ -91,10 +92,10 @@ int init_s2hat_global_parameters(Files_path_WIENER_FILTER Files_WF_struct, int *
 /**/
 /* Initialize MPI parameters of local parameters wrapper structure of s2hat, which will differ for all processors */
 int init_MPI_struct_s2hat_local_parameters(S2HAT_LOCAL_parameters *Local_param_s2hat, int number_ranks_s2hat, MPI_Comm initcomm);
-
+/**/
 /* Create wrapper structure of local parameters wrapper structure of s2hat, which will differ for all processors, and assuming MPI structure already assigned */
 int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters Global_param_s2hat, int nstokes, S2HAT_LOCAL_parameters *Local_param_s2hat);
-
+/**/
 /* Initaization of superctrure S2HAT_parameters */
 int init_s2hat_parameters_superstruct(Files_path_WIENER_FILTER *Files_WF_struct, int *mask_binary, int nstokes, S2HAT_parameters *S2HAT_params, MPI_Comm world_comm);
 
@@ -105,7 +106,7 @@ int init_s2hat_parameters_superstruct(Files_path_WIENER_FILTER *Files_WF_struct,
 void init_files_struct_WF(Files_path_WIENER_FILTER *Files_path_WF_struct, int nside, int lmax_Wiener_Filter, char *c_ell_path, int number_correlations);
 /**/
 /* Function to read file corresponding to the mask */
-// void read_fits_mask(int nside, double *mask, char *path_mask_file, int col);
+void read_fits_mask(int nside, double *mask, char *path_mask_file, int col);
 
 /* Function to read TQU maps */
 void read_TQU_maps( int nside, double *map, char *infile, int nstokes);
@@ -150,7 +151,7 @@ int get_inverse_covariance_matrix_NxN(int nstokes, S2HAT_parameters *S2HAT_param
 
 /* Function to transform the mask into binary (composed of 0 and 1 on pixel sky)*/
 void make_mask_binary(double* mask, int* mask_binary, int *f_sky, long npix);
-
+/**/
 int convert_indices_nest2ring(int *indices_nest, int *indices_ring, long int number_of_indices, int nstokes, int nside);
 // Convert indices nest2ring assuming MAPPRAISER convention for NEST (TQUTQUTQU) and S2HAT convention for RING (TTTTQQQQUUU)
 
@@ -166,6 +167,7 @@ int project_values_into_different_scheme(double *values_in, int number_values, i
 void convert_full_map_nest2ring(double *map_nest, double *map_ring, int nside, int nstokes, int npix);
 void convert_full_map_ring2nest(double *map_ring, double *map_nest, int nside, int nstokes, int npix);
 // Convert full maps from ring2nest or nest2ring assuming S2HAT convention for RING (TTTTQQQQUUU) and MAPPRAISER convention for NEST (TQUTQUTQU)
+
 
 /* Content of mpi_tools.c */
 
@@ -189,10 +191,10 @@ void free_covariance_matrix(double ** covariance_matrix_3x3, int lmax);
 
 /* Free wrapper structures of s2hat */
 void free_s2hat_GLOBAL_parameters_struct(S2HAT_GLOBAL_parameters *Global_param_s2hat);
-
+/**/
 /* Free wrapper structures of s2hat */
 void free_s2hat_LOCAL_parameters_struct(S2HAT_LOCAL_parameters *Local_param_s2hat);
-
+/**/
 /* Free superstructure around S2HAT */
 void free_s2hat_parameters_struct(S2HAT_parameters *S2HAT_params);
 

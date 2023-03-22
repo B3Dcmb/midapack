@@ -1,6 +1,7 @@
 # LIBMIDAPACK
 
 add_library(midapack SHARED)
+# add_library(midapack STATIC)
 
 # TODO build both a shared and static library? allow to choose?
 
@@ -17,7 +18,7 @@ add_subdirectory(spherical_harmonics)
 # header files
 # ----------------------------------------------------------------------------------------#
 
-target_include_directories(midapack PRIVATE
+target_include_directories(midapack PUBLIC
                            "../include"
                            "../include/mapmat"
                            "../include/toeplitz"
@@ -53,7 +54,7 @@ endif ()
 # set(HEADER_FILES ${HEALPIXROOT}"/include/chealpix.h")
 target_include_directories(midapack PRIVATE $ENV{HEALPIXROOT}/include)
 target_include_directories(midapack PRIVATE $ENV{S2HATROOT}/include)
-target_link_libraries(midapack PRIVATE $ENV{S2HATROOT}/lib/cori/intel/libs2hat_std.a )
+target_link_libraries(midapack PRIVATE $ENV{S2HATROOT}/lib/cori/intel/libs2hat_std.a)
 target_link_libraries(midapack PRIVATE $ENV{HEALPIXROOT}/lib/libchealpix.a)
 target_compile_definitions(midapack PRIVATE "-DHEALPIXDATA=${HEALPIXROOT}share/healpix/ -ls2hat_std")
 # endif ()
@@ -85,6 +86,16 @@ else ()
     find_package(BLAS)
     find_package(LAPACK REQUIRED)
 endif ()
+
+# CFITSIO
+
+if (CFITSIO_FOUND)
+    target_include_directories(midapack PRIVATE "${CFITSIO_INCLUDES}")
+    target_link_libraries(midapack PUBLIC "${CFITSIO_LIBRARIES}")
+else ()
+    message(FATAL_ERROR "Could not find cfitsio. Consider providing a hint (-D CFITSIO_DIR <path>).")
+endif ()
+
 
 # ----------------------------------------------------------------------------------------#
 # compile options
