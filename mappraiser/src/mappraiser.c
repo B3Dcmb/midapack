@@ -21,9 +21,9 @@ int x2map_pol(double *mapI, double *mapQ, double *mapU, double *Cond, int *hits,
               double *cond, int *lhits, int xsize);
 
 void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int Z_2lvl, int pointing_commflag,
-           double tol, int maxiter, int enlFac, int ortho_alg, int bs_red, int nside, void *data_size_proc,
-           int nb_blocks_loc, void *local_blocks_sizes, int Nnz, void *pix, void *pixweights, void *signal,
-           double *noise, int lambda, double *inv_tt, double *tt) {
+           double tol, int maxiter, int enlFac, int ortho_alg, int bs_red, int nside, int gap_stgy,
+           void *data_size_proc, int nb_blocks_loc, void *local_blocks_sizes, int Nnz, void *pix, void *pixweights,
+           void *signal, double *noise, int lambda, double *inv_tt, double *tt) {
     int64_t M;             // Global number of rows
     int m, Nb_t_Intervals; // local number of rows of the pointing matrix A, nbr of stationary intervals
     int64_t gif;           // global indice for the first local line
@@ -170,8 +170,8 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     // print Toeplitz parameters for information
     if (rank == 0) {
         printf("[rank %d] Noise model: Banded block Toeplitz, half bandwidth = %d\n", rank, lambda_block_avg);
-        printf("[rank %d] Toeplitz flags:\n", rank);
-        print_flag_stgy_init(flag_stgy);
+//        printf("[rank %d] Toeplitz flags:\n", rank);
+//        print_flag_stgy_init(flag_stgy);
     }
 
     MPI_Barrier(comm);
@@ -184,7 +184,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     // Conjugate Gradient
     if (solver == 0) {
         PCG_GLS_true(outpath, ref, &A, &Nm1, &N, x, signal, noise, cond, lhits, tol, maxiter, precond, Z_2lvl, &Gaps,
-                     gif);
+                     gif, gap_stgy);
     } else if (solver == 1) {
 #ifdef W_ECG
         ECG_GLS(outpath, ref, &A, &Nm1, x, signal, noise, cond, lhits, tol, maxiter, enlFac, ortho_alg, bs_red, &Gaps, gif);

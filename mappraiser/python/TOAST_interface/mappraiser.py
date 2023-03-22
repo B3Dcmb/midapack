@@ -250,6 +250,8 @@ class Mappraiser(Operator):
     maxiter = Int(3000, help="Maximum number of iterations allowed for the solver")
     enlFac = Int(1, help="Enlargement factor for ECG")
     bs_red = Int(0, help="Use dynamic search reduction")
+    gap_stgy = Int(0, help="Strategy for handling timestream gaps"
+                           "(0->gap-filling, 1->nested PCG")
 
     @traitlets.validate("shared_flag_mask")
     def _check_shared_flag_mask(self, proposal):
@@ -453,6 +455,7 @@ class Mappraiser(Operator):
             "enlFac": self.enlFac,
             "ortho_alg": self.ortho_alg,
             "bs_red": self.bs_red,
+            "gap_stgy": self.gap_stgy,
         })
 
         # params dictionary overrides operator traits for mappraiser C library arguments
@@ -1340,7 +1343,6 @@ class Mappraiser(Operator):
             self._mappraiser_pixweights,
             self._mappraiser_signal,
             self._mappraiser_noise,
-            params["Lambda"],
             self._mappraiser_invtt,
             self._mappraiser_tt,
         )

@@ -10,15 +10,16 @@
 #include <stdio.h>
 #include <math.h>
 #include <mpi.h>
+#include <stdbool.h>
 
 #include "mappraiser/precond.h"
 #include "mappraiser/pcg_true.h"
 #include "mappraiser/noise_weighting.h"
 #include "mappraiser/gap_filling.h"
 
-int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N,
-                 double *x, double *b, double *noise, double *cond, int *lhits,
-                 double tol, int K, int precond, int Z_2lvl, Gap *Gaps, int64_t gif) {
+int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double *x, double *b, double *noise,
+                 double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl, Gap *Gaps, int64_t gif,
+                 int gap_stgy) {
     int i, j, k; // some indexes
     int m, n;    // number of local time samples, number of local pixels
     int rank, size;
@@ -59,6 +60,27 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N,
         printf("[rank %d] nbr sky pixels = %d\n", rank, n);
         fflush(stdout);
     }
+
+    bool gap_stgy_ok;
+    do {
+        switch (gap_stgy) {
+            case 0: // gap-filling
+                // ...
+                gap_stgy_ok = true;
+                break;
+            case 1: // nested PCG for noise-weighting
+                // ...
+                gap_stgy_ok = true;
+                break;
+            default:
+                gap_stgy_ok = false;
+                if (rank == 0) {
+                    printf("[proc %d] invalid gap_stgy (%d), defaulting to 0 (=gap-filling)\n", rank, gap_stgy);
+                    fflush(stdout);
+                }
+                gap_stgy = 0;
+        }
+    } while (!gap_stgy_ok);
 
     // map domain objects memory allocation
     h = (double *) malloc(n * sizeof(double));  // descent direction

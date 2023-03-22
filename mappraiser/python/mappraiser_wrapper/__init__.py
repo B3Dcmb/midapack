@@ -59,37 +59,38 @@ _mappraiser.MLmap.argtypes = [
     ct.c_int,  # ortho_alg
     ct.c_int,  # bs_red
     ct.c_int,  # nside
+    ct.c_int,  # gap_stgy
     npc.ndpointer(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"),  # data_size_proc
     ct.c_int,  # nb_blocks_loc
     npc.ndpointer(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"),  # local_blocks_sizes
     ct.c_int,  # Nnz
-    npc.ndpointer(dtype=PIXEL_TYPE, ndim=1, flags="C_CONTIGUOUS"), # pixels
-    npc.ndpointer(dtype=WEIGHT_TYPE, ndim=1, flags="C_CONTIGUOUS"), # pixweights
-    npc.ndpointer(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"), # signal
-    npc.ndpointer(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"), # noise
+    npc.ndpointer(dtype=PIXEL_TYPE, ndim=1, flags="C_CONTIGUOUS"),  # pixels
+    npc.ndpointer(dtype=WEIGHT_TYPE, ndim=1, flags="C_CONTIGUOUS"),  # pixweights
+    npc.ndpointer(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"),  # signal
+    npc.ndpointer(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"),  # noise
     ct.c_int,  # lambda
-    npc.ndpointer(dtype=INVTT_TYPE, ndim=1, flags="C_CONTIGUOUS"), # inv_tt
-    npc.ndpointer(dtype=INVTT_TYPE, ndim=1, flags="C_CONTIGUOUS"), # tt
+    npc.ndpointer(dtype=INVTT_TYPE, ndim=1, flags="C_CONTIGUOUS"),  # inv_tt
+    npc.ndpointer(dtype=INVTT_TYPE, ndim=1, flags="C_CONTIGUOUS"),  # tt
 ]
 
 
 def MLmap(
-    comm,
-    params,
-    data_size_proc,
-    nb_blocks_loc,
-    local_blocks_sizes,
-    nnz,
-    pixels,
-    pixweights,
-    signal,
-    noise,
-    Lambda,
-    inv_tt,
-    tt,
+        comm,
+        params,
+        data_size_proc,
+        nb_blocks_loc,
+        local_blocks_sizes,
+        nnz,
+        pixels,
+        pixweights,
+        signal,
+        noise,
+        inv_tt,
+        tt,
 ):
     """
-    Compute the MLMV solution of the GLS estimator, assuming uniform detector weighting and a single PSD for all stationary intervals.
+    Compute the MLMV solution of the GLS estimator, assuming uniform detector weighting and a single PSD
+    for all stationary intervals.
     (These assumptions will be removed in future updates)
 
     Parameters
@@ -104,7 +105,6 @@ def MLmap(
     * `pixweights`: Corresponding matrix values
     * `signal`: Signal buffer
     * `noise`: Noise buffer
-    * `Lambda`: Toeplitz matrix half-bandwidth
     * `inv_tt`: Inverse noise correlation
     * `tt`: Noise autocorrelation
 
@@ -114,7 +114,7 @@ def MLmap(
 
     outpath = params["path_output"].encode("ascii")
     ref = params["ref"].encode("ascii")
-    
+
     comm.Barrier()
 
     _mappraiser.MLmap(
@@ -131,6 +131,7 @@ def MLmap(
         params["ortho_alg"],
         params["bs_red"],
         params["nside"],
+        params["gap_stgy"],
         data_size_proc,
         nb_blocks_loc,
         local_blocks_sizes,
@@ -139,7 +140,7 @@ def MLmap(
         pixweights,
         signal,
         noise,
-        Lambda,
+        params["Lambda"],
         inv_tt,
         tt,
     )
