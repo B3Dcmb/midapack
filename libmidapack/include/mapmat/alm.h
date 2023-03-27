@@ -12,6 +12,10 @@
 #ifndef MAPMAT_ALM_H
 #define MAPMAT_ALM_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void m2s(double *mapval, double *submapval, int *subset, int count);
 
 void s2m_sum(double *mapval, double *submapval, int *subset, int count);
@@ -29,5 +33,9 @@ int m2m(double *vA1, int *A1, int n1, double *vA2, int *A2, int n2);
 int m2m_sum(double *vA1, int *A1, int n1, double *vA2, int *A2, int n2);
 
 int m2m_sum_i(int *vA1, int *A1, int n1, int *vA2, int *A2, int n2);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //MAPMAT_ALM_H

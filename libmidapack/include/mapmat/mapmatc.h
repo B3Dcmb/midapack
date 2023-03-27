@@ -13,6 +13,10 @@
 #include "csort.h"
 #include "ring.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define NONE 0
 #define RING 1
 #define BUTTERFLY 2
@@ -62,5 +66,9 @@ int CMatComShape(CMat *A, int flag);
 int CMatVecProd(CMat *A, double *x, double *y, int pflag);
 
 int CTrMatVecProd(CMat *A, double *y, double* x, int pflag);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //MAPMATC_H

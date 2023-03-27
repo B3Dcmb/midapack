@@ -6,6 +6,10 @@
 #ifndef MAPMAT_CSORT_H
 #define MAPMAT_CSORT_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int ssort(int *indices, int count, int flag);
 
 #if OPENMP
@@ -15,5 +19,9 @@ int omp_psort(int *indices, int count, int flag);
 int sorted(int *indices, int count);
 
 int monotony(int *indices, int count);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //MAPMAT_CSORT_H
