@@ -48,6 +48,20 @@
 
 #include "toeplitz.h"
 
+#define max(a, b)            \
+({                           \
+    __typeof__ (a) _a = (a); \
+    __typeof__ (b) _b = (b); \
+    _a > _b ? _a : _b;       \
+})
+
+#define min(a, b)            \
+({                           \
+    __typeof__ (a) _a = (a); \
+    __typeof__ (b) _b = (b); \
+    _a < _b ? _a : _b;       \
+})
+
 // r1.1 - Frederic Dauvergne (APC)
 // This is the routines related to the Toeplitz blocks diagonal routine.
 // There is a sequential equivalent routine in the file toeplitz_seq.c

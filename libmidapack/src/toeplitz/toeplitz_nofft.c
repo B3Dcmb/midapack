@@ -57,6 +57,20 @@
 #include "toeplitz.h"
 extern int PRINT_RANK;
 
+#define max(a, b)            \
+({                           \
+    __typeof__ (a) _a = (a); \
+    __typeof__ (b) _b = (b); \
+    _a > _b ? _a : _b;       \
+})
+
+#define min(a, b)            \
+({                           \
+    __typeof__ (a) _a = (a); \
+    __typeof__ (b) _b = (b); \
+    _a < _b ? _a : _b;       \
+})
+
 //r1.1 - Frederic Dauvergne (APC)
 //basic product without fft use.
 //stmm_simple_core is not used by the API. This is similar to stmm_core by using a sliding

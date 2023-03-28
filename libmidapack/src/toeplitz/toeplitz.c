@@ -58,6 +58,20 @@
 
 #include "toeplitz.h"
 
+#define max(a, b)            \
+({                           \
+    __typeof__ (a) _a = (a); \
+    __typeof__ (b) _b = (b); \
+    _a > _b ? _a : _b;       \
+})
+
+#define min(a, b)            \
+({                           \
+    __typeof__ (a) _a = (a); \
+    __typeof__ (b) _b = (b); \
+    _a < _b ? _a : _b;       \
+})
+
 //r1.2 - Frederic Dauvergne (APC)
 //This file contains the main part of the Toeplitz algebra module. This include
 //the elementary product routines (using FFT) and initialization routines.
@@ -80,7 +94,6 @@ int VERBOSE_FIRSTINIT=1;
 
 //Parameter just to know the rank for printing when VERBOSE mode is on
 int PRINT_RANK = -1;
-
 
 //=========================================================================
 

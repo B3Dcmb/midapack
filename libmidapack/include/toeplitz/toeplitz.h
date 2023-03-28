@@ -75,10 +75,15 @@
 #include <math.h>
 #include <string.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 //=========================================================================
 // Basic functions definition
-#define max(a, b) (((a) > (b)) ? (a) : (b))
-#define min(a, b) (((a) < (b)) ? (a) : (b))
+// These lines are not accepted by a c++ compiler
+//#define max(a, b) (((a) > (b)) ? (a) : (b))
+//#define min(a, b) (((a) < (b)) ? (a) : (b))
 
 //=========================================================================
 // Fixed parameters
@@ -241,10 +246,6 @@ typedef struct Tpltz {
 
 //=========================================================================
 // User routines definition (API)
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 
 // Sequential routines (group 11)
