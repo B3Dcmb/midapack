@@ -48,146 +48,141 @@
 
 #include "toeplitz.h"
 #include <time.h>
+
 extern int PRINT_RANK;
 
 //set of utilitaries routines - fd@apc
 
 
-int defineTpltz( Tpltz *Nm1, int64_t nrow, int m_cw, int m_rw, Block *tpltzblocks, int nb_blocks_loc, int nb_blocks_tot, int64_t idp, int local_V_size, Flag flag_stgy, MPI_Comm comm)
-{
+int defineTpltz(Tpltz *Nm1, int64_t nrow, int m_cw, int m_rw, Block *tpltzblocks, int nb_blocks_loc, int nb_blocks_tot,
+                int64_t idp, int local_V_size, Flag flag_stgy, MPI_Comm comm) {
 
-  Nm1->nrow = nrow; //glob //recup du fichier params apres (en variables globales)
-  Nm1->m_cw = m_cw; //glob
-  Nm1->m_rw = m_rw; //glob
-  Nm1->tpltzblocks = tpltzblocks; //toep
-  Nm1->nb_blocks_loc = nb_blocks_loc; //toep
-  Nm1->nb_blocks_tot = nb_blocks_tot;  //toep
-  Nm1->idp = idp; //comput
-  Nm1->local_V_size = local_V_size; //comput
-  Nm1->flag_stgy = flag_stgy; //param
-  Nm1->comm = comm; //param
+    Nm1->nrow = nrow; //glob //recup du fichier params apres (en variables globales)
+    Nm1->m_cw = m_cw; //glob
+    Nm1->m_rw = m_rw; //glob
+    Nm1->tpltzblocks = tpltzblocks; //toep
+    Nm1->nb_blocks_loc = nb_blocks_loc; //toep
+    Nm1->nb_blocks_tot = nb_blocks_tot;  //toep
+    Nm1->idp = idp; //comput
+    Nm1->local_V_size = local_V_size; //comput
+    Nm1->flag_stgy = flag_stgy; //param
+    Nm1->comm = comm; //param
 
 
-  return 0;
+    return 0;
 }
 
 
+int
+defineBlocks_avg(Block *tpltzblocks, double *T, int nb_blocks_loc, int n_block_avg, int lambda_block_avg, int64_t id0) {
 
-int defineBlocks_avg(Block *tpltzblocks, double *T, int nb_blocks_loc, int n_block_avg, int lambda_block_avg, int64_t id0 )
-{
-
-int i;
-
-
-  for ( i=0; i<nb_blocks_loc; i++)
-    tpltzblocks[i].n = n_block_avg;
-
-  for ( i=0; i<nb_blocks_loc; i++)
-    tpltzblocks[i].lambda = lambda_block_avg;
-
-  tpltzblocks[0].idv = (int64_t) (id0/n_block_avg) * n_block_avg ;
-  for(i=1;i<nb_blocks_loc;i++)
-    tpltzblocks[i].idv = (int64_t) tpltzblocks[i-1].idv + tpltzblocks[i-1].n;
-
-  for( i=0; i<nb_blocks_loc; i++) {
-    tpltzblocks[i].T_block = (T);
-  }
+    int i;
 
 
-  return 0;
+    for (i = 0; i < nb_blocks_loc; i++)
+        tpltzblocks[i].n = n_block_avg;
+
+    for (i = 0; i < nb_blocks_loc; i++)
+        tpltzblocks[i].lambda = lambda_block_avg;
+
+    tpltzblocks[0].idv = (int64_t) (id0 / n_block_avg) * n_block_avg;
+    for (i = 1; i < nb_blocks_loc; i++)
+        tpltzblocks[i].idv = (int64_t) tpltzblocks[i - 1].idv + tpltzblocks[i - 1].n;
+
+    for (i = 0; i < nb_blocks_loc; i++) {
+        tpltzblocks[i].T_block = (T);
+    }
+
+
+    return 0;
 }
 
 
 //=============================================
 
 
-int createRandomT(double *T, int Tsize)
-{
+int createRandomT(double *T, int Tsize) {
 
-  int i;
-  srand (time (NULL));  //init seed
+    int i;
+    srand(time(NULL));  //init seed
 
-  //input matrix definition of T
-    for(i=0;i<Tsize;i++)
-      T[i]= rand()/((double) RAND_MAX);
+    //input matrix definition of T
+    for (i = 0; i < Tsize; i++)
+        T[i] = rand() / ((double) RAND_MAX);
 
-  return 0;
+    return 0;
 }
 
 
+int createTbasic1(double *T, int Tsize) {
 
-int createTbasic1(double *T, int Tsize)
-{
+    int i;
+    srand(Tsize);
 
-  int i;
-  srand (Tsize);
+    //input matrix definition of T
+    for (i = 0; i < Tsize; i++)
+        T[i] = 1.0 + rand() / ((double) RAND_MAX);
 
-  //input matrix definition of T
-    for(i=0;i<Tsize;i++)
-      T[i]= 1.0 + rand()/((double) RAND_MAX);
-
-  return 0;
+    return 0;
 }
 
 
+int createTbasic2(double *T, int Tsize) {
 
-int createTbasic2(double *T, int Tsize)
-{
+    int i;
+    srand(Tsize);
 
-  int i;
-  srand (Tsize);
+    //input matrix definition of T
+    for (i = 0; i < Tsize; i++) {
+        if (i == 0) {
+            T[i] = 10.;
+        } else if (i == 1) {
+            T[i] = 2.;
+        } else if (i == 2) {
+            T[i] = 3.;
+        } else {
+            T[i] = rand() / ((double) RAND_MAX);
+        }
+    }
 
-  //input matrix definition of T
-    for(i=0;i<Tsize;i++) {
-      if (i == 0) {
-        T[i]=10.;}
-      else if (i == 1) {
-        T[i]=2.;}
-      else if (i == 2) {
-        T[i]=3.;}
-      else {
-        T[i]=rand()/((double) RAND_MAX);
-     }}
-
-  return 0;
+    return 0;
 }
 
 
-int createTbasic3(double *T, int Tsize)
-{
+int createTbasic3(double *T, int Tsize) {
 
-  int i;
-  srand (Tsize);
+    int i;
+    srand(Tsize);
 
-  //input matrix definition of T
-    for(i=0;i<Tsize;i++) {
-      if (i == 0) {
-        T[i]=2.;}
-      else if (i == 1) {
-        T[i]=-1.;}
-      else if (i == 2) {
-        T[i]=0.;}
-      else {
-        T[i]=0.;//rand()/((double) RAND_MAX);
-     }}
+    //input matrix definition of T
+    for (i = 0; i < Tsize; i++) {
+        if (i == 0) {
+            T[i] = 2.;
+        } else if (i == 1) {
+            T[i] = -1.;
+        } else if (i == 2) {
+            T[i] = 0.;
+        } else {
+            T[i] = 0.;//rand()/((double) RAND_MAX);
+        }
+    }
 
 
-  return 0;
+    return 0;
 }
 
 
-int createTfrominvtt(double *T, int Tsize)
-{
+int createTfrominvtt(double *T, int Tsize) {
 
-  int i;
+    int i;
 
 //#include "invtt_params.h"
 
-  double *invtt;
+    double *invtt;
 
-  T = invtt;
+    T = invtt;
 //  createinvtt(invtt);
 
 
-  return 0;
+    return 0;
 }

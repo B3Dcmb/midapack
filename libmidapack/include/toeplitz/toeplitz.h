@@ -64,11 +64,6 @@
 
 #endif
 
-// OpenMP is a private dependency
-// #ifdef W_OPENMP
-// #include <omp.h>
-// #endif
-
 #include <fftw3.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -78,12 +73,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-//=========================================================================
-// Basic functions definition
-// These lines are not accepted by a c++ compiler
-//#define max(a, b) (((a) > (b)) ? (a) : (b))
-//#define min(a, b) (((a) < (b)) ? (a) : (b))
 
 //=========================================================================
 // Fixed parameters
@@ -269,7 +258,7 @@ int gstbmm(double **V, int nrow, int m_cw, int m_rw, Block *tpltzblocks, int nb_
            int64_t *id0gap, int *lgap, int ngap, Flag flag_stgy);
 
 int
-reset_gaps(double **V, int id0, int local_V_size, int m, int nrow, int m_rowwise, int64_t *id0gap, int *lgap, int ngap);
+reset_gaps(double **V, int id0, int local_V_size, int m, int nrow, int m_rowwise, const int64_t *id0gap, const int *lgap, int ngap);
 
 // Mpi routines (group 12)
 #ifdef W_MPI
@@ -301,12 +290,12 @@ int define_blocksize(int n, int lambda, int bs_flag, int fixed_bs);
 
 int define_nfft(int n_thread, int flag_nfft, int fixed_nfft);
 
-int fftw_init_omp_threads();
+int fftw_init_omp_threads(int fftw_n_thread);
 
-int rhs_init_fftw(int *nfft, int fft_size, fftw_complex **V_fft, double **V_rfft, fftw_plan *plan_f, fftw_plan *plan_b,
+int rhs_init_fftw(const int *nfft, int fft_size, fftw_complex **V_fft, double **V_rfft, fftw_plan *plan_f, fftw_plan *plan_b,
                   int fftw_flag);
 
-int circ_init_fftw(double *T, int fft_size, int lambda, fftw_complex **T_fft);
+int circ_init_fftw(const double *T, int fft_size, int lambda, fftw_complex **T_fft);
 
 int scmm_direct(int fft_size, int nfft, fftw_complex *C_fft, int ncol, double *V_rfft, double **CV, fftw_complex *V_fft,
                 fftw_plan plan_f_V, fftw_plan plan_b_CV);
@@ -316,8 +305,8 @@ int scmm_basic(double **V, int blocksize, int m, fftw_complex *C_fft, double **C
 
 int stmm_simple_basic(double **V, int n, int m, double *T, int lambda, double **TV);
 
-int build_gappy_blocks(int nrow, int m, Block *tpltzblocks, int nb_blocks_local, int nb_blocks_all, int64_t *id0gap,
-                       int *lgap, int ngap, Block *tpltzblocks_gappy, int *nb_blocks_gappy_final,
+int build_gappy_blocks(int nrow, int m, Block *tpltzblocks, int nb_blocks_local, int nb_blocks_all, const int64_t *id0gap,
+                       const int *lgap, int ngap, Block *tpltzblocks_gappy, int *nb_blocks_gappy_final,
                        int flag_param_distmin_fixed);
 
 // Internal routines (group 22)

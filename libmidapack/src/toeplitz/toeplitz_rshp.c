@@ -62,302 +62,291 @@
 //transformation.
 
 
-int fctid_mat2vect(int i, int id0, int n, int lambda)
-{
-  int I,J, i_out;
-  int distcorrmin= lambda-1;
-  int rfirst=id0%n;
+int fctid_mat2vect(int i, int id0, int n, int lambda) {
+    int I, J, i_out;
+    int distcorrmin = lambda - 1;
+    int rfirst = id0 % n;
 
-  if (i==-1) 
-    return (-1);
-  
-
-  I = (i+rfirst)%(n+distcorrmin);
-  J = (i+rfirst)/(n+distcorrmin);
-
-  if (I<n)
-    i_out = I-rfirst+J*n;  
-  else
-    i_out = -1; //not defined. value is zero.
+    if (i == -1)
+        return (-1);
 
 
-  return i_out;
+    I = (i + rfirst) % (n + distcorrmin);
+    J = (i + rfirst) / (n + distcorrmin);
+
+    if (I < n)
+        i_out = I - rfirst + J * n;
+    else
+        i_out = -1; //not defined. value is zero.
+
+
+    return i_out;
 }
 
 
-int fctid_mat2vect_inv(int i, int id0, int n, int lambda)
-{
-  int I,J, i_out;
-  int distcorrmin= lambda-1;
-  int rfirst=id0%n;
+int fctid_mat2vect_inv(int i, int id0, int n, int lambda) {
+    int I, J, i_out;
+    int distcorrmin = lambda - 1;
+    int rfirst = id0 % n;
 
-  if (i==-1)
-    i_out = -1; //not defined. value is zero.
+    if (i == -1)
+        i_out = -1; //not defined. value is zero.
 
-  I = (i+rfirst)%(n);
-  J = (i+rfirst)/(n);
+    I = (i + rfirst) % (n);
+    J = (i + rfirst) / (n);
 
-  i_out = I-rfirst+J*(n+distcorrmin);
+    i_out = I - rfirst + J * (n + distcorrmin);
 
-  return i_out;
+    return i_out;
 }
 
 
-int fctid_concatcol(int i, int id0, int n, int m, int l, int lconc, int lambda, int *nocol, int nbcol)
-{
-  int I,J, i_out;
-  int distcorrmin= lambda-1;
-  int rfirst=id0%n;
+int fctid_concatcol(int i, int id0, int n, int m, int l, int lconc, int lambda, int *nocol, int nbcol) {
+    int I, J, i_out;
+    int distcorrmin = lambda - 1;
+    int rfirst = id0 % n;
 
-  if (i==-1)
-    return (-1);
+    if (i == -1)
+        return (-1);
 
-  if (i>=lconc)
-    return (-2);//this indice not define. It shouldn't be used
+    if (i >= lconc)
+        return (-2);//this indice not define. It shouldn't be used
 
-  I = (i+rfirst)%(n);
-  J = (i+rfirst)/(n);
+    I = (i + rfirst) % (n);
+    J = (i + rfirst) / (n);
 
-    i_out = I-rfirst+nocol[J]*(n);
+    i_out = I - rfirst + nocol[J] * (n);
 
 
-  return i_out;
+    return i_out;
 }
 
 
-int fctid_concatcol_inv(int i, int id0, int n, int m, int l, int lconc, int lambda, int *nocol_inv, int nbcol)
-{
-  int I,J, i_out;
-  int distcorrmin= lambda-1;
-  int rfirst=id0%n;
+int fctid_concatcol_inv(int i, int id0, int n, int m, int l, int lconc, int lambda, int *nocol_inv, int nbcol) {
+    int I, J, i_out;
+    int distcorrmin = lambda - 1;
+    int rfirst = id0 % n;
 
-  if (i==-1)
-    return (-1);
+    if (i == -1)
+        return (-1);
 
-  if (i>=l)
-    return (-2);//this indice not define. It shouldn't be used
+    if (i >= l)
+        return (-2);//this indice not define. It shouldn't be used
 
-  I = (i+rfirst)%(n);
-  J = (i+rfirst)/(n);
+    I = (i + rfirst) % (n);
+    J = (i + rfirst) / (n);
 
-  if (nocol_inv[J]==(-1))
-    i_out = -1;
-  else
-    i_out = I-rfirst+nocol_inv[J]*(n);
+    if (nocol_inv[J] == (-1))
+        i_out = -1;
+    else
+        i_out = I - rfirst + nocol_inv[J] * (n);
 
 
-  return i_out;
+    return i_out;
 }
 
 
+int fctid_vect2nfftblock(int i, int v1_size, int fft_size, int nfft, int lambda) {
 
-int fctid_vect2nfftblock(int i, int v1_size, int fft_size, int nfft, int lambda)
-{
+    int I, J, i_out;
+    int distcorrmin = lambda - 1;
 
-  int I,J, i_out;
-  int distcorrmin= lambda-1;
+    if (i == -1)
+        return (-1);
 
-  if (i==-1)
-    return (-1);
+    I = (i) % (fft_size);
+    J = (i) / (fft_size);
 
-  I = (i)%(fft_size);
-  J = (i)/(fft_size);
+    i_out = (I - distcorrmin) + J * (fft_size - 2 * distcorrmin);
 
-  i_out = (I-distcorrmin) + J*(fft_size-2*distcorrmin) ;
-
-  if (i_out<0 || i_out>=v1_size)
-    i_out = -1;
+    if (i_out < 0 || i_out >= v1_size)
+        i_out = -1;
 
 
-  return i_out;
+    return i_out;
 }
 
 
-int is_needconcat(int *nocol, int nbcol)
-{
-  int i;
-  int ip=nocol[0];
-  for(i=1;i<nbcol;i++) {
-    if (nocol[i]!=(ip+i)) 
-      return 1;
-  }
+int is_needconcat(int *nocol, int nbcol) {
+    int i;
+    int ip = nocol[0];
+    for (i = 1; i < nbcol; i++) {
+        if (nocol[i] != (ip + i))
+            return 1;
+    }
 
 
-  return 0;
+    return 0;
 }
 
 
-int fctid_vect2nfftblock_inv(int i, int v1_size, int fft_size, int nfft, int lambda)
-{
+int fctid_vect2nfftblock_inv(int i, int v1_size, int fft_size, int nfft, int lambda) {
 
-  int I,J, i_out;
-  int distcorrmin= lambda-1;
+    int I, J, i_out;
+    int distcorrmin = lambda - 1;
 
-  if (i<0 || i>=v1_size)
-    return (-2);
+    if (i < 0 || i >= v1_size)
+        return (-2);
 
-  I = (i)%(fft_size-2*distcorrmin);
-  J = (i)/(fft_size-2*distcorrmin);
+    I = (i) % (fft_size - 2 * distcorrmin);
+    J = (i) / (fft_size - 2 * distcorrmin);
 
-  i_out = (I+distcorrmin) + J*(fft_size) ;
+    i_out = (I + distcorrmin) + J * (fft_size);
 
-  return i_out;
+    return i_out;
 }
 
 
-int define_rshp_size(int flag_format_rshp, int fft_size, int nfft, int v1_size, int vedge_size, int *nrshp, int *mrshp, int *lrshp)
-{
+int define_rshp_size(int flag_format_rshp, int fft_size, int nfft, int v1_size, int vedge_size, int *nrshp, int *mrshp,
+                     int *lrshp) {
 
-  if (flag_format_rshp==2) {
-    *nrshp=fft_size;
-    *mrshp=nfft;
-    *lrshp=(*nrshp)*(*mrshp);
-  }
-  else if (flag_format_rshp==1) {
-    *nrshp=v1_size;
-    *mrshp=1;
-    *lrshp=(*nrshp)*(*mrshp);
-  }
-  else if (flag_format_rshp==0) { //this case appear only if flag_shortcut_nbcol_eq_1==0
-    *nrshp=vedge_size;
-    *mrshp=1;
-    *lrshp=vedge_size;
-  }
-  else {//error not a good flag_format_rshp
-  }
+    if (flag_format_rshp == 2) {
+        *nrshp = fft_size;
+        *mrshp = nfft;
+        *lrshp = (*nrshp) * (*mrshp);
+    } else if (flag_format_rshp == 1) {
+        *nrshp = v1_size;
+        *mrshp = 1;
+        *lrshp = (*nrshp) * (*mrshp);
+    } else if (flag_format_rshp == 0) { //this case appear only if flag_shortcut_nbcol_eq_1==0
+        *nrshp = vedge_size;
+        *mrshp = 1;
+        *lrshp = vedge_size;
+    } else {//error not a good flag_format_rshp
+    }
 
-  return 0;
+    return 0;
 }
 
 
 int build_nocol_inv(int *nocol, int nbcol, int m)  //ncol_inv to define as parameters
 {
- int i;
- int *nocol_inv;
-  nocol_inv = (int *) calloc(m, sizeof(double));
+    int i;
+    int *nocol_inv;
+    nocol_inv = (int *) calloc(m, sizeof(double));
 
-  for(i=0;i<m;i++)
-    nocol_inv[i]=-1;
-  for(i=0;i<nbcol;i++)
-    nocol_inv[nocol[i]]=i;
+    for (i = 0; i < m; i++)
+        nocol_inv[i] = -1;
+    for (i = 0; i < nbcol; i++)
+        nocol_inv[nocol[i]] = i;
 
 
-  return 0;
+    return 0;
 }
 
 
-int build_reshape(double *Vin, int *nocol, int nbcol, int lconc, int n, int m, int id0, int l, int lambda, int nfft, double *Vrshp, int nrshp, int mrshp, int lrshp, int flag_format_rshp)
-{
+int build_reshape(double *Vin, int *nocol, int nbcol, int lconc, int n, int m, int id0, int l, int lambda, int nfft,
+                  double *Vrshp, int nrshp, int mrshp, int lrshp, int flag_format_rshp) {
 
-  int i;
-  int rfirst=id0%n;
-  int i_out1, i_out2, i_out3;
-  int distcorrmin=lambda-1;
+    int i;
+    int rfirst = id0 % n;
+    int i_out1, i_out2, i_out3;
+    int distcorrmin = lambda - 1;
 
-  int v1_size;
-  int fft_size;
+    int v1_size;
+    int fft_size;
 
-  int idf = id0+l-1;
-  int lconc0;
+    int idf = id0 + l - 1;
+    int lconc0;
 
-  FILE *file;
-  file = stdout;
+    FILE *file;
+    file = stdout;
 
-  v1_size=lconc+(distcorrmin)*(nbcol-1);
-  fft_size = ceil(1.0*v1_size/nfft)+2*distcorrmin;
+    v1_size = lconc + (distcorrmin) * (nbcol - 1);
+    fft_size = ceil(1.0 * v1_size / nfft) + 2 * distcorrmin;
 
- //used transformation
-if (VERBOSE) {
-  fprintf(file, "fctid_concatcol: \t %d\n", (is_needconcat(nocol, nbcol)==1));
-  fprintf(file, "fctid_mat2vect: \t %d\n", (nbcol>1)); 
-  fprintf(file, "fctid_vect2nfftblock \t %d\n", (nfft>1));
+    //used transformation
+    if (VERBOSE) {
+        fprintf(file, "fctid_concatcol: \t %d\n", (is_needconcat(nocol, nbcol) == 1));
+        fprintf(file, "fctid_mat2vect: \t %d\n", (nbcol > 1));
+        fprintf(file, "fctid_vect2nfftblock \t %d\n", (nfft > 1));
+    }
+
+
+    for (i = 0; i < lrshp; i++) {
+
+        if (nfft > 1)
+            i_out1 = fctid_vect2nfftblock(i, v1_size, fft_size, nfft, lambda);
+        else
+            i_out1 = i;
+
+        if (nbcol > 1)
+            i_out2 = fctid_mat2vect(i_out1, rfirst, n, lambda);
+        else
+            i_out2 = i_out1;
+
+        if (is_needconcat(nocol, nbcol) == 1)
+            i_out3 = fctid_concatcol(i_out2, id0, n, m, l, lconc, lambda, nocol, nbcol);
+        else
+            i_out3 = i_out2;
+
+
+        if (i_out3 == -1)
+            Vrshp[i] = 0;
+        else
+            Vrshp[i] = Vin[i_out3];
+
+    }//end for
+
+
+    return 0;
 }
 
 
-  for(i=0;i<lrshp;i++) {
+int extract_result(double *Vout, int *nocol, int nbcol, int lconc, int n, int m, int id0, int l, int lambda, int nfft,
+                   double *Vrshp, int nrshp, int mrshp, int lrshp, int flag_format_rshp) {
 
-  if (nfft>1)
-    i_out1 = fctid_vect2nfftblock( i, v1_size, fft_size, nfft, lambda);
-  else
-    i_out1 = i;
+    int i;
+    int rfirst = id0 % n;
+    int i_out1, i_out2, i_out3;
+    int i_in1;
+    int distcorrmin = lambda - 1;
 
-  if (nbcol>1)
-    i_out2 = fctid_mat2vect(i_out1 , rfirst, n, lambda);
-  else
-    i_out2 = i_out1;
+    int v1_size;
+    int fft_size;
 
-  if (is_needconcat(nocol, nbcol)==1)
-    i_out3 = fctid_concatcol(i_out2, id0, n, m, l, lconc, lambda, nocol, nbcol);
-  else
-    i_out3 = i_out2;
+    FILE *file;
+    file = stdout;
 
+    v1_size = lconc + (distcorrmin) * (nbcol - 1);
+    fft_size = ceil(1.0 * v1_size / nfft) + 2 * distcorrmin;
 
-  if (i_out3==-1)
-    Vrshp[i]=0;
-  else
-    Vrshp[i]=Vin[i_out3];
+    //used transformation
+    if (VERBOSE) {
+        fprintf(file, "fctid_concatcol: \t %d\n", (is_needconcat(nocol, nbcol) == 1));
+        fprintf(file, "fctid_mat2vect: \t %d\n", (nbcol > 1));
+        fprintf(file, "fctid_vect2nfftblock \t %d\n", (nfft > 1));
+    }
 
-  }//end for
+    int lcol;
+    int j, k;
 
+    for (i = 0; i < lconc; i++) {
 
-  return 0;
-}
+        if (is_needconcat(nocol, nbcol) == 1)
+            i_in1 = fctid_concatcol(i, id0, n, m, l, lconc, lambda, nocol, nbcol);
+        else
+            i_in1 = i;
 
+        if (nbcol > 1)
+            i_out2 = fctid_mat2vect_inv(i, rfirst, n, lambda);
+        else
+            i_out2 = i_out1;
 
-int extract_result(double *Vout, int *nocol, int nbcol, int lconc, int n, int m, int id0, int l, int lambda, int nfft, double *Vrshp, int nrshp, int mrshp, int lrshp, int flag_format_rshp)
-{  
+        if (nfft > 1)
+            i_out3 = fctid_vect2nfftblock_inv(i_out2, v1_size, fft_size, nfft, lambda);
+        else
+            i_out3 = i_out2;
 
-  int i;
-  int rfirst=id0%n;
-  int i_out1, i_out2, i_out3;
-  int i_in1;
-  int distcorrmin=lambda-1;
-
-  int v1_size;
-  int fft_size;
-
-  FILE *file;
-  file = stdout;
-
-  v1_size=lconc+(distcorrmin)*(nbcol-1);
-  fft_size = ceil(1.0*v1_size/nfft)+2*distcorrmin;
-
- //used transformation
-if (VERBOSE) {
-  fprintf(file, "fctid_concatcol: \t %d\n", (is_needconcat(nocol, nbcol)==1));
-  fprintf(file, "fctid_mat2vect: \t %d\n", (nbcol>1));
-  fprintf(file, "fctid_vect2nfftblock \t %d\n", (nfft>1));
-}
-
-  int lcol;
-  int j,k;
-
-  for(i=0;i<lconc;i++) { 
-
-  if (is_needconcat(nocol, nbcol)==1)
-    i_in1=fctid_concatcol(i, id0, n, m, l, lconc, lambda, nocol, nbcol);
-  else
-    i_in1 = i;
-
-  if (nbcol>1)
-    i_out2 = fctid_mat2vect_inv(i , rfirst, n, lambda);
-  else
-    i_out2 = i_out1;
-
-  if (nfft>1)
-    i_out3 = fctid_vect2nfftblock_inv(i_out2, v1_size, fft_size, nfft, lambda);
-  else
-    i_out3 = i_out2;
-
-  if (i_out3==-1)
-    Vout[i]=-1;
-  else if (i_out3==-2)
-    Vout[i]=-2;
-  else
-      Vout[i_in1] = Vrshp[i_out3];
-  }
+        if (i_out3 == -1)
+            Vout[i] = -1;
+        else if (i_out3 == -2)
+            Vout[i] = -2;
+        else
+            Vout[i_in1] = Vrshp[i_out3];
+    }
 
 
-  return 0;
+    return 0;
 }
 

@@ -58,6 +58,12 @@
 
 #include "toeplitz.h"
 
+#ifdef _OPENMP
+
+#include <omp.h>
+
+#endif
+
 #define max(a, b)            \
 ({                           \
     __typeof__ (a) _a = (a); \
@@ -90,7 +96,7 @@
 /** Prints some informative messages during the computation.
  */
 int VERBOSE;
-int VERBOSE_FIRSTINIT=1;
+int VERBOSE_FIRSTINIT = 1;
 
 //Parameter just to know the rank for printing when VERBOSE mode is on
 int PRINT_RANK = -1;
@@ -103,21 +109,20 @@ int PRINT_RANK = -1;
    \param file file name
    \param line line number
 */
-int print_error_message(int error_number, char const *file, int line)
-{
-  char *str_mess;
-  str_mess = (char *) malloc(100 * sizeof(char));
-  if(error_number == 1)
-    sprintf (str_mess, "Error on line %d of %s. Toeplitz band width > vector size\n", line, file);
-  if(error_number == 2)
-    sprintf (str_mess, "Error on line %d of %s. Bad allocation.\n", line, file);
-  if(error_number == 3)
-    sprintf (str_mess, "Error on line %d of %s. Error at fftw multithread initialization.\n", line, file);
-  if(error_number == 7)
-    sprintf (str_mess, "Error on line %d of %s.\n", line, file);
-  fprintf(stderr, "%s", str_mess);
-  printf("%s", str_mess);
-  return error_number;
+int print_error_message(int error_number, char const *file, int line) {
+    char *str_mess;
+    str_mess = (char *) malloc(100 * sizeof(char));
+    if (error_number == 1)
+        sprintf(str_mess, "Error on line %d of %s. Toeplitz band width > vector size\n", line, file);
+    if (error_number == 2)
+        sprintf(str_mess, "Error on line %d of %s. Bad allocation.\n", line, file);
+    if (error_number == 3)
+        sprintf(str_mess, "Error on line %d of %s. Error at fftw multithread initialization.\n", line, file);
+    if (error_number == 7)
+        sprintf(str_mess, "Error on line %d of %s.\n", line, file);
+    fprintf(stderr, "%s", str_mess);
+    printf("%s", str_mess);
+    return error_number;
 
 }
 
@@ -140,85 +145,79 @@ int print_error_message(int error_number, char const *file, int line)
     \param bs_flag flag to use a different formula for optimal block size computation
     \param fixed_bs fixed blocksize value if needed
  */
-int define_blocksize(int n, int lambda, int bs_flag, int fixed_bs)
-{
-  int bs;  //computed optimal block size
-  int min_bs;  //minimum block size used for the computation
-  int min_pow2;  //minimum power of two index used for the block size computation
+int define_blocksize(int n, int lambda, int bs_flag, int fixed_bs) {
+    int bs;  //computed optimal block size
+    int min_bs;  //minimum block size used for the computation
+    int min_pow2;  //minimum power of two index used for the block size computation
 
-  //cheating
+    //cheating
 //  bs_flag = 5;//1;//5;
 //  fixed_bs = pow(2,15);  //2^14 winner because smaller block than 2^15 (as same speed)
 
-  if (bs_flag==1) {
-    bs = fixed_bs;
+    if (bs_flag == 1) {
+        bs = fixed_bs;
 
-  }
-  else if (bs_flag==2) {  //this formula need to be check - seems there is a pb
-    min_bs = 2*lambda;    //when bs = 2 lambda. Not enough data left in the middle
-    min_pow2 = (int) ceil( log(min_bs)/log(2) );
-    bs = pow(2, min_pow2);
-    if (bs > n)       //This is to avoid block size much bigger than the matrix. Append mostly
-      bs = min_bs;  //when the matrix is small compared to his bandwith
+    } else if (bs_flag == 2) {  //this formula need to be check - seems there is a pb
+        min_bs = 2 * lambda;    //when bs = 2 lambda. Not enough data left in the middle
+        min_pow2 = (int) ceil(log(min_bs) / log(2));
+        bs = pow(2, min_pow2);
+        if (bs > n)       //This is to avoid block size much bigger than the matrix. Append mostly
+            bs = min_bs;  //when the matrix is small compared to his bandwith
 
-  }
-  else if (bs_flag==3) {
-    min_bs = 3*lambda;
-    min_pow2 = (int) ceil( log(min_bs)/log(2) );
-    bs = pow(2, min_pow2);
-    if (bs > n)       //This is to avoid block size much bigger than the matrix. Append mostly
-      bs = min_bs;  //when the matrix is small compared to his bandwith
+    } else if (bs_flag == 3) {
+        min_bs = 3 * lambda;
+        min_pow2 = (int) ceil(log(min_bs) / log(2));
+        bs = pow(2, min_pow2);
+        if (bs > n)       //This is to avoid block size much bigger than the matrix. Append mostly
+            bs = min_bs;  //when the matrix is small compared to his bandwith
 
-  }
-  else if (bs_flag==4 || bs_flag==0) {
-    min_bs = 4*lambda;
-    min_pow2 = (int) ceil( log(min_bs)/log(2) );
-    bs = pow(2, min_pow2);
-    if (bs > n)       //This is to avoid block size much bigger than the matrix. Append mostly
-      bs = min_bs;  //when the matrix is small compared to his bandwith
+    } else if (bs_flag == 4 || bs_flag == 0) {
+        min_bs = 4 * lambda;
+        min_pow2 = (int) ceil(log(min_bs) / log(2));
+        bs = pow(2, min_pow2);
+        if (bs > n)       //This is to avoid block size much bigger than the matrix. Append mostly
+            bs = min_bs;  //when the matrix is small compared to his bandwith
 
-  }
-  else if (bs_flag==5) {
-    //Different formula to compute the optimal block size
-    bs=1;
-    while(bs < 2*(lambda-1)*log(bs+1) && bs<n) {
-      bs = bs*2;  }
+    } else if (bs_flag == 5) {
+        //Different formula to compute the optimal block size
+        bs = 1;
+        while (bs < 2 * (lambda - 1) * log(bs + 1) && bs < n) {
+            bs = bs * 2;
+        }
 
-  }
-  else if (bs_flag==6) { //the same as bs_flag==5 but with constrain on the minimal size
-                                       // and the number of subblocks.
+    } else if (bs_flag == 6) { //the same as bs_flag==5 but with constrain on the minimal size
+        // and the number of subblocks.
 
-    min_bs = 4*lambda;
-    min_pow2 = (int) ceil( log(min_bs)/log(2) );
+        min_bs = 4 * lambda;
+        min_pow2 = (int) ceil(log(min_bs) / log(2));
 
-    min_pow2 = max(min_pow2, pow(2,14)); //add condition to have a minimum size 2^14 for bs
-                                         //This is based on empirical estimation and can be justified
-					 //by the speed benchmark of FFTW3 (see the FFTW official website).
-    bs = pow(2, min_pow2);
+        min_pow2 = max(min_pow2, pow(2, 14)); //add condition to have a minimum size 2^14 for bs
+        //This is based on empirical estimation and can be justified
+        //by the speed benchmark of FFTW3 (see the FFTW official website).
+        bs = pow(2, min_pow2);
 
-    if (bs > n)       //This is to avoid block size much bigger than the matrix. Append mostly
-      bs = min_bs;  //when the matrix is small compared to his bandwith
+        if (bs > n)       //This is to avoid block size much bigger than the matrix. Append mostly
+            bs = min_bs;  //when the matrix is small compared to his bandwith
 
 //test if enough subblock for sliding windows algorithm:
 //    int nbloc_bs = ceil( (1.0*n)/(bs-2*distcorrmin));
 //    if (nbloc_bs<8) //Empirical condition to avoid small number of subblocks
 //      bs = 0;   //Switch to no sliding windows algorithm
 
-  }
-  else {
-    printf("Error. Wrong value for bs_flag. Set to auto mode.\n");
-    min_bs = 4*lambda;
-    min_pow2 = (int) ceil( log(min_bs)/log(2) );
-    bs = pow(2, min_pow2);
-    if (bs > n)       //This is to avoid block size much bigger than the matrix. Append mostly
-      bs = min_bs;  //when the matrix is small compared to his bandwith
-  }
+    } else {
+        printf("Error. Wrong value for bs_flag. Set to auto mode.\n");
+        min_bs = 4 * lambda;
+        min_pow2 = (int) ceil(log(min_bs) / log(2));
+        bs = pow(2, min_pow2);
+        if (bs > n)       //This is to avoid block size much bigger than the matrix. Append mostly
+            bs = min_bs;  //when the matrix is small compared to his bandwith
+    }
 
 
-  if(PRINT_RANK==0 && VERBOSE>1)
-    printf("Computed optimal blocksize is %d (with lambda = %d)\n", bs, lambda);
+    if (PRINT_RANK == 0 && VERBOSE > 1)
+        printf("Computed optimal blocksize is %d (with lambda = %d)\n", bs, lambda);
 
-  return bs;
+    return bs;
 }
 
 
@@ -230,22 +229,21 @@ int define_blocksize(int n, int lambda, int bs_flag, int fixed_bs)
     \param flag_nfft flag to set the strategy to define nfft
     \param fixed_nfft fixed nfft value if nedeed (used for the case where flag_nfft=1)
  */
-int define_nfft(int n_thread, int flag_nfft, int fixed_nfft)
-{
-  int nfft;
+int define_nfft(int n_thread, int flag_nfft, int fixed_nfft) {
+    int nfft;
 
-  if (flag_nfft==0)
-    nfft = NFFT_DEFAULT;
-  else if (flag_nfft==1)
-    nfft = fixed_nfft;
-  else if (flag_nfft==2)
-    nfft = n_thread;
-  else {
-    printf("Error. Wrong value for flag_nfft. Set to auto mode.\n");
-    nfft = NFFT_DEFAULT;
-  }
+    if (flag_nfft == 0)
+        nfft = NFFT_DEFAULT;
+    else if (flag_nfft == 1)
+        nfft = fixed_nfft;
+    else if (flag_nfft == 2)
+        nfft = n_thread;
+    else {
+        printf("Error. Wrong value for flag_nfft. Set to auto mode.\n");
+        nfft = NFFT_DEFAULT;
+    }
 
-  return nfft;
+    return nfft;
 }
 
 
@@ -267,20 +265,18 @@ int define_nfft(int n_thread, int flag_nfft, int fixed_nfft)
     \param plan_f fftw plan forward (r2c)
     \param plan_b fftw plan backward (c2r)
 */
-int tpltz_init(int n, int lambda, int *nfft, int *blocksize, fftw_complex **T_fft, double *T, fftw_complex **V_fft, double **V_rfft, fftw_plan *plan_f, fftw_plan *plan_b, Flag flag_stgy)
-{
-  int n_thread=1;
-  double t1, t2;
+int tpltz_init(int n, int lambda, int *nfft, int *blocksize, fftw_complex **T_fft, double *T, fftw_complex **V_fft,
+               double **V_rfft, fftw_plan *plan_f, fftw_plan *plan_b, Flag flag_stgy) {
 
-  //Set the VERBOSE global variable
-  VERBOSE = flag_stgy.flag_verbose;
+    //Set the VERBOSE global variable
+    VERBOSE = flag_stgy.flag_verbose;
 
 
-  //initialize block size
-  *blocksize = define_blocksize(n, lambda, flag_stgy.flag_bs, flag_stgy.fixed_bs);
+    //initialize block size
+    *blocksize = define_blocksize(n, lambda, flag_stgy.flag_bs, flag_stgy.fixed_bs);
 
 
-  //if (bs==0)
+    //if (bs==0)
 //     flag_stgy.flag_bs = 9999 //swich to noslidingwindowsalgo
 
 
@@ -289,49 +285,51 @@ int tpltz_init(int n, int lambda, int *nfft, int *blocksize, fftw_complex **T_ff
 
 //  if ((NB_OMPTHREADS <= n_thread) && (NB_OMPTHREADS != 0))
 //    omp_set_num_threads(NB_OMPTHREADS);
-#ifdef W_OPENMP
-  n_thread = omp_get_max_threads();
+#ifdef _OPENMP
+    int n_thread = omp_get_max_threads();
+#else
+    int n_thread = 1;
 #endif
 
-  //initialize nfft
-  *nfft = define_nfft(n_thread, flag_stgy.flag_nfft, flag_stgy.fixed_nfft);   //*nfft=n_thread;
+    //initialize nfft
+    *nfft = define_nfft(n_thread, flag_stgy.flag_nfft, flag_stgy.fixed_nfft);   //*nfft=n_thread;
 
 
-  if(PRINT_RANK==0 && VERBOSE>0 && VERBOSE_FIRSTINIT==1) {
-    printf("Using %d threads\n", n_thread);
-    printf("nfft = %d\n", *nfft);
-  }
+    if (PRINT_RANK == 0 && VERBOSE > 0 && VERBOSE_FIRSTINIT == 1) {
+        printf("Using %d threads\n", n_thread);
+        printf("nfft = %d\n", *nfft);
+    }
 
-  //initialize fftw plan allocation flag
-  int fftw_flag = flag_stgy.flag_fftw; //FFTW_FLAG;
+    //initialize fftw plan allocation flag
+    int fftw_flag = flag_stgy.flag_fftw; //FFTW_FLAG;
 
-  //initialize fftw for omp threads
+    //initialize fftw for omp threads
 #ifdef fftw_MULTITHREADING
-  fftw_init_omp_threads(n_thread);
+    fftw_init_omp_threads(n_thread);
 #endif
 
-  //initialize fftw array and plan for T (and make it circulant first)
+    //initialize fftw array and plan for T (and make it circulant first)
 // t1=MPI_Wtime();
-  circ_init_fftw(T, (*blocksize), lambda, T_fft);
+    circ_init_fftw(T, (*blocksize), lambda, T_fft);
 //  t2=  MPI_Wtime();
 
 //  if (PRINT_RANK==0 && VERBOSE>0)
 //    printf("time circ_init_fftw=%f\n", t2-t1);
 
-  //initialize fftw array and plan for V
+    //initialize fftw array and plan for V
 // t1=MPI_Wtime();
-  rhs_init_fftw(nfft, (*blocksize), V_fft, V_rfft, plan_f, plan_b, fftw_flag);
+    rhs_init_fftw(nfft, (*blocksize), V_fft, V_rfft, plan_f, plan_b, fftw_flag);
 //  t2=  MPI_Wtime();
 
 //  if (PRINT_RANK==0 && VERBOSE>0)
 //    printf("time rhs_init_fftw=%f\n", t2-t1);
 
-  if(PRINT_RANK==0 && VERBOSE>1)
-    printf("Initialization finished successfully\n");
+    if (PRINT_RANK == 0 && VERBOSE > 1)
+        printf("Initialization finished successfully\n");
 
-  VERBOSE_FIRSTINIT=0;
+    VERBOSE_FIRSTINIT = 0;
 
-  return 0;
+    return 0;
 }
 
 
@@ -343,22 +341,21 @@ int tpltz_init(int n, int lambda, int *nfft, int *blocksize, fftw_complex **T_ff
     by the variable n_thread) is read from OMP_NUM_THREAD environment variable.
     fftw multithreaded option is controlled by fftw_MULTITHREADING macro.
 */
-int fftw_init_omp_threads(int fftw_n_thread)
-{
-  int status;
+int fftw_init_omp_threads(int fftw_n_thread) {
+    int status;
 
-  //initialize fftw omp threads
-  status = fftw_init_threads();
-  if (status==0)
-    return print_error_message (3, __FILE__, __LINE__);
+    //initialize fftw omp threads
+    status = fftw_init_threads();
+    if (status == 0)
+        return print_error_message(3, __FILE__, __LINE__);
 
-  //set the number of FFTW threads
-  fftw_plan_with_nthreads(fftw_n_thread);
+    //set the number of FFTW threads
+    fftw_plan_with_nthreads(fftw_n_thread);
 
-  if(PRINT_RANK==0 && VERBOSE>1 && VERBOSE_FIRSTINIT==1)
-    printf("Using multithreaded FFTW with %d threads\n", fftw_n_thread);
+    if (PRINT_RANK == 0 && VERBOSE > 1 && VERBOSE_FIRSTINIT == 1)
+        printf("Using multithreaded FFTW with %d threads\n", fftw_n_thread);
 
-  return 0;
+    return 0;
 }
 
 
@@ -375,19 +372,21 @@ int fftw_init_omp_threads(int fftw_n_thread)
     \param plan_b fftw plan backward (c2r)
     \param fftw_flag fftw plan allocation flag
  */
-int rhs_init_fftw(int *nfft, int fft_size, fftw_complex **V_fft, double **V_rfft, fftw_plan *plan_f, fftw_plan *plan_b, int fftw_flag)
-{
-  //allocate fftw arrays and plans for V
-  *V_fft  = (fftw_complex*) fftw_malloc((*nfft)*(fft_size/2+1) * sizeof(fftw_complex) );
-  *V_rfft = (double*) fftw_malloc((*nfft)*fft_size * sizeof(double) );
-  if (*V_fft==0 || *V_rfft==0)
-    return print_error_message (2, __FILE__, __LINE__);
+int rhs_init_fftw(const int *nfft, int fft_size, fftw_complex **V_fft, double **V_rfft, fftw_plan *plan_f,
+                  fftw_plan *plan_b, int fftw_flag) {
+    //allocate fftw arrays and plans for V
+    *V_fft = (fftw_complex *) fftw_malloc((*nfft) * (fft_size / 2 + 1) * sizeof(fftw_complex));
+    *V_rfft = (double *) fftw_malloc((*nfft) * fft_size * sizeof(double));
+    if (*V_fft == 0 || *V_rfft == 0)
+        return print_error_message(2, __FILE__, __LINE__);
 
-  *plan_f = fftw_plan_many_dft_r2c(1, &fft_size, (*nfft), *V_rfft, &fft_size, 1, fft_size, *V_fft, NULL, 1, fft_size/2+1, fftw_flag );
-  *plan_b = fftw_plan_many_dft_c2r(1, &fft_size, (*nfft), *V_fft, NULL, 1, fft_size/2+1, *V_rfft, &fft_size, 1, fft_size, fftw_flag );
+    *plan_f = fftw_plan_many_dft_r2c(1, &fft_size, (*nfft), *V_rfft, &fft_size, 1, fft_size, *V_fft, NULL, 1,
+                                     fft_size / 2 + 1, fftw_flag);
+    *plan_b = fftw_plan_many_dft_c2r(1, &fft_size, (*nfft), *V_fft, NULL, 1, fft_size / 2 + 1, *V_rfft, &fft_size, 1,
+                                     fft_size, fftw_flag);
 
 
-  return 0;
+    return 0;
 }
 
 
@@ -402,37 +401,35 @@ int rhs_init_fftw(int *nfft, int fft_size, fftw_complex **V_fft, double **V_rfft
     \param lambda Toeplitz band width.
     \param T_fft complex array used for FFTs.
  */
-int circ_init_fftw(double *T, int fft_size, int lambda, fftw_complex **T_fft)
-{
-  //routine variable
-  int i;
-  int circ_fftw_flag = FFTW_ESTIMATE;
-  //allocation for T_fft
-  *T_fft = (fftw_complex*) fftw_malloc( (fft_size/2+1) * sizeof(fftw_complex) );
-  if (*T_fft==0)
-    return print_error_message (2, __FILE__, __LINE__);
-  double *T_circ = (double*) (*T_fft);
+int circ_init_fftw(const double *T, int fft_size, int lambda, fftw_complex **T_fft) {
+    //routine variable
+    int i;
+    int circ_fftw_flag = FFTW_ESTIMATE;
+    //allocation for T_fft
+    *T_fft = (fftw_complex *) fftw_malloc((fft_size / 2 + 1) * sizeof(fftw_complex));
+    if (*T_fft == 0)
+        return print_error_message(2, __FILE__, __LINE__);
+    double *T_circ = (double *) (*T_fft);
 
-  //inplace fft
-  fftw_plan plan_f_T;
-  plan_f_T   = fftw_plan_dft_r2c_1d( fft_size, T_circ, *T_fft, circ_fftw_flag );
+    //inplace fft
+    fftw_plan plan_f_T;
+    plan_f_T = fftw_plan_dft_r2c_1d(fft_size, T_circ, *T_fft, circ_fftw_flag);
 
-  //make T circulant
-#ifdef W_OPENMP
+    //make T circulant
 #pragma omp parallel for
-#endif
-  for(i=0; i<fft_size+2;i++)
-    T_circ[i] = 0.0;
+    for (i = 0; i < fft_size + 2; i++)
+        T_circ[i] = 0.0;
 
-  T_circ[0] = T[0];
-  for(i=1;i<lambda;i++) {
-    T_circ[i] = T[i];
-    T_circ[fft_size-i] = T[i];    }
+    T_circ[0] = T[0];
+    for (i = 1; i < lambda; i++) {
+        T_circ[i] = T[i];
+        T_circ[fft_size - i] = T[i];
+    }
 
-  fftw_execute(plan_f_T);
-  fftw_destroy_plan(plan_f_T);
+    fftw_execute(plan_f_T);
+    fftw_destroy_plan(plan_f_T);
 
-  return 0;
+    return 0;
 }
 
 
@@ -447,18 +444,18 @@ int circ_init_fftw(double *T, int fft_size, int lambda, fftw_complex **T_fft)
     \param plan_f fftw plan forward (r2c)
     \param plan_b fftw plan backward (c2r)
 */
-int tpltz_cleanup(fftw_complex **T_fft, fftw_complex **V_fft, double **V_rfft,fftw_plan *plan_f, fftw_plan *plan_b){
-  fftw_destroy_plan(*plan_f);
-  fftw_destroy_plan(*plan_b);
-  fftw_free(*T_fft);
-  fftw_free(*V_fft);
-  fftw_free(*V_rfft);
+int tpltz_cleanup(fftw_complex **T_fft, fftw_complex **V_fft, double **V_rfft, fftw_plan *plan_f, fftw_plan *plan_b) {
+    fftw_destroy_plan(*plan_f);
+    fftw_destroy_plan(*plan_b);
+    fftw_free(*T_fft);
+    fftw_free(*V_fft);
+    fftw_free(*V_rfft);
 #ifdef fftw_MULTITHREADING
-  fftw_cleanup_threads();
+    fftw_cleanup_threads();
 #endif
-  fftw_cleanup();
+    fftw_cleanup();
 
-  return 0;
+    return 0;
 }
 
 
@@ -473,35 +470,33 @@ int tpltz_cleanup(fftw_complex **T_fft, fftw_complex **V_fft, double **V_rfft,ff
     are either left as they were on the input or zeroed if zero_flag is set to 1. If the
     block to be copied is larger than either the input or the output matrix an error occurs.
 */
-int copy_block(int ninrow, int nincol, double *Vin, int noutrow, int noutcol, double *Vout, int inrow, int incol, int nblockrow, int nblockcol, int outrow, int outcol, double norm, int set_zero_flag)
-{
-  int i, j, p, offsetIn, offsetOut;
+int copy_block(int ninrow, int nincol, double *Vin, int noutrow, int noutcol, double *Vout, int inrow, int incol,
+               int nblockrow, int nblockcol, int outrow, int outcol, double norm, int set_zero_flag) {
+    int i, j, p, offsetIn, offsetOut;
 
-  //do some size checks first
-  if( (nblockcol > nincol) || (nblockrow > ninrow) || (nblockcol > noutcol) || (nblockrow > noutrow)) {
-    printf("Error in routine copy_block. Bad size setup.\n");
-    return print_error_message(7, __FILE__, __LINE__);
-  }
+    //do some size checks first
+    if ((nblockcol > nincol) || (nblockrow > ninrow) || (nblockcol > noutcol) || (nblockrow > noutrow)) {
+        printf("Error in routine copy_block. Bad size setup.\n");
+        return print_error_message(7, __FILE__, __LINE__);
+    }
 
-  if(set_zero_flag) {
-#ifdef W_OPENMP
+    if (set_zero_flag) {
 #pragma omp parallel for //private(i) num_threads(NB_OMPTHREADS_CPBLOCK)
-#endif
-    for(i=0;i<noutrow*noutcol;i++)  //could use maybe memset but how about threading
-      Vout[i] = 0.0;
-  }
+        for (i = 0; i < noutrow * noutcol; i++)  //could use maybe memset but how about threading
+            Vout[i] = 0.0;
+    }
 
-  offsetIn = ninrow*incol+inrow;
-  offsetOut = noutrow*outcol+outrow;
+    offsetIn = ninrow * incol + inrow;
+    offsetOut = noutrow * outcol + outrow;
 
 //#pragma omp parallel for private(i,j,p) num_threads(NB_OMPTHREADS_CPBLOCK)
-  for(i=0;i<nblockcol*nblockrow;i++) {    //copy the block
-    j = i/nblockrow;
-    p = i%nblockrow;
-    Vout[offsetOut+j*noutrow+p] = Vin[offsetIn+j*ninrow+p]*norm;
-  }
+    for (i = 0; i < nblockcol * nblockrow; i++) {    //copy the block
+        j = i / nblockrow;
+        p = i % nblockrow;
+        Vout[offsetOut + j * noutrow + p] = Vin[offsetIn + j * ninrow + p] * norm;
+    }
 
-  return 0;
+    return 0;
 }
 
 
@@ -525,27 +520,26 @@ int copy_block(int ninrow, int nincol, double *Vin, int noutrow, int noutcol, do
     \param plan_f_V fftw plan forward (r2c)
     \param plan_b_CV fftw plan backward (c2r)
 */
-int scmm_direct(int fft_size, int nfft, fftw_complex *C_fft, int ncol, double *V_rfft, double **CV, fftw_complex *V_fft, fftw_plan plan_f_V, fftw_plan plan_b_CV)
-{
-  //routine variables
-  int sizeT = fft_size/2+1;
-  int i, idx;
+int scmm_direct(int fft_size, int nfft, fftw_complex *C_fft, int ncol, double *V_rfft, double **CV, fftw_complex *V_fft,
+                fftw_plan plan_f_V, fftw_plan plan_b_CV) {
+    //routine variables
+    int sizeT = fft_size / 2 + 1;
+    int i, idx;
 
-  //perform forward FFT
-  fftw_execute(plan_f_V); //input in V_rfft; output in V_fft
+    //perform forward FFT
+    fftw_execute(plan_f_V); //input in V_rfft; output in V_fft
 
 //  printf("ncol=%d, fft_size=%d, sizeT=%d\n", ncol, fft_size, sizeT);
 
 //double t1, t2;
 //  t1=MPI_Wtime();
 
-#ifdef W_OPENMP
 #pragma omp parallel for private(idx) //num_threads(nfft)
-#endif
-  for(i=0;i<ncol*sizeT;i++) {
-    idx = i%sizeT;
-    V_fft[i][0] = C_fft[idx][0]*V_fft[i][0]-C_fft[idx][1]*V_fft[i][1];
-    V_fft[i][1] = C_fft[idx][0]*V_fft[i][1]+C_fft[idx][1]*V_fft[i][0];    }
+    for (i = 0; i < ncol * sizeT; i++) {
+        idx = i % sizeT;
+        V_fft[i][0] = C_fft[idx][0] * V_fft[i][0] - C_fft[idx][1] * V_fft[i][1];
+        V_fft[i][1] = C_fft[idx][0] * V_fft[i][1] + C_fft[idx][1] * V_fft[i][0];
+    }
 
 //  t2=  MPI_Wtime();
 //  printf("Computation time : %lf s.\n", t2-t1);
@@ -569,10 +563,10 @@ double t1, t2;
 
 
 
-  //perform  backward FFts
-  fftw_execute(plan_b_CV); //input in V_fft; output in V_rfft
+    //perform  backward FFts
+    fftw_execute(plan_b_CV); //input in V_fft; output in V_rfft
 
-  return 0;
+    return 0;
 }
 
 
@@ -605,49 +599,48 @@ double t1, t2;
     \param plan_f_V fftw plan forward (r2c)
     \param plan_b_CV fftw plan backward (c2r)
 */
-int scmm_basic(double **V, int blocksize, int m, fftw_complex *C_fft, double **CV, fftw_complex *V_fft, double *V_rfft, int nfft, fftw_plan plan_f_V, fftw_plan plan_b_CV)
-{
-  //routine variables
-  int i,k; //loop index
-  int nloop = (int) ceil((1.0*m)/nfft);  //number of subblocks
+int scmm_basic(double **V, int blocksize, int m, fftw_complex *C_fft, double **CV, fftw_complex *V_fft, double *V_rfft,
+               int nfft, fftw_plan plan_f_V, fftw_plan plan_b_CV) {
+    //routine variables
+    int i, k; //loop index
+    int nloop = (int) ceil((1.0 * m) / nfft);  //number of subblocks
 
-  // Loop over set of columns
-  int ncol = min(nfft, m);  //a number of columns to be copied from the data to working matrix
-                            //equal the number of simultaneous FFTs
+    // Loop over set of columns
+    int ncol = min(nfft, m);  //a number of columns to be copied from the data to working matrix
+    //equal the number of simultaneous FFTs
 
 
-#ifdef W_OPENMP
 #pragma omp parallel for //num_threads(NB_OMPTHREADS_BASIC)//schedule(dynamic,1)
-#endif
-  for( i=0;i<blocksize*ncol;i++)
-    V_rfft[i] = 0.0;  //could use maybe memset but how about threading
+    for (i = 0; i < blocksize * ncol; i++)
+        V_rfft[i] = 0.0;  //could use maybe memset but how about threading
 
 
 //bug fixed conflit between num_threads and nfft
 //#pragma omp parallel for schedule(dynamic,1) num_threads(8) //num_threads(nfft)
-  for(k=0;k<nloop;k++) {   //this is the main loop over the set of columns
-    if (k==nloop-1)   //last loop ncol may be smaller than nfft
-      ncol = m-(nloop-1)*nfft;
+    for (k = 0; k < nloop; k++) {   //this is the main loop over the set of columns
+        if (k == nloop - 1)   //last loop ncol may be smaller than nfft
+            ncol = m - (nloop - 1) * nfft;
 
-  //init fftw matrices.
-  //extracts a block of ncol full-length columns from the data matrix and embeds in a bigger
-  //matrix padding each column with lambda zeros. Note that all columns will be zero padded
-  //thanks to the "memset" call above
+        //init fftw matrices.
+        //extracts a block of ncol full-length columns from the data matrix and embeds in a bigger
+        //matrix padding each column with lambda zeros. Note that all columns will be zero padded
+        //thanks to the "memset" call above
 
-  copy_block(blocksize, m, (*V), blocksize, ncol, V_rfft, 0, k*nfft, blocksize, ncol, 0, 0, 1.0, 0);
-  //note: all nfft vectors are transformed below ALWAYS in a single go (if ncol < nfft) the extra
-  //useless work is done.
+        copy_block(blocksize, m, (*V), blocksize, ncol, V_rfft, 0, k * nfft, blocksize, ncol, 0, 0, 1.0, 0);
+        //note: all nfft vectors are transformed below ALWAYS in a single go (if ncol < nfft) the extra
+        //useless work is done.
 
-  scmm_direct(blocksize, nfft, C_fft, ncol, V_rfft, CV, V_fft, plan_f_V, plan_b_CV);
-  //note: the parameter CV is not really used
+        scmm_direct(blocksize, nfft, C_fft, ncol, V_rfft, CV, V_fft, plan_f_V, plan_b_CV);
+        //note: the parameter CV is not really used
 
-  //extract the relevant part from the result
-  copy_block(blocksize, ncol, V_rfft, blocksize, m, (*CV), 0, 0, blocksize, ncol, 0, k*nfft, 1.0/((double) blocksize), 0);
+        //extract the relevant part from the result
+        copy_block(blocksize, ncol, V_rfft, blocksize, m, (*CV), 0, 0, blocksize, ncol, 0, k * nfft,
+                   1.0 / ((double) blocksize), 0);
 
-  }  //end of loop over the column-sets
+    }  //end of loop over the column-sets
 
 
-  return 0;
+    return 0;
 }
 
 
@@ -679,120 +672,121 @@ int scmm_basic(double **V, int blocksize, int m, fftw_complex *C_fft, double **C
     \param flag_offset flag to avoid extra 2*lambda padding to zeros on the edges
     \param flag_nofft flag to do product without using fft
 */
-int stmm_core(double **V, int n, int m, double *T, fftw_complex *T_fft, int blocksize, int lambda, fftw_complex *V_fft, double *V_rfft, int nfft, fftw_plan plan_f, fftw_plan plan_b, int flag_offset, int flag_nofft)
-{
+int stmm_core(double **V, int n, int m, double *T, fftw_complex *T_fft, int blocksize, int lambda, fftw_complex *V_fft,
+              double *V_rfft, int nfft, fftw_plan plan_f, fftw_plan plan_b, int flag_offset, int flag_nofft) {
 
-  // double t1,t2;
+    // double t1,t2;
 
-  // t1=  MPI_Wtime();
+    // t1=  MPI_Wtime();
 
-  //cheating:
+    //cheating:
 //  flag_offset = 1;
 
-  //routine variable
-  int status;
-  int i,j,k,p;  //loop index
-  int currentsize;
-  int distcorrmin= lambda-1;
+    //routine variable
+    int status;
+    int i, j, k, p;  //loop index
+    int currentsize;
+    int distcorrmin = lambda - 1;
 
-  int blocksize_eff = blocksize-2*distcorrmin;  //just a good part after removing the overlaps
-  int nbloc;  //number of subblock of slide/overlap algorithm
+    int blocksize_eff = blocksize - 2 * distcorrmin;  //just a good part after removing the overlaps
+    int nbloc;  //number of subblock of slide/overlap algorithm
 
-  if (flag_offset==1)
-    nbloc = ceil((1.0*(n-2*distcorrmin))/blocksize_eff);
-  else
-    nbloc = ceil( (1.0*n)/blocksize_eff);  //we need n because of reshaping
+    if (flag_offset == 1)
+        nbloc = ceil((1.0 * (n - 2 * distcorrmin)) / blocksize_eff);
+    else
+        nbloc = ceil((1.0 * n) / blocksize_eff);  //we need n because of reshaping
 
-  // if(PRINT_RANK==0 && VERBOSE>0)
-  //   printf("nbloc=%d, n=%d, m=%d, blocksize=%d, blocksize_eff=%d\n", nbloc, n, m, blocksize, blocksize_eff);
+    // if(PRINT_RANK==0 && VERBOSE>0)
+    //   printf("nbloc=%d, n=%d, m=%d, blocksize=%d, blocksize_eff=%d\n", nbloc, n, m, blocksize, blocksize_eff);
 
-  double *V_bloc, *TV_bloc;
-  V_bloc  = (double *) calloc(blocksize*m, sizeof(double));
-  TV_bloc = (double *) calloc(blocksize*m, sizeof(double));
-  if((V_bloc==0)||(TV_bloc==0))
-    return print_error_message(2, __FILE__, __LINE__);
+    double *V_bloc, *TV_bloc;
+    V_bloc = (double *) calloc(blocksize * m, sizeof(double));
+    TV_bloc = (double *) calloc(blocksize * m, sizeof(double));
+    if ((V_bloc == 0) || (TV_bloc == 0))
+        return print_error_message(2, __FILE__, __LINE__);
 
-  int offset=0;
-  if (flag_offset==1)
-    offset=distcorrmin;
+    int offset = 0;
+    if (flag_offset == 1)
+        offset = distcorrmin;
 
-  int iV = 0;  //"-distcorrmin+offset";  //first index in V
-  int iTV = offset;  //first index in TV
+    int iV = 0;  //"-distcorrmin+offset";  //first index in V
+    int iTV = offset;  //first index in TV
 
-  //"k=0";
-  //first subblock separately as it requires some padding. prepare the block of the data vector
-  //with the overlaps on both sides
-  currentsize = min( blocksize-distcorrmin+offset, n-iV);
-  //note: if flag_offset=0, pad first distcorrmin elements with zeros (for the first subblock only)
-  // and if flag_offset=1 there is no padding with zeros.
-  copy_block( n, m, *V, blocksize, m, V_bloc, 0, 0, currentsize, m, distcorrmin-offset, 0, 1.0, 0);
+    //"k=0";
+    //first subblock separately as it requires some padding. prepare the block of the data vector
+    //with the overlaps on both sides
+    currentsize = min(blocksize - distcorrmin + offset, n - iV);
+    //note: if flag_offset=0, pad first distcorrmin elements with zeros (for the first subblock only)
+    // and if flag_offset=1 there is no padding with zeros.
+    copy_block(n, m, *V, blocksize, m, V_bloc, 0, 0, currentsize, m, distcorrmin - offset, 0, 1.0, 0);
 
-  //do block computation
-  if (flag_nofft==1)
-    status = stmm_simple_basic(&V_bloc, blocksize, m, T, lambda, &TV_bloc);
-  else
-    status = scmm_basic(&V_bloc, blocksize, m, T_fft, &TV_bloc, V_fft, V_rfft, nfft, plan_f, plan_b);
+    //do block computation
+    if (flag_nofft == 1)
+        status = stmm_simple_basic(&V_bloc, blocksize, m, T, lambda, &TV_bloc);
+    else
+        status = scmm_basic(&V_bloc, blocksize, m, T_fft, &TV_bloc, V_fft, V_rfft, nfft, plan_f, plan_b);
 
-  if (status!=0) {
-    printf("Error in stmm_core.");
-    return print_error_message(7, __FILE__, __LINE__);  }
-
-
-  //now copy first the new chunk of the data matrix **before** overwriting the input due to overlaps !
-  iV = blocksize_eff-distcorrmin+offset;
-
-  if(nbloc > 1) {
-    currentsize  = min( blocksize, n-iV);  //not to overshoot
-
-    int flag_reset = (currentsize!=blocksize);  //with flag_reset=1, always "memset" the block.
-    copy_block( n, m, *V, blocksize, m, V_bloc, iV, 0, currentsize, m, 0, 0, 1.0, flag_reset);
-  }
-
-  //and now store the ouput back in V
-  currentsize  = min( blocksize_eff, n-iTV);       // to trim the extra rows
-  copy_block( blocksize, m, TV_bloc, n, m, *V, distcorrmin, 0, currentsize, m, iTV, 0, 1.0, 0);
-
-
-  iTV += blocksize_eff;
-  //now continue with all the other subblocks
-  for(k=1;k<nbloc;k++) {
-
-    //do bloc computation
-  if (flag_nofft==1)
-    status = stmm_simple_basic(&V_bloc, blocksize, m, T, lambda, &TV_bloc);
-  else
-    status = scmm_basic(&V_bloc, blocksize, m, T_fft, &TV_bloc, V_fft, V_rfft, nfft, plan_f, plan_b);
-
-  if (status!=0) break;
-
-
-    iV += blocksize_eff;
-    //copy first the next subblock to process
-    if(k != nbloc-1) {
-      currentsize = min(blocksize, n-iV);  //not to overshoot
-
-      int flag_resetk = (currentsize!=blocksize);  //with flag_reset=1, always "memset" the block.
-      copy_block( n, m, *V, blocksize, m, V_bloc, iV, 0, currentsize, m, 0, 0, 1.0, flag_resetk);
+    if (status != 0) {
+        printf("Error in stmm_core.");
+        return print_error_message(7, __FILE__, __LINE__);
     }
 
-    //and then store the output in V
-    currentsize  = min( blocksize_eff, n-iTV);  //not to overshoot
-    copy_block( blocksize, m, TV_bloc, n, m, *V, distcorrmin, 0, currentsize, m, iTV, 0, 1.0, 0);
+
+    //now copy first the new chunk of the data matrix **before** overwriting the input due to overlaps !
+    iV = blocksize_eff - distcorrmin + offset;
+
+    if (nbloc > 1) {
+        currentsize = min(blocksize, n - iV);  //not to overshoot
+
+        int flag_reset = (currentsize != blocksize);  //with flag_reset=1, always "memset" the block.
+        copy_block(n, m, *V, blocksize, m, V_bloc, iV, 0, currentsize, m, 0, 0, 1.0, flag_reset);
+    }
+
+    //and now store the ouput back in V
+    currentsize = min(blocksize_eff, n - iTV);       // to trim the extra rows
+    copy_block(blocksize, m, TV_bloc, n, m, *V, distcorrmin, 0, currentsize, m, iTV, 0, 1.0, 0);
+
+
     iTV += blocksize_eff;
+    //now continue with all the other subblocks
+    for (k = 1; k < nbloc; k++) {
 
-  }//end bloc computation
+        //do bloc computation
+        if (flag_nofft == 1)
+            status = stmm_simple_basic(&V_bloc, blocksize, m, T, lambda, &TV_bloc);
+        else
+            status = scmm_basic(&V_bloc, blocksize, m, T_fft, &TV_bloc, V_fft, V_rfft, nfft, plan_f, plan_b);
+
+        if (status != 0) break;
 
 
-  free(V_bloc);
-  free(TV_bloc);
+        iV += blocksize_eff;
+        //copy first the next subblock to process
+        if (k != nbloc - 1) {
+            currentsize = min(blocksize, n - iV);  //not to overshoot
+
+            int flag_resetk = (currentsize != blocksize);  //with flag_reset=1, always "memset" the block.
+            copy_block(n, m, *V, blocksize, m, V_bloc, iV, 0, currentsize, m, 0, 0, 1.0, flag_resetk);
+        }
+
+        //and then store the output in V
+        currentsize = min(blocksize_eff, n - iTV);  //not to overshoot
+        copy_block(blocksize, m, TV_bloc, n, m, *V, distcorrmin, 0, currentsize, m, iTV, 0, 1.0, 0);
+        iTV += blocksize_eff;
+
+    }//end bloc computation
 
 
-  // t2=  MPI_Wtime();
+    free(V_bloc);
+    free(TV_bloc);
 
-  // if (PRINT_RANK==0 && VERBOSE>0)
-  //   printf("time stmm_core=%f\n", t2-t1);
 
-  return status;
+    // t2=  MPI_Wtime();
+
+    // if (PRINT_RANK==0 && VERBOSE>0)
+    //   printf("time stmm_core=%f\n", t2-t1);
+
+    return status;
 }
 
 
@@ -823,162 +817,167 @@ int stmm_core(double **V, int n, int m, double *T, fftw_complex *T_fft, int bloc
     \param nfft number of simultaneous FTTs
     \param flag_stgy flag strategy for the product computation
 */
-int stmm_main(double **V, int n, int m, int id0, int l, double *T, fftw_complex *T_fft, int lambda, fftw_complex *V_fft, double *V_rfft, fftw_plan plan_f, fftw_plan plan_b, int blocksize, int nfft, Flag flag_stgy)
-{
+int stmm_main(double **V, int n, int m, int id0, int l, double *T, fftw_complex *T_fft, int lambda, fftw_complex *V_fft,
+              double *V_rfft, fftw_plan plan_f, fftw_plan plan_b, int blocksize, int nfft, Flag flag_stgy) {
 
-  //routine variable
-  int i,j,k,p;  //loop index
-  int distcorrmin= lambda-1;
-  int flag_prod_strategy_nofft=0;  //0: ffts   1: no ffts
-  int flag_shortcut_m_eff_eq_1=1;//1;//1;
-  int flag_shortcut_nbcol_eq_1=1;//1;//1;
-  int flag_nfullcol_in_middle=0;//0; //in the case where m=1 can be good to direct stmm_core too
-  int flag_optim_offset_for_nfft=0;
-  int flag_no_rshp=flag_stgy.flag_no_rshp;//0;
-  int flag_nofft=flag_stgy.flag_nofft;//1;
+    //routine variable
+    int i, j, k, p;  //loop index
+    int distcorrmin = lambda - 1;
+    int flag_prod_strategy_nofft = 0;  //0: ffts   1: no ffts
+    int flag_shortcut_m_eff_eq_1 = 1;//1;//1;
+    int flag_shortcut_nbcol_eq_1 = 1;//1;//1;
+    int flag_nfullcol_in_middle = 0;//0; //in the case where m=1 can be good to direct stmm_core too
+    int flag_optim_offset_for_nfft = 0;
+    int flag_no_rshp = flag_stgy.flag_no_rshp;//0;
+    int flag_nofft = flag_stgy.flag_nofft;//1;
 
-  int m_eff     = (id0+l-1)/n - id0/n + 1 ;  //number of columns
-  int nfullcol;
-  int nloop_middle;  //change it to number of full column to improve memory
+    int m_eff = (id0 + l - 1) / n - id0 / n + 1;  //number of columns
+    int nfullcol;
+    int nloop_middle;  //change it to number of full column to improve memory
 
-  FILE *file;
-  file = stdout;
+    FILE *file;
+    file = stdout;
 
-  if (l<distcorrmin) //test to avoid communications errors
-    return print_error_message (1, __FILE__, __LINE__);
+    if (l < distcorrmin) //test to avoid communications errors
+        return print_error_message(1, __FILE__, __LINE__);
 
 
 //shortcut for m==1 if flag_shortcut_m_eff_eq_1==1  && nfft==1 ??
-  if (m_eff==1 && flag_shortcut_m_eff_eq_1==1 && nfft==1 || flag_no_rshp==1 && id0==0 && l==n*m) {
+    if (m_eff == 1 && flag_shortcut_m_eff_eq_1 == 1 && nfft == 1 || flag_no_rshp == 1 && id0 == 0 && l == n * m) {
 
-    int flag_offset=0;
+        int flag_offset = 0;
 
 //  if (flag_prod_strategy_nofft==1)   //need to have T as input to make it work
-   // stmm_simple_core(V, n, m, T, blocksize, lambda, nfft, flag_offset);
+        // stmm_simple_core(V, n, m, T, blocksize, lambda, nfft, flag_offset);
 //  else
-    int nr=min(l,n);
-    stmm_core(V, nr, m_eff, T, T_fft, blocksize, lambda, V_fft, V_rfft, nfft, plan_f, plan_b, flag_offset, flag_nofft);
+        int nr = min(l, n);
+        stmm_core(V, nr, m_eff, T, T_fft, blocksize, lambda, V_fft, V_rfft, nfft, plan_f, plan_b, flag_offset,
+                  flag_nofft);
 
 
-    return 0;
-  }//End shortcut for m==1
+        return 0;
+    }//End shortcut for m==1
 
 
 //the middle
-  int m_middle;
+    int m_middle;
 
 //define splitting for the product computation
-  nfullcol = max(0, (l-(n-id0%n)%n-(id0+l)%n)/n );  //check how many full columns input data we have
+    nfullcol = max(0, (l - (n - id0 % n) % n - (id0 + l) % n) / n);  //check how many full columns input data we have
 
-  if (flag_nfullcol_in_middle==1)
-    nloop_middle = ceil(1.0*(nfullcol)/nfft);
-  else
-    nloop_middle = (nfullcol)/nfft;
+    if (flag_nfullcol_in_middle == 1)
+        nloop_middle = ceil(1.0 * (nfullcol) / nfft);
+    else
+        nloop_middle = (nfullcol) / nfft;
 
-  if (flag_nfullcol_in_middle==1)
-    m_middle = nfullcol;
-  else
-    m_middle = nfft*nloop_middle;
-
-
-  int vmiddle_size = n*m_middle;
+    if (flag_nfullcol_in_middle == 1)
+        m_middle = nfullcol;
+    else
+        m_middle = nfft * nloop_middle;
 
 
-  if(PRINT_RANK==0 && VERBOSE>2)
-    printf("nloop_middle=%d , m_middle=%d\n", nloop_middle, m_middle);
+    int vmiddle_size = n * m_middle;
+
+
+    if (PRINT_RANK == 0 && VERBOSE > 2)
+        printf("nloop_middle=%d , m_middle=%d\n", nloop_middle, m_middle);
 
 
 //compute the middle if needed
-  if (nloop_middle>0) {
-    double *Vmiddle;
-    int offset_middle = (n-id0%n)%n;
-    Vmiddle = (*V)+offset_middle;
+    if (nloop_middle > 0) {
+        double *Vmiddle;
+        int offset_middle = (n - id0 % n) % n;
+        Vmiddle = (*V) + offset_middle;
 
-    int flag_offset=0;
-    stmm_core(&Vmiddle, n, m_middle, T, T_fft, blocksize, lambda, V_fft, V_rfft, nfft, plan_f, plan_b, flag_offset, flag_nofft);
+        int flag_offset = 0;
+        stmm_core(&Vmiddle, n, m_middle, T, T_fft, blocksize, lambda, V_fft, V_rfft, nfft, plan_f, plan_b, flag_offset,
+                  flag_nofft);
 
-  } //(nloop_middle>0)
+    } //(nloop_middle>0)
 
 
 //edge  (first+last columns + extra column from the euclidian division)
-  int v1edge_size = min(l,(n-id0%n)%n);
-  int v2edge_size = max( l-(v1edge_size+vmiddle_size) , 0);
-  int vedge_size = v1edge_size+v2edge_size;
+    int v1edge_size = min(l, (n - id0 % n) % n);
+    int v2edge_size = max(l - (v1edge_size + vmiddle_size), 0);
+    int vedge_size = v1edge_size + v2edge_size;
 
 //compute the edges if needed
-  if (vedge_size>0) {
+    if (vedge_size > 0) {
 
-  int m_v1edge, m_v2edge;
-  m_v1edge = (v1edge_size>0)*1;  //m_v1 = 1 or 0 cannot be more
-  m_v2edge = m-(m_v1edge+m_middle);
-  int nbcol = m_v1edge+m_v2edge;
-  int *nocol;
-  nocol = (int *) calloc(nbcol, sizeof(double));
+        int m_v1edge, m_v2edge;
+        m_v1edge = (v1edge_size > 0) * 1;  //m_v1 = 1 or 0 cannot be more
+        m_v2edge = m - (m_v1edge + m_middle);
+        int nbcol = m_v1edge + m_v2edge;
+        int *nocol;
+        nocol = (int *) calloc(nbcol, sizeof(double));
 
-  //define the columns for the edge computation
-  if (m_v1edge==1)
-    nocol[0]=0;
-  for(i=(m_v1edge);i<nbcol;i++)
-    nocol[i]=m_middle+i;
+        //define the columns for the edge computation
+        if (m_v1edge == 1)
+            nocol[0] = 0;
+        for (i = (m_v1edge); i < nbcol; i++)
+            nocol[i] = m_middle + i;
 
-  if(PRINT_RANK==0 && VERBOSE>2)
-    printf("nbcol=%d , m_v1edge=%d , m_v2edge=%d\n", nbcol, m_v1edge, m_v2edge);
+        if (PRINT_RANK == 0 && VERBOSE > 2)
+            printf("nbcol=%d , m_v1edge=%d , m_v2edge=%d\n", nbcol, m_v1edge, m_v2edge);
 
 //shorcut for nbcol==1
-  if (nbcol==1 && nfft==1 && flag_shortcut_nbcol_eq_1==1) {
+        if (nbcol == 1 && nfft == 1 && flag_shortcut_nbcol_eq_1 == 1) {
             //this is the case where no reshaping is needed. This is equivalent to flag_format_rshp==0
-    double *Vedge;
-    int offset_edge = n*nocol[0];//work because all the previous columns are obligatory full
-    Vedge = (*V)+offset_edge;
-    int flag_offset=0;
-    stmm_core(&Vedge, vedge_size, nbcol, T, T_fft, blocksize, lambda, V_fft, V_rfft, nfft, plan_f, plan_b, flag_offset, flag_nofft);
+            double *Vedge;
+            int offset_edge = n * nocol[0];//work because all the previous columns are obligatory full
+            Vedge = (*V) + offset_edge;
+            int flag_offset = 0;
+            stmm_core(&Vedge, vedge_size, nbcol, T, T_fft, blocksize, lambda, V_fft, V_rfft, nfft, plan_f, plan_b,
+                      flag_offset, flag_nofft);
 
-  }
-  else {  //general case to compute de edges
+        } else {  //general case to compute de edges
 
-  double *Vin;
-  Vin = (*V);
+            double *Vin;
+            Vin = (*V);
 
 //size for the different kinds of reshaping
-  int lconc = vedge_size; //another way to compute : lconc = n*nbcol - (nocol[0]==0)*(id0%n) - (nocol[nbcol-1]==(m-1))*(n-(id0+l)%n);
-  int v1_size=lconc+(distcorrmin)*(nbcol-1);
-  int fft_size = ceil(1.0*v1_size/nfft)+2*distcorrmin;
+            int lconc = vedge_size; //another way to compute : lconc = n*nbcol - (nocol[0]==0)*(id0%n) - (nocol[nbcol-1]==(m-1))*(n-(id0+l)%n);
+            int v1_size = lconc + (distcorrmin) * (nbcol - 1);
+            int fft_size = ceil(1.0 * v1_size / nfft) + 2 * distcorrmin;
 
-  int flag_format_rshp = (nfft>1)*2 + (nfft==1 && nbcol>1)*1 + (nfft==1 && nbcol==1)*0;
-  int nrshp, mrshp, lrshp;
+            int flag_format_rshp = (nfft > 1) * 2 + (nfft == 1 && nbcol > 1) * 1 + (nfft == 1 && nbcol == 1) * 0;
+            int nrshp, mrshp, lrshp;
 
-  define_rshp_size(flag_format_rshp, fft_size, nfft, v1_size, vedge_size, &nrshp, &mrshp, &lrshp);
+            define_rshp_size(flag_format_rshp, fft_size, nfft, v1_size, vedge_size, &nrshp, &mrshp, &lrshp);
 
 //allocate Vrshp for computation
-  double *Vrshp;
-  Vrshp = (double *) calloc(lrshp, sizeof(double));
-  double *Vout;
-  Vout = (*V);
+            double *Vrshp;
+            Vrshp = (double *) calloc(lrshp, sizeof(double));
+            double *Vout;
+            Vout = (*V);
 
-  if(PRINT_RANK==0 && VERBOSE>2) {
-    fprintf(file, "nrshp=%d , mrshp=%d , lrshp=%d\n", nrshp, mrshp, lrshp);
-    fprintf(file, "flag_format_rshp=%d\n", flag_format_rshp);
-  }
+            if (PRINT_RANK == 0 && VERBOSE > 2) {
+                fprintf(file, "nrshp=%d , mrshp=%d , lrshp=%d\n", nrshp, mrshp, lrshp);
+                fprintf(file, "flag_format_rshp=%d\n", flag_format_rshp);
+            }
 
-  build_reshape(Vin, nocol, nbcol, lconc, n, m, id0, l, lambda, nfft, Vrshp, nrshp, mrshp, lrshp, flag_format_rshp);
+            build_reshape(Vin, nocol, nbcol, lconc, n, m, id0, l, lambda, nfft, Vrshp, nrshp, mrshp, lrshp,
+                          flag_format_rshp);
 
-  int flag_offset;
-  if (flag_format_rshp==2 && flag_optim_offset_for_nfft==1)
-    flag_offset=1;
-  else
-    flag_offset=0;
+            int flag_offset;
+            if (flag_format_rshp == 2 && flag_optim_offset_for_nfft == 1)
+                flag_offset = 1;
+            else
+                flag_offset = 0;
 
 //compute Vrshp
-    stmm_core(&Vrshp, nrshp, mrshp, T, T_fft, blocksize, lambda, V_fft, V_rfft, nfft, plan_f, plan_b, flag_offset, flag_nofft);
+            stmm_core(&Vrshp, nrshp, mrshp, T, T_fft, blocksize, lambda, V_fft, V_rfft, nfft, plan_f, plan_b,
+                      flag_offset, flag_nofft);
 
-    extract_result(Vout, nocol, nbcol, lconc, n, m, id0, l, lambda, nfft, Vrshp, nrshp, mrshp, lrshp, flag_format_rshp);
-
-
-  }//End general case to compute de edges
-  }//End (vedge_size>0)
+            extract_result(Vout, nocol, nbcol, lconc, n, m, id0, l, lambda, nfft, Vrshp, nrshp, mrshp, lrshp,
+                           flag_format_rshp);
 
 
-  return 0;
+        }//End general case to compute de edges
+    }//End (vedge_size>0)
+
+
+    return 0;
 }
 
 
@@ -1000,127 +999,131 @@ int stmm_main(double **V, int n, int m, int id0, int l, double *T, fftw_complex 
     \param flag_stgy flag strategy for the product computation
     \param comm communicator (usually MPI_COMM_WORLD)
 */
-int mpi_stmm(double **V, int n, int m, int id0, int l, double *T, int lambda, Flag flag_stgy, MPI_Comm comm)
-{
+int mpi_stmm(double **V, int n, int m, int id0, int l, double *T, int lambda, Flag flag_stgy, MPI_Comm comm) {
 
-  //mpi variables
-  int rank;   //rank process
-  int size;   //number of processes
-  MPI_Status status;
-  MPI_Comm_rank(comm, &rank);
-  MPI_Comm_size(comm, &size);
-
-
-  //routine variables
-  int i,j,k; // some index
-  int idf = id0+l;  // first index of scattered V for rank "rank + 1";
-  int cfirst = id0/n;   // first column index
-  int clast  = idf/n; // last column index
-  int clast_r = (idf-1)/n;
-  int m_eff  = clast_r - cfirst + 1 ;
-  double *V1, *Lambda;
-
-  // Mpi communication conditions
-  // Mpi comm is needed when columns are truncated
-  int right = rank + 1;
-  int left  = rank - 1;
-  int v1_size = l + 2*lambda; // size including comm
-  if (rank==0 || cfirst*n==id0){ // no left comm
-    v1_size -= lambda;
-    left = MPI_PROC_NULL;}
-  if (rank==(size-1) || clast*n==idf){ // no right comm
-    v1_size -= lambda;
-    right = MPI_PROC_NULL;}
-
-  // init data to send
-  Lambda=(double *) malloc(2*lambda * sizeof(double));
-  if (Lambda==0)
-    return print_error_message (2, __FILE__, __LINE__);
-
-  for(i=0;i<lambda;i++)    {
-    Lambda[i]=(*V)[i];
-    Lambda[i+lambda]=(*V)[i+l-lambda];    }
-
-  if(PRINT_RANK==0 && VERBOSE>2)
-    printf("[rank %d] Left comm with %d | Right comm with %d\n", rank, left, right);
-
-  //send and receive data
-  MPI_Sendrecv_replace(Lambda, lambda, MPI_DOUBLE, left, MPI_USER_TAG, right, MPI_USER_TAG, comm, &status);  //1st comm
-  MPI_Sendrecv_replace((Lambda+lambda), lambda, MPI_DOUBLE, right, MPI_USER_TAG, left, MPI_USER_TAG, comm, &status);  //2nd comm
+    //mpi variables
+    int rank;   //rank process
+    int size;   //number of processes
+    MPI_Status status;
+    MPI_Comm_rank(comm, &rank);
+    MPI_Comm_size(comm, &size);
 
 
-  if (l<lambda)  //After sendrecv to avoid problems of communication for others processors
-    return print_error_message (1, __FILE__, __LINE__);
+    //routine variables
+    int i, j, k; // some index
+    int idf = id0 + l;  // first index of scattered V for rank "rank + 1";
+    int cfirst = id0 / n;   // first column index
+    int clast = idf / n; // last column index
+    int clast_r = (idf - 1) / n;
+    int m_eff = clast_r - cfirst + 1;
+    double *V1, *Lambda;
 
-  //copy received data
-  if(left==MPI_PROC_NULL && right==MPI_PROC_NULL)  // 0--0 : nothing to do
-    V1 = *V;
-  else if(left==MPI_PROC_NULL) { // 0--1 : realloc
-    *V = realloc(*V, v1_size * sizeof(double));
-    if(*V == NULL)
-      return print_error_message (2, __FILE__, __LINE__);
-    V1 = *V;  }
-  else  // 1--1 or 1--0 : new allocation
-    V1  = (double *) malloc(v1_size * sizeof(double));
+    // Mpi communication conditions
+    // Mpi comm is needed when columns are truncated
+    int right = rank + 1;
+    int left = rank - 1;
+    int v1_size = l + 2 * lambda; // size including comm
+    if (rank == 0 || cfirst * n == id0) { // no left comm
+        v1_size -= lambda;
+        left = MPI_PROC_NULL;
+    }
+    if (rank == (size - 1) || clast * n == idf) { // no right comm
+        v1_size -= lambda;
+        right = MPI_PROC_NULL;
+    }
 
-  if (left!=MPI_PROC_NULL){
-    for(i=0;i<lambda;i++)
-      V1[i] = Lambda[i+lambda];
-    id0 -= lambda;}
-  if (right!=MPI_PROC_NULL){
-    for(i=0;i<lambda;i++)
-      V1[i+v1_size-lambda] = Lambda[i];      }
+    // init data to send
+    Lambda = (double *) malloc(2 * lambda * sizeof(double));
+    if (Lambda == 0)
+        return print_error_message(2, __FILE__, __LINE__);
 
-  // Copy input matrix V
-  int offset = 0;
-  if (left!=MPI_PROC_NULL){
-    offset = lambda;
-#ifdef W_OPENMP
+    for (i = 0; i < lambda; i++) {
+        Lambda[i] = (*V)[i];
+        Lambda[i + lambda] = (*V)[i + l - lambda];
+    }
+
+    if (PRINT_RANK == 0 && VERBOSE > 2)
+        printf("[rank %d] Left comm with %d | Right comm with %d\n", rank, left, right);
+
+    //send and receive data
+    MPI_Sendrecv_replace(Lambda, lambda, MPI_DOUBLE, left, MPI_USER_TAG, right, MPI_USER_TAG, comm,
+                         &status);  //1st comm
+    MPI_Sendrecv_replace((Lambda + lambda), lambda, MPI_DOUBLE, right, MPI_USER_TAG, left, MPI_USER_TAG, comm,
+                         &status);  //2nd comm
+
+
+    if (l < lambda)  //After sendrecv to avoid problems of communication for others processors
+        return print_error_message(1, __FILE__, __LINE__);
+
+    //copy received data
+    if (left == MPI_PROC_NULL && right == MPI_PROC_NULL)  // 0--0 : nothing to do
+        V1 = *V;
+    else if (left == MPI_PROC_NULL) { // 0--1 : realloc
+        *V = realloc(*V, v1_size * sizeof(double));
+        if (*V == NULL)
+            return print_error_message(2, __FILE__, __LINE__);
+        V1 = *V;
+    } else  // 1--1 or 1--0 : new allocation
+        V1 = (double *) malloc(v1_size * sizeof(double));
+
+    if (left != MPI_PROC_NULL) {
+        for (i = 0; i < lambda; i++)
+            V1[i] = Lambda[i + lambda];
+        id0 -= lambda;
+    }
+    if (right != MPI_PROC_NULL) {
+        for (i = 0; i < lambda; i++)
+            V1[i + v1_size - lambda] = Lambda[i];
+    }
+
+    // Copy input matrix V
+    int offset = 0;
+    if (left != MPI_PROC_NULL) {
+        offset = lambda;
 #pragma omp parallel for
-#endif
-    for(i=offset;i<l+offset;i++)
-      V1[i] = (*V)[i-offset]; }
+        for (i = offset; i < l + offset; i++)
+            V1[i] = (*V)[i - offset];
+    }
 
-  fftw_complex *V_fft, *T_fft;
-  double *V_rfft;
-  fftw_plan plan_f, plan_b;
-
-
-  //Compute matrix product
-  int nfft,  blocksize;
-
-  tpltz_init(v1_size, lambda , &nfft, &blocksize, &T_fft, T, &V_fft, &V_rfft, &plan_f, &plan_b, flag_stgy);
-
-  if(PRINT_RANK==0 && VERBOSE>1)
-    printf("[rank %d] Before middle-level call : blocksize=%d, nfft=%d\n", rank, blocksize, nfft);
-
-  stmm_main(&V1, n, m, id0, v1_size, T, T_fft, lambda, V_fft, V_rfft, plan_f, plan_b, blocksize, nfft, flag_stgy);
+    fftw_complex *V_fft, *T_fft;
+    double *V_rfft;
+    fftw_plan plan_f, plan_b;
 
 
-  tpltz_cleanup(&T_fft, &V_fft, &V_rfft,&plan_f, &plan_b );
+    //Compute matrix product
+    int nfft, blocksize;
 
-  // Copy output matrix TV
-  offset = 0;
-  if (left!=MPI_PROC_NULL)
-    offset = lambda;
-  if(left==MPI_PROC_NULL && right==MPI_PROC_NULL) // 0--0
-    *V=V1;
-  else if(left==MPI_PROC_NULL) { // 0--1
-    V1 = realloc(V1, l * sizeof(double));
-    if(V1 == NULL)
-      return print_error_message (2, __FILE__, __LINE__);
-    *V = V1;     }
-  else { // 1--0 or 1--1
-#ifdef W_OPENMP
+    tpltz_init(v1_size, lambda, &nfft, &blocksize, &T_fft, T, &V_fft, &V_rfft, &plan_f, &plan_b, flag_stgy);
+
+    if (PRINT_RANK == 0 && VERBOSE > 1)
+        printf("[rank %d] Before middle-level call : blocksize=%d, nfft=%d\n", rank, blocksize, nfft);
+
+    stmm_main(&V1, n, m, id0, v1_size, T, T_fft, lambda, V_fft, V_rfft, plan_f, plan_b, blocksize, nfft, flag_stgy);
+
+
+    tpltz_cleanup(&T_fft, &V_fft, &V_rfft, &plan_f, &plan_b);
+
+    // Copy output matrix TV
+    offset = 0;
+    if (left != MPI_PROC_NULL)
+        offset = lambda;
+    if (left == MPI_PROC_NULL && right == MPI_PROC_NULL) // 0--0
+        *V = V1;
+    else if (left == MPI_PROC_NULL) { // 0--1
+        V1 = realloc(V1, l * sizeof(double));
+        if (V1 == NULL)
+            return print_error_message(2, __FILE__, __LINE__);
+        *V = V1;
+    } else { // 1--0 or 1--1
 #pragma omp parallel for
-#endif
-    for(i=offset;i<l+offset;i++)
-      (*V)[i-offset] = V1[i];    }
+        for (i = offset; i < l + offset; i++)
+            (*V)[i - offset] = V1[i];
+    }
 
-  if(left!=MPI_PROC_NULL)
-    free(V1);
+    if (left != MPI_PROC_NULL)
+        free(V1);
 
-  return 0;
+    return 0;
 }
 
 #endif

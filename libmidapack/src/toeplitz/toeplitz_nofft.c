@@ -55,6 +55,7 @@
 
 
 #include "toeplitz.h"
+
 extern int PRINT_RANK;
 
 #define max(a, b)            \
@@ -84,43 +85,40 @@ extern int PRINT_RANK;
     bandwith is small compared to the matrix size. The number of operation is then no more than
     (lambda*2-1) multiplications and (lambda*2-1)-1 additions per row.
 */
-int stmm_simple_basic(double **V, int n, int m, double *T, int lambda, double **TV)
-{
+int stmm_simple_basic(double **V, int n, int m, double *T, int lambda, double **TV) {
 
-  int j_first, j_last;
-  int i,j,k,Tid;
-  int n_thread;
-  int idx;
+    int j_first, j_last;
+    int i, j, k, Tid;
+    int n_thread;
+    int idx;
 
-  int flag_nocomputeedges=1;
-  int offset_edges=0;
+    int flag_nocomputeedges = 1;
+    int offset_edges = 0;
 
-  int distcorrmin= lambda-1;
+    int distcorrmin = lambda - 1;
 
-  if (flag_nocomputeedges==1)
-    offset_edges=distcorrmin;
+    if (flag_nocomputeedges == 1)
+        offset_edges = distcorrmin;
 
 
- for (k=0;k<m;k++) {
+    for (k = 0; k < m; k++) {
 
-#ifdef W_OPENMP
-#pragma omp parallel for shared(k,lambda,n) private(i,j,j_first,j_last,Tid)
-#endif
-  for(i=0+offset_edges;i<n-offset_edges;i++) {
+#pragma omp parallel for shared(k, lambda, n) private(i, j, j_first, j_last, Tid)
+        for (i = 0 + offset_edges; i < n - offset_edges; i++) {
 
-    (*TV)[i+k*n]=0;
-    j_first=max( i-(lambda-1) , 0);
-    j_last =min( i+lambda , n);
+            (*TV)[i + k * n] = 0;
+            j_first = max(i - (lambda - 1), 0);
+            j_last = min(i + lambda, n);
 
-  for(j=j_first;j<j_last;j++) {
-    Tid=abs(j-i);
-    (*TV)[i+k*n] += T[Tid] * (*V)[j+k*n];
-  } //End j loop
+            for (j = j_first; j < j_last; j++) {
+                Tid = abs(j - i);
+                (*TV)[i + k * n] += T[Tid] * (*V)[j + k * n];
+            } //End j loop
 
-  } //End i loop
- } //End k loop
+        } //End i loop
+    } //End k loop
 
-  return 0;
+    return 0;
 }
 
 
@@ -141,93 +139,98 @@ int stmm_simple_basic(double **V, int n, int m, double *T, int lambda, double **
     \param nfft number of simultaneous FFTs
     \param flag_offset flag to avoid extra 2*lambda padding to zeros on the edges
 */
-int stmm_simple_core(double **V, int n, int m, double *T, int blocksize, int lambda, int nfft, int flag_offset)
-{
+int stmm_simple_core(double **V, int n, int m, double *T, int blocksize, int lambda, int nfft, int flag_offset) {
 
-  //routine variable 
-  int status;
-  int i,j,k,p;  //loop index 
-  int currentsize;
-  int distcorrmin= lambda-1;
-  int blocksize_eff = blocksize-2*distcorrmin;  //just a good part after removing the overlaps
-  int nbloc;  //a number of subblock of slide/overlap algorithm
+    //routine variable
+    int status;
+    int i, j, k, p;  //loop index
+    int currentsize;
+    int distcorrmin = lambda - 1;
+    int blocksize_eff = blocksize - 2 * distcorrmin;  //just a good part after removing the overlaps
+    int nbloc;  //a number of subblock of slide/overlap algorithm
 
-  if (flag_offset==1)
-    nbloc = ceil((1.0*(n-2*distcorrmin))/blocksize_eff);
-  else
-    nbloc = ceil( (1.0*n)/blocksize_eff);
-
-
-  double *V_bloc, *TV_bloc;
-  V_bloc  = (double *) calloc(blocksize*m, sizeof(double));
-  TV_bloc = (double *) calloc(blocksize*m, sizeof(double));
-  if((V_bloc==0)||(TV_bloc==0))
-    return print_error_message(2, __FILE__, __LINE__);
-
-  int offset=0;
-  if (flag_offset==1)
-    offset=distcorrmin;
-
-  int iV = 0;  //"-distcorrmin+offset";  //first index in V 
-  int iTV = offset;  //first index in TV 
-
-  //"k=0";
-  //first subblock separately as it requires some padding. prepare the block of the data vector
-  //with the overlaps on both sides
-  currentsize = min( blocksize-distcorrmin+offset, n-iV);
-  //note: if flag_offset=0, pad first distcorrmin elements with zeros (for the first subblock only)
-  // and if flag_offset=1 there is no padding with zeros.
-  copy_block( n, m, *V, blocksize, m, V_bloc, 0, 0, currentsize, m, distcorrmin-offset, 0, 1.0, 0);
-
-  //do block computation 
-  status = stmm_simple_basic(&V_bloc, blocksize, m, T, lambda, &TV_bloc);
-
-  if (status!=0) {
-    printf("Error in stmm_core.");
-    return print_error_message(7, __FILE__, __LINE__);  }
-
-  //now copy first the new chunk of the data matrix **before** overwriting the input due to overlaps !
-  iV = blocksize_eff-distcorrmin+offset;
-
-  if(nbloc > 1) {
-    currentsize  = min( blocksize, n-iV);  //not to overshoot          
-
-    int flag_reset = (currentsize!=blocksize);  //with flag_reset=1, always "memset" the block.
-    copy_block( n, m, *V, blocksize, m, V_bloc, iV, 0, currentsize, m, 0, 0, 1.0, flag_reset);
-  }
-
-  //and now store the ouput back in V
-  currentsize  = min( blocksize_eff, n-iTV);       // to trim the extra rows
-  copy_block( blocksize, m, TV_bloc, n, m, *V, distcorrmin, 0, currentsize, m, iTV, 0, 1.0, 0);
+    if (flag_offset == 1)
+        nbloc = ceil((1.0 * (n - 2 * distcorrmin)) / blocksize_eff);
+    else
+        nbloc = ceil((1.0 * n) / blocksize_eff);
 
 
-  iTV += blocksize_eff;
-  //now continue with all the other subblocks    
-  for(k=1;k<nbloc;k++) {
+    double *V_bloc, *TV_bloc;
+    V_bloc = (double *) calloc(blocksize * m, sizeof(double));
+    TV_bloc = (double *) calloc(blocksize * m, sizeof(double));
+    if ((V_bloc == 0) || (TV_bloc == 0))
+        return print_error_message(2, __FILE__, __LINE__);
 
-    //do bloc computation 
+    int offset = 0;
+    if (flag_offset == 1)
+        offset = distcorrmin;
+
+    int iV = 0;  //"-distcorrmin+offset";  //first index in V
+    int iTV = offset;  //first index in TV
+
+    //"k=0";
+    //first subblock separately as it requires some padding. prepare the block of the data vector
+    //with the overlaps on both sides
+    currentsize = min(blocksize - distcorrmin + offset, n - iV);
+    //note: if flag_offset=0, pad first distcorrmin elements with zeros (for the first subblock only)
+    // and if flag_offset=1 there is no padding with zeros.
+    copy_block(n, m, *V, blocksize, m, V_bloc, 0, 0,
+               currentsize, m, distcorrmin - offset, 0, 1.0, 0);
+
+    //do block computation
     status = stmm_simple_basic(&V_bloc, blocksize, m, T, lambda, &TV_bloc);
-    if (status!=0) break;
 
-    iV += blocksize_eff;
-    //copy first the next subblock to process 
-    if(k != nbloc-1) {
-      currentsize = min(blocksize, n-iV);  //not to overshoot          
-
-      int flag_resetk = (currentsize!=blocksize);  //with flag_reset=1, always "memset" the block.
-      copy_block( n, m, *V, blocksize, m, V_bloc, iV, 0, currentsize, m, 0, 0, 1.0, flag_resetk);
+    if (status != 0) {
+        printf("Error in stmm_core.");
+        return print_error_message(7, __FILE__, __LINE__);
     }
 
-    //and then store the output in V 
-    currentsize  = min( blocksize_eff, n-iTV);  //not to overshoot               
-    copy_block( blocksize, m, TV_bloc, n, m, *V, distcorrmin, 0, currentsize, m, iTV, 0, 1.0, 0);
+    //now copy first the new chunk of the data matrix **before** overwriting the input due to overlaps !
+    iV = blocksize_eff - distcorrmin + offset;
+
+    if (nbloc > 1) {
+        currentsize = min(blocksize, n - iV);  //not to overshoot
+
+        int flag_reset = (currentsize != blocksize);  //with flag_reset=1, always "memset" the block.
+        copy_block(n, m, *V, blocksize, m, V_bloc, iV, 0,
+                   currentsize, m, 0, 0, 1.0, flag_reset);
+    }
+
+    //and now store the ouput back in V
+    currentsize = min(blocksize_eff, n - iTV);       // to trim the extra rows
+    copy_block(blocksize, m, TV_bloc, n, m, *V, distcorrmin, 0,
+               currentsize, m, iTV, 0, 1.0, 0);
+
+
     iTV += blocksize_eff;
+    //now continue with all the other subblocks
+    for (k = 1; k < nbloc; k++) {
 
-  }//end bloc computation 
+        //do bloc computation
+        status = stmm_simple_basic(&V_bloc, blocksize, m, T, lambda, &TV_bloc);
+        if (status != 0) break;
+
+        iV += blocksize_eff;
+        //copy first the next subblock to process
+        if (k != nbloc - 1) {
+            currentsize = min(blocksize, n - iV);  //not to overshoot
+
+            int flag_resetk = (currentsize != blocksize);  //with flag_reset=1, always "memset" the block.
+            copy_block(n, m, *V, blocksize, m, V_bloc, iV, 0,
+                       currentsize, m, 0, 0, 1.0, flag_resetk);
+        }
+
+        //and then store the output in V
+        currentsize = min(blocksize_eff, n - iTV);  //not to overshoot
+        copy_block(blocksize, m, TV_bloc, n, m, *V, distcorrmin, 0,
+                   currentsize, m, iTV, 0, 1.0, 0);
+        iTV += blocksize_eff;
+
+    }//end bloc computation
 
 
-  free(V_bloc);
-  free(TV_bloc);
+    free(V_bloc);
+    free(TV_bloc);
 
-  return status;
+    return status;
 }
