@@ -11,13 +11,14 @@ namespace mappraiser {
 
     double compute_variance(int samples, const double& mean, double *buf);
 
-    void sim_noise_tod(int samples, int lambda, const double *tt, double *buf, double var_goal = 1.0);
+    void sim_noise_tod(int samples, int lambda, const double *tt, double *buf, u_int64_t realization, u_int64_t detindx,
+                       u_int64_t obsindx, u_int64_t telescope, double var_goal = 1.0);
 
-    void sim_constrained_noise_block(Tpltz *N_block, Tpltz *Nm1_block, const double *noise,
-                                     Gap *gaps, double *out_constrained);
+    void sim_constrained_noise_block(Tpltz *N_block, Tpltz *Nm1_block, double *noise, Gap *gaps,
+                                     u_int64_t realization, u_int64_t detindx, u_int64_t obsindx, u_int64_t telescope);
 
-    void sim_constrained_noise(Tpltz *N, Tpltz *Nm1, const double *noise,
-                               Gap *gaps, double *out_constrained);
+    void sim_constrained_noise(Tpltz *N, Tpltz *Nm1, double *noise, Gap *gaps, u_int64_t realization,
+                               const u_int64_t *detindxs, const u_int64_t *obsindxs, const u_int64_t *telescopes);
 }
 #endif
 
@@ -26,7 +27,8 @@ namespace mappraiser {
 extern "C" {
 #endif
 
-void sim_constrained_noise(Tpltz *N, Tpltz *Nm1, const double *noise, Gap *gaps, double *out_constrained);
+void sim_constrained_noise(Tpltz *N, Tpltz *Nm1, double *noise, Gap *gaps, u_int64_t realization,
+                           const u_int64_t *detindxs, const u_int64_t *obsindxs, const u_int64_t *telescopes);
 
 #ifdef __cplusplus
 }

@@ -29,6 +29,20 @@
 
 #define eps 1.0e-15
 
+#define max(a, b)            \
+({                           \
+    __typeof__ (a) _a = (a); \
+    __typeof__ (b) _b = (b); \
+    _a > _b ? _a : _b;       \
+})
+
+#define min(a, b)            \
+({                           \
+    __typeof__ (a) _a = (a); \
+    __typeof__ (b) _b = (b); \
+    _a < _b ? _a : _b;       \
+})
+
 // do the local Atdiag(Nm1)A with as output a block-diagonal matrix (stored as a vector) in the pixel domain
 int getlocalW(const Mat *A, Tpltz *Nm1, double *vpixBlock, int *lhits) {
     int i, j, k, l;                                 // some indexes

@@ -19,7 +19,8 @@
 
 int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double *x, double *b, double *noise,
                  double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl, Gap *Gaps, int64_t gif,
-                 int gap_stgy) {
+                 int gap_stgy, u_int64_t realization, const u_int64_t *detindxs, const u_int64_t *obsindxs,
+                 const u_int64_t *telescopes) {
     int i, j, k; // some indexes
     int m, n;    // number of local time samples, number of local pixels
     int rank, size;
@@ -61,26 +62,35 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
         fflush(stdout);
     }
 
-    bool gap_stgy_ok;
-    do {
-        switch (gap_stgy) {
-            case 0: // gap-filling
-                // ...
-                gap_stgy_ok = true;
-                break;
-            case 1: // nested PCG for noise-weighting
-                // ...
-                gap_stgy_ok = true;
-                break;
-            default:
-                gap_stgy_ok = false;
-                if (rank == 0) {
-                    printf("[proc %d] invalid gap_stgy (%d), defaulting to 0 (=gap-filling)\n", rank, gap_stgy);
-                    fflush(stdout);
-                }
-                gap_stgy = 0;
-        }
-    } while (!gap_stgy_ok);
+    // TODO signal = signal + noise?
+
+    gap_treatment:
+    weight_stgy_t stgy;
+    switch (gap_stgy) {
+        case 0: // gap-filling
+            if (rank == 0)
+                printf("[proc %d] gap_stgy = %d (gap-filling)\n", rank, gap_stgy);
+            sim_constrained_noise(N, Nm1, noise, Gaps, realization, detindxs, obsindxs, telescopes);
+            stgy = BASIC;
+            break;
+        case 1: // nested PCG for noise-weighting
+            if (rank == 0)
+                printf("[proc %d] gap_stgy = %d (nested PCG)\n", rank, gap_stgy);
+            stgy = ITER;
+            break;
+        case 2: // gap-filling + nested PCG afterwards
+            if (rank == 0)
+                printf("[proc %d] gap_stgy = %d (gap-filling + nested PCG)\n", rank, gap_stgy);
+            sim_constrained_noise(N, Nm1, noise, Gaps, realization, detindxs, obsindxs, telescopes);
+            stgy = ITER_IGNORE;
+            break;
+        default:
+            if (rank == 0)
+                printf("[proc %d] invalid gap_stgy (%d), defaulting to 0\n", rank, gap_stgy);
+            gap_stgy = 0;
+            goto gap_treatment;
+    }
+    fflush(stdout);
 
     // map domain objects memory allocation
     h = (double *) malloc(n * sizeof(double));  // descent direction
@@ -103,7 +113,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
     for (i = 0; i < m; i++)
         _g[i] = b[i] + noise[i] - _g[i];
 
-    apply_weights(Nm1, N, Gaps, _g); // _g = Nm1 (d-Ax0)  (d = signal + noise)
+    apply_weights(Nm1, N, Gaps, _g, stgy); // _g = Nm1 (d-Ax0)  (d = signal + noise)
 
     TrMatVecProd(A, _g, g, 0); // g = At _g
 
@@ -165,7 +175,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
 
         MatVecProd(A, h, Ah, 0); // Ah = A h
 
-        apply_weights(Nm1, N, Gaps, Nm1Ah); // Nm1Ah = Nm1 Ah   (Nm1Ah == Ah)
+        apply_weights(Nm1, N, Gaps, Nm1Ah, stgy); // Nm1Ah = Nm1 Ah   (Nm1Ah == Ah)
 
         TrMatVecProd(A, Nm1Ah, AtNm1Ah, 0); // AtNm1Ah = At Nm1Ah
 

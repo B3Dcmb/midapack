@@ -112,7 +112,7 @@ def stage_local(
                     (idet * nsamp + offset) * nnz,
                     (idet * nsamp + offset + view_samples) * nnz,
                     1,
-                    )
+                )
                 if detdata_name is not None:
                     if nnz > 1:
                         mappraiser_buffer[slc] = np.repeat(
@@ -236,7 +236,7 @@ def restore_local(
                     (idet * nsamp + offset) * nnz,
                     (idet * nsamp + offset + view_samples) * nnz,
                     1,
-                    )
+                )
                 if nnz > 1:
                     views.detdata[detdata_name][ivw][ldet] = mappraiser_buffer[
                         slc
@@ -284,25 +284,6 @@ def restore_in_turns(
     return
 
 
-def compute_local_block_sizes(data, view, dets, buffer):
-    """Compute the sizes of the local data blocks and store them in the provided buffer."""
-    for iobs, ob in enumerate(data.obs):
-        views = ob.view[view]
-        for idet, det in enumerate(dets):
-            if det not in ob.local_detectors:
-                continue
-            # Loop over views
-            for vw in views:
-                view_samples = None
-                if vw.start is None:
-                    # This is a view of the whole obs
-                    view_samples = ob.n_local_samples
-                else:
-                    view_samples = vw.stop - vw.start
-                buffer[idet * len(data.obs) + iobs] += view_samples
-    return
-
-
 def compute_autocorrelations(
         nobs: int,
         ndet: int,
@@ -328,7 +309,7 @@ def compute_autocorrelations(
                 (idet * nobs + iobs) * Lambda,
                 (idet * nobs + iobs) * Lambda + Lambda,
                 1,
-                )
+            )
             buffer_inv_tt[slc], buffer_tt[slc] = noise_autocorrelation(
                 nsetod,
                 blocksize,
@@ -408,7 +389,7 @@ def noise_autocorrelation(
             + "]: PSD fit log(sigma2) = %1.2f, alpha = %1.2f, fknee = %1.2f, fmin = %1.2e\n"
             % tuple(popt),
             flush=True,
-            )
+        )
         print("[det {}]: PSD fit covariance: \n{}\n".format(idet, pcov), flush=True)
 
     # Initialize full size inverse PSD in frequency domain

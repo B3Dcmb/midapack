@@ -60,9 +60,13 @@ _mappraiser.MLmap.argtypes = [
     ct.c_int,  # bs_red
     ct.c_int,  # nside
     ct.c_int,  # gap_stgy
+    ct.c_uint64,  # realization
     npc.ndpointer(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"),  # data_size_proc
     ct.c_int,  # nb_blocks_loc
     npc.ndpointer(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"),  # local_blocks_sizes
+    npc.ndpointer(dtype=np.uint64, ndim=1, flags="C_CONTIGUOUS"),  # detindxs
+    npc.ndpointer(dtype=np.uint64, ndim=1, flags="C_CONTIGUOUS"),  # obsindxs
+    npc.ndpointer(dtype=np.uint64, ndim=1, flags="C_CONTIGUOUS"),  # telescopes
     ct.c_int,  # Nnz
     npc.ndpointer(dtype=PIXEL_TYPE, ndim=1, flags="C_CONTIGUOUS"),  # pixels
     npc.ndpointer(dtype=WEIGHT_TYPE, ndim=1, flags="C_CONTIGUOUS"),  # pixweights
@@ -80,6 +84,9 @@ def MLmap(
         data_size_proc,
         nb_blocks_loc,
         local_blocks_sizes,
+        detindxs,
+        obsindxs,
+        telescopes,
         nnz,
         pixels,
         pixweights,
@@ -132,9 +139,13 @@ def MLmap(
         params["bs_red"],
         params["nside"],
         params["gap_stgy"],
+        params["realization"],
         data_size_proc,
         nb_blocks_loc,
         local_blocks_sizes,
+        detindxs,
+        obsindxs,
+        telescopes,
         nnz,
         pixels,
         pixweights,

@@ -20,7 +20,6 @@ import toml
 # local imports
 from .utils import (
     compute_autocorrelations,
-    compute_local_block_sizes,
     log_time_memory,
     restore_in_turns,
     restore_local,
@@ -252,6 +251,7 @@ class Mappraiser(Operator):
     bs_red = Int(0, help="Use dynamic search reduction")
     gap_stgy = Int(0, help="Strategy for handling timestream gaps"
                            "(0->gap-filling, 1->nested PCG")
+    realization = Int(0, help="Noise realization index (for gap-filling)")
 
     @traitlets.validate("shared_flag_mask")
     def _check_shared_flag_mask(self, proposal):
@@ -369,6 +369,9 @@ class Mappraiser(Operator):
             "timestamps",
             "signal",
             "blocksizes",
+            "detindxs",
+            "obsindxs",
+            "telescopes",
             "noise",
             "invtt",
             "pixels",
@@ -456,6 +459,7 @@ class Mappraiser(Operator):
             "ortho_alg": self.ortho_alg,
             "bs_red": self.bs_red,
             "gap_stgy": self.gap_stgy,
+            "realization": self.realization,
         })
 
         # params dictionary overrides operator traits for mappraiser C library arguments
@@ -914,14 +918,46 @@ class Mappraiser(Operator):
                 len(data.obs) * len(all_dets)
             )
             self._mappraiser_blocksizes = self._mappraiser_blocksizes_raw.array()
+            # Create buffer for detindx
+            c_storage, _ = dtype_to_aligned(np.uint64)
+            self._mappraiser_detindxs_raw = c_storage.zeros(
+                len(data.obs) * len(all_dets)
+            )
+            self._mappraiser_detindxs = self._mappraiser_detindxs_raw.array()
+            # Create buffer for obindx
+            d_storage, _ = dtype_to_aligned(np.uint64)
+            self._mappraiser_obsindxs_raw = d_storage.zeros(
+                len(data.obs) * len(all_dets)
+            )
+            self._mappraiser_obsindxs = self._mappraiser_obsindxs_raw.array()
+            # Create buffer for telescope
+            e_storage, _ = dtype_to_aligned(np.uint64)
+            self._mappraiser_telescopes_raw = e_storage.zeros(
+                len(data.obs) * len(all_dets)
+            )
+            self._mappraiser_telescopes = self._mappraiser_telescopes_raw.array()
 
-        # Compute sizes of local data blocks
-        compute_local_block_sizes(
-            data,
-            self.view,
-            all_dets,
-            self._mappraiser_blocksizes,
-        )
+        # Compute sizes of local data blocks, store telescope, ob and det uids (for gap-filling procedure)
+        for iobs, ob in enumerate(data.obs):
+            views = ob.view[self.view]
+            dets = ob.select_local_detectors(all_dets)
+            sindx = ob.session.uid
+            telescope = ob.telescope.uid
+            nse = ob[self.noise_model]
+            for idet, key in enumerate(nse.all_keys_for_dets(dets)):
+                data_block_indx = idet * len(data.obs) + iobs
+                self._mappraiser_detindxs[data_block_indx] = nse.index(key)
+                self._mappraiser_obsindxs[data_block_indx] = sindx
+                self._mappraiser_telescopes[data_block_indx] = telescope
+                # Loop over views to compute the block size
+                for vw in views:
+                    view_samples = None
+                    if vw.start is None:
+                        # This is a view of the whole obs
+                        view_samples = ob.n_local_samples
+                    else:
+                        view_samples = vw.stop - vw.start
+                    self._mappraiser_blocksizes[data_block_indx] += view_samples
 
         # Gather data sizes of the full communicator in global array
         data_size_proc = np.array(
@@ -938,7 +974,8 @@ class Mappraiser(Operator):
         )
 
         # Copy the noise.
-        # For the moment, in the absence of a gap-filling procedure in MAPPRAISER, we separate signal and noise in the simulations
+        # For the moment, in the absence of a gap-filling procedure in MAPPRAISER,
+        # we separate signal and noise in the simulations
 
         # Check if the simulation contains any noise at all.
         if self.noiseless:
@@ -1252,6 +1289,12 @@ class Mappraiser(Operator):
                 del self._mappraiser_signal_raw
                 del self._mappraiser_blocksizes
                 del self._mappraiser_blocksizes_raw
+                del self._mappraiser_detindxs
+                del self._mappraiser_detindxs_raw
+                del self._mappraiser_obsindxs
+                del self._mappraiser_obsindxs_raw
+                del self._mappraiser_telescopes
+                del self._mappraiser_telescopes_raw
                 # Restore noise
                 restore_in_turns(
                     data,
@@ -1338,6 +1381,9 @@ class Mappraiser(Operator):
             data_size_proc,
             nb_blocks_loc,
             self._mappraiser_blocksizes,
+            self._mappraiser_detindxs,
+            self._mappraiser_obsindxs,
+            self._mappraiser_telescopes,
             nnz,
             self._mappraiser_pixels,
             self._mappraiser_pixweights,

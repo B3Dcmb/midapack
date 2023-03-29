@@ -91,6 +91,10 @@ void mappraiser::sim_noise_tod(int samples,
                                int lambda,
                                const double *tt,
                                double *buf,
+                               u_int64_t realization,
+                               u_int64_t detindx,
+                               u_int64_t obsindx,
+                               u_int64_t telescope,
                                double var_goal) {
     // Logical size of the fft
     // this could be modified to be a power of 2, for example
@@ -107,7 +111,11 @@ void mappraiser::sim_noise_tod(int samples,
 
     // Generate Re/Im gaussian randoms in a half-complex array
     // (see https://fftw.org/fftw3_doc/The-Halfcomplex_002dformat-DFT.html)
-    mappraiser::rng_dist_normal(samples, 0, 0, 0, 0, pdata);
+    u_int64_t key1 = realization * 4294967296 + telescope * 65536;
+    u_int64_t key2 = obsindx * 4294967296 + detindx;
+    u_int64_t counter1 = static_cast<u_int64_t>(lambda) * 4294967296;
+    u_int64_t counter2 = 0; // incremented in loop during generation
+    mappraiser::rng_dist_normal(samples, key1, key2, counter1, counter2, pdata);
 
     // Compute PSD values from the auto-correlation function
     int psdlen = (fftlen / 2) + 1;
@@ -137,7 +145,7 @@ void mappraiser::sim_noise_tod(int samples,
     // Zero out DC level
     double DC_subtracted = mappraiser::compute_mean(samples, buf, true);
 
-    std::cout << "subtracted DC level = " << DC_subtracted << std::endl;
+//    std::cout << "subtracted DC level = " << DC_subtracted << std::endl;
 
     // Normalize according to desired variance for the TOD
     // In theory this should not be necessary
@@ -146,7 +154,7 @@ void mappraiser::sim_noise_tod(int samples,
         buf[i] *= rescale;
     }
 
-    std::cout << "rescale factor (= sigma_goal / sigma) = " << rescale << std::endl;
+//    std::cout << "rescale factor (= sigma_goal / sigma) = " << rescale << std::endl;
 
     // Free allocated memory
     fftw_free(pdata);
@@ -156,9 +164,12 @@ void mappraiser::sim_noise_tod(int samples,
 
 void mappraiser::sim_constrained_noise_block(Tpltz *N_block,
                                              Tpltz *Nm1_block,
-                                             const double *noise,
+                                             double *noise,
                                              Gap *gaps,
-                                             double *constr_block) {
+                                             u_int64_t realization,
+                                             u_int64_t detindx,
+                                             u_int64_t obsindx,
+                                             u_int64_t telescope) {
     // get the number of samples and the bandwidth
     const int samples = N_block->tpltzblocks[0].n;
     const int lambda = N_block->tpltzblocks[0].lambda;
@@ -171,7 +182,8 @@ void mappraiser::sim_constrained_noise_block(Tpltz *N_block,
 
     // generate random noise realization "xi" with correlations
     auto *xi = static_cast<double *>(std::malloc(sizeof(double) * samples));
-    mappraiser::sim_noise_tod(samples, lambda, N_block->tpltzblocks[0].T_block, xi, var);
+    mappraiser::sim_noise_tod(samples, lambda, N_block->tpltzblocks[0].T_block, xi, realization, detindx, obsindx,
+                              telescope, var);
 
     // rhs = noise - xi
     for (int i = 0; i < samples; ++i) {
@@ -179,31 +191,41 @@ void mappraiser::sim_constrained_noise_block(Tpltz *N_block,
     }
 
     // invert the system N x = (noise - xi)
-    apply_weights(Nm1_block, N_block, gaps, rhs);
+    apply_weights(Nm1_block, N_block, gaps, rhs, ITER);
 
     // compute the unconstrained realization
-    std::copy(rhs, (rhs + samples), constr_block);
-    stbmmProd(N_block, constr_block);
+    auto *constrained = static_cast<double *>(std::malloc(sizeof(double) * samples));
+    std::copy(rhs, (rhs + samples), constrained);
+    stbmmProd(N_block, constrained);
 
     for (int i = 0; i < samples; ++i) {
-        constr_block[i] += xi[i] + mean; // add the mean back
+        constrained[i] += xi[i] + mean; // add the mean back
     }
+
+    // TODO check quality of contrained realization
+    // ...
+
+    // copy final result into noise vector
+    std::copy(constrained, (constrained + samples), noise);
 
     // Free memory
     std::free(xi);
     std::free(rhs);
+    std::free(constrained);
 }
 
 void mappraiser::sim_constrained_noise(Tpltz *N,
                                        Tpltz *Nm1,
-                                       const double *noise,
+                                       double *noise,
                                        Gap *gaps,
-                                       double *out_constrained) {
+                                       u_int64_t realization,
+                                       const u_int64_t *detindxs,
+                                       const u_int64_t *obsindxs,
+                                       const u_int64_t *telescopes) {
     // Loop through toeplitz blocks
     int t_id = 0;
     Tpltz N_block, Nm1_block;
-    const double *noise_block;
-    double *constrained_block;
+    double *noise_block;
 
     for (int i = 0; i < N->nb_blocks_loc; ++i) {
         // define single-block Tpltz structures
@@ -212,11 +234,10 @@ void mappraiser::sim_constrained_noise(Tpltz *N,
 
         // pointer to current block in the tod
         noise_block = (noise + t_id);
-        constrained_block = (out_constrained + t_id);
 
         // compute a constrained noise realization for the current block
-        mappraiser::sim_constrained_noise_block(&N_block, &Nm1_block, noise_block,
-                                                gaps, constrained_block);
+        mappraiser::sim_constrained_noise_block(&N_block, &Nm1_block, noise_block, gaps, realization, detindxs[i],
+                                                obsindxs[i], telescopes[i]);
 
         t_id += N->tpltzblocks[i].n;
     }
@@ -224,8 +245,11 @@ void mappraiser::sim_constrained_noise(Tpltz *N,
 
 void sim_constrained_noise(Tpltz *N,
                            Tpltz *Nm1,
-                           const double *noise,
+                           double *noise,
                            Gap *gaps,
-                           double *out_constrained) {
-    mappraiser::sim_constrained_noise(N, Nm1, noise, gaps, out_constrained);
+                           u_int64_t realization,
+                           const u_int64_t *detindxs,
+                           const u_int64_t *obsindxs,
+                           const u_int64_t *telescopes) {
+    mappraiser::sim_constrained_noise(N, Nm1, noise, gaps, realization, detindxs, obsindxs, telescopes);
 }
