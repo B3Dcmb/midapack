@@ -17,8 +17,8 @@
 #include "mappraiser/pcg_true.h"
 #include "mappraiser/iofiles.h"
 
-int x2map_pol(double *mapI, double *mapQ, double *mapU, double *Cond, int *hits, double *x, int *lstid,
-              double *cond, int *lhits, int xsize);
+int x2map_pol(double *mapI, double *mapQ, double *mapU, double *Cond, int *hits, const double *x, const int *lstid,
+              const double *cond, const int *lhits, int xsize);
 
 void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int Z_2lvl, int pointing_commflag,
            double tol, int maxiter, int enlFac, int ortho_alg, int bs_red, int nside, int gap_stgy,
@@ -241,7 +241,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     }
 
     if (rank == 0) {
-        int npix = 12 * pow(nside, 2);
+        int npix = 12 * nside * nside;
         int oldsize;
 
         double *mapI;
@@ -361,8 +361,8 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
 //    MPI_Finalize();
 }
 
-int x2map_pol(double *mapI, double *mapQ, double *mapU, double *Cond, int *hits, double *x, int *lstid,
-              double *cond, int *lhits, int xsize) {
+int x2map_pol(double *mapI, double *mapQ, double *mapU, double *Cond, int *hits, const double *x, const int *lstid,
+              const double *cond, const int *lhits, int xsize) {
 
     int i;
 

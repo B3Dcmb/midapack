@@ -1,7 +1,8 @@
 /**
  * @file pcg_true.c
  * @authors Hamza El Bouhargani (adapted from Frederic Dauvergne), Aygul Jamal
- * @brief Preconditioned Conjugate Gradient algorithm applied to the map-making equation. Can use the block-diagonal Jacobi or Two-level preconditioners.
+ * @brief Preconditioned Conjugate Gradient algorithm applied to the map-making equation.
+ *        Can use the block-diagonal Jacobi or Two-level preconditioners.
  * @date May 2019
  * @last_update Mar 2023 by Simon Biquard
  */
@@ -10,7 +11,6 @@
 #include <stdio.h>
 #include <math.h>
 #include <mpi.h>
-#include <stdbool.h>
 
 #include "mappraiser/precond.h"
 #include "mappraiser/pcg_true.h"
@@ -64,25 +64,25 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
 
     // TODO signal = signal + noise?
 
+    weight_stgy_t strategy;
     gap_treatment:
-    weight_stgy_t stgy;
     switch (gap_stgy) {
         case 0: // gap-filling
             if (rank == 0)
                 printf("[proc %d] gap_stgy = %d (gap-filling)\n", rank, gap_stgy);
             sim_constrained_noise(N, Nm1, noise, Gaps, realization, detindxs, obsindxs, telescopes);
-            stgy = BASIC;
+            strategy = BASIC;
             break;
         case 1: // nested PCG for noise-weighting
             if (rank == 0)
                 printf("[proc %d] gap_stgy = %d (nested PCG)\n", rank, gap_stgy);
-            stgy = ITER;
+            strategy = ITER;
             break;
         case 2: // gap-filling + nested PCG afterwards
             if (rank == 0)
                 printf("[proc %d] gap_stgy = %d (gap-filling + nested PCG)\n", rank, gap_stgy);
             sim_constrained_noise(N, Nm1, noise, Gaps, realization, detindxs, obsindxs, telescopes);
-            stgy = ITER_IGNORE;
+            strategy = ITER_IGNORE;
             break;
         default:
             if (rank == 0)
@@ -113,7 +113,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
     for (i = 0; i < m; i++)
         _g[i] = b[i] + noise[i] - _g[i];
 
-    apply_weights(Nm1, N, Gaps, _g, stgy); // _g = Nm1 (d-Ax0)  (d = signal + noise)
+    apply_weights(Nm1, N, Gaps, _g, strategy); // _g = Nm1 (d-Ax0)  (d = signal + noise)
 
     TrMatVecProd(A, _g, g, 0); // g = At _g
 
@@ -175,7 +175,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
 
         MatVecProd(A, h, Ah, 0); // Ah = A h
 
-        apply_weights(Nm1, N, Gaps, Nm1Ah, stgy); // Nm1Ah = Nm1 Ah   (Nm1Ah == Ah)
+        apply_weights(Nm1, N, Gaps, Nm1Ah, strategy); // Nm1Ah = Nm1 Ah   (Nm1Ah == Ah)
 
         TrMatVecProd(A, Nm1Ah, AtNm1Ah, 0); // AtNm1Ah = At Nm1Ah
 
