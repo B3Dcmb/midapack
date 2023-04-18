@@ -3,8 +3,16 @@
 
 #include <midapack.h>
 
-int build_pixel_to_time_domain_mapping(Mat *A);
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-void build_gap_struct(int64_t gif, Gap *Gaps, Mat *A);
+int build_pixel_to_time_domain_mapping ( Mat *A );
+
+void build_gap_struct ( int64_t gif, Gap *Gaps, Mat *A );
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //MAPPRAISER_MAPPING_H

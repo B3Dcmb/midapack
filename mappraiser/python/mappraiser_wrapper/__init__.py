@@ -157,3 +157,63 @@ def MLmap(
     )
 
     return
+
+
+_mappraiser.gap_filling.restype = None
+_mappraiser.gap_filling.argtypes = [
+    MPI_Comm,  # comm
+    npc.ndpointer(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"),  # data_size_proc
+    ct.c_int,  # nb_blocks_loc
+    npc.ndpointer(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"),  # local_blocks_sizes
+    ct.c_int,  # Nnz
+    npc.ndpointer(dtype=INVTT_TYPE, ndim=1, flags="C_CONTIGUOUS"),  # tt
+    npc.ndpointer(dtype=INVTT_TYPE, ndim=1, flags="C_CONTIGUOUS"),  # inv_tt
+    ct.c_int,  # lambda
+    npc.ndpointer(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"),  # noise
+    npc.ndpointer(dtype=PIXEL_TYPE, ndim=1, flags="C_CONTIGUOUS"),  # indices
+    ct.c_uint64,  # realization
+    npc.ndpointer(dtype=np.uint64, ndim=1, flags="C_CONTIGUOUS"),  # detindxs
+    npc.ndpointer(dtype=np.uint64, ndim=1, flags="C_CONTIGUOUS"),  # obsindxs
+    npc.ndpointer(dtype=np.uint64, ndim=1, flags="C_CONTIGUOUS"),  # telescopes
+]
+
+
+def gap_filling(
+        comm,
+        data_size_proc,
+        nb_blocks_loc,
+        local_blocks_sizes,
+        bandwidth,
+        realization,
+        detindxs,
+        obsindxs,
+        telescopes,
+        nnz,
+        pixels,
+        noise,
+        inv_tt,
+        tt,
+):
+    if not available:
+        raise RuntimeError("No libmappraiser available, cannot perform gap-filling")
+
+    comm.Barrier()
+
+    _mappraiser.gap_filling(
+        encode_comm(comm),
+        data_size_proc,
+        nb_blocks_loc,
+        local_blocks_sizes,
+        nnz,
+        tt,
+        inv_tt,
+        bandwidth,
+        noise,
+        pixels,
+        realization,
+        detindxs,
+        obsindxs,
+        telescopes,
+    )
+
+    return

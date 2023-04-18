@@ -548,16 +548,55 @@ class Mappraiser(Operator):
         )
 
         # Compute the ML map
-        if data.comm.world_rank == 0:
-            msg = "{} Computing the ML map".format(self._logprefix)
-            log.info(msg)
-        self._MLmap(
-            params,
-            data,
-            data_size_proc,
-            len(data.obs) * len(all_dets),
-            nnz,
-        )
+        if not kwargs.get("test_gap_fill"):
+            if data.comm.world_rank == 0:
+                msg = "{} Computing the ML map".format(self._logprefix)
+                log.info(msg)
+            self._MLmap(
+                params,
+                data,
+                data_size_proc,
+                len(data.obs) * len(all_dets),
+                nnz,
+            )
+        else:
+            # make a copy of the original TOD
+            storage, _ = dtype_to_aligned(mappraiser.SIGNAL_TYPE)
+            self._mappraiser_tod_raw = storage.zeros(nsamp * len(all_dets))
+            self._mappraiser_tod = self._mappraiser_tod_raw.array()
+            self._mappraiser_tod[:] = self._mappraiser_noise[:] + self._mappraiser_signal[:]
+
+            # perform gap-filling
+            self._gap_filling(
+                params,
+                data,
+                data_size_proc,
+                len(data.obs) * len(all_dets),
+                nnz,
+            )
+
+            if data.comm.world_rank == 0:
+                import matplotlib.pyplot as plt
+                fig, axs = plt.subplots(nrows=4, sharex='col', figsize=(12, 10))
+                offset = 7000
+                nsamp_plot = 2000
+                axs[0].plot(self._mappraiser_tod[offset:offset + nsamp_plot])
+                axs[0].set_title("Original TOD (signal + noise)")
+                axs[1].plot(self._mappraiser_noise[offset:offset + nsamp_plot])
+                axs[1].set_title("Gap-filled noise vector")
+                axs[2].plot((self._mappraiser_tod - self._mappraiser_noise)[offset:offset + nsamp_plot])
+                axs[2].set_title("Difference")
+                axs[3].plot(self._mappraiser_pixels[offset:offset + nsamp_plot])
+                axs[3].set_title("Sky pixel indices")
+                plt.savefig(os.path.join(params["path_output"], "gap_filling_plot.png"))
+            else:
+                self._gap_filling(
+                    params,
+                    data,
+                    data_size_proc,
+                    len(data.obs) * len(all_dets),
+                    nnz,
+                )
 
         log.info_rank(
             f"{self._logprefix} Processed time data in",
@@ -1394,6 +1433,26 @@ class Mappraiser(Operator):
         )
 
         return
+
+    @function_timer
+    def _gap_filling(self, params, data, data_size_proc, nb_blocks_loc, nnz):
+        """Perform gap-filling on the data (signal + noise)"""
+        mappraiser.gap_filling(
+            data.comm.comm_world,
+            data_size_proc,
+            nb_blocks_loc,
+            self._mappraiser_blocksizes,
+            params["Lambda"],
+            params["realization"],
+            self._mappraiser_detindxs,
+            self._mappraiser_obsindxs,
+            self._mappraiser_telescopes,
+            nnz,
+            self._mappraiser_pixels,
+            self._mappraiser_noise + self._mappraiser_signal,
+            self._mappraiser_invtt,
+            self._mappraiser_tt,
+        )
 
     def _requires(self):
         req = self.pixel_pointing.requires()
