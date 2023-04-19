@@ -44,8 +44,10 @@ typedef struct S2HAT_LOCAL_parameters{
     int* mvals; // size given by nmvals
 
     // For butterfly communication scheme -- in RING scheme
-    int first_pixel_number;
-    int last_pixel_number;
+    int first_pixel_number; // First pixel of the first ring locally stored for S2HAT purposes
+    int last_pixel_number; // Last pixel of the first ring locally stored for S2HAT purposes
+    // BEWARE : we assume the last_pixel_number to be INCLUDED in the last ring
+
     long int *pixel_numbered_ring; // Pointer to the ordered pixel in RING scheme which the process will consider for S2HAT operations
     // The pixels considered here will only be given for a set of rings in the Northern hemisphere + the equatorial ring
 
@@ -98,7 +100,7 @@ int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters Global_param_s2ha
 /**/
 /* Initaization of superctrure S2HAT_parameters */
 int init_s2hat_parameters_superstruct(Files_path_WIENER_FILTER *Files_WF_struct, int *mask_binary, int nstokes, S2HAT_parameters *S2HAT_params, MPI_Comm world_comm);
-
+/**/
 
 /* Content of files_io.c */
 
@@ -107,7 +109,7 @@ void init_files_struct_WF(Files_path_WIENER_FILTER *Files_path_WF_struct, int ns
 /**/
 /* Function to read file corresponding to the mask */
 void read_fits_mask(int nside, double *mask, char *path_mask_file, int col);
-
+/**/
 /* Function to read TQU maps */
 void read_TQU_maps( int nside, double *map, char *infile, int nstokes);
 /**/
@@ -120,11 +122,11 @@ void read_fits_cells(int lmax, int number_correl, double *c_ell_array, char *pat
 /* Content of alm_tools.c */
 
 /* Transform alm coefficients local_alm into a pixel map local_map_pix */
-int apply_alm2pix(s2hat_dcomplex *local_alm, double *local_map_pix, S2HAT_parameters *S2HAT_params);
-
+int apply_alm2pix(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parameters *S2HAT_params);
+/**/
 /* Transform local pixel map into local alm coefficients */
 int apply_pix2alm(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parameters *S2HAT_params);
-
+/**/
 /* Apply inverse of covariance matrix to local_alm */
 int apply_inv_covariance_matrix_to_alm(s2hat_dcomplex *input_local_alm, s2hat_dcomplex *out_local_alm, double **inv_covariance_matrix, int nstokes, S2HAT_parameters *S2HAT_params);
 
@@ -158,30 +160,32 @@ int convert_indices_nest2ring(int *indices_nest, int *indices_ring, long int num
 int convert_indices_ring2nest(int *indices_ring, int *indices_nest, long int number_of_indices, int nstokes, int nside);
 // Convert indices nest2rring2nesting assuming S2HAT convention for RING (TTTTQQQQUUU) and MAPPRAISER convention for NEST (TQUTQUTQU)
 
-int get_projectors_ring_and_nest(int *indices_nest, int *ordered_indices_ring, int size_indices, int nstokes, int nside, int *projector_ring2nest, int *projector_nest2ring);
+int get_projectors_indices(int *indices_nest, int *ordered_indices_ring, int size_indices, int nstokes, int nside, int *projector_ring2nest, int *projector_nest2ring);
 // Get projectors for ring2nest and nest2ring for maps on a specific proc
 
 int project_values_into_different_scheme(double *values_in, int number_values, int *projector_in2out, double *values_out);
-// Use the projectors found in get_projectors_ring_and_nest to project the maps in 1 scheme or the other
+// Use the projectors found in get_projectors_indices to project the maps in 1 scheme or the other
 
 void convert_full_map_nest2ring(double *map_nest, double *map_ring, int nside, int nstokes, int npix);
 void convert_full_map_ring2nest(double *map_ring, double *map_nest, int nside, int nstokes, int npix);
 // Convert full maps from ring2nest or nest2ring assuming S2HAT convention for RING (TTTTQQQQUUU) and MAPPRAISER convention for NEST (TQUTQUTQU)
 
+int gather_map(double *local_map_pix, double *full_sky_map, int nstokes, S2HAT_parameters *S2HAT_params);
+// Gather all S2HAT processes local maps into a full_sky_map
 
 /* Content of mpi_tools.c */
 
 /* Create a mpi communicator subset of the initial global communicator, by taking the number_ranks_to_divide first ranks within it*/
 int mpi_create_subset(int number_ranks_to_divive, MPI_Comm initcomm, MPI_Comm *subset_comm);
-
+/**/
 /* Sent to root all indices, so that root will contain all_sky_pixels_observed, a map in the form of a mask : 1 on the pixels observed, 0 otherwise */
 int all_reduce_to_all_indices_mappraiser(int *indices_pixel_local, int number_pixel_local, int nside, int* all_sky_pixels_observed, int root, MPI_Comm world_comm);
 
 /* Use s2hat routines to broadcast s2hat global structures */
 void mpi_broadcast_s2hat_global_struc(S2HAT_GLOBAL_parameters *Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat);
-
+/**/
 /* Distribute full sky map in ring ordering, with convention [npix, nstokes] in column-wise order among procs, into local maps */
-int distribute_full_sky_map_into_local_maps_S2HAT(double* full_sky_map, double *local_map_s2hat, S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat, int nstokes);
+int distribute_full_sky_map_into_local_maps_S2HAT(double* full_sky_map, double *local_map_s2hat, S2HAT_parameters *S2HAT_params);
 
 /* Collect submap from local_maps of S2HAT, given first and last pixel of submap */
 int collect_partial_map_from_pixels(double* local_map_s2hat, double *output_submap, int first_pix, int last_pix, S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat, int nstokes);
@@ -197,5 +201,4 @@ void free_s2hat_LOCAL_parameters_struct(S2HAT_LOCAL_parameters *Local_param_s2ha
 /**/
 /* Free superstructure around S2HAT */
 void free_s2hat_parameters_struct(S2HAT_parameters *S2HAT_params);
-
-
+/**/

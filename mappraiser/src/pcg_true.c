@@ -485,6 +485,7 @@ int apply_sys_matrix(Mat *A, Tpltz *Nm1, struct Precond *p, Harmonic_superstruct
             // output_variable->does_map_pixel_need_update = 1; // Change done on harmonic domain, pixel domain need update
 
             // free(local_alm_out);
+            break;
         }
     }
     return 0;

@@ -13,8 +13,98 @@
 #include "s2hat_tools.h"
 
 
-int mpi_create_subset(int number_ranks_to_divive, MPI_Comm initcomm, MPI_Comm *subset_comm){
+int mpi_send_data_from_above_treshold(int treshold_rank, double *data_init, int size_data, double *data_out, MPI_Comm world_comm)
+{
+    /* Redistribute data stored in local processes so that every processes with rank above the treshold_rank will send their data to processes
+        symmetrically to the treshold_rank
+        This means that the process with rank treshold_rank+1 will send its data to the process treshold_rank-1
+
+        It is always assumed that the total number of processes in world_comm is strictly more than treshold_rank
+
+        This routine will be mostly used for butterfly scheme purposes
+    */
+    int i;
+    int *ranks_not_const;
+
+    int rank, size, difference_treshold, tag = 0;
+    double *buffer;
+
+
+    MPI_Comm_rank(world_comm, &rank);
+    MPI_Comm_size(world_comm, &size);
+    MPI_Request s_request, r_request;
+
+    if (rank >= treshold_rank - (size - treshold_rank))
+        {
+            buffer = malloc(size_data*sizeof(double));
+            if (rank > treshold_rank){
+                difference_treshold = rank - treshold_rank;
+
+                // buffer = malloc(size_data*sizeof(double));
+                memcpy(buffer, data_init, size_data);
+                MPI_Isend(buffer, size_data, MPI_DOUBLE, treshold_rank-difference_treshold, tag, world_comm, &s_request);
+                // free(buffer);
+            }
+            if (rank < treshold_rank){
+                difference_treshold = treshold_rank - rank;
+
+                // buffer = malloc(size_data*sizeof(double));
+                MPI_Irecv(buffer, size_data, MPI_DOUBLE, treshold_rank + difference_treshold, tag, world_comm, &r_request);
+                memcpy(data_out, buffer, size_data);
+                // free(buffer);
+            }
+            free(buffer);
+        }
     
+    return 0;
+}
+
+int mpi_send_data_from_below_treshold(int treshold_rank, double *data_init, int size_data, double *data_out, MPI_Comm world_comm)
+{
+    /* Redistribute data stored in local processes so that every processes with rank below the treshold_rank, within the difference size-treshold_rank, 
+        will send their data to processes symmetrically to the treshold_rank
+        This means that the process with rank treshold_rank-1 will send its data to the process treshold_rank+1
+
+        It is always assumed that the total number of processes in world_comm is strictly more than treshold_rank
+
+        This routine will be mostly used for butterfly scheme purposes
+    */
+    int i;
+    int *ranks_not_const;
+
+    int rank, size, difference_treshold, tag = 0;
+    double *buffer;
+
+
+    MPI_Comm_rank(world_comm, &rank);
+    MPI_Comm_size(world_comm, &size);
+    MPI_Request s_request, r_request;
+
+    if (rank >= treshold_rank - (size - treshold_rank))
+        {
+            buffer = malloc(size_data*sizeof(double));
+            if (rank > treshold_rank){
+                difference_treshold = rank - treshold_rank;
+
+                memcpy(buffer, data_init, size_data);
+                MPI_Irecv(buffer, size_data, MPI_DOUBLE, treshold_rank-difference_treshold, tag, world_comm, &s_request);
+            }
+            if (rank < treshold_rank){
+                difference_treshold = treshold_rank - rank;
+
+                MPI_Isend(buffer, size_data, MPI_DOUBLE, treshold_rank + difference_treshold, tag, world_comm, &r_request);
+                memcpy(data_out, buffer, size_data);
+            }
+            free(buffer);
+        }
+    
+    return 0;
+}
+
+
+int mpi_create_subset(int number_ranks_to_divive, MPI_Comm initcomm, MPI_Comm *subset_comm)
+{
+    /* Create a mpi communicator subset of the initial global communicator, by taking the number_ranks_to_divide first ranks within it*/
     int i;
     int *ranks_not_const;
     MPI_Group global_mpi_group, mpi_subset_group;
@@ -84,10 +174,14 @@ void mpi_broadcast_s2hat_global_struc(S2HAT_GLOBAL_parameters *Global_param_s2ha
     }
 }
 
-int distribute_full_sky_map_into_local_maps_S2HAT(double* full_sky_map, double *local_map_s2hat, S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat, int nstokes){
+int distribute_full_sky_map_into_local_maps_S2HAT(double* full_sky_map, double *local_map_s2hat, S2HAT_parameters *S2HAT_params)
+{
+    S2HAT_GLOBAL_parameters *Global_param_s2hat = S2HAT_params->Global_param_s2hat;
+    S2HAT_LOCAL_parameters *Local_param_s2hat = S2HAT_params->Local_param_s2hat;
+    int nstokes = S2HAT_params->nstokes;
     /* Distribute full sky map in ring ordering, with convention [npix, nstokes] in column-wise order among procs, into local maps */
-    distribute_map(Global_param_s2hat.pixelization_scheme, 1, 0, nstokes, Local_param_s2hat.first_ring, Local_param_s2hat.last_ring, Local_param_s2hat.map_size, 
-        local_map_s2hat, full_sky_map, Local_param_s2hat.gangrank, Local_param_s2hat.gangsize, Local_param_s2hat.gangroot, Local_param_s2hat.gangcomm);
+    distribute_map(Global_param_s2hat->pixelization_scheme, 1, 0, nstokes, Local_param_s2hat->first_ring, Local_param_s2hat->last_ring, Local_param_s2hat->map_size, 
+        local_map_s2hat, full_sky_map, Local_param_s2hat->gangrank, Local_param_s2hat->gangsize, Local_param_s2hat->gangroot, Local_param_s2hat->gangcomm);
     // 1 for the number of maps, 0 for the index of the current map
 
     return 0;
@@ -124,16 +218,17 @@ void free_s2hat_GLOBAL_parameters_struct(S2HAT_GLOBAL_parameters *Global_param_s
 }
 
 void free_s2hat_LOCAL_parameters_struct(S2HAT_LOCAL_parameters *Local_param_s2hat){
-    free(Local_param_s2hat->mvals);
+    if (Local_param_s2hat->nmvals > 0) free(Local_param_s2hat->mvals);
+    free(Local_param_s2hat->pixel_numbered_ring);
     free(Local_param_s2hat);
 }
 
 void free_s2hat_parameters_struct(S2HAT_parameters *S2HAT_params){
 
     free_s2hat_GLOBAL_parameters_struct(S2HAT_params->Global_param_s2hat);
-    if (S2HAT_params->Local_param_s2hat->gangrank != -1)
+    if (S2HAT_params->Local_param_s2hat->gangrank >= 0){
         free_s2hat_LOCAL_parameters_struct(S2HAT_params->Local_param_s2hat);
-
+    }
     free(S2HAT_params);
 }
 

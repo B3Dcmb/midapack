@@ -1451,7 +1451,7 @@ void apply_precond(struct Precond *p, const Mat *A, const Tpltz *Nm1, Harmonic_s
             MatVecProd(&(p->BJ_inv), init_PCG_var->local_map_pix, out_PCG_var->local_map_pix, 0);
 
             // out_PCG_var->does_local_alm_need_update = 1; // Change done on pixel domain, harmonic domain need update
-
+            break;
         case 1 :
         case 2 :
             // 2lvl
@@ -1471,6 +1471,7 @@ void apply_precond(struct Precond *p, const Mat *A, const Tpltz *Nm1, Harmonic_s
                 out_PCG_var->local_map_pix[i] += p->Qg[i];
             }
             // out_PCG_var->does_local_alm_need_update = 1; // Change done on pixel domain, harmonic domain need update
+            break;
         case 3 : // Preconditionner C^{-1} + Pdiag(N^-1)P
 
             MatVecProd(&(p->BJ_inv), init_PCG_var->local_map_pix, out_PCG_var->local_map_pix, 0);
@@ -1523,7 +1524,9 @@ void apply_precond(struct Precond *p, const Mat *A, const Tpltz *Nm1, Harmonic_s
                 // init_PCG_var = init_local_pix;
                 // out_PCG_var = local_alm_out;
                 */
+                break;
             }
+            break;
                     
     }
     

@@ -60,7 +60,7 @@ int convert_indices_ring2nest(int *indices_ring, int *indices_nest, long int num
 }
 
 
-int get_projectors_ring_and_nest(int *indices_nest, int *ordered_indices_ring, int size_indices, int nstokes, int nside, int *projector_ring2nest, int *projector_nest2ring)
+int get_projectors_indices(int *indices_nest, int *ordered_indices_ring, int size_indices, int nstokes, int nside, int *projector_ring2nest, int *projector_nest2ring)
 {
   /* Build projectors to convert indices_nest from the nest pixel distribution to ring pixel distribution,
      then reorder them so that the indices in ring order are monotonous 
@@ -137,3 +137,15 @@ void convert_full_map_ring2nest(double *map_ring, double *map_nest, int nside, i
 }
 
 
+
+int gather_map(double *local_map_pix, double *full_sky_map, int nstokes, S2HAT_parameters *S2HAT_params)
+{
+    // Gather all S2HAT processes local maps into a full_sky_map
+
+    S2HAT_GLOBAL_parameters *Global_param_s2hat = S2HAT_params->Global_param_s2hat;
+    S2HAT_LOCAL_parameters *Local_param_s2hat = S2HAT_params->Local_param_s2hat;
+    // int nstokes = 3;
+    collect_map(Global_param_s2hat->pixelization_scheme, 1, 0, nstokes, full_sky_map, Local_param_s2hat->first_ring, Local_param_s2hat->last_ring, Local_param_s2hat->map_size,
+            local_map_pix, Local_param_s2hat->gangrank, Local_param_s2hat->gangsize, Local_param_s2hat->gangroot, Local_param_s2hat->gangcomm);
+    return 0;
+}

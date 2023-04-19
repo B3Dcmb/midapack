@@ -62,7 +62,7 @@ int init_butterfly_communication(Butterfly_struct *Butterfly_obj, int *indices_i
             butterfly_reshuffle_init(indices_in, count_in, indices_out, count_out, Butterfly_obj->R, Butterfly_obj->nR, Butterfly_obj->S, Butterfly_obj->nS, &(Butterfly_obj->com_indices), &(Butterfly_obj->com_count), Butterfly_obj->steps, comm);
     }
 
-    Butterfly_obj->do_we_need_to_project_into_different_scheme = do_we_need_to_project_into_different_scheme;
+    // Butterfly_obj->do_we_need_to_project_into_different_scheme = do_we_need_to_project_into_different_scheme;
     return 0;
 }
 
@@ -107,30 +107,30 @@ int init_harmonic_superstruct(int is_pixel_scheme_MAPPRAISER_ring, Mat *A, Harmo
     //     // We work with a nest distribution
     //     indices_local_MAPPRAISER_ring = (long int *)malloc(map_size*sizeof(long int));
 
-    //     get_projectors_ring_and_nest(indices_local_MAPPRAISER, indices_local_MAPPRAISER_ring, number_pixels_MAPPRAISER, projector_ring2nest, projector_nest2ring, S2HAT_params->nstokes)
+    //     get_projectors_indices(indices_local_MAPPRAISER, indices_local_MAPPRAISER_ring, number_pixels_MAPPRAISER, projector_ring2MAPP, projector_MAPP2ring, S2HAT_params->nstokes)
     //     // If nest distribution with MAPPRAISER convention, convert the indices into ring distribution with S2HAT convention
         
-    //     ring2MAPP_butterfly->projector_values = projector_ring2nest;
-    //     MAPP2ring_butterfly->projector_values = projector_nest2ring;
+    //     ring2MAPP_butterfly->projector_values = projector_ring2MAPP;
+    //     MAPP2ring_butterfly->projector_values = projector_MAPP2ring;
     //     // Define the projectors
 
     //     ring2MAPP_butterfly->ordered_indices = indices_local_MAPPRAISER_ring; // Get ordered indices ring for future purpose
     //     MAPP2ring_butterfly->ordered_indices = indices_local_MAPPRAISER_ring; // Get ordered indices ring for future purpose
     // }
 
-    ndices_local_MAPPRAISER_ring = (long int *)malloc(map_size*sizeof(long int));
+    indices_local_MAPPRAISER_ring = (long int *)malloc(map_size*sizeof(long int));
 
-    get_projectors_ring_and_nest(indices_local_MAPPRAISER, indices_local_MAPPRAISER_ring, number_pixels_MAPPRAISER, projector_ring2nest, projector_nest2ring, S2HAT_params->nstokes)
+    get_projectors_indices(indices_local_MAPPRAISER, indices_local_MAPPRAISER_ring, number_pixels_MAPPRAISER, projector_ring2MAPP, projector_MAPP2ring, S2HAT_params->nstokes)
     // If nest distribution with MAPPRAISER convention, convert the indices into ring distribution with S2HAT convention
     
-    ring2MAPP_butterfly->projector_values = projector_ring2nest;
-    MAPP2ring_butterfly->projector_values = projector_nest2ring;
+    ring2MAPP_butterfly->projector_values = projector_ring2MAPP;
+    MAPP2ring_butterfly->projector_values = projector_MAPP2ring;
     // Define the projectors
 
     ring2MAPP_butterfly->ordered_indices = indices_local_MAPPRAISER_ring; // Get ordered indices ring for future purpose
     MAPP2ring_butterfly->ordered_indices = indices_local_MAPPRAISER_ring; // Get ordered indices ring for future purpose
 
-    
+
     MAPP2ring_butterfly->indices_local_MAPPRAISER_ring = indices_local_MAPPRAISER_ring;
 
     pixel_numbered_ring = Local_param_s2hat->pixel_numbered_ring;
@@ -176,20 +176,22 @@ int butterfly_communication(double *values_to_communicate, int *indices_in, int 
     for (i = 0; i < Butterfly_obj->com_count; i++)
         com_val[i] = 0.0;
 
-    if (Butterfly_obj->do_we_need_to_project_into_different_scheme)
-    {
-        // We work with a ring distribution
-        m2m(values_to_communicate, indices_in, count_in, com_val, Butterfly_struct->com_indices, Butterfly_struct->com_count);
-    }
-    else // If the pixel distribution is not in ring distribution, then it is expected to be in nest pixel distribution and we need to change it
-    {   
-        // We work with a nest distribution
-        values_ordered = (double *)malloc(count_in*sizeof(double));
-        // Project the nest distribution into rings
-        project_values_into_different_scheme(values_to_communicate, count_in, Butterfly_struct->projector_values, values_ordered);
+    // if (Butterfly_obj->do_we_need_to_project_into_different_scheme)
+    // {
+    //     // We work with a ring distribution
+    //     m2m(values_to_communicate, indices_in, count_in, com_val, Butterfly_struct->com_indices, Butterfly_struct->com_count);
+    // }
+    // else // If the pixel distribution is not in ring distribution, then it is expected to be in nest pixel distribution and we need to change it
+    // {   
+    //     // We work with a nest distribution
+    //     values_ordered = (double *)malloc(count_in*sizeof(double));
+    //     // Project the nest distribution into rings
+    //     project_values_into_different_scheme(values_to_communicate, count_in, Butterfly_struct->projector_values, values_ordered);
 
-        m2m(values_ordered, Butterfly_obj->ordered_indices, count_in, com_val, Butterfly_struct->com_indices, Butterfly_struct->com_count);
-    }
+    //     m2m(values_ordered, Butterfly_obj->ordered_indices, count_in, com_val, Butterfly_struct->com_indices, Butterfly_struct->com_count);
+    // }
+
+    m2m(values_to_communicate, Butterfly_obj->ordered_indices, count_in, com_val, Butterfly_struct->com_indices, Butterfly_struct->com_count);
 
     switch(flag_classic_or_reshuffle_butterfly)
     {
@@ -201,8 +203,8 @@ int butterfly_communication(double *values_to_communicate, int *indices_in, int 
     }
     m2m(com_val, Butterfly_struct->com_indices, Butterfly_struct->com_count, values_out, indices_out, count_out);
     
-    if (Butterfly_obj->do_we_need_to_project_into_different_scheme == 0)
-        free(values_ordered);
+    // if (Butterfly_obj->do_we_need_to_project_into_different_scheme == 0)
+    //     free(values_ordered);
     
     free(com_val);
 }
@@ -216,15 +218,21 @@ int global_map_2_harmonic(double* local_pixel_map_MAPPRAISER, s2hat_dcomplex *lo
     Butterfly_struct *Butterfly_map2harmonic = Harmonic_sup->MAPPRAISER_to_S2HAT;
 
     double *local_pixel_map_ring = (double *)calloc(Local_param_s2hat->map_size, sizeof(double));
+    double *local_pixel_map_MAPPRAISER_ring = (double *)calloc((A->lcount - (A->nnz) * (A->trash_pix)),sizeof(double));
 
+    project_values_into_different_scheme(local_pixel_map_MAPPRAISER, A->lcount - (A->nnz) * (A->trash_pix), Butterfly_struct->projector_values, local_pixel_map_MAPPRAISER_ring);
 
-    butterfly_communication(local_pixel_map_MAPPRAISER, A->lindices + (A->nnz) * (A->trash_pix), A->lcount - (A->nnz) * (A->trash_pix), 
+    butterfly_communication(local_pixel_map_MAPPRAISER_ring, Butterfly_harmonic2map->ordered_indices, A->lcount - (A->nnz) * (A->trash_pix), 
                             local_pixel_map_ring, Local_param_s2hat->pixel_numbered_ring, Local_param_s2hat->map_size, 
                             Butterfly_map2harmonic, A->comm);
+    // butterfly_communication(local_pixel_map_MAPPRAISER, A->lindices + (A->nnz) * (A->trash_pix), A->lcount - (A->nnz) * (A->trash_pix), 
+    //                         local_pixel_map_ring, Local_param_s2hat->pixel_numbered_ring, Local_param_s2hat->map_size, 
+    //                         Butterfly_map2harmonic, A->comm);
 
     apply_pix2alm(local_pixel_map_ring, local_alm_s2hat, Harmonic_sup->S2HAT_params);
 
     free(local_pixel_map_ring);
+    free(local_pixel_map_MAPPRAISER_ring);
 
     return 0;
 }
@@ -235,7 +243,7 @@ int global_harmonic_2_map(s2hat_dcomplex *local_alm_s2hat, double* local_pixel_m
     Butterfly_struct *Butterfly_harmonic2map = Harmonic_sup->MAPPRAISER_to_S2HAT;
     
     double *local_map_pix_ring = (double *)calloc(Local_param_s2hat->map_size, sizeof(double));
-    double *local_pixel_map_MAPPRAISER_ring = (double *)calloc((A->lcount - (A->nnz) * (A->trash_pix)),sizeof(double));    
+    double *local_pixel_map_MAPPRAISER_ring = (double *)calloc((A->lcount - (A->nnz) * (A->trash_pix)),sizeof(double));
 
     apply_alm2pix(local_alm_s2hat, local_map_pix_ring, Harmonic_sup->S2HAT_params);
     
@@ -259,11 +267,13 @@ int free_Butterfly_struct(Butterfly_struct *Butterfly_obj)
     free(Butterfly_obj->S); 
     free(Butterfly_obj->nS);
 
-    if (Butterfly_obj->do_we_need_to_project_into_different_scheme)
-    {
-        free(Butterfly_obj->projector_values);
-        free(Butterfly_obj->ordered_indices);
-    }
+    // if (Butterfly_obj->do_we_need_to_project_into_different_scheme)
+    // {
+    //     free(Butterfly_obj->projector_values);
+    //     free(Butterfly_obj->ordered_indices);
+    // }
+    free(Butterfly_obj->projector_values);
+    free(Butterfly_obj->ordered_indices);
 
     free(Butterfly_obj);
 }

@@ -40,7 +40,7 @@ typedef struct Butterfly_struct{
     // Flag to indicate if classic or reshuffled butterfly is used, e.g. if we expect the pixel distributions prior and after communication to be the same or different
     // 0 for classic butterfly scheme with same pixel distributions prior/after ; 1 for after
 
-    int do_we_need_to_project_into_different_scheme;
+    // int do_we_need_to_project_into_different_scheme;
     // Flag to indicate if we need to project the input pixel distribution into a different scheme
     
     int *projector_values;
