@@ -12,14 +12,16 @@ namespace mappraiser {
     double compute_variance ( int samples, const double &mean, double *buf );
 
     void sim_noise_tod ( int samples, int lambda, const double *tt, double *buf, u_int64_t realization,
-                         u_int64_t detindx, u_int64_t obsindx, u_int64_t telescope, double var_goal = 1.0 );
+                         u_int64_t detindx, u_int64_t obsindx, u_int64_t telescope, double var_goal = 1.0,
+                         bool verbose = false );
 
     void sim_constrained_noise_block ( Tpltz *N_block, Tpltz *Nm1_block, double *noise, Gap *gaps,
                                        u_int64_t realization, u_int64_t detindx, u_int64_t obsindx,
-                                       u_int64_t telescope );
+                                       u_int64_t telescope, bool verbose );
 
     void sim_constrained_noise ( Tpltz *N, Tpltz *Nm1, double *noise, Gap *gaps, u_int64_t realization,
-                                 const u_int64_t *detindxs, const u_int64_t *obsindxs, const u_int64_t *telescopes );
+                                 const u_int64_t *detindxs, const u_int64_t *obsindxs, const u_int64_t *telescopes,
+                                 bool verbose );
 }
 #endif
 
@@ -28,8 +30,11 @@ namespace mappraiser {
 extern "C" {
 #endif
 
+#include <stdbool.h>
+
 void sim_constrained_noise ( Tpltz *N, Tpltz *Nm1, double *noise, Gap *gaps, u_int64_t realization,
-                             const u_int64_t *detindxs, const u_int64_t *obsindxs, const u_int64_t *telescopes );
+                             const u_int64_t *detindxs, const u_int64_t *obsindxs, const u_int64_t *telescopes,
+                             bool verbose );
 
 void gap_filling ( MPI_Comm comm,
                    const int *data_size_proc,

@@ -190,7 +190,7 @@ def gap_filling(
         telescopes,
         nnz,
         pixels,
-        noise,
+        signal,
         inv_tt,
         tt,
 ):
@@ -208,7 +208,7 @@ def gap_filling(
         tt,
         inv_tt,
         bandwidth,
-        noise,
+        signal,
         pixels,
         realization,
         detindxs,

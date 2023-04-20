@@ -99,7 +99,8 @@ void mappraiser::sim_noise_tod ( int samples,
                                  u_int64_t detindx,
                                  u_int64_t obsindx,
                                  u_int64_t telescope,
-                                 double var_goal ) {
+                                 double var_goal,
+                                 bool verbose ) {
     // Logical size of the fft
     // this could be modified to be a power of 2, for example
     int fftlen = samples;
@@ -175,7 +176,8 @@ void mappraiser::sim_constrained_noise_block ( Tpltz *N_block,
                                                u_int64_t realization,
                                                u_int64_t detindx,
                                                u_int64_t obsindx,
-                                               u_int64_t telescope ) {
+                                               u_int64_t telescope,
+                                               bool verbose ) {
     // get the number of samples and the bandwidth
     const int samples = N_block->tpltzblocks[0].n;
     const int lambda  = N_block->tpltzblocks[0].lambda;
@@ -197,7 +199,7 @@ void mappraiser::sim_constrained_noise_block ( Tpltz *N_block,
     }
 
     // invert the system N x = (noise - xi)
-    apply_weights ( Nm1_block, N_block, gaps, rhs, ITER );
+    apply_weights ( Nm1_block, N_block, gaps, rhs, ITER, verbose );
 
     // compute the unconstrained realization
     auto *constrained = static_cast<double *>(std::malloc ( sizeof ( double ) * samples ));
@@ -227,13 +229,16 @@ void mappraiser::sim_constrained_noise ( Tpltz *N,
                                          u_int64_t realization,
                                          const u_int64_t *detindxs,
                                          const u_int64_t *obsindxs,
-                                         const u_int64_t *telescopes ) {
+                                         const u_int64_t *telescopes,
+                                         bool verbose ) {
     // Loop through toeplitz blocks
     int    t_id = 0;
     Tpltz  N_block, Nm1_block;
     double *noise_block;
 
     for (int i = 0; i < N->nb_blocks_loc; ++i) {
+        std::cout << "Processing block n° " << i << std::endl;
+
         // define single-block Tpltz structures
         set_tpltz_struct ( &N_block, N, &N->tpltzblocks[i] );
         set_tpltz_struct ( &Nm1_block, Nm1, &Nm1->tpltzblocks[i] );
@@ -243,7 +248,7 @@ void mappraiser::sim_constrained_noise ( Tpltz *N,
 
         // compute a constrained noise realization for the current block
         mappraiser::sim_constrained_noise_block ( &N_block, &Nm1_block, noise_block, gaps, realization, detindxs[i],
-                                                  obsindxs[i], telescopes[i] );
+                                                  obsindxs[i], telescopes[i], verbose );
 
         t_id += N->tpltzblocks[i].n;
     }
@@ -256,8 +261,9 @@ void sim_constrained_noise ( Tpltz *N,
                              u_int64_t realization,
                              const u_int64_t *detindxs,
                              const u_int64_t *obsindxs,
-                             const u_int64_t *telescopes ) {
-    mappraiser::sim_constrained_noise ( N, Nm1, noise, gaps, realization, detindxs, obsindxs, telescopes );
+                             const u_int64_t *telescopes,
+                             bool verbose ) {
+    mappraiser::sim_constrained_noise ( N, Nm1, noise, gaps, realization, detindxs, obsindxs, telescopes, verbose );
 }
 
 void gap_filling ( MPI_Comm comm,
@@ -367,7 +373,7 @@ void gap_filling ( MPI_Comm comm,
     // call routine to generate constrained realization
     MPI_Barrier ( comm );
 
-    sim_constrained_noise ( &N, &Nm1, noise, &G, realization, detindxs, obsindxs, telescopes );
+    sim_constrained_noise ( &N, &Nm1, noise, &G, realization, detindxs, obsindxs, telescopes, rank == 0 );
 
     MPI_Barrier ( comm );
 

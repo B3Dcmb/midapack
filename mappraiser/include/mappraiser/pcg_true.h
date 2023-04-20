@@ -3,6 +3,8 @@
 
 #include <midapack.h>
 
+#include <stdbool.h>
+
 // Pixel share ponderation to deal with overlapping pixels between multiple MPI procs
 void get_pixshare_pond(Mat *A, double *pixpond);
 

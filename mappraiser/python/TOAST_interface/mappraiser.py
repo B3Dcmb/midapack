@@ -560,11 +560,15 @@ class Mappraiser(Operator):
                 nnz,
             )
         else:
-            # make a copy of the original TOD
-            storage, _ = dtype_to_aligned(mappraiser.SIGNAL_TYPE)
-            self._mappraiser_tod_raw = storage.zeros(nsamp * len(all_dets))
-            self._mappraiser_tod = self._mappraiser_tod_raw.array()
-            self._mappraiser_tod[:] = self._mappraiser_noise[:] + self._mappraiser_signal[:]
+            # merge signal and noise
+            self._mappraiser_signal += self._mappraiser_noise
+
+            # save a copy of the original TOD (since it will be modified by gap-filling procedure)
+            original_tod = np.copy(self._mappraiser_signal)
+
+            # identify the gaps (1 -> gap, 0 -> valid)
+            tgaps = np.zeros_like(self._mappraiser_pixels[::nnz], dtype=np.uint8)
+            tgaps[self._mappraiser_pixels[::nnz] < 0] = 1
 
             # perform gap-filling
             self._gap_filling(
@@ -576,26 +580,12 @@ class Mappraiser(Operator):
             )
 
             if data.comm.world_rank == 0:
-                import matplotlib.pyplot as plt
-                fig, axs = plt.subplots(nrows=4, sharex='col', figsize=(12, 10))
-                offset = 7000
-                nsamp_plot = 2000
-                axs[0].plot(self._mappraiser_tod[offset:offset + nsamp_plot])
-                axs[0].set_title("Original TOD (signal + noise)")
-                axs[1].plot(self._mappraiser_noise[offset:offset + nsamp_plot])
-                axs[1].set_title("Gap-filled noise vector")
-                axs[2].plot((self._mappraiser_tod - self._mappraiser_noise)[offset:offset + nsamp_plot])
-                axs[2].set_title("Difference")
-                axs[3].plot(self._mappraiser_pixels[offset:offset + nsamp_plot])
-                axs[3].set_title("Sky pixel indices")
-                plt.savefig(os.path.join(params["path_output"], "gap_filling_plot.png"))
-            else:
-                self._gap_filling(
-                    params,
-                    data,
-                    data_size_proc,
-                    len(data.obs) * len(all_dets),
-                    nnz,
+                # save results
+                np.savez_compressed(
+                    os.path.join(params["path_output"], f"data/gf_{params['ref']}"),
+                    tod=original_tod,
+                    gaps=tgaps,
+                    gf=self._mappraiser_signal
                 )
 
         log.info_rank(
@@ -1449,7 +1439,7 @@ class Mappraiser(Operator):
             self._mappraiser_telescopes,
             nnz,
             self._mappraiser_pixels,
-            self._mappraiser_noise + self._mappraiser_signal,
+            self._mappraiser_signal,
             self._mappraiser_invtt,
             self._mappraiser_tt,
         )

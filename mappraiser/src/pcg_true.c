@@ -70,7 +70,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
         case 0: // gap-filling
             if (rank == 0)
                 printf("[proc %d] gap_stgy = %d (gap-filling)\n", rank, gap_stgy);
-            sim_constrained_noise(N, Nm1, noise, Gaps, realization, detindxs, obsindxs, telescopes);
+            sim_constrained_noise(N, Nm1, noise, Gaps, realization, detindxs, obsindxs, telescopes, false);
             strategy = BASIC;
             break;
         case 1: // nested PCG for noise-weighting
@@ -81,7 +81,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
         case 2: // gap-filling + nested PCG afterwards
             if (rank == 0)
                 printf("[proc %d] gap_stgy = %d (gap-filling + nested PCG)\n", rank, gap_stgy);
-            sim_constrained_noise(N, Nm1, noise, Gaps, realization, detindxs, obsindxs, telescopes);
+            sim_constrained_noise(N, Nm1, noise, Gaps, realization, detindxs, obsindxs, telescopes, false);
             strategy = ITER_IGNORE;
             break;
         default:
@@ -113,7 +113,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
     for (i = 0; i < m; i++)
         _g[i] = b[i] + noise[i] - _g[i];
 
-    apply_weights(Nm1, N, Gaps, _g, strategy); // _g = Nm1 (d-Ax0)  (d = signal + noise)
+    apply_weights(Nm1, N, Gaps, _g, strategy, false); // _g = Nm1 (d-Ax0)  (d = signal + noise)
 
     TrMatVecProd(A, _g, g, 0); // g = At _g
 
@@ -175,7 +175,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
 
         MatVecProd(A, h, Ah, 0); // Ah = A h
 
-        apply_weights(Nm1, N, Gaps, Nm1Ah, strategy); // Nm1Ah = Nm1 Ah   (Nm1Ah == Ah)
+        apply_weights(Nm1, N, Gaps, Nm1Ah, strategy, false); // Nm1Ah = Nm1 Ah   (Nm1Ah == Ah)
 
         TrMatVecProd(A, Nm1Ah, AtNm1Ah, 0); // AtNm1Ah = At Nm1Ah
 
