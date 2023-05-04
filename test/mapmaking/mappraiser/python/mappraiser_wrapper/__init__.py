@@ -113,8 +113,7 @@ _mappraiser.MTmap.argtypes =[
     wrapped_ndptr(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"),
     wrapped_ndptr(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"),
     ct.c_double, #samplerate
-    ct.c_double, #hwp_rpm
-    wrapped_ndptr(dtype=INVTT_TYPE, ndim=1, flags="C_CONTIGUOUS"),
+    npc.ndpointer(dtype=np.float64, ndim=1, flags="C_CONTIGUOUS"),
 ]
 
 def MLmap(comm, params, data_size_proc, nb_blocks_loc, local_blocks_sizes, Nnz, pixels, pixweights, signal, noise, Lambda, invtt):
@@ -163,5 +162,5 @@ def MTmap(comm, params, sweeptstamps, nsweeps, az, az_min, az_max, hwp_angle, nc
         hwp_angle_p = (hwp_angle.__array_interface__['data'][0] + np.arange(hwp_angle.shape[0])*hwp_angle.strides[0]).astype(np.uintp)
     # hwp_sin_p = (hwp_sin.__array_interface__['data'][0] + np.arange(hwp_sin.shape[0])*hwp_sin.strides[0]).astype(np.uintp)
     # Call C-function
-    _mappraiser.MTmap(encode_comm(comm), outpath, ref, params["solver"], params["pointing_commflag"], params["npoly"], params["nhwp"], params["hwpss-base"], params["sss"], params["sbins"], params["tol"], params["maxiter"], params["enlFac"], params["ortho_alg"], params["bs_red"], params["nside"], sweeptstamps_p, nsweeps, az_p, az_min, az_max, hwp_angle_p, nces, data_size_proc, nb_blocks_loc, local_blocks_sizes, Nnz, pixels, pixweights, signal, noise, params["samplerate"], params["hwp_rpm"], invtt)
+    _mappraiser.MTmap(encode_comm(comm), outpath, ref, params["solver"], params["pointing_commflag"], params["npoly"], params["nhwp"], params["hwpss-base"], params["sss"], params["sbins"], params["tol"], params["maxiter"], params["enlFac"], params["ortho_alg"], params["bs_red"], params["nside"], sweeptstamps_p, nsweeps, az_p, az_min, az_max, hwp_angle_p, nces, data_size_proc, nb_blocks_loc, local_blocks_sizes, Nnz, pixels, pixweights, signal, noise, params["samplerate"], invtt)
     return

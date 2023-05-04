@@ -721,7 +721,7 @@ class OpMappraiser(Operator):
 
                     for idet, det in enumerate(detectors):
                         # Get the signal.
-                        noise = tod.local_signal(det, self._noise_name) * 1./np.sqrt(365)
+                        noise = tod.local_signal(det, self._noise_name)
                         noise_dtype = noise.dtype
                         offset = global_offset
                         nn = len(noise)
@@ -1045,9 +1045,9 @@ class OpMappraiser(Operator):
         )
         self._mappraiser_invtt = np.array([np.array(invtt_i, dtype= mappraiser.INVTT_TYPE) for invtt_i in invtt_list])
         del invtt_list
-        self._mappraiser_invtt = np.concatenate(self._mappraiser_invtt)
+        self._mappraiser_invtt = np.array(np.concatenate(self._mappraiser_invtt),dtype = mappraiser.INVTT_TYPE)
         if self._params["uniform_w"] == 1:
-            self._mappraiser_invtt = np.ones_like(self._mappraiser_invtt)
+            self._mappraiser_invtt = np.ones_like(self._mappraiser_invtt, dtype = mappraiser.INVTT_TYPE)
         if self._verbose:
             nodecomm.Barrier()
             if self._rank == 0:

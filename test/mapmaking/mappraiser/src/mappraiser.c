@@ -370,7 +370,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
   // MPI_Finalize();
 }
 
-void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_commflag, int npoly, int nhwp, double delta_t, int ground, int n_sss_bins, double tol, int maxiter, int enlFac, int ortho_alg, int bs_red, int nside, int **sweeptstamps, int *nsweeps, double **az, double *az_min, double *az_max, double **hwp_angle, int nces, void *data_size_proc, int nb_blocks_loc, void *local_blocks_sizes, int Nnz, void *pix, void *pixweights, void *signal, double *noise, double sampling_freq, double hwp_rpm, double *invtt)
+void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_commflag, int npoly, int nhwp, double delta_t, int ground, int n_sss_bins, double tol, int maxiter, int enlFac, int ortho_alg, int bs_red, int nside, int **sweeptstamps, int *nsweeps, double **az, double *az_min, double *az_max, double **hwp_angle, int nces, void *data_size_proc, int nb_blocks_loc, void *local_blocks_sizes, int Nnz, void *pix, void *pixweights, void *signal, double *noise, double sampling_freq, double *invtt)
 {
   int64_t	M;       //Global number of rows
   int		m, Nb_t_Intervals;  //local number of rows of the pointing matrix A, nbr of stationary intervals
@@ -526,7 +526,7 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
     printf("[rank %d] nb_blocks_tot=%d, nb_blocks_loc=%d, lambda_block_avg=%d \n", rank, nb_blocks_tot, nb_blocks_loc, lambda_block_avg);
     // printf("[rank %d] nb_proc_shared_a_block=%d, nb_comm=%d \n", rank, nb_proc_shared_a_block, nb_comm);
   }
-
+  fflush(stdout);
   // //Sanity checks
   // if(rank == 0){
   //   printf("nces = %d\n",nces);
@@ -579,6 +579,15 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
     }
   }
 
+  /*if(rank==0){
+    char hwpfilename[256];
+    FILE *fp0;
+    sprintf(hwpfilename,"%s/hwpangle.dat",outpath);
+    fp0=fopen(hwpfilename, "wb");
+    fwrite(hwp_angle[0], sizeof(double), Nm1.tpltzblocks[0].n, fp0);
+    fclose(fp0);
+  }*/
+  
   // //Simulate HWPSS signal (just harmonics of hwp angle)
   // double hwpss_center = 0.002;
   // double hwpss_dispersion = 0.01;
@@ -610,7 +619,7 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
   Tlist_init(X, ndet, nces, (int *)local_blocks_sizes, detnsweeps, ces_length,
   sweeptstamps, n_sss_bins, az_binned, sampling_freq, npoly, ground, nhwp, delta_t,
   store_hwp, hwp_mod);
-
+  fflush(stdout);
   //Allocate memory for the list of kernel blocks and inv block container
   int global_size_kernel = 0;
   int id_kernelblock = 0;
@@ -621,7 +630,7 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
   }
   double *B = (double *) calloc(global_size_kernel, sizeof(double));
   double *Binv = (double *) calloc((npoly*nsweeps[0] + ground*n_sss_bins + 2*nhwp*hwp_bins[0])*(npoly*nsweeps[0] + ground*n_sss_bins + 2*nhwp*hwp_bins[0]), sizeof(double));
-
+  fflush(stdout);
   //Build the list of inverse kernel blocks
   for(i=0;i<nces;i++){
     if(store_hwp == 0)
@@ -706,7 +715,6 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int pointing_com
    if(rank==0)
  printf("##### Start PCG ####################\n");
  fflush(stdout);
-  printf("noise[%d]=%f\n",0,noise[0]);
   st=MPI_Wtime();
 // Conjugate Gradient
   if(solver==0)

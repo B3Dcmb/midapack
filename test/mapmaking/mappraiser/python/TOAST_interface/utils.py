@@ -126,7 +126,6 @@ def setup_mappraiser(args):
     params["Lambda"] = args.Lambda
     params["uniform_w"] = args.uniform_w
     params["samplerate"] = args.sample_rate
-    params["hwp_rpm"] = args.hwp_rpm
     params["output"] = args.outpath
     params["ref"] = args.ref
     params["solver"] = args.solver

@@ -10,25 +10,45 @@
 /******************************************************************************/
 /*                             Defining Structures                            */
 /******************************************************************************/
+/* Metadata used by template operators */
+typedef struct TemplateMetadata {
+  int nces; // local number of CESs
+  double sampling_rate;
+  int *scan_size; // Array of local CES lengths (in samples)
+  int **sweeptstamps; // 2D array of time stamps corresponding to scan direction changes (one row for each CES)
+  int **az_binned; // 2D array of boresight azimuth bins (one row for each CES)
+  double ***hwp_mod // 3D Array of cosines and sines of the HWP angle (1d: cos/sin, 2d: CESs, 3d: time)
+  int nhwp; // number of HWPSS templates
+  double delta_t; //Baseline length for fitting constant amplitude HWPSS templates
+}
 /* Template Classes */
 typedef struct TemplateClass {
-int tinit;          // initial sample (local index)
-int tlast;         // final (included, local index)
-int nsamples;          // tlast - tinit + 1 (local samples)
-int nbinMin;       // minimum bin number (in local indexes)
-int nbinMax;  //   maximum bin number (in local indexes)
-int nbins;   // number of bins: npixMax - npixMin + 1
-int nmult;   // multiplicity: number of bins per sample
-int *bins;   //   time ordered list of bin numbers (nmult bins for each sample) -> size: nmult x (tlast - tinit + 1)
-double *wghts;  // time ordered list of weights (nmult weight for each sample) -> size: nmult x (tlast - tinit + 1)
-// These data fields are not yet settled and are subject to change in future updates
-char *flag_det;  // Detector flag
-char *flag_CES;  // Constant Elevation Scan flag
-char *flag_dataset;  // Data set flag
-char *flag_w;  // "S": weights stored in memory, "C": weights computed on the fly
-char *ID;  // Unique ID defining the Templates class type (poly of order n, ground, HWP)
-int order; // temporary
+  int tinit;          // initial sample (local index)
+  int tlast;         // final (included, local index)
+  int nsamples;          // tlast - tinit + 1 (local samples)
+  int nbinMin;       // minimum bin number (in local indexes)
+  int nbinMax;  //   maximum bin number (in local indexes)
+  int nbins;   // number of bins: npixMax - npixMin + 1
+  int nmult;   // multiplicity: number of bins per sample
+  int *bins;   //   time ordered list of bin numbers (nmult bins for each sample) -> size: nmult x (tlast - tinit + 1)
+  double *wghts;  // time ordered list of weights (nmult weight for each sample) -> size: nmult x (tlast - tinit + 1)
+  // These data fields are not yet settled and are subject to change in future updates
+  char *flag_det;  // Detector flag
+  char *flag_CES;  // Constant Elevation Scan flag
+  char *flag_dataset;  // Data set flag
+  char *flag_w;  // "S": weights stored in memory, "C": weights computed on the fly
+  char *ID;  // Unique ID defining the Templates class type (poly of order n, ground, HWP)
+  int order; // temporary
 } TemplateClass;
+
+/* Template list */
+typedef struct Templates {
+  TemplateClass *TemplatesList; // Pointer to list of template classes
+  TemplateMetadata mdata; // Contains scan information useful for building and applyin template filters
+  int nclass; // number of template classes
+  int nb_templates_loc; // local number of templates
+  int store_hwp; // Flag to store all HWPSS orders once before single template expansion  
+} Templates;
 
 typedef struct hwpss_w {
   int ces_id; // CES local index
