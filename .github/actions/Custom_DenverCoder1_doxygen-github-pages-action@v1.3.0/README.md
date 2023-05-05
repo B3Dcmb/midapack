@@ -2,7 +2,7 @@
 
 GitHub Action for making and deploying Doxygen documentation to a GitHub pages branch.
 
-This is a customized version that adds latex installation.
+**Note**: This action has been ported from this [repository](https://github.com/DenverCoder1/doxygen-github-pages-action) @v1.3.0 and customized to add an installation of Latex necessary for the build of the Doxygen documentation.
 
 ## Basic Usage
 
@@ -71,7 +71,7 @@ The [actions/checkout](https://github.com/actions/checkout) step is used to chec
 Doxygen, Graphviz and TeX Live are installed by running the following command:
 
 ```bash
-sudo apt-get install doxygen graphviz texlive-full -y
+sudo apt-get install doxygen graphviz texlive texlive-fonts-recommended -y
 ```
 
 ### 3. Generate Doxygen Documentation
