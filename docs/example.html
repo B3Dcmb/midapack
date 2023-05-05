@@ -88,8 +88,8 @@ $(document).ready(function(){initNavTree('example.html',''); initResizable(); })
 <div class="title">Application example </div>  </div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p>Here is an application example of a least square problem resolution which is implemented in test_pcg_mapmat.c . Considering a problem formulated as <img class="formulaInl" alt="$ A^t A x = A^t b $" src="form_16.png"/>, Solution x can be compute iteratively using conjutgate gradient. Instead computing and storing the whole <img class="formulaInl" alt="$A^tA$" src="form_17.png"/> matrix, we apply succesively pointing, <img class="formulaInl" alt="$A^t$" src="form_7.png"/>, and unpointing products, <img class="formulaInl" alt="$A$" src="form_6.png"/>, at each iterate.</p>
-<p>Classic gradient conjugate algorithm has been slightly modified. As we explain <img class="formulaInl" alt="$A^t$" src="form_7.png"/> and <img class="formulaInl" alt="$A$" src="form_6.png"/> are applied succesively. Furtherwise dotproduct operations in the overlapped domain have been moved in the distributed domain. Espacially we use relation : <img class="formulaInl" alt="$&lt; A^t y, x &gt; = &lt; y , Ax &gt; $" src="form_18.png"/>.</p>
+<div class="textblock"><p>Here is an application example of a least square problem resolution which is implemented in test_pcg_mapmat.c . Considering a problem formulated as <img class="formulaInl" alt="$ A^t A x = A^t b $" src="form_16.png" width="68" height="11"/>, Solution x can be compute iteratively using conjutgate gradient. Instead computing and storing the whole <img class="formulaInl" alt="$A^tA$" src="form_17.png" width="24" height="11"/> matrix, we apply succesively pointing, <img class="formulaInl" alt="$A^t$" src="form_7.png" width="14" height="11"/>, and unpointing products, <img class="formulaInl" alt="$A$" src="form_6.png" width="10" height="10"/>, at each iterate.</p>
+<p>Classic gradient conjugate algorithm has been slightly modified. As we explain <img class="formulaInl" alt="$A^t$" src="form_7.png" width="14" height="11"/> and <img class="formulaInl" alt="$A$" src="form_6.png" width="10" height="10"/> are applied succesively. Furtherwise dotproduct operations in the overlapped domain have been moved in the distributed domain. Espacially we use relation : <img class="formulaInl" alt="$&lt; A^t y, x &gt; = &lt; y , Ax &gt; $" src="form_18.png" width="123" height="14"/>.</p>
 <p>Algorithm needs into memory 6 vectors :</p><ul>
 <li>3 in ovelapped domain(x, gradient, direction),</li>
 <li>3 in distributed domain.</li>
@@ -97,8 +97,8 @@ $(document).ready(function(){initNavTree('example.html',''); initResizable(); })
 <p>Complexity, counting operations at each iterate, is detailled as follow :</p><ul>
 <li>4 produits scalaires dans le domaine temporelle (communication = single MPI_Allreduce),</li>
 <li>3 axpy dans le domaine de la carte (no communication),</li>
-<li>3 multiplication par <img class="formulaInl" alt="$A$" src="form_6.png"/> (no communication),</li>
-<li>1 multiplication par <img class="formulaInl" alt="$A^t$" src="form_7.png"/> (communication = MIDAPACK Communication scheme).</li>
+<li>3 multiplication par <img class="formulaInl" alt="$A$" src="form_6.png" width="10" height="10"/> (no communication),</li>
+<li>1 multiplication par <img class="formulaInl" alt="$A^t$" src="form_7.png" width="14" height="11"/> (communication = MIDAPACK Communication scheme).</li>
 </ul>
 <div class="fragment"><div class="line"><a class="code" href="structMat.html">Mat</a> A;</div>
 <div class="line"><span class="keywordtype">double</span> *x, *g, *d;</div>
@@ -198,7 +198,7 @@ $(document).ready(function(){initNavTree('example.html',''); initResizable(); })
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
     <li class="navelem"><a class="el" href="index.html">General introduction</a></li><li class="navelem"><a class="el" href="pointing.html">Pointing operations documentation</a></li>
-    <li class="footer">Generated on Fri May 5 2023 22:24:03 for MIDAPACK - MIcrowave Data Analysis PACKage by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.1 </li>
+    <li class="footer">Generated on Fri May 5 2023 22:43:11 for MIDAPACK - MIcrowave Data Analysis PACKage by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.1 </li>
   </ul>
 </div>
 </body>

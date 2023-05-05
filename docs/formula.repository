@@ -1,0 +1,39 @@
+\_form#0=76x14:$ card(A_1 \cup A_2) $
+\_form#1=76x14:$ card(A_1 \cap A_2) $
+\_form#2=45x13:$ A1 \cup A_2 $
+\_form#3=44x13:$ A_1 \cap A_2 $
+\_form#4=44x13:$y \leftarrow A x$
+\_form#5=48x14:$x \leftarrow A^t y$
+\_form#6=10x10:$A$
+\_form#7=14x11:$A^t$
+\_form#8=100x69:\[ A = \left( \begin{array}{c}A_0 \\A_1\\ \vdots \\ A_{n_{prc}-1} \end{array} \right) \]
+\_form#9=154x18:\[ A^t=(A_0^t, A_1^t, A_2^t, ... A_{n_{prc}-1}^t) \]
+\_form#10=139x121:\[ A = \left( \begin{array}{ccccc}1&7&0&0&0\\0&0&2&0&8\\5&0&3&0&0\\5&0&2&0&0\\0&0&2&9&0\\0&0&0&8&6\\0&1&0&0&3\\0&6&0&4&0\end{array} \right) \]
+\_form#11=70x31:\[ A = \left( \begin{array}{c} A_0 \\ A_1 \end{array} \right) \]
+\_form#12=299x61:\[ A_0 = \left( \begin{array}{ccccc} 1&7&0&0&0\\0&0&2&0&8\\5&0&3&0&0\\5&0&2&0&0\end{array} \right) , A_1 = \left( \begin{array}{ccccc} 0&0&2&9&0\\0&0&0&8&6\\0&1&0&0&3\\0&6&0&4&0\end{array} \right) \]
+\_form#13=5x9:$ i $
+\_form#14=53x15:$ x_i=A_i^t y_i$
+\_form#15=84x18:$ x = \sum_{i=0}^{n_{prc}-1} x_i $
+\_form#16=68x11:$ A^t A x = A^t b $
+\_form#17=24x11:$A^tA$
+\_form#18=123x14:$< A^t y, x > = < y , Ax > $
+\_form#19=15x10:$+1$
+\_form#20=8x10:$\lambda$
+\_form#21=5x9:$ 1 $
+\_form#22=8x10:$ \lambda$
+\_form#23=34x11:$ 2 \lambda + 1 $
+\_form#24=49x14:${\cal O}( n \ln \lambda)$
+\_form#25=9x6:$ n $
+\_form#26=34x14:$ {\cal O}( n \lambda)$
+\_form#27=34x11:$\lambda \ll n$
+\_form#28=51x14:$ {\cal O|}(n \ln \lambda)$
+\_form#29=61x14:${\cal O}(2 n \ln 2 n)$
+\_form#30=9x6:$ n$
+\_form#31=5x10:$ b$
+\_form#32=35x11:$ b > 2\lambda$
+\_form#33=9x6:$n$
+\_form#34=191x14:\[ n/(n-2\lambda)\times b \ln b \sim n \ln b \sim n \ln \lambda \]
+\_form#35=6x10:$k$
+\_form#36=6x10:$ k $
+\_form#37=43x13:$ 1 \le k \le $
+\_form#38=6x10:$ k$
