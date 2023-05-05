@@ -68,7 +68,7 @@
 /// block of the matrix, which remains symmetric, block-diagonal.
 ///
 /// The library provides distributed (MPI) and sequential/multithreaded (openMP) routines, which are based on common
-/// low level sequential/openMP functions. The Fourier Transforms are performed with help of \ref the FFTW library <http://www.fftw.org/>.
+/// low level sequential/openMP functions. The Fourier Transforms are performed with help of the FFTW library: <http://www.fftw.org/> .
 ///
 /// The overall structure of the library is as follows:
 ///

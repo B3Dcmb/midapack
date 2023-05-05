@@ -21,15 +21,15 @@
 //=========================================================================
 //Fixed parameters
 
-/// Verbose mode
-/** Print some informative messages during the computation.
+// Verbose mode
+/* Print some informative messages during the computation.
  */
 #ifndef VERBOSE
 #define VERBOSE 0 
 #endif
 
-/// MPI user defined tag
-/** Tag used for MPI communications.
+// MPI user defined tag
+/* Tag used for MPI communications.
  */
 #ifndef MPI_USER_TAG
 #define MPI_USER_TAG 123

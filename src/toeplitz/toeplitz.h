@@ -82,8 +82,8 @@
 //Fixed parameters
 
 
-/// MPI user defined tag
-/** Tag used for MPI communications.
+// MPI user defined tag
+/* Tag used for MPI communications.
  */
 #ifndef MPI_USER_TAG
 #define MPI_USER_TAG 123
@@ -95,16 +95,16 @@
 #define fftw_MULTITHREADING
 #endif
 
-/// Number of FFT's performed at the same time (default value).
-/** FFT's can be performed simultaneously using advanced fftw plans.
+// Number of FFT's performed at the same time (default value).
+/* FFT's can be performed simultaneously using advanced fftw plans.
 */
 #ifndef NFFT_DEFAULT
 #define NFFT_DEFAULT 1 /*1*/
 #endif
 
 
-/// fftw plan allocation flag (default value).
-/** fftw plan allocation flag can be one of (from fastest to lowest):
+// fftw plan allocation flag (default value).
+/* fftw plan allocation flag can be one of (from fastest to lowest):
     ESTIMATE, MEASURE, PATIENT, EXHAUSTIVE. Default is MEASURE.
     Fastest plans lead to sub optimal FFT computation.
 */

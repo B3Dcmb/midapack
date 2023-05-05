@@ -82,7 +82,7 @@
 /// When using MatInit function, precomputation is performed blindly.
 /// Nevertheless, for advanced user it is able to initialize a matrix in several steps.
 /// This enables to specify differents methods for the precomputations.
-/// - set non-zero elements indices and values (@link MatSetIndices MatSetIndices @endlink @link MatSetvalues MatSetValues @endlink),
+/// - set non-zero elements indices and values (@link MatSetIndices MatSetIndices @endlink @link MatSetValues MatSetValues @endlink),
 /// - reindex local matrix (@link MatLocalShape MatLocalShape @endlink),
 /// - create communication scheme (@link MatComShape MatComShape @endlink).
 /// 

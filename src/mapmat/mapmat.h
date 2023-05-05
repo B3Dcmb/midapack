@@ -6,7 +6,7 @@
     @author Pierre Cargemel
     @date November 2011 */
 
-/** Update by Hamza El Bouhargani
+/* Update by Hamza El Bouhargani
     @date February 2019 */
 
 #include <mpi.h>

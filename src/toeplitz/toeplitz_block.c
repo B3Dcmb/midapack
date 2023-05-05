@@ -252,12 +252,14 @@ int mpi_stbmm(double **V, int64_t nrow, int m, int m_rowwise, Block *tpltzblocks
  MPI_Request requestRight_r, requestRight_s;
 
   if (flag_blockingcomm==1) {
+//! [communication blocking example]
 //send and receive data
   MPI_Sendrecv( LambdaOut, toSendLeft*m_rowwise, MPI_DOUBLE, left,  MPI_USER_TAG, (LambdaIn+lambdaIn_offset), offsetn*m_rowwise, MPI_DOUBLE, right, MPI_USER_TAG, comm, &status);
   MPI_Sendrecv( (LambdaOut+lambdaOut_offset), toSendRight*m_rowwise, MPI_DOUBLE, right,  MPI_USER_TAG, LambdaIn, offset0*m_rowwise, MPI_DOUBLE, left, MPI_USER_TAG, comm, &status);
-
+//! [communication blocking example]
   }
   else {
+//! [communication non-blocking example]
 //to the Left
   MPI_Irecv((LambdaIn+lambdaIn_offset), offsetn*m_rowwise, MPI_DOUBLE, right, MPI_USER_TAG, comm, &requestLeft_r);
   MPI_Isend(LambdaOut, toSendLeft*m_rowwise, MPI_DOUBLE, left, MPI_USER_TAG, comm, &requestLeft_s);
@@ -265,7 +267,7 @@ int mpi_stbmm(double **V, int64_t nrow, int m, int m_rowwise, Block *tpltzblocks
 //to the Right
   MPI_Irecv(LambdaIn, offset0*m_rowwise, MPI_DOUBLE, left, MPI_USER_TAG, comm, &requestRight_r);
   MPI_Isend((LambdaOut+lambdaOut_offset), toSendRight*m_rowwise, MPI_DOUBLE, right, MPI_USER_TAG, comm, &requestRight_s);
-
+//! [communication non-blocking example]
  }
 
 #endif
@@ -286,12 +288,13 @@ int mpi_stbmm(double **V, int64_t nrow, int m, int m_rowwise, Block *tpltzblocks
 #ifdef W_MPI
 
 if (flag_blockingcomm!=1) {
+  //! [communication Wait example]
   //MPI_Wait for lambda comm
   MPI_Wait(&requestLeft_r, &status);
   MPI_Wait(&requestLeft_s, &status);
   MPI_Wait(&requestRight_r, &status);
   MPI_Wait(&requestRight_s, &status);
-
+  //! [communication Wait example]
 }
 
 
