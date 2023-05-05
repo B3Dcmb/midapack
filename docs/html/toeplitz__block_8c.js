@@ -1,4 +1,0 @@
-var toeplitz__block_8c =
-[
-    [ "mpi_stbmm", "toeplitz__block_8c.html#gaa7ea4ac654fcb9f5fe3bad139febb65d", null ]
-];
