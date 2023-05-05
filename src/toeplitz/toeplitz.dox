@@ -278,7 +278,7 @@
 /// the MPI processes (nodes, processors, etc). 
 /// The library routines allow essentially for two different data distributions as well as one inermediate option.
 ///
-/// \image html Fig_ToeplitzDataDistribution.png "Illustrations of three different data layouts accepted by the MPI routines. The data matrix shown here is divided between 4 MPI-processes using, from \a left to \a right the \c column-wise, \c row-wise, and \c hybrid (with \a k = 2) distribution." width = 5cm
+/// \image html Fig_ToeplitzDataDistribution.png "Illustrations of three different data layouts accepted by the MPI routines. The data matrix shown here is divided between 4 MPI-processes using, from \a left to \a right the \c column-wise, \c row-wise, and \c hybrid (with \a k = 2) distribution."
 /// 
 /// The first distribution is called hereafter a \b column-wise distribution. In this case the data matrix is treated
 /// as a vector made of columns of the data matrix concatenated together. A valid data distribution can be then 
