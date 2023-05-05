@@ -16,3 +16,4 @@ jobs:
           branch: gh-pages
           folder: docs/html
           config_file: docs/mkdoc.dox
+          target_folder: docs/
