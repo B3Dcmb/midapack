@@ -90,8 +90,8 @@ $(document).ready(function(){initNavTree('algorithm.html',''); initResizable(); 
 <div class="contents">
 <div class="textblock"><p>Transposed matrix vector multiplication is performed in two steps : <br  />
 </p><ul>
-<li>Firstly, each processor <img class="formulaInl" alt="$ i $" src="form_13.png" width="5" height="9"/> multiply a local vector by a local matrix, <img class="formulaInl" alt="$ x_i=A_i^t y_i$" src="form_14.png" width="53" height="15"/>.</li>
-<li>Then processors communicated to update the local result vector, <img class="formulaInl" alt="$ x = \sum_{i=0}^{n_{prc}-1} x_i $" src="form_15.png" width="84" height="18"/></li>
+<li>Firstly, each processor <img class="formulaInl" alt="$ i $" src="form_13.png"/> multiply a local vector by a local matrix, <img class="formulaInl" alt="$ x_i=A_i^t y_i$" src="form_14.png"/>.</li>
+<li>Then processors communicated to update the local result vector, <img class="formulaInl" alt="$ x = \sum_{i=0}^{n_{prc}-1} x_i $" src="form_15.png"/></li>
 </ul>
 <p>The second steps involved to communicate and sum elements of all the each local vectors. When size of the problem or number processors increases, this operation may become a bottleneck. To minimize the computationnal cost of this collective reduce operation, Midapack identifies the minimum parts of elements to communicate between processors. Once it is done, collective communication are executed using one of the custommized algorithms as Ring, Butterfly, Nonblocking, Noempty</p>
 <p>The communication algorithm is specified when calling <a class="el" href="group__matmap__group11.html#ga38bb561b83b6df1660a4b0fe09ad13f5">MatInit </a> or <a class="el" href="group__matmap__group11.html#ga61b3b348d7c039aadfc3196e6b83535a">MatComShape </a>. An integer encodes all the communication algorithms (None=0, Ring=1, Butterfly=2, Nonblocking=3 Noempty=4).</p>
@@ -104,7 +104,7 @@ $(document).ready(function(){initNavTree('algorithm.html',''); initResizable(); 
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
     <li class="navelem"><a class="el" href="index.html">General introduction</a></li><li class="navelem"><a class="el" href="pointing.html">Pointing operations documentation</a></li>
-    <li class="footer">Generated on Fri May 5 2023 22:43:11 for MIDAPACK - MIcrowave Data Analysis PACKage by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.1 </li>
+    <li class="footer">Generated on Fri May 5 2023 23:48:10 for MIDAPACK - MIcrowave Data Analysis PACKage by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.1 </li>
   </ul>
 </div>
 </body>
