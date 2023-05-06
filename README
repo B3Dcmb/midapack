@@ -31,14 +31,14 @@ Getting some more information
 
 You can download the last release from github: https://github.com/B3Dcmb/midapack 
 
-and find a online manual at: https://b3dcmb.github.io/midapack/
+and find an online manual (currently only available for version 1.1b) at: https://b3dcmb.github.io/midapack/
 
-Please use this site to report any bugs and relay any comments/suggestions you may have to the developers.
+The novel features of version 2.0 are described in detail in the MAPPRAISER software release paper: https://arxiv.org/abs/2112.03370
 
 Project collaborators
 ---------------------
 
-MIDAPACK is a product of a collaboration between members of the cosmology group at Laboratore 
+MIDAPACK is a product of a collaboration between members of the cosmology group at Laboratoire 
 AstroParticule et Cosmologie (UMR7164), Centre Pierre Binétruy (IRL2007) and Alpines team at INRIA-Paris. 
 
 The full list of collaborators, including application scientists, validators, etc, can be found:
@@ -78,13 +78,14 @@ modern Unix-like system after minimal porting efforts.
 
 The source code is delivered in a set of directories:
 
-- The /src directory contains the sources files for the core library. It's composed by the
+- The /src directory contains the sources files for the core low-level library. It's composed by the
 differents modules of the Midapack library (please refer to the website for more details). 
 You can directly compile theses files and link the generated binaries with your own program.
 
 - The /test directory contains some Utility/demonstration programs to show some examples of
-how to use the library fonctionnalities.
+how to use the library fonctionnalities. It also contains the MAPPRAISER package found under the /mapmaking directory.
 
-The documentation can be found on this site:
+For more details please check:
 
-https://b3dcmb.github.io/midapack/
+- The online documentation for version 1.1b: https://b3dcmb.github.io/midapack/
+- The MAPPRAISER software release paper: https://arxiv.org/abs/2112.03370
