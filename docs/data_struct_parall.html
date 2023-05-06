@@ -90,27 +90,27 @@ $(document).ready(function(){initNavTree('data_struct_parall.html',''); initResi
 <div class="contents">
 <div class="textblock"><h1><a class="anchor" id="input_struct"></a>
 Parallel sparse matrix</h1>
-<p>Considering a matrix <img class="formulaInl" alt="$A$" src="form_6.png"/>, parallelism assume <img class="formulaInl" alt="$A$" src="form_6.png"/> is row-distributed over processes. Each processor has into memory m rows of the global matrix. Reciprocally <img class="formulaInl" alt="$A^t$" src="form_7.png"/> is column-distributed, with m columns into memory. That is to say </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[ A = \left( \begin{array}{c}A_0 \\A_1\\ \vdots \\ A_{n_{prc}-1} \end{array} \right) \]" src="form_8.png"/>
+<p>Considering a matrix <img class="formulaInl" alt="$A$" src="form_6.png" width="10" height="10"/>, parallelism assume <img class="formulaInl" alt="$A$" src="form_6.png" width="10" height="10"/> is row-distributed over processes. Each processor has into memory m rows of the global matrix. Reciprocally <img class="formulaInl" alt="$A^t$" src="form_7.png" width="14" height="11"/> is column-distributed, with m columns into memory. That is to say </p><p class="formulaDsp">
+<img class="formulaDsp" alt="\[ A = \left( \begin{array}{c}A_0 \\A_1\\ \vdots \\ A_{n_{prc}-1} \end{array} \right) \]" src="form_8.png" width="100" height="69"/>
 </p>
 <p> Reciprocally </p><p class="formulaDsp">
-<img class="formulaDsp" alt="\[ A^t=(A_0^t, A_1^t, A_2^t, ... A_{n_{prc}-1}^t) \]" src="form_9.png"/>
+<img class="formulaDsp" alt="\[ A^t=(A_0^t, A_1^t, A_2^t, ... A_{n_{prc}-1}^t) \]" src="form_9.png" width="154" height="18"/>
 </p>
-<p>As <img class="formulaInl" alt="$A$" src="form_6.png"/> is a sparse martix, it doesn't store zero values. Furthermore we assume <img class="formulaInl" alt="$A$" src="form_6.png"/> is exactly nnz nonzerovalues. Then building matrix A only require these non-zero values and theirs global columns indices, also called ELL format. Input data consists in two large tab of size m*nnz, where rows are concatenated. This input array have to be passed when calling matrix initializtaion function.</p>
+<p>As <img class="formulaInl" alt="$A$" src="form_6.png" width="10" height="10"/> is a sparse martix, it doesn't store zero values. Furthermore we assume <img class="formulaInl" alt="$A$" src="form_6.png" width="10" height="10"/> is exactly nnz nonzerovalues. Then building matrix A only require these non-zero values and theirs global columns indices, also called ELL format. Input data consists in two large tab of size m*nnz, where rows are concatenated. This input array have to be passed when calling matrix initializtaion function.</p>
 <p>To well balance the load over processes we have to ensure number of rows time number of non-zero per row is roughly the same on each processor. <br  />
 </p>
 <h1><a class="anchor" id="input_example"></a>
 Input data</h1>
 <p>The two following examples illustrate the input data needs to build a matrix using <a class="el" href="group__matmap__group11.html#ga38bb561b83b6df1660a4b0fe09ad13f5">MatInit. </a> The first one is a sequential, the second consider 2 processors.</p><ul>
 <li>sequential case : m=8, nnz=2, indices=[0 1 2 4 0 2 0 2 2 3 3 4 1 4 1 3], values=[1 7 2 8 5 3 5 6 2 9 8 6 1 3 6 4]. <p class="formulaDsp">
-<img class="formulaDsp" alt="\[ A = \left( \begin{array}{ccccc}1&amp;7&amp;0&amp;0&amp;0\\0&amp;0&amp;2&amp;0&amp;8\\5&amp;0&amp;3&amp;0&amp;0\\5&amp;0&amp;2&amp;0&amp;0\\0&amp;0&amp;2&amp;9&amp;0\\0&amp;0&amp;0&amp;8&amp;6\\0&amp;1&amp;0&amp;0&amp;3\\0&amp;6&amp;0&amp;4&amp;0\end{array} \right) \]" src="form_10.png"/>
+<img class="formulaDsp" alt="\[ A = \left( \begin{array}{ccccc}1&amp;7&amp;0&amp;0&amp;0\\0&amp;0&amp;2&amp;0&amp;8\\5&amp;0&amp;3&amp;0&amp;0\\5&amp;0&amp;2&amp;0&amp;0\\0&amp;0&amp;2&amp;9&amp;0\\0&amp;0&amp;0&amp;8&amp;6\\0&amp;1&amp;0&amp;0&amp;3\\0&amp;6&amp;0&amp;4&amp;0\end{array} \right) \]" src="form_10.png" width="139" height="121"/>
 </p>
 </li>
 <li>parallel case over 2 processors : input data on processor 0 is m=3, nnz=2, indices=[0 1 2 4 0 2 0 2], values=[1 7 2 8 5 3 5 6]. Input data on processor 1 is m=4, nnz=2, indices=[2 3 3 4 1 4 1 3], values=[2 9 8 6 1 3 6 4]. <p class="formulaDsp">
-<img class="formulaDsp" alt="\[ A = \left( \begin{array}{c} A_0 \\ A_1 \end{array} \right) \]" src="form_11.png"/>
+<img class="formulaDsp" alt="\[ A = \left( \begin{array}{c} A_0 \\ A_1 \end{array} \right) \]" src="form_11.png" width="70" height="31"/>
 </p>
  <p class="formulaDsp">
-<img class="formulaDsp" alt="\[ A_0 = \left( \begin{array}{ccccc} 1&amp;7&amp;0&amp;0&amp;0\\0&amp;0&amp;2&amp;0&amp;8\\5&amp;0&amp;3&amp;0&amp;0\\5&amp;0&amp;2&amp;0&amp;0\end{array} \right) , A_1 = \left( \begin{array}{ccccc} 0&amp;0&amp;2&amp;9&amp;0\\0&amp;0&amp;0&amp;8&amp;6\\0&amp;1&amp;0&amp;0&amp;3\\0&amp;6&amp;0&amp;4&amp;0\end{array} \right) \]" src="form_12.png"/>
+<img class="formulaDsp" alt="\[ A_0 = \left( \begin{array}{ccccc} 1&amp;7&amp;0&amp;0&amp;0\\0&amp;0&amp;2&amp;0&amp;8\\5&amp;0&amp;3&amp;0&amp;0\\5&amp;0&amp;2&amp;0&amp;0\end{array} \right) , A_1 = \left( \begin{array}{ccccc} 0&amp;0&amp;2&amp;9&amp;0\\0&amp;0&amp;0&amp;8&amp;6\\0&amp;1&amp;0&amp;0&amp;3\\0&amp;6&amp;0&amp;4&amp;0\end{array} \right) \]" src="form_12.png" width="299" height="61"/>
 </p>
  Two remarks about the input data structure (ELL format) :<ul>
 <li>It happens that a row has more or less non-zero values than nnz. In this case we can choose the greater nnz and add zero wherever it is necessary with whatever index. For performance we advise to choose an index which has already a value in the row.</li>
@@ -135,7 +135,7 @@ Internal data stucture</h1>
 <div id="nav-path" class="navpath"><!-- id is needed for treeview function! -->
   <ul>
     <li class="navelem"><a class="el" href="index.html">General introduction</a></li><li class="navelem"><a class="el" href="pointing.html">Pointing operations documentation</a></li>
-    <li class="footer">Generated on Sat May 6 2023 00:15:12 for MIDAPACK - MIcrowave Data Analysis PACKage by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.1 </li>
+    <li class="footer">Generated on Sat May 6 2023 00:32:03 for MIDAPACK - MIcrowave Data Analysis PACKage by <a href="https://www.doxygen.org/index.html"><img class="footer" src="doxygen.svg" width="104" height="31" alt="doxygen"/></a> 1.9.1 </li>
   </ul>
 </div>
 </body>
