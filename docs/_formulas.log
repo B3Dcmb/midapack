@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=latex 2023.5.5)  5 MAY 2023 23:48
+This is pdfTeX, Version 3.141592653-2.6-1.40.22 (TeX Live 2022/dev/Debian) (preloaded format=latex 2023.5.6)  6 MAY 2023 00:15
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -51,28 +51,58 @@ File: dvips.def 2017/06/20 v3.1d Graphics/color driver for dvips
 Package: inputenc 2021/02/14 v1.3d Input encoding file
 \inpenc@prehook=\toks17
 \inpenc@posthook=\toks18
+) (/usr/share/texlive/texmf-dist/tex/latex/newunicodechar/newunicodechar.sty
+Package: newunicodechar 2018/04/08 v1.2 Defining Unicode characters
 )
 
-! LaTeX Error: File `newunicodechar.sty' not found.
+Package newunicodechar Warning: Redefining Unicode character on input line 7.
 
-Type X to quit or <RETURN> to proceed,
-or enter new name. (Default extension: sty)
 
-Enter file name: 
-! Emergency stop.
-<read *> 
-         
-l.6   \newunicodechar
-                     {⁻}{${}^{-}$}% Superscript minus^^M
-*** (cannot \read from terminal in nonstop modes)
+Package newunicodechar Warning: Redefining Unicode character on input line 8.
 
- 
+(/usr/share/texlive/texmf-dist/tex/latex/l3backend/l3backend-dvips.def
+File: l3backend-dvips.def 2022-01-12 L3 backend support: dvips
+\l__pdf_internal_box=\box50
+\g__pdf_backend_object_int=\count193
+\l__pdf_backend_content_box=\box51
+\l__pdf_backend_model_box=\box52
+\g__pdf_backend_annotation_int=\count194
+\g__pdf_backend_link_int=\count195
+\g__pdf_backend_link_sf_int=\count196
+)
+No file _formulas.aux.
+\openout1 = `_formulas.aux'.
+
+LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 11.
+LaTeX Font Info:    ... okay on input line 11.
+LaTeX Font Info:    Checking defaults for OMS/cmsy/m/n on input line 11.
+LaTeX Font Info:    ... okay on input line 11.
+LaTeX Font Info:    Checking defaults for OT1/cmr/m/n on input line 11.
+LaTeX Font Info:    ... okay on input line 11.
+LaTeX Font Info:    Checking defaults for T1/cmr/m/n on input line 11.
+LaTeX Font Info:    ... okay on input line 11.
+LaTeX Font Info:    Checking defaults for TS1/cmr/m/n on input line 11.
+LaTeX Font Info:    ... okay on input line 11.
+LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 11.
+LaTeX Font Info:    ... okay on input line 11.
+LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 11.
+LaTeX Font Info:    ... okay on input line 11.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <7> on input line 12.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <5> on input line 12.
+[1
+
+] [2] [3] [4] [5] [6] [7] [8] [9] [10] [11] [12] [13] [14] [15] [16] [17] [18] 
+[19] [20] [21] [22] [23] [24] [25] [26] [27] [28] [29] [30] [31] [32] [33] [34]
+[35] [36] [37] [38] [39] (./_formulas.aux) ) 
 Here is how much of TeX's memory you used:
- 794 strings out of 480248
- 12230 string characters out of 5896178
- 294293 words of memory out of 5000000
- 18800 multiletter control sequences out of 15000+600000
+ 1005 strings out of 480248
+ 18055 string characters out of 5896178
+ 305691 words of memory out of 5000000
+ 19001 multiletter control sequences out of 15000+600000
  469259 words of font info for 28 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 70i,0n,76p,228b,36s stack positions out of 5000i,500n,10000p,200000b,80000s
-No pages of output.
+ 70i,8n,76p,247b,100s stack positions out of 5000i,500n,10000p,200000b,80000s
+
+Output written on _formulas.dvi (39 pages, 5852 bytes).
