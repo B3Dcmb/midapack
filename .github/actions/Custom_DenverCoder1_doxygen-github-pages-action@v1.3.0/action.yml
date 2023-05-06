@@ -34,7 +34,7 @@ runs:
         submodules: "true"
 
     - name: Install Doxygen
-      run: sudo apt-get install doxygen graphviz texlive texlive-fonts-recommended -y
+      run: sudo apt-get install doxygen graphviz texlive texlive-xetex -y
       shell: bash
 
     - name: Generate Doxygen Documentation

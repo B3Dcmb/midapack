@@ -68,10 +68,10 @@ The [actions/checkout](https://github.com/actions/checkout) step is used to chec
 
 ### 2. Install Doxygen
 
-Doxygen, Graphviz and TeX Live are installed by running the following command:
+Doxygen, Graphviz and TeX Live (and XeTeX for unicode support) are installed by running the following command:
 
 ```bash
-sudo apt-get install doxygen graphviz texlive texlive-fonts-recommended -y
+sudo apt-get install doxygen graphviz texlive texlive-xetex -y
 ```
 
 ### 3. Generate Doxygen Documentation
