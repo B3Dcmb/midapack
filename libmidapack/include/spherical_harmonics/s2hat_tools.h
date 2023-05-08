@@ -96,7 +96,7 @@ int init_s2hat_global_parameters(Files_path_WIENER_FILTER Files_WF_struct, int *
 int init_MPI_struct_s2hat_local_parameters(S2HAT_LOCAL_parameters *Local_param_s2hat, int number_ranks_s2hat, MPI_Comm initcomm);
 /**/
 /* Create wrapper structure of local parameters wrapper structure of s2hat, which will differ for all processors, and assuming MPI structure already assigned */
-int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters Global_param_s2hat, int nstokes, S2HAT_LOCAL_parameters *Local_param_s2hat);
+int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters *Global_param_s2hat, int nstokes, S2HAT_LOCAL_parameters *Local_param_s2hat);
 /**/
 /* Initaization of superctrure S2HAT_parameters */
 int init_s2hat_parameters_superstruct(Files_path_WIENER_FILTER *Files_WF_struct, int *mask_binary, int nstokes, S2HAT_parameters *S2HAT_params, MPI_Comm world_comm);
@@ -128,25 +128,25 @@ int apply_alm2pix(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parame
 int apply_pix2alm(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parameters *S2HAT_params);
 /**/
 /* Apply inverse of covariance matrix to local_alm */
-int apply_inv_covariance_matrix_to_alm(s2hat_dcomplex *input_local_alm, s2hat_dcomplex *out_local_alm, double **inv_covariance_matrix, int nstokes, S2HAT_parameters *S2HAT_params);
-
+int apply_inv_covariance_matrix_to_alm(s2hat_dcomplex *input_local_alm, s2hat_dcomplex *out_local_alm, double **inv_covariance_matrix, S2HAT_parameters *S2HAT_params);
+/**/
 /* Transform alm to c_ell coefficients */
-int alm2cls(s2hat_dcomplex* local_alm, double *c_ell_array, int nspec, int nstokes, S2HAT_parameters *S2HAT_params);
-
+int alm2cls(s2hat_dcomplex* local_alm, double *c_ell_array, int nspec, S2HAT_parameters *S2HAT_params);
+/**/
 
 
 /* Content of covariance_matrix_tools.c */
 
 /* General function to inverse matrix using LAPACK */
 int get_inverse_matrix(int order_matrix, double* matrix_to_be_inverted);
-
+/**/
 /* Read c_ell to generate covariance matrix which will be in the form : covariance_matrix_3x3[lmax][number_correlations] 
    with number_correlations being either 9 for [TT, TE, TB, ET, EE, EB, BT, BE, BB] (with TE=ET, TB=BT and BE=EB), 4 for 9 for [EE, EB, BE, BB] (with BE=EB) or 1 for [TT] */
-int get_covariance_matrix_NxN(char *c_ell_path, int number_correl, int nstokes, double **covariance_matrix_NxN, S2HAT_GLOBAL_parameters Global_param_s2hat);
-
+int get_covariance_matrix_NxN(char *c_ell_path, int number_correl, double **covariance_matrix_NxN, S2HAT_parameters *S2HAT_params);
+/**/
 /* Function to obtain inverse of covariance matrix in harmonic domain, from given c_ells */
-int get_inverse_covariance_matrix_NxN(int nstokes, S2HAT_parameters *S2HAT_params, double **inverse_covariance_matrix);
-
+int get_inverse_covariance_matrix_NxN(S2HAT_parameters *S2HAT_params, double **inverse_covariance_matrix);
+/**/
 
 
 /* Content of pix_tools.c */
@@ -172,6 +172,7 @@ void convert_full_map_ring2nest(double *map_ring, double *map_nest, int nside, i
 
 int gather_map(double *local_map_pix, double *full_sky_map, int nstokes, S2HAT_parameters *S2HAT_params);
 // Gather all S2HAT processes local maps into a full_sky_map
+/**/
 
 /* Content of mpi_tools.c */
 
@@ -192,7 +193,7 @@ int collect_partial_map_from_pixels(double* local_map_s2hat, double *output_subm
 
 /* Free covariance matrix */
 void free_covariance_matrix(double ** covariance_matrix_3x3, int lmax);
-
+/**/
 /* Free wrapper structures of s2hat */
 void free_s2hat_GLOBAL_parameters_struct(S2HAT_GLOBAL_parameters *Global_param_s2hat);
 /**/

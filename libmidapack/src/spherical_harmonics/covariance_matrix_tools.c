@@ -42,8 +42,8 @@ int get_inverse_matrix(int order_matrix, double* matrix_to_be_inverted){
 
 
 
-int get_covariance_matrix_NxN(char *c_ell_path, int number_correl, int nstokes, double **covariance_matrix_NxN, S2HAT_GLOBAL_parameters Global_param_s2hat){
-    /* Read c_ell file to compute covariance matrix
+int get_covariance_matrix_NxN(char *c_ell_path, int number_correl, double **covariance_matrix_NxN, S2HAT_parameters *S2HAT_params){
+    /* Read c_ell file to construct covariance matrix
 
     Number_correl is expected to be :
     - 1 : only TT
@@ -67,16 +67,19 @@ int get_covariance_matrix_NxN(char *c_ell_path, int number_correl, int nstokes, 
         Finally, if number_correl is 1, then only the information about the intensity will be contained in the covariance matrix
         
         */
-    int lmax = Global_param_s2hat.nlmax;
+    int nstokes = S2HAT_params->nstokes;
+    S2HAT_GLOBAL_parameters *Global_param_s2hat = S2HAT_params->Global_param_s2hat;
+    int lmax = Global_param_s2hat->nlmax;
     int correl_index, ell_value;
     double *c_ell_array;
 
-    if ((number_correl != 5) && (number_correl <= 6)){
-        printf("Error : number_correl must be either 1: TT ; 2: EE, BB ; 3: EE, BB, BE  ; 4: TT, EE, BB and TE ; or 6: TT, EE, BB, TE, TB and EB \n");
+    if ((number_correl == 5) || (number_correl >= 6)){
+        printf("Error : number_correl is %d \n", number_correl);
+        printf("\t \t The variable number_correl must be either 1: TT ; 2: EE, BB ; 3: EE, BB, BE  ; 4: TT, EE, BB and TE ; or 6: TT, EE, BB, TE, TB and EB \n");
         fflush(stdout);
     }
 
-    c_ell_array = malloc(number_correl*(lmax+1)*sizeof(double));
+    c_ell_array = calloc(number_correl*(lmax+1),sizeof(double));
     read_fits_cells(lmax+1, number_correl, c_ell_array, c_ell_path, 1); // Reading cell_fits_file
 
 
@@ -87,6 +90,7 @@ int get_covariance_matrix_NxN(char *c_ell_path, int number_correl, int nstokes, 
         }
 
         if (nstokes>1){
+            // printf("----- TEST : %f -- %d - %d \n", c_ell_array[ nstokes*(lmax+1) + ell_value ], nstokes, nstokes*(lmax+1) + ell_value);
             covariance_matrix_NxN[ell_value][1] = c_ell_array[ nstokes*(lmax+1) + ell_value ]; // Cross-correlation TE (if case with intensity+polarization) or EB (if only polarization) (up-right block)
             covariance_matrix_NxN[ell_value][nstokes] = c_ell_array[ nstokes*(lmax+1) + ell_value ]; // Cross-correlation TE (if case with intensity+polarization) or EB (if only polarization) (middle-left block)
             if(number_correl == 6){
@@ -104,28 +108,32 @@ int get_covariance_matrix_NxN(char *c_ell_path, int number_correl, int nstokes, 
 }
 
 
-int get_inverse_covariance_matrix_NxN(int nstokes, S2HAT_parameters *S2HAT_params, double **inverse_covariance_matrix){
+int get_inverse_covariance_matrix_NxN(S2HAT_parameters *S2HAT_params, double **inverse_covariance_matrix){
     /* Function to obtain inverse of covariance matrix in harmonic domain, from given c_ells
     */
 
-    Files_path_WIENER_FILTER Files_path_WF_struct = *(S2HAT_params->Files_WF_struct);
-    S2HAT_GLOBAL_parameters Global_param_s2hat = *(S2HAT_params->Global_param_s2hat);
+    Files_path_WIENER_FILTER *Files_path_WF_struct = S2HAT_params->Files_WF_struct;
+    S2HAT_GLOBAL_parameters *Global_param_s2hat = S2HAT_params->Global_param_s2hat;
+    int nstokes = S2HAT_params->nstokes;
 
     double **covariance_matrix;
     int ell_value, index_1;
-    int lmax = Global_param_s2hat.nlmax;
+    int lmax = Global_param_s2hat->nlmax;
 
     // covariance_matrix = calloc(lmax+1, sizeof(double *));
     // for(ell_value=0; ell_value<lmax+1; ell_value++){
     //     covariance_matrix[ell_value] = calloc(9,sizeof(double));
     // }
 
-    char *c_ell_path = Files_path_WF_struct.c_ell_path;
-    int number_correlations = Files_path_WF_struct.number_correlations;
-    get_covariance_matrix_NxN(c_ell_path, number_correlations, nstokes, inverse_covariance_matrix, Global_param_s2hat);
+    char *c_ell_path = Files_path_WF_struct->c_ell_path;
+    int number_correlations = Files_path_WF_struct->number_correlations;
+    // printf("Getting covariance matrix : %d %d \n", number_correlations, Files_path_WF_struct->number_correlations); fflush(stdout);
+    get_covariance_matrix_NxN(c_ell_path, number_correlations, inverse_covariance_matrix, S2HAT_params);
+
+    // printf("Inversing covariance matrix \n"); fflush(stdout);
 
     for(ell_value=0; ell_value<lmax+1; ell_value++){
-        get_inverse_matrix(nstokes*nstokes, inverse_covariance_matrix[ell_value]);
+        get_inverse_matrix(nstokes, inverse_covariance_matrix[ell_value]);
     }
 
     // It's possible covariance_matrix will be returned as [3][3], which is not what we want

@@ -97,20 +97,21 @@ void read_fits_mask(int nside, double *mask, char *path_mask_file, int col)
 void read_TQU_maps( int nside, double *map, char *infile, int nstokes)
 {
   long nele = 12*(long)nside*(long)nside;
-  double *mapI = map;
-  double *mapQ = map + nele;
-  double *mapU = map + nele + nele;
+  // double *mapI = map;
+  // double *mapQ = map + nele;
+  // double *mapU = map + nele + nele;
 
   //READ MAPS
   printf( "           data   : %s ", infile);
 
-  read_fits_mask( nside, mapI, infile, 1);
+  // read_fits_mask( nside, mapI, infile, 1);
+  read_fits_mask( nside, map, infile, 1);
   // printf( "( T ");
   if (nstokes > 1){
-    read_fits_mask( nside, mapQ, infile, 2);
+    read_fits_mask( nside, &(map[nele]), infile, 2);
     // printf( "Q ");
     if( nstokes == 3) {
-      read_fits_mask( nside, mapU, infile, 3);
+      read_fits_mask( nside, &(map[2*nele]), infile, 3);
       // printf( "U ");
     }
   }  

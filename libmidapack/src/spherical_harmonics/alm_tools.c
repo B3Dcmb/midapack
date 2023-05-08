@@ -29,6 +29,10 @@ int apply_alm2pix(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parame
     S2HAT_GLOBAL_parameters *Global_param_s2hat = S2HAT_params->Global_param_s2hat;
     S2HAT_LOCAL_parameters *Local_param_s2hat = S2HAT_params->Local_param_s2hat;
     // Getting global and local S2HAT parameters needed for the computation
+    
+    if (Local_param_s2hat->gangrank < 0)
+        return 0;
+    // Only apply the transformation to the processes used with S2HAT
 
     int nmaps = 1; // We only provide 1 input set of alm coefficient
     // int nstokes = 3; // We want all T, Q and U maps
@@ -57,7 +61,7 @@ int apply_alm2pix(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parame
 
         case 2: // Case with only polarization
             // printf("Test 0002 \n"); fflush(stdout);
-            spin=2;
+            spin=nstokes;
             s2hat_alm2map_spin( Global_param_s2hat->pixelization_scheme, Global_param_s2hat->scan_sky_structure_pixel, spin, Global_param_s2hat->nlmax, Global_param_s2hat->nmmax,
                 Local_param_s2hat->nmvals, Local_param_s2hat->mvals, nmaps,
                 Local_param_s2hat->first_ring, Local_param_s2hat->last_ring, Local_param_s2hat->map_size, local_map_pix, lda, local_alm,
@@ -82,6 +86,10 @@ int apply_pix2alm(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parame
     S2HAT_LOCAL_parameters *Local_param_s2hat = S2HAT_params->Local_param_s2hat;
     // Getting global and local S2HAT parameters needed for the computation
     
+    if (Local_param_s2hat->gangrank < 0)
+        return 0;
+    // Only apply the transformation to the processes used with S2HAT
+
     int nstokes = S2HAT_params->nstokes; // Getting number of Stokes parameters
 
     int nmaps = 1; // We only provide 1 input set of alm coefficient
@@ -117,7 +125,7 @@ int apply_pix2alm(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parame
             break;
 
         case 2: // Case with only polarization
-            spin=2;            
+            spin=nstokes;            
             s2hat_map2alm_spin( Global_param_s2hat->pixelization_scheme, Global_param_s2hat->scan_sky_structure_pixel, spin, Global_param_s2hat->nlmax, Global_param_s2hat->nmmax,
                 Local_param_s2hat->nmvals, Local_param_s2hat->mvals, nmaps, Local_param_s2hat->first_ring, Local_param_s2hat->last_ring,
 		        local_w8ring, Local_param_s2hat->map_size, local_map_pix, lda, local_alm,
@@ -132,7 +140,7 @@ int apply_pix2alm(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parame
 }
 
 
-int apply_inv_covariance_matrix_to_alm(s2hat_dcomplex *input_local_alm, s2hat_dcomplex *out_local_alm, double **inv_covariance_matrix, int nstokes, S2HAT_parameters *S2HAT_params){
+int apply_inv_covariance_matrix_to_alm(s2hat_dcomplex *input_local_alm, s2hat_dcomplex *out_local_alm, double **inv_covariance_matrix, S2HAT_parameters *S2HAT_params){
     /* Apply inverse of covariance matrix to input_local_alm */
 
     S2HAT_GLOBAL_parameters Global_param_s2hat = *(S2HAT_params->Global_param_s2hat);
@@ -140,6 +148,7 @@ int apply_inv_covariance_matrix_to_alm(s2hat_dcomplex *input_local_alm, s2hat_dc
 
 
     int ell_value, m_value, index_stokes, line_index, nmvals;
+    int nstokes = S2HAT_params->nstokes;
     // int nstokes = 3;
     int lmax = S2HAT_params->Global_param_s2hat->nlmax;
 
@@ -187,7 +196,7 @@ int apply_inv_covariance_matrix_to_alm(s2hat_dcomplex *input_local_alm, s2hat_dc
 }
 
 
-int alm2cls(s2hat_dcomplex* local_alm, double *c_ell_array, int nspec, int nstokes, S2HAT_parameters *S2HAT_params){
+int alm2cls(s2hat_dcomplex* local_alm, double *c_ell_array, int nspec, S2HAT_parameters *S2HAT_params){
     /* Transform alm to c_ell coefficients
      local_alm is a 4-dimensional array in the form :
         (1:nstokes,0:nlmax,0:nmvals-1,1:nmaps), if lda == nstokes;      (HEALpix convention)
@@ -196,10 +205,17 @@ int alm2cls(s2hat_dcomplex* local_alm, double *c_ell_array, int nspec, int nstok
 
     Output :  c_ell_array in the ordering [0:nlmax,1:nspec] with nspec corresponding to TT, EE, BB, TE, TB, EB
               If nspec = 6; // All 6 spectras TT, EE, BB, TE, TB, EB computed
+
+    Note : 
+        nspec == ncomp -- only auto-spectra are computed;
+        nspec == ncomp+1 ( ncomp>1) -- all ncomp auto spectra and one cross spectrum (e.g., TE if ncomp == 3) are computed;
+        nspec == [ncomp (ncomp+1)]/2 (ncomp > 1) -- all auto and all cross spectra are computed.
+
     */
 
     S2HAT_GLOBAL_parameters Global_param_s2hat = *(S2HAT_params->Global_param_s2hat);
     S2HAT_LOCAL_parameters Local_param_s2hat = *(S2HAT_params->Local_param_s2hat);
+    int nstokes = S2HAT_params->nstokes;
 
     int lmax = Global_param_s2hat.nlmax;
     int ell= 0;
@@ -215,7 +231,7 @@ int alm2cls(s2hat_dcomplex* local_alm, double *c_ell_array, int nspec, int nstok
 
     // c_ell_array = (double *) calloc( nstokes*(lmax+1), sizeof(double));
     // printf("Test - gangrank %d", Local_param_s2hat.gangrank);
-    if (Local_param_s2hat.gangrank == -1)
+    if (Local_param_s2hat.gangrank == 0)
         collect_cls(nmaps, mapnum, ncomp, lmax, Local_param_s2hat.nmvals, Local_param_s2hat.mvals, lda, 
                 local_alm, nspec, c_ell_array, Local_param_s2hat.gangrank, Local_param_s2hat.gangsize, Local_param_s2hat.gangroot, Local_param_s2hat.gangcomm);
     // printf("Test2 - gangrank %d %f %f", Local_param_s2hat.gangrank, *(c_ell_array), *(c_ell_array+lmax-1));

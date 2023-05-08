@@ -128,7 +128,7 @@ int init_MPI_struct_s2hat_local_parameters(S2HAT_LOCAL_parameters *Local_param_s
 }
 
 
-int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters Global_param_s2hat, int nstokes, S2HAT_LOCAL_parameters *Local_param_s2hat){
+int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters *Global_param_s2hat, int nstokes, S2HAT_LOCAL_parameters *Local_param_s2hat){
     /* Create s2hat structure of local parameters of s2hat, which will differ for all processors
     
     !!! BEWARE : MPI structure is assumed to already have been assigned using init_MPI_struct_s2hat_local_parameters !!!
@@ -136,11 +136,11 @@ int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters Global_param_s2ha
     Those local parameters are used to improve the computation efficiency
     Full documentation here : https://apc.u-paris.fr/APC_CS/Recherche/Adamis/MIDAS09/software/s2hat/s2hat/docs/S2HATdocs.html */ 
     long int *pixel_numbered_ring;
-    s2hat_pixeltype pixelization_scheme = Global_param_s2hat.pixelization_scheme;
-    s2hat_scandef scan_sky_structure_pixel = Global_param_s2hat.scan_sky_structure_pixel;
-    int nlmax = Global_param_s2hat.nlmax;
-    int nmmax = Global_param_s2hat.nmmax;
-    long int number_pixel_total = 12*((Global_param_s2hat.nside)*(Global_param_s2hat.nside)), first_pixel_number_ring, last_pixel_number_ring, number_pixels_local;
+    s2hat_pixeltype pixelization_scheme = Global_param_s2hat->pixelization_scheme;
+    s2hat_scandef scan_sky_structure_pixel = Global_param_s2hat->scan_sky_structure_pixel;
+    int nlmax = Global_param_s2hat->nlmax;
+    int nmmax = Global_param_s2hat->nmmax;
+    long int number_pixel_total = 12*((Global_param_s2hat->nside)*(Global_param_s2hat->nside)), first_pixel_number_ring, last_pixel_number_ring, number_pixels_local;
 
     int i, j, plms=0, nmvals, first_ring, last_ring, map_size;
     int first_pixel_south_hermisphere;
@@ -171,15 +171,15 @@ int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters Global_param_s2ha
         // printf("--------Mvalues obtained ! - %d : %d \n", Local_param_s2hat->gangrank, mvals[0]);
         // fflush(stdout);
 
-        Local_param_s2hat->first_pixel_number = Global_param_s2hat.pixelization_scheme.fpix[first_ring-1];
-        Local_param_s2hat->last_pixel_number = Global_param_s2hat.pixelization_scheme.fpix[last_ring-1] + Global_param_s2hat.pixelization_scheme.nph[last_ring-1]-1;
+        Local_param_s2hat->first_pixel_number = Global_param_s2hat->pixelization_scheme.fpix[first_ring-1];
+        Local_param_s2hat->last_pixel_number = Global_param_s2hat->pixelization_scheme.fpix[last_ring-1] + Global_param_s2hat->pixelization_scheme.nph[last_ring-1]-1;
         // The last expression correspond to the indice of the first pixel of the last ring (given by fpix[last_ring - 1]),
         // to which we add the number of pixels within the last ring (given by nph[last_ring - 1])
         // BEWARE : we assume the last_pixel_number to be INCLUDED in the last ring
 
-        first_pixel_number_ring = Global_param_s2hat.pixelization_scheme.fpix[first_ring-1];
+        first_pixel_number_ring = Global_param_s2hat->pixelization_scheme.fpix[first_ring-1];
         // Getting first pixel number of ring probed by local proc, in S2HAT convention
-        last_pixel_number_ring = Global_param_s2hat.pixelization_scheme.fpix[last_ring-1] + Global_param_s2hat.pixelization_scheme.nph[last_ring-1]; 
+        last_pixel_number_ring = Global_param_s2hat->pixelization_scheme.fpix[last_ring-1] + Global_param_s2hat->pixelization_scheme.nph[last_ring-1]; 
         // Getting last pixel number of ring probed by local proc, in S2HAT convention
         number_pixels_local = last_pixel_number_ring - first_pixel_number_ring;
         
@@ -192,9 +192,9 @@ int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters Global_param_s2ha
         }
 
         first_pixel_south_hermisphere =  number_pixel_total -  last_pixel_number_ring;
-        if (last_ring == Global_param_s2hat.pixelization_scheme.nringsall)
+        if (last_ring == Global_param_s2hat->pixelization_scheme.nringsall)
         {
-            first_pixel_south_hermisphere += Global_param_s2hat.pixelization_scheme.nph[last_ring-1];
+            first_pixel_south_hermisphere += Global_param_s2hat->pixelization_scheme.nph[last_ring-1];
             // If last_ring is equal to the nringsall, which includes the northern rings and the equatorial ring,
             // Then the last ring corresponds to the equatorial ring, which has already been viewed, and we need to avoid redistributing its pixel numberings
         }
@@ -206,6 +206,7 @@ int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters Global_param_s2ha
         }
 
         Local_param_s2hat->pixel_numbered_ring = pixel_numbered_ring;
+        // printf("### Test - %ld %d \n", Local_param_s2hat->pixel_numbered_ring[0], map_size*nstokes); fflush(stdout);
 
         Local_param_s2hat->nmvals = nmvals;
         Local_param_s2hat->first_ring = first_ring;
@@ -227,10 +228,11 @@ int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters Global_param_s2ha
 
 int init_s2hat_parameters_superstruct(Files_path_WIENER_FILTER *Files_WF_struct, int *mask_binary, int nstokes, S2HAT_parameters *S2HAT_params, MPI_Comm world_comm)
 {   // Initalize both S2HAT_GLOBAL_parameters and S2HAT_LOCAL_parameters for superstructure of S2HAT
-    
+    // S2HAT_GLOBAL_parameters Global_param_s2hat;
     S2HAT_GLOBAL_parameters *Global_param_s2hat = (S2HAT_GLOBAL_parameters *) malloc( 1 * sizeof(S2HAT_GLOBAL_parameters));
     init_s2hat_global_parameters(*Files_WF_struct, mask_binary, Files_WF_struct->lmax_Wiener_Filter, Global_param_s2hat); 
     // Initialization of Global_param_s2hat structure, for sky pixelization scheme and lmax_WF choice
+
 
     int rank;
     MPI_Comm_rank( world_comm, &rank);
@@ -240,15 +242,23 @@ int init_s2hat_parameters_superstruct(Files_path_WIENER_FILTER *Files_WF_struct,
     init_MPI_struct_s2hat_local_parameters(Local_param_s2hat, Global_param_s2hat->scan_sky_structure_pixel.nringsobs, world_comm); 
     
     // printf("))))))))~~~~ %d TEST RANK for MPI_subgroup within init S2HAT_param \n", rank); fflush(stdout);
-    if (Local_param_s2hat->gangrank >= 0)
-        init_s2hat_local_parameters_struct(*Global_param_s2hat, nstokes, Local_param_s2hat);
+    // printf("--- Test initializing MPI struct - %d \n", Local_param_s2hat.gangrank);
+    if (Local_param_s2hat->gangrank >= 0){
+        // printf("Initializing MPI struct - %d \n", Local_param_s2hat.gangrank);
+        init_s2hat_local_parameters_struct(Global_param_s2hat, nstokes, Local_param_s2hat);
+        // printf("TEST --- MPI struct - %d \n", Local_param_s2hat.gangcomm);
+        }
     // Initialization of Local_param_s2hat structure, including MPI parameters, first/last rings studied, size of pixels cut sky per rank, etc. -- see Wiener filter extension directory for more details
+    
+    int first_ring = Local_param_s2hat->first_ring;
+    // printf("Test verif : %d %ld \n", first_ring, Global_param_s2hat->pixelization_scheme.fpix[first_ring-1]); fflush(stdout);
 
     S2HAT_params->Global_param_s2hat = Global_param_s2hat;
     S2HAT_params->Local_param_s2hat = Local_param_s2hat;
+    S2HAT_params->Files_WF_struct = Files_WF_struct;
     // Initialization of final superstructure S2HAT_params
 
-    S2HAT_params->size_alm = (Global_param_s2hat->nlmax+1)*Global_param_s2hat->nmmax;
+    S2HAT_params->size_alm = Global_param_s2hat->nlmax+1*Global_param_s2hat->nmmax;
     S2HAT_params->nstokes = nstokes;
 
     return 0;
