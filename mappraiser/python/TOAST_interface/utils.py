@@ -366,11 +366,13 @@ def noise_autocorrelation(
         pass
 
     # Estimate psd from noise timestream
+
+    # Length of segments used to estimate PSD (defines the lowest frequency we can estimate)
     if nperseg == 0:
-        nperseg = nn  # Length of segments used to estimate PSD (defines the lowest frequency we can estimate)
-    f, psd = scipy.signal.welch(
-        nsetod, fsamp, window="hann", nperseg=nperseg, detrend="linear"
-    )
+        nperseg = nn
+
+    # Compute a periodogram with Welch's method
+    f, psd = scipy.signal.welch(nsetod, fsamp, window='hann', nperseg=nperseg, detrend='linear')
 
     # Fit the psd model to the periodogram (in log scale)
     popt, pcov = curve_fit(
@@ -419,7 +421,7 @@ def noise_autocorrelation(
         at = 150
         window = scipy.signal.get_window(("chebwin", at), 2 * Lambda)
     else:
-        raise RuntimeError(f"Apodisation window '{apod_window_type}' is not supported.")
+        raise RuntimeError(f"Apodization window '{apod_window_type}' is not supported.")
 
     window = np.fft.ifftshift(window)
     window = window[:Lambda]
@@ -427,6 +429,17 @@ def noise_autocorrelation(
     # Apply window
     inv_tt_w = np.multiply(window, inv_tt[:Lambda], dtype=invtt_dtype)
     tt_w = np.multiply(window, tt[:Lambda], dtype=invtt_dtype)
+
+    # Keep the same norm
+    #
+    # rescale_tt = np.sqrt(np.sum(np.square(tt)) / np.sum(np.square(tt_w)))
+    # rescale_itt = np.sqrt(np.sum(np.square(inv_tt)) / np.sum(np.square(inv_tt_w)))
+    #
+    # print("correction for     tt = ", rescale_tt)
+    # print("correction for inv_tt = ", rescale_itt)
+    #
+    # tt_w *= rescale_tt
+    # inv_tt_w *= rescale_itt
 
     # Optionally save some PSDs for plots
     if save_psd:

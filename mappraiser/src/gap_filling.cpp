@@ -40,8 +40,8 @@ void mappraiser::psd_from_tt ( int fftlen,
 
     // Initialization of input
     std::copy ( tt, (tt + lambda), circ_t );
-    std::fill ((circ_t + lambda), (circ_t + fftlen - lambda), 0 );
-    std::reverse_copy ( tt, (tt + lambda), (circ_t + fftlen - lambda));
+    std::fill ((circ_t + lambda), (circ_t + fftlen - lambda + 1), 0 );
+    std::reverse_copy ( tt + 1, (tt + lambda), (circ_t + fftlen - lambda + 1));
 
     // Execute FFT plan
     fftw_execute ( p );
@@ -60,8 +60,7 @@ void mappraiser::psd_from_tt ( int fftlen,
     fftw_destroy_plan ( p );
 }
 
-
-double mappraiser::compute_mean ( int samples, double *buf, bool subtract ) {
+double mappraiser::compute_mean ( int samples, double *buf, bool subtract = false ) {
     // Compute the DC level
     double DC = 0;
 
@@ -79,17 +78,109 @@ double mappraiser::compute_mean ( int samples, double *buf, bool subtract ) {
     return DC;
 }
 
+double mappraiser::compute_mean_good ( int samples, double *buf, const bool *valid, bool subtract = false ) {
+    // Compute the DC level
+    double DC   = 0;
+    int    good = 0;
 
-double mappraiser::compute_variance ( int samples, const double &mean, double *buf ) {
+    for (int i = 0; i < samples; ++i) {
+        if (valid[i]) {
+            DC += buf[i];
+            ++good;
+        }
+    }
+
+    DC /= static_cast<double> (good);
+
+    // Remove it if needed
+    if (subtract) {
+        for (int i = 0; i < samples; ++i) {
+            if (valid[i])
+                buf[i] -= DC;
+        }
+    }
+    return DC;
+}
+
+double mappraiser::compute_variance ( int samples, double mean, const double *buf ) {
     double var = 0;
 
     for (int i = 0; i < samples; ++i) {
-        var += std::pow ( buf[i] - mean, 2 );
+        var += (buf[i] - mean) * (buf[i] - mean);
     }
+
     var /= static_cast<double> (samples - 1);
     return var;
 }
 
+double mappraiser::compute_variance_good ( int samples, double mean, const double *buf, const bool *valid ) {
+    double var  = 0;
+    int    good = 0;
+
+    for (int i = 0; i < samples; ++i) {
+        if (valid[i]) {
+            var += (buf[i] - mean) * (buf[i] - mean);
+            ++good;
+        }
+    }
+
+    var /= static_cast<double> (good - 1);
+    return var;
+}
+
+int mappraiser::find_valid_samples ( Gap *gaps, int samples, int64_t id0, bool *valid ) {
+    int gap    = -1;
+    int n_good = 0;
+
+    for (int i = 0; i < samples; ++i) {
+        // find closest gap before (or at) current sample
+        while (gaps->id0gap[gap + 1] <= id0 + i) { ++gap; }
+
+        if (gap == -1)
+            // the sample is valid because all gaps are strictly after
+            valid[i] = true;
+        else {
+            // the sample is valid if the gap is too short
+            valid[i] = gaps->id0gap[gap] + gaps->lgap[gap] <= id0 + i;
+        }
+
+        if (valid[i])
+            ++n_good;
+    }
+    return n_good;
+}
+
+void mappraiser::remove_baseline ( double *buf, int samples, double *baseline, const bool *valid, bool rm = true ) {
+    const int w = 200; // size of window
+    int       c = 0;
+
+    for (int i = 0; i < samples; ++i) {
+        double avg   = 0;
+        int    count = 0;
+        if (valid[i]) {
+            // compute the moving average
+            for (int j = std::max ( 0, i - w ); j < std::min ( samples, i + w + 1 ); ++j) {
+                if (valid[j]) {
+                    avg += buf[j];
+                    ++count;
+                }
+            }
+            baseline[c] = avg / static_cast<double>(count);
+            ++c;
+        }
+    }
+
+    // remove the baseline
+    if (rm) {
+        c = 0;
+        for (int i = 0; i < samples; ++i) {
+            if (valid[i]) {
+                buf[i] -= baseline[c];
+                ++c;
+            }
+        }
+    }
+}
 
 void mappraiser::sim_noise_tod ( int samples,
                                  int lambda,
@@ -151,17 +242,23 @@ void mappraiser::sim_noise_tod ( int samples,
     // Zero out DC level
     double DC_subtracted = mappraiser::compute_mean ( samples, buf, true );
 
-//    std::cout << "subtracted DC level = " << DC_subtracted << std::endl;
+    if (verbose)
+        std::cout << "  subtracted DC level = " << DC_subtracted << std::endl;
 
     // Normalize according to desired variance for the TOD
     // In theory this should not be necessary
-    double rescale = std::sqrt ( var_goal / mappraiser::compute_variance ( samples, 0.0, buf ));
+    if (var_goal >= 0.0) {
+        double var     = mappraiser::compute_variance ( samples, 0.0, buf );
+        double rescale = std::sqrt ( var_goal / var );
 
-    for (int i = 0; i < samples; ++i) {
-        buf[i] *= rescale;
+        if (verbose)
+            std::cout << "  measured sigma = " << std::sqrt ( var ) << std::endl
+                      << "   (goal:" << std::sqrt ( var_goal ) << ")" << std::endl
+                      << "  rescale factor = " << rescale << std::endl;
+
+        for (int i = 0; i < samples; ++i)
+            buf[i] *= rescale;
     }
-
-//    std::cout << "rescale factor (= sigma_goal / sigma) = " << rescale << std::endl;
 
     // Free allocated memory
     fftw_free ( pdata );
@@ -178,20 +275,49 @@ void mappraiser::sim_constrained_noise_block ( Tpltz *N_block,
                                                u_int64_t obsindx,
                                                u_int64_t telescope,
                                                bool verbose ) {
-    // get the number of samples and the bandwidth
-    const int samples = N_block->tpltzblocks[0].n;
-    const int lambda  = N_block->tpltzblocks[0].lambda;
+    // get the number of samples, the global first index and the bandwidth
+    const int     samples = N_block->tpltzblocks[0].n;
+    const int64_t id0     = N_block->tpltzblocks[0].idv;
+    const int     lambda  = N_block->tpltzblocks[0].lambda;
 
-    // copy the original noise vector and remove the mean
+    // copy the original noise vector
     auto *rhs = static_cast<double *>(std::malloc ( sizeof ( double ) * samples ));
     std::copy ( noise, (noise + samples), rhs );
-    double mean = mappraiser::compute_mean ( samples, rhs, true );
-    double var  = mappraiser::compute_variance ( samples, 0.0, rhs );
+
+    // locate the valid samples
+    auto *valid = static_cast<bool *>(std::malloc ( sizeof ( bool ) * samples ));
+    int  n_good = find_valid_samples ( gaps, samples, id0, valid );
+
+    if (verbose)
+        std::cout << "  proportion of valid samples = " << 100 * n_good / samples << " %" << std::endl;
+
+    // remove baseline (moving average)
+    auto *baseline = static_cast<double *>(std::malloc ( sizeof ( double ) * n_good ));
+    mappraiser::remove_baseline ( rhs, samples, baseline, valid, true );
+
+    if (verbose)
+        std::cout << "  removed baseline" << std::endl;
+
+/*
+    // compute the mean (from valid samples)
+    double mean = mappraiser::compute_mean_good ( samples, rhs, valid, false );
+
+    // compute the variance (from valid samples)
+    double var = mappraiser::compute_variance_good ( samples, mean, rhs, valid );
+
+    if (verbose) {
+        std::cout << "  mean (valid)  = " << mean << std::endl
+                  << "  std deviation = " << std::sqrt ( var ) << std::endl;
+    }
+*/
 
     // generate random noise realization "xi" with correlations
     auto *xi = static_cast<double *>(std::malloc ( sizeof ( double ) * samples ));
-    mappraiser::sim_noise_tod ( samples, lambda, N_block->tpltzblocks[0].T_block, xi, realization, detindx, obsindx,
-                                telescope, var );
+    mappraiser::sim_noise_tod ( samples, lambda, N_block->tpltzblocks[0].T_block, xi, realization, detindx,
+                                obsindx, telescope, -1.0, false );
+
+    if (verbose)
+        std::cout << "  generated random noise realization" << std::endl;
 
     // rhs = noise - xi
     for (int i = 0; i < samples; ++i) {
@@ -199,18 +325,30 @@ void mappraiser::sim_constrained_noise_block ( Tpltz *N_block,
     }
 
     // invert the system N x = (noise - xi)
-    apply_weights ( Nm1_block, N_block, gaps, rhs, ITER, verbose );
+    if (verbose)
+        std::cout << "  inverting Toeplitz system with PCG..." << std::endl;
 
-    // compute the unconstrained realization
+    apply_weights ( Nm1_block, N_block, gaps, rhs, ITER, false );
+
+    // compute the constrained realization
     auto *constrained = static_cast<double *>(std::malloc ( sizeof ( double ) * samples ));
     std::copy ( rhs, (rhs + samples), constrained );
     stbmmProd ( N_block, constrained );
 
+    if (verbose)
+        std::cout << "  computed full constrained realization" << std::endl;
+
+    int c = 0; // to go through baseline vector
+
     for (int i = 0; i < samples; ++i) {
-        constrained[i] += xi[i] + mean; // add the mean back
+        if (valid[i]) {
+            constrained[i] += xi[i] + baseline[c];
+            ++c;
+        } else
+            constrained[i] += xi[i]; // + (baseline[c] + baseline[c + 1]) / 2;
     }
 
-    // TODO check quality of contrained realization
+    // TODO check quality of constrained realization against original vector?
     // ...
 
     // copy final result into noise vector
@@ -220,6 +358,7 @@ void mappraiser::sim_constrained_noise_block ( Tpltz *N_block,
     std::free ( xi );
     std::free ( rhs );
     std::free ( constrained );
+    std::free ( baseline );
 }
 
 void mappraiser::sim_constrained_noise ( Tpltz *N,
@@ -233,11 +372,12 @@ void mappraiser::sim_constrained_noise ( Tpltz *N,
                                          bool verbose ) {
     // Loop through toeplitz blocks
     int    t_id = 0;
-    Tpltz  N_block, Nm1_block;
     double *noise_block;
+    Tpltz  N_block, Nm1_block;
 
     for (int i = 0; i < N->nb_blocks_loc; ++i) {
-        std::cout << "Processing block n° " << i << std::endl;
+        if (verbose)
+            std::cout << "Processing block n° " << i << std::endl;
 
         // define single-block Tpltz structures
         set_tpltz_struct ( &N_block, N, &N->tpltzblocks[i] );
@@ -294,8 +434,8 @@ void gap_filling ( MPI_Comm comm,
     // Data distribution
 
     int64_t M             = 0;
-    int     m             = data_size_proc[rank];
     int64_t gif           = 0;
+    int     m             = data_size_proc[rank];
     int     nb_blocks_tot = 0;
 
     for (int i = 0; i < size; i++) {
@@ -372,10 +512,17 @@ void gap_filling ( MPI_Comm comm,
 
     // call routine to generate constrained realization
     MPI_Barrier ( comm );
+    double start = MPI_Wtime ();
 
     sim_constrained_noise ( &N, &Nm1, noise, &G, realization, detindxs, obsindxs, telescopes, rank == 0 );
 
     MPI_Barrier ( comm );
+    double end = MPI_Wtime ();
+
+    if (rank == 0) {
+        printf ( "Performed gap-filling in %lf seconds\n\n", end - start );
+        fflush ( stdout );
+    }
 
     free ( tpltzblocks_N );
     free ( tpltzblocks_Nm1 );
