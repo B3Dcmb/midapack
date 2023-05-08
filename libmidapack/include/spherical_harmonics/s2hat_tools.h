@@ -187,9 +187,10 @@ void mpi_broadcast_s2hat_global_struc(S2HAT_GLOBAL_parameters *Global_param_s2ha
 /**/
 /* Distribute full sky map in ring ordering, with convention [npix, nstokes] in column-wise order among procs, into local maps */
 int distribute_full_sky_map_into_local_maps_S2HAT(double* full_sky_map, double *local_map_s2hat, S2HAT_parameters *S2HAT_params);
+/**/
 
 /* Collect submap from local_maps of S2HAT, given first and last pixel of submap */
-int collect_partial_map_from_pixels(double* local_map_s2hat, double *output_submap, int first_pix, int last_pix, S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat, int nstokes);
+int collect_partial_map_from_pixels(double* local_map_s2hat, double *output_submap, int first_pix, int last_pix, S2HAT_parameters *S2HAT_params);
 
 /* Free covariance matrix */
 void free_covariance_matrix(double ** covariance_matrix_3x3, int lmax);

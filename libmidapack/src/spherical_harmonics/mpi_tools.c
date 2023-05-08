@@ -192,8 +192,12 @@ int distribute_full_sky_map_into_local_maps_S2HAT(double* full_sky_map, double *
 }
 
 
-int collect_partial_map_from_pixels(double* local_map_s2hat, double *output_submap, int first_pix, int last_pix, S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat, int nstokes){
+int collect_partial_map_from_pixels(double* local_map_s2hat, double *output_submap, int first_pix, int last_pix, S2HAT_parameters *S2HAT_params){
     // Collect specific pixels from all local_map_s2hat to form a submap given first and last pixels 
+    
+    S2HAT_GLOBAL_parameters *Global_param_s2hat = S2HAT_params->Global_param_s2hat;
+    S2HAT_LOCAL_parameters *Local_param_s2hat = S2HAT_params->Local_param_s2hat;
+    int nstokes = S2HAT_params->nstokes;
     int submap_size = last_pix - first_pix; // Submapsize given by pixel numbers
 
     collect_partialmap(Global_param_s2hat.pixelization_scheme, 1, 0, nstokes, first_pix, last_pix, 
