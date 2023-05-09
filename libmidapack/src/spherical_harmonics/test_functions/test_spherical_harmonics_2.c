@@ -192,7 +192,7 @@ int main_S2HAT_LOCAL_parameters(int argc, char** argv){
     printf(" %d - MPI struct in s2hat_local : gangrank %d, gangsize %d, gangroot %d \n", gangrank, Local_param_s2hat->gangrank, Local_param_s2hat->gangsize, Local_param_s2hat->gangroot);
     fflush(stdout);
     
-    mpi_broadcast_s2hat_global_struc(Global_param_s2hat, *Local_param_s2hat); // Broadcast global parameters to all procs ?
+    // mpi_broadcast_s2hat_global_struc(&S2HAT_params); // Broadcast global parameters to all procs ?
     printf(" %d - S2HAT structures broadcasted ! \n", gangrank);
     fflush(stdout);
 
@@ -2490,8 +2490,8 @@ int main_covariance_alms(int argc, char** argv){
 // int collect_partial_map_from_pixels(double* local_map_s2hat, double *output_submap, int first_pix, int last_pix, S2HAT_GLOBAL_parameters Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat, int nstokes);
 
 
-// int main_pixel_scheme_transition(int argc, char** argv){
-int main(int argc, char** argv){
+int main_pixel_scheme_transition_v0(int argc, char** argv){
+// int main(int argc, char** argv){
     // char *path_mask = "/global/cscratch1/sd/mag/Masks_files/SO_wH.fits";
 
     char *path_mask = "/global/cscratch1/sd/mag/Masks_files/No_Mask.fits";
@@ -2503,7 +2503,7 @@ int main(int argc, char** argv){
     int i_index, ncomp;
     int index, index_2, ell_value;
 
-    int nside = 512;
+    int nside = 16;
     // int lmax = 3*nside-1 ;//1500;//025;
     // int lmax = 4;
     // int nstokes = 3;
@@ -2544,19 +2544,15 @@ int main(int argc, char** argv){
 
     printf("Initializing Global_param_s2hat \n");
     Files_path_WIENER_FILTER *Files_path_WF_struct = malloc( 1 * sizeof(Files_path_WIENER_FILTER));;
-    // Files_path_WF_struct 
-    // char *c_ell_path = "/global/homes/m/mag/midapack/test/spherical_harmonics/test_functions/c_ell_file_lmax_4.fits"; //// TO PUT !!!!
+
     int number_correlations = 4; //3; // 6; // TO MODIFY LATER !!!!!!!
     int nstokes = 3; //3;
-    // printf("Getting into init WF \n"); fflush(stdout);    
-    // init_files_struct_WF(&Files_path_WF_struct, nside, lmax, c_ell_path, number_correlations);
-    // printf("--- Test init %d %d \n", Files_path_WF_struct.lmax_Wiener_Filter, lmax); fflush(stdout);
-    // printf("--- Test init2 %d %d \n", Files_path_WF_struct.number_correlations, number_correlations); fflush(stdout);
+
     init_files_struct_WF(Files_path_WF_struct, nside, lmax, c_ell_path, number_correlations);
     printf("--- Test init %d %d \n", Files_path_WF_struct->lmax_Wiener_Filter, lmax); fflush(stdout);
     printf("--- Test init2 %d %d \n", Files_path_WF_struct->number_correlations, number_correlations); fflush(stdout);
     
-    int i;
+    int i, j;
 
     mask_binary=NULL;// = calloc(12*nside*nside, sizeof(int));
     // int ga0, number_of_pixels_one_ring = 8;//6*512;
@@ -2568,8 +2564,294 @@ int main(int argc, char** argv){
 
     printf("Initializing S2HAT_param \n"); fflush(stdout);
     S2HAT_parameters S2HAT_params;
-     // = malloc(1*sizeof(S2HAT_parameters));
-    // printf("^^^^^^^ %d ----- RANK for MPI_subgroup before init S2HAT_param \n", gangrank); fflush(stdout);
+    
+    init_s2hat_parameters_superstruct(Files_path_WF_struct, mask_binary, nstokes, &S2HAT_params, gangcomm);
+    
+
+    printf("--- Test2 init %d %d \n", Files_path_WF_struct->lmax_Wiener_Filter, lmax);
+    printf("--- Test3 init %d \n", S2HAT_params.Global_param_s2hat->nlmax); fflush(stdout);
+    printf("--- Test init3 # %d %d \n", Files_path_WF_struct->number_correlations, number_correlations); fflush(stdout);
+    // S2HAT_parameters *S2HAT_params = &S2HAT_params_;
+
+    S2HAT_GLOBAL_parameters *Global_param_s2hat = S2HAT_params.Global_param_s2hat;
+    S2HAT_LOCAL_parameters *Local_param_s2hat = S2HAT_params.Local_param_s2hat;
+
+
+
+    /////////////////////////////////////////
+    // npix = 12*nside*nside;   
+    // double *CMB_map; 
+    // CMB_map = (double *) malloc( nstokes*npix*sizeof(double));
+    // read_TQU_maps(nside, CMB_map, path_CMB_map, nstokes);
+    // printf("Reading map - rank %d \n", gangrank);
+    // fflush(stdout);
+
+    // printf("Minute test1 - rank %d - %f \n", gangrank, CMB_map[0]);
+    // free(CMB_map);
+    // printf("Minute test2 - rank %d - %f \n", gangrank, new_CMB_map[0]);
+    // printf("Changing map - rank %d \n", gangrank);
+    // fflush(stdout);
+
+    // double *local_map_pix;//, *local_map_pix_E, *local_map_pix_B;
+    // local_map_pix = (double *) calloc( 3*Local_param_s2hat->map_size, sizeof(double));
+    // printf("###### Test8 - %ld \n", Local_param_s2hat->pixel_numbered_ring[0]); fflush(stdout);
+    // printf("###### TEST2 --- MPI struct - %d \n", Local_param_s2hat->gangcomm); fflush(stdout);
+    // printf("###### CMB Temp - %f \n", CMB_map[0]); fflush(stdout);
+    // // printf("######2 CMB Temp - %f \n", CMB_map_temp[2*npix]); fflush(stdout);
+
+    // distribute_full_sky_map_into_local_maps_S2HAT(CMB_map, local_map_pix, &S2HAT_params);
+    
+    // s2hat_dcomplex *local_alm;
+    
+    long int number_of_indices = nstokes*10;
+    int true_number_of_indices = number_of_indices/nstokes;
+    int *indices_nest_input = calloc(number_of_indices,sizeof(int));
+    int *indices_nest_output = calloc(number_of_indices,sizeof(int));
+    int *indices_ring = calloc(number_of_indices,sizeof(int));
+    
+    int init_pix=30;
+    printf("Indices created - %d \n", true_number_of_indices);
+    for(i=0; i<true_number_of_indices; i++){
+        for(j=0; j<nstokes; j++){
+            // printf("%d %d - ", j*true_number_of_indices + i, init_pix + i + j*npix); 
+            // indices_nest_input[j*true_number_of_indices + i] = init_pix + i + j*npix;
+            printf("%d %d - ", i*nstokes + j, init_pix + i*nstokes + j); 
+            indices_nest_input[i*nstokes + j] = init_pix + i*nstokes + j;
+            }
+        }
+
+    printf("\n"); fflush(stdout);
+
+    printf("List 10 firsts indices nest created : \n"); fflush(stdout);
+    for (i=0; i<10; i++)
+        printf(" %d \t", indices_nest_input[i]);
+    printf("\n");
+    for (i=true_number_of_indices; i<10+true_number_of_indices; i++)
+        printf(" %d \t", indices_nest_input[i]);
+    printf("\n"); fflush(stdout);
+
+    convert_indices_nest2ring(indices_nest_input, indices_ring, number_of_indices, nstokes, nside);
+
+    printf("List 10 firsts indices ring converted : \n"); fflush(stdout);
+    for (i=0; i<10; i++)
+        printf(" -- %d %d -- \t", indices_ring[i], indices_nest_input[i]);
+    printf("\n");
+    for (i=true_number_of_indices; i<10+true_number_of_indices; i++)
+        printf(" -- %d %d -- \t", indices_ring[i], indices_nest_input[i]);
+    printf("\n"); fflush(stdout);
+
+    convert_indices_ring2nest(indices_ring, indices_nest_output, number_of_indices, nstokes, nside);
+
+    printf("List 10 firsts indices nest retrieved : \n");
+    for (i=0; i<10; i++)
+        printf(" -- %d %d -- \t", indices_nest_output[i], indices_nest_input[i]);
+    printf("\n");
+    for (i=true_number_of_indices; i<10+true_number_of_indices; i++)
+        printf(" -- %d %d -- \t", indices_nest_output[i], indices_nest_input[i]);
+    printf("\n"); fflush(stdout);
+
+    
+    printf("##### NEW TEST 1 !!! \n");
+    printf("List 10 firsts indices nest used : %ld \n", number_of_indices);
+    for (i=0; i<10; i++)
+        printf(" %d \t", indices_nest_input[i]);
+    printf("\n");
+    for (i=true_number_of_indices; i<10+true_number_of_indices; i++)
+        printf(" %d \t", indices_nest_input[i]);
+    printf("\n");
+
+    int *ordered_indices_ring = (int *)malloc(number_of_indices*sizeof(int));
+    int *projector_ring2nest = (int *)malloc(number_of_indices*sizeof(int));
+    int *projector_nest2ring = (int *)malloc(number_of_indices*sizeof(int));
+    get_projectors_indices(indices_nest_input, ordered_indices_ring, number_of_indices, nstokes, nside, projector_ring2nest, projector_nest2ring);
+
+    printf("Projector ring2nest \n");
+    for (i=0; i<10; i++)
+        printf(" %d \t", projector_ring2nest[i]);
+    printf("\n");
+    for (i=true_number_of_indices; i<10+true_number_of_indices; i++)
+        printf(" %d \t", projector_ring2nest[i]);
+    printf("\n");
+    printf("Projector nest2ring \n");
+    for (i=0; i<10; i++)
+        printf(" %d \t", projector_nest2ring[i]);
+    printf("\n");
+    for (i=true_number_of_indices; i<10+true_number_of_indices; i++)
+        printf(" %d \t", projector_nest2ring[i]);
+    printf("\n"); fflush(stdout);
+
+    double values_in[30] = {1,3,5,7,8,9,10,12,14,15,
+                            16,17,18,.1,.2,.3,.4,.5,.6,.7,
+                            -1,-2,-3,-4,-5,-6,-7,-8,-9,-10};
+    double *values_out = calloc(number_of_indices, sizeof(int));
+
+    project_values_into_different_scheme(values_in, number_of_indices, projector_nest2ring, values_out);
+
+    double elem;
+    printf("Values projected : \n"); fflush(stdout);
+    for (i=0; i<number_of_indices; i++){
+        printf("-- %f %f -- ", values_in[i], values_out[i]);
+        if (i%10 == 0)
+            printf("\n");
+    }
+    printf("\n"); fflush(stdout);
+
+
+    free(projector_ring2nest);
+    free(projector_nest2ring);
+    free(ordered_indices_ring);
+    free(indices_nest_output);
+
+    int low_nside = 2;
+    int low_npix = 12*low_nside*low_nside;
+
+    // printf("malloc -1 -- %d %d \n", nstokes, low_npix); fflush(stdout);
+    // double *test = (double *)malloc(4 * sizeof(double));
+
+    printf("malloc 0 -- %d %d %d \n", nstokes, low_npix, (nstokes*low_npix)); fflush(stdout);
+    double *map_CMB_nest_input = (double *)malloc( (nstokes*low_npix) * sizeof(double));
+
+    printf("malloc 1 \n"); fflush(stdout);
+    double *map_CMB_ring = (double *)malloc( nstokes*low_npix * sizeof(double));
+
+    printf("malloc 2 \n"); fflush(stdout);
+    double *map_CMB_nest_output = (double *)malloc( nstokes*low_npix * sizeof(double));
+
+
+    printf("Last test -- Preparing map \n"); fflush(stdout);
+    for(i=0; i<low_npix*nstokes; i++){
+        for (j=0; j<nstokes; j++)
+            map_CMB_nest_input[i*nstokes + j] = i + .1*j;
+    }
+        
+
+    printf("Converting map nest2ring \n"); fflush(stdout);
+    convert_full_map_nest2ring(map_CMB_nest_input, map_CMB_ring, low_nside, nstokes);
+    
+    printf("Converting map back ring2nest \n"); fflush(stdout);
+    convert_full_map_ring2nest(map_CMB_ring, map_CMB_nest_output, low_nside, nstokes);
+
+    printf("Test map conversion \n"); fflush(stdout);
+    for(i=0; i<low_npix*nstokes; i++)
+        printf(" --- %d %f %f %f --- ", i, map_CMB_nest_input[i], map_CMB_nest_output[i], map_CMB_ring[i]);
+    printf("\n"); fflush(stdout);
+    
+    // for(i=0; i<low_npix*nstokes; i++)
+    //         indices_nest_input[i] = i;
+
+    // convert_indices_nest2ring(indices_nest_input, indices_ring, number_of_indices, nstokes, nside);
+
+    // printf("List firsts indices nest converted into ring, for NSIDE=2 \n"); fflush(stdout);
+    // for (i=0; i<low_npix*nstokes; i++)
+    //     printf(" -- %d %d %d -- \t", i, indices_ring[i], indices_nest_input[i]);
+    // printf("\n"); fflush(stdout);
+
+
+    printf("Free 0 \n"); fflush(stdout);
+    free(Files_path_WF_struct);
+    printf("Free 1 \n"); fflush(stdout);
+    free_s2hat_parameters_struct(&S2HAT_params);
+    
+    // free(CMB_map);
+    printf("Free 2 \n"); fflush(stdout);
+    free(indices_nest_input);
+    free(indices_ring);
+    
+    printf("BEWARE : maps not freed, maybe problem for later ? \n"); fflush(stdout);
+    printf("Free 3 \n"); fflush(stdout);
+    // free(map_CMB_nest_input);
+    printf("Free 3b \n"); fflush(stdout);
+    // free(map_CMB_ring);
+    printf("Free 4 \n"); fflush(stdout);
+    // free(map_CMB_nest_output);
+    
+    printf("Free 5? \n"); fflush(stdout);
+    MPI_Finalize();
+
+    return 0;
+}
+
+
+// /* Sent to root all indices, so that root will contain all_sky_pixels_observed, a map in the form of a mask : 1 on the pixels observed, 0 otherwise */
+// int all_reduce_to_all_indices_mappraiser(int *indices_pixel_local, int number_pixel_local, int nside, int* all_sky_pixels_observed, int root, MPI_Comm world_comm);
+
+// /* Collect submap from local_maps of S2HAT, given first and last pixel of submap */
+// int collect_partial_map_from_pixels(double* local_map_s2hat, double *output_submap, int first_pix, int last_pix, S2HAT_parameters *S2HAT_params);
+
+// int main_pixel_scheme_transition_v0(int argc, char** argv){
+int main(int argc, char** argv){
+    // char *path_mask = "/global/cscratch1/sd/mag/Masks_files/SO_wH.fits";
+
+    char *path_mask = "/global/cscratch1/sd/mag/Masks_files/No_Mask.fits";
+    // char *c_ell_path = "/global/homes/m/mag/midapack/test/spherical_harmonics/test_functions/c_ell_file_lmax_4.fits"; //// TO PUT !!!!
+    char *c_ell_path = "/global/homes/m/mag/midapack/libmidapack/src/spherical_harmonics/test_functions/c_ell_file_lmax_4.fits"; //// TO PUT !!!!
+    int *mask_binary;
+
+    int f_sky, npix;
+    int i_index, ncomp;
+    int index, index_2, ell_value;
+
+    int nside = 16;
+    // int lmax = 3*nside-1 ;//1500;//025;
+    // int lmax = 4;
+    // int nstokes = 3;
+    char *path_CMB_map = "/global/cscratch1/sd/mag/xPure_data/Files_Launch/Map_band_limited_1024_0.fits";
+    // int *mask_binary;
+    // double *CMB_map;
+
+    // int nside = 512;
+    // int lmax = 1535;
+    // int lmax = 1024;
+    int lmax = 4; // 2*nside+2; //+10; //3*nside-1 ;//1500;//025;
+    // int nstokes = 3;
+    npix = 12*nside*nside;
+
+    // S2HAT_GLOBAL_parameters *Global_param_s2hat;
+    // S2HAT_LOCAL_parameters *Local_param_s2hat;
+    
+    int rank, nprocs;
+    MPI_Comm gangcomm;
+    
+
+    MPI_Init( &argc, &argv);
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    MPI_Comm_size( MPI_COMM_WORLD, &nprocs);
+
+    printf("Initializing MPI %d %d \n", rank, nprocs);
+    fflush(stdout);
+
+
+
+    printf("NEW SIM ################################################################################################################################################ \n");
+    printf("Initializing MPI %d %d \n", rank, nprocs);
+    fflush(stdout);
+
+    int gangrank = rank;
+    gangcomm = MPI_COMM_WORLD;
+
+
+    printf("Initializing Global_param_s2hat \n");
+    Files_path_WIENER_FILTER *Files_path_WF_struct = malloc( 1 * sizeof(Files_path_WIENER_FILTER));;
+
+    int number_correlations = 4; //3; // 6; // TO MODIFY LATER !!!!!!!
+    int nstokes = 3; //3;
+
+    init_files_struct_WF(Files_path_WF_struct, nside, lmax, c_ell_path, number_correlations);
+    printf("--- Test init %d %d \n", Files_path_WF_struct->lmax_Wiener_Filter, lmax); fflush(stdout);
+    printf("--- Test init2 %d %d \n", Files_path_WF_struct->number_correlations, number_correlations); fflush(stdout);
+    
+    int i, j;
+
+    mask_binary=NULL;// = calloc(12*nside*nside, sizeof(int));
+    // int ga0, number_of_pixels_one_ring = 8;//6*512;
+    // for(i=0; i<number_of_pixels_one_ring; i++)
+    //     mask_binary[i+gap*number_of_pixels_one_ring]=1;
+    // mask_binary = calloc(npix,sizeof(int));
+    // for(i=10; i<npix/15; i++)
+    //     mask_binary[i]=1;
+
+    printf("Initializing S2HAT_param \n"); fflush(stdout);
+    S2HAT_parameters S2HAT_params;
     
     init_s2hat_parameters_superstruct(Files_path_WF_struct, mask_binary, nstokes, &S2HAT_params, gangcomm);
     
@@ -2589,14 +2871,14 @@ int main(int argc, char** argv){
     double *CMB_map; 
     CMB_map = (double *) malloc( nstokes*npix*sizeof(double));
     read_TQU_maps(nside, CMB_map, path_CMB_map, nstokes);
-    // printf("Reading map - rank %d \n", gangrank);
-    // fflush(stdout);
+    printf("Reading map - rank %d \n", gangrank);
+    fflush(stdout);
 
     printf("Minute test1 - rank %d - %f \n", gangrank, CMB_map[0]);
-    // free(CMB_map);
-    // printf("Minute test2 - rank %d - %f \n", gangrank, new_CMB_map[0]);
-    // printf("Changing map - rank %d \n", gangrank);
-    // fflush(stdout);
+    free(CMB_map);
+    printf("Minute test2 - rank %d - %f \n", gangrank, new_CMB_map[0]);
+    printf("Changing map - rank %d \n", gangrank);
+    fflush(stdout);
 
     double *local_map_pix;//, *local_map_pix_E, *local_map_pix_B;
     local_map_pix = (double *) calloc( 3*Local_param_s2hat->map_size, sizeof(double));
@@ -2607,122 +2889,15 @@ int main(int argc, char** argv){
 
     distribute_full_sky_map_into_local_maps_S2HAT(CMB_map, local_map_pix, &S2HAT_params);
     
-    s2hat_dcomplex *local_alm;
-    local_alm = (s2hat_dcomplex *) malloc( nstokes*(Global_param_s2hat->nlmax+1)*Global_param_s2hat->nmmax*sizeof(s2hat_dcomplex));
-    
-    
-    apply_pix2alm(local_map_pix, local_alm, &S2HAT_params);
 
-    printf("%d - Local_alm : \n", gangrank);
-    int nmvals = Local_param_s2hat->nmvals;
-    int index_stokes, m_value;
-    
-    for (ell_value=0;ell_value<lmax;ell_value++){
-        printf("\n %d -alms - #### ell= %d \n", gangrank, ell_value);
-        for (m_value=0; m_value < nmvals; m_value++){
-            for(index_stokes=0;index_stokes<nstokes;index_stokes++){
-                // printf("%.9f %.9f - \t", local_alm[m_value*(lmax+1)*nstokes + ell_value*nstokes + index_stokes].re, local_alm[m_value*(lmax+1)*nstokes + ell_value*nstokes + index_stokes].im);
-                printf("%.9f %.9f - \t", local_alm[m_value*(lmax)*nstokes + ell_value*nstokes + index_stokes].re, local_alm[m_value*(lmax)*nstokes + ell_value*nstokes + index_stokes].im);
-            }
-            printf(" ## ");
-        }
-    }
-    printf("\n");
-    fflush(stdout);
 
-    ////////////////////////////////////////
-
-    printf("Getting inverse of covariance matrix - %d\n", gangrank);
-    fflush(stdout);
-    int n_correl_to_get = 4; // or 6
-
-    double **inverse_covariance_matrix;
-    // inverse_covariance_matrix = calloc(lmax+1, sizeof(double *));
-    inverse_covariance_matrix = calloc(lmax, sizeof(double *));
-    // for(ell_value=0; ell_value<lmax+1; ell_value++){
-    //     inverse_covariance_matrix[ell_value] = calloc(9,sizeof(double));
-    // }
-    for(ell_value=0; ell_value<lmax; ell_value++){
-        inverse_covariance_matrix[ell_value] = calloc(9,sizeof(double));
-    }
-
-    get_inverse_covariance_matrix_NxN(&S2HAT_params, inverse_covariance_matrix);
-    printf("Inverse of covariance matrix computed from file : %d \n", gangrank);
-    fflush(stdout);
-
-    int order_matrix = 3;
-
-    // double identity[9] = {1, 0, 0, 0, 1, 0, 0, 0, 1};
-    // for(ell_value=0;ell_value<lmax;ell_value++){
-    //     for (index=0; index<order_matrix ; index++){
-    //         for (index_2=0; index_2<order_matrix ; index_2++){
-    //             inverse_covariance_matrix[ell_value][index*order_matrix+index_2] = identity[index*order_matrix+index_2];
-    //         }
-    //     }
-    // }
-
-    
-    for (ell_value=0;ell_value<lmax;ell_value++){
-        printf("\n %d #### -inv_cov- ell= %d \n", gangrank, ell_value);
-        for (index=0; index < order_matrix; index++){
-            for (index_2=0; index_2<order_matrix; index_2++){
-                printf("%.9f \t", inverse_covariance_matrix[ell_value][index*order_matrix + index_2]);
-            }
-            printf("\n");
-        }
-    }
-
-    s2hat_dcomplex *local_alm_out;
-    local_alm_out = (s2hat_dcomplex *) malloc( nstokes*(Global_param_s2hat->nlmax+1)*Global_param_s2hat->nmmax*sizeof(s2hat_dcomplex));
-    // apply_inv_covariance_matrix_to_alm(local_alm, inverse_covariance_matrix, *Global_param_s2hat, *Local_param_s2hat);
-    apply_inv_covariance_matrix_to_alm(local_alm, local_alm_out, inverse_covariance_matrix, &S2HAT_params);    
-
-    printf("%d - Local_alm after applying inv covariance matrix : \n", gangrank);
-    // int nmvals = Local_param_s2hat.nmvals;
-    
-    
-    for (ell_value=0;ell_value<lmax;ell_value++){
-        printf("\n %d - new local_alm - #### ell= %d \n", gangrank, ell_value);
-        for (m_value=0; m_value < nmvals; m_value++){
-            for(index_stokes=0;index_stokes<nstokes;index_stokes++){
-                // printf("%.9f %.9f - \t", local_alm[m_value*(lmax+1)*nstokes + ell_value*nstokes + index_stokes].re, local_alm[m_value*(lmax+1)*nstokes + ell_value*nstokes + index_stokes].im);
-                printf("%.9f %.9f - \t", local_alm_out[m_value*(lmax)*nstokes + ell_value*nstokes + index_stokes].re, local_alm_out[m_value*(lmax)*nstokes + ell_value*nstokes + index_stokes].im);
-            }
-            printf(" ## ");
-        }
-    }
-    printf("\n");
-    fflush(stdout);
-    
-    double *c_ell_array;
-
-    printf("Collecting c_ells - %d \n", gangrank);
-    fflush(stdout);
-    int index_correl, nspec = 6;
-    c_ell_array = (double *)calloc( nspec*(lmax), sizeof(double));
-    
-    alm2cls(local_alm_out, c_ell_array, nspec, &S2HAT_params);
-
-    if (gangrank==0){
-        for(index_correl=0;index_correl<nspec;index_correl++){
-            printf("\n %d - CELLS #### correl = %d \n", gangrank, index_correl);
-            for (ell_value=0;ell_value<lmax;ell_value++){
-                // printf("\n %d - CELLS #### ell= %d correl = %d \n", gangrank, ell_value, index_correl);
-                printf("%.9f \t", c_ell_array[index_correl*(lmax) + ell_value]);
-            }
-        }
-        fflush(stdout);
-    }
-    printf("\n");
-    free(c_ell_array);
-
-    // free_covariance_matrix(covariance_matrix_3x3, lmax);
-    free_covariance_matrix(inverse_covariance_matrix, lmax);
-
+    printf("Free 0 \n"); fflush(stdout);
+    free(Files_path_WF_struct);
+    printf("Free 1 \n"); fflush(stdout);
     free_s2hat_parameters_struct(&S2HAT_params);
-    // free_s2hat_GLOBAL_parameters_struct(Global_param_s2hat);
-    // free_s2hat_LOCAL_parameters_struct(Local_param_s2hat);
-    // MPI_Finalize();
+
+    MPI_Finalize();
 
     return 0;
 }
+

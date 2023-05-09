@@ -166,8 +166,8 @@ int get_projectors_indices(int *indices_nest, int *ordered_indices_ring, int siz
 int project_values_into_different_scheme(double *values_in, int number_values, int *projector_in2out, double *values_out);
 // Use the projectors found in get_projectors_indices to project the maps in 1 scheme or the other
 
-void convert_full_map_nest2ring(double *map_nest, double *map_ring, int nside, int nstokes, int npix);
-void convert_full_map_ring2nest(double *map_ring, double *map_nest, int nside, int nstokes, int npix);
+void convert_full_map_nest2ring(double *map_nest, double *map_ring, int nside, int nstokes);
+void convert_full_map_ring2nest(double *map_ring, double *map_nest, int nside, int nstokes);
 // Convert full maps from ring2nest or nest2ring assuming S2HAT convention for RING (TTTTQQQQUUU) and MAPPRAISER convention for NEST (TQUTQUTQU)
 
 int gather_map(double *local_map_pix, double *full_sky_map, int nstokes, S2HAT_parameters *S2HAT_params);
@@ -183,7 +183,7 @@ int mpi_create_subset(int number_ranks_to_divive, MPI_Comm initcomm, MPI_Comm *s
 int all_reduce_to_all_indices_mappraiser(int *indices_pixel_local, int number_pixel_local, int nside, int* all_sky_pixels_observed, int root, MPI_Comm world_comm);
 
 /* Use s2hat routines to broadcast s2hat global structures */
-void mpi_broadcast_s2hat_global_struc(S2HAT_GLOBAL_parameters *Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat);
+void mpi_broadcast_s2hat_global_struc(S2HAT_parameters *S2HAT_params);
 /**/
 /* Distribute full sky map in ring ordering, with convention [npix, nstokes] in column-wise order among procs, into local maps */
 int distribute_full_sky_map_into_local_maps_S2HAT(double* full_sky_map, double *local_map_s2hat, S2HAT_parameters *S2HAT_params);

@@ -41,7 +41,7 @@ int mpi_send_data_from_above_treshold(int treshold_rank, double *data_init, int 
                 difference_treshold = rank - treshold_rank;
 
                 // buffer = malloc(size_data*sizeof(double));
-                memcpy(buffer, data_init, size_data);
+                memcpy(buffer, data_init, size_data*sizeof(double));
                 MPI_Isend(buffer, size_data, MPI_DOUBLE, treshold_rank-difference_treshold, tag, world_comm, &s_request);
                 // free(buffer);
             }
@@ -50,7 +50,7 @@ int mpi_send_data_from_above_treshold(int treshold_rank, double *data_init, int 
 
                 // buffer = malloc(size_data*sizeof(double));
                 MPI_Irecv(buffer, size_data, MPI_DOUBLE, treshold_rank + difference_treshold, tag, world_comm, &r_request);
-                memcpy(data_out, buffer, size_data);
+                memcpy(data_out, buffer, size_data*sizeof(double));
                 // free(buffer);
             }
             free(buffer);
@@ -86,14 +86,14 @@ int mpi_send_data_from_below_treshold(int treshold_rank, double *data_init, int 
             if (rank > treshold_rank){
                 difference_treshold = rank - treshold_rank;
 
-                memcpy(buffer, data_init, size_data);
+                memcpy(buffer, data_init, size_data*sizeof(double));
                 MPI_Irecv(buffer, size_data, MPI_DOUBLE, treshold_rank-difference_treshold, tag, world_comm, &s_request);
             }
             if (rank < treshold_rank){
                 difference_treshold = treshold_rank - rank;
 
                 MPI_Isend(buffer, size_data, MPI_DOUBLE, treshold_rank + difference_treshold, tag, world_comm, &r_request);
-                memcpy(data_out, buffer, size_data);
+                memcpy(data_out, buffer, size_data*sizeof(double));
             }
             free(buffer);
         }
@@ -161,16 +161,18 @@ int all_reduce_to_all_indices_mappraiser(int *indices_pixel_local, int number_pi
 
 
 
-void mpi_broadcast_s2hat_global_struc(S2HAT_GLOBAL_parameters *Global_param_s2hat, S2HAT_LOCAL_parameters Local_param_s2hat){
+void mpi_broadcast_s2hat_global_struc(S2HAT_parameters *S2HAT_params){
     /* Use s2hat routines to broadcast s2hat structures */
-    if (Local_param_s2hat.gangrank != -1){
-        MPI_pixelizationBcast( &(Global_param_s2hat->pixelization_scheme), Local_param_s2hat.gangroot, Local_param_s2hat.gangrank, Local_param_s2hat.gangcomm);
-        MPI_scanBcast(Global_param_s2hat->pixelization_scheme, &(Global_param_s2hat->scan_sky_structure_pixel), Local_param_s2hat.gangroot, Local_param_s2hat.gangrank, Local_param_s2hat.gangcomm);
-        MPI_Bcast( &(Global_param_s2hat->pixpar.par1), 1, MPI_INT, Local_param_s2hat.gangroot, Local_param_s2hat.gangcomm);
-        MPI_Bcast( &(Global_param_s2hat->pixpar.par2), 1, MPI_INT, Local_param_s2hat.gangroot, Local_param_s2hat.gangcomm);
-        MPI_Bcast( &(Global_param_s2hat->nlmax), 1, MPI_INT, Local_param_s2hat.gangroot, Local_param_s2hat.gangcomm);
-        MPI_Bcast( &(Global_param_s2hat->nmmax), 1, MPI_INT, Local_param_s2hat.gangroot, Local_param_s2hat.gangcomm);
-        MPI_Bcast( &(Global_param_s2hat->nside), 1, MPI_INT, Local_param_s2hat.gangroot, Local_param_s2hat.gangcomm);
+    S2HAT_GLOBAL_parameters *Global_param_s2hat = S2HAT_params->Global_param_s2hat;
+    S2HAT_LOCAL_parameters *Local_param_s2hat = S2HAT_params->Local_param_s2hat;
+    if (Local_param_s2hat->gangrank != -1){
+        MPI_pixelizationBcast( &(Global_param_s2hat->pixelization_scheme), Local_param_s2hat->gangroot, Local_param_s2hat->gangrank, Local_param_s2hat->gangcomm);
+        MPI_scanBcast(Global_param_s2hat->pixelization_scheme, &(Global_param_s2hat->scan_sky_structure_pixel), Local_param_s2hat->gangroot, Local_param_s2hat->gangrank, Local_param_s2hat->gangcomm);
+        MPI_Bcast( &(Global_param_s2hat->pixpar.par1), 1, MPI_INT, Local_param_s2hat->gangroot, Local_param_s2hat->gangcomm);
+        MPI_Bcast( &(Global_param_s2hat->pixpar.par2), 1, MPI_INT, Local_param_s2hat->gangroot, Local_param_s2hat->gangcomm);
+        MPI_Bcast( &(Global_param_s2hat->nlmax), 1, MPI_INT, Local_param_s2hat->gangroot, Local_param_s2hat->gangcomm);
+        MPI_Bcast( &(Global_param_s2hat->nmmax), 1, MPI_INT, Local_param_s2hat->gangroot, Local_param_s2hat->gangcomm);
+        MPI_Bcast( &(Global_param_s2hat->nside), 1, MPI_INT, Local_param_s2hat->gangroot, Local_param_s2hat->gangcomm);
     }
 }
 
@@ -200,9 +202,9 @@ int collect_partial_map_from_pixels(double* local_map_s2hat, double *output_subm
     int nstokes = S2HAT_params->nstokes;
     int submap_size = last_pix - first_pix; // Submapsize given by pixel numbers
 
-    collect_partialmap(Global_param_s2hat.pixelization_scheme, 1, 0, nstokes, first_pix, last_pix, 
-        output_submap, Local_param_s2hat.first_ring, Local_param_s2hat.last_ring, submap_size, local_map_s2hat, 
-        Local_param_s2hat.gangrank, Local_param_s2hat.gangsize, Local_param_s2hat.gangroot, Local_param_s2hat.gangcomm);
+    collect_partialmap(Global_param_s2hat->pixelization_scheme, 1, 0, nstokes, first_pix, last_pix, 
+        output_submap, Local_param_s2hat->first_ring, Local_param_s2hat->last_ring, submap_size, local_map_s2hat, 
+        Local_param_s2hat->gangrank, Local_param_s2hat->gangsize, Local_param_s2hat->gangroot, Local_param_s2hat->gangcomm);
     // 1 map given, 0 is the number of the map
 
     return 0;
