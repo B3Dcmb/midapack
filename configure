@@ -1,334 +1,619 @@
-#!/bin/bash        
+#!/bin/bash
 #title           : configure
 #description     : This script will generate several Makefiles in src/toeplitz/ src/mapmat test/toeplitz test/mapmat.
 #                  input specify option as mpi, openmp, debug ...
 #authors	 : Pierre Cargemel, Frederic Dauvergne
 #date            : 17/07/2012
-#version         : 0.1    
+#version         : 0.1
 #usage		 : ./configure [options]
-#notes           : 
-#######################################
-#print help
-function chelp {
-       echo 'usage : ./configure [--option [expression]]' 
-       echo ' ' 
-       echo 'options :' 
-       echo '  --with [expression] (or --without)' 
-       echo '    mpi ; to use Message Passing Interface' 
-       echo '    openmp ; to multithreading via openmp' 
-       echo '    debug ; to generate a debug version' 
-       echo '    example for using mpi and openmp : ./configure --with mpi --with openmp' 
-       echo '  --cc [compiler] ' 
-       echo '    specify compiler to use' 
-       echo '    example for using : ./configure -cc mpicc' 
-       echo '  --fc [compiler] ' 
-       echo '    specify a fortran compiler' 
-       echo '    example for using gfortran : ./configure --fc gfortran' 
-       echo ' '
-} 
+#notes           :
+################################################
 
-function searchincpath { 
-found=0
-file=$1 
-path='/usr/include'
-echo 'searching '$file' in '$path
-if [ -f $path'/'$file ]
-  then
-  found=1
-  echo 'found'
-else
-  path='/usr/local/include'
-  echo 'searching '$file' in '$path
-  if [ -f $path'/'$file ]
-    then
-    found=1
-    echo 'found'
-  else 
-    path='/opt/local/include'
+
+# Print help
+function chelp {
+    echo 'usage : ./configure [--option [expression]]'
+    echo ' '
+    echo 'options :'
+    echo '  --with [expression] (or --without)'
+    echo '    mpi ; to use Message Passing Interface'
+    echo '    openmp ; to multithreading via openmp'
+    echo '    debug ; to generate a debug version'
+    echo '    mkl ; use MKL optimized routines'
+    echo '    ecg ; compile ECG solver (requires preAlps, metis and MKL)'
+    # echo '    docker ; compilation inside Docker image'
+    echo '    example for using mpi and openmp : ./configure --with mpi --with openmp'
+    echo '  --cc [compiler] '
+    echo '    specify compiler to use'
+    echo '    example for using : ./configure --cc mpicc'
+    echo '  --fc [compiler] '
+    echo '    specify a fortran compiler'
+    echo '    example for using gfortran : ./configure --fc gfortran'
+    echo ' '
+}
+
+function searchincpath {
+    found=0
+    file=$1
+    path='/usr/include'
     echo 'searching '$file' in '$path
     if [ -f $path'/'$file ]
-      then
-      found=1
-      echo 'found'
-    else
-      echo 'cannot find '$file
-      echo 'please enter the path for'$file
-      read path
-      if [ -f $path'/'$file ]
-        then
+    then
         found=1
         echo 'found'
-      else 
-        echo 'error : cannot find '$file' in '$path
-        path=''
-        exit
-      fi
+    else
+        path='/usr/local/include'
+        echo 'searching '$file' in '$path
+        if [ -f $path'/'$file ]
+        then
+            found=1
+            echo 'found'
+        else
+            path='/opt/local/include'
+            echo 'searching '$file' in '$path
+            if [ -f $path'/'$file ]
+            then
+                found=1
+                echo 'found'
+            else
+                echo 'cannot find '$file
+                echo 'please enter the path for'$file
+                read path
+                if [ -f $path'/'$file ]
+                then
+                    found=1
+                    echo 'found'
+                else
+                    echo 'error : cannot find '$file' in '$path
+                    path=''
+                    exit
+                fi
+            fi
+        fi
     fi
-  fi
-fi
 }
 
-
-function searchlibpath { 
-found=0
-file=$1 
-path='/usr/lib'
-echo 'searching '$file' in '$path
-if [ -f $path'/'$file ]
-  then
-  found=1
-  echo 'found'
-else
-  path='/usr/local/lib'
-  echo 'searching '$file' in '$path
-  if [ -f $path'/'$file ]
-    then
-    found=1
-    echo 'found'
-  else 
-    path='/opt/local/lib'
+function searchlibpath {
+    found=0
+    file=$1
+    path='/usr/lib'
     echo 'searching '$file' in '$path
     if [ -f $path'/'$file ]
-      then
-      found=1
-      echo 'found'
+    then
+        found=1
+        echo 'found'
     else
-      echo $file' not found'
-      path=''
+        path='/usr/local/lib'
+        echo 'searching '$file' in '$path
+        if [ -f $path'/'$file ]
+        then
+            found=1
+            echo 'found'
+        else
+            path='/opt/local/lib'
+            echo 'searching '$file' in '$path
+            if [ -f $path'/'$file ]
+            then
+                found=1
+                echo 'found'
+            else
+                echo $file' not found'
+                path=''
+            fi
+        fi
     fi
-  fi
-fi
 }
 
 
+################################################
+### Read parameters and check options ##########
+################################################
 
-#default variable values
+# Default variable values
 MPI=1
 OPENMP=1
 GPU=0
 DEBUG=0
 ERROR=0
+MKL=1
+ECG=1
+# DOCKER=0
 
 PROJECT='Midapack_'
 VERSION='1.1b'
+
 CC=0
+MPICC=$MPICC
 GCC='gcc'
-MPICC='mpicc'
 NVCC='nvcc'
 F90='gfortran'
-OPT=''
+
+# OPT='-Wall -Werror -fPIC'
+OPT='-fPIC'
 DIR=$(pwd)
 DIRTAR='export_tar'
+LDFLAGS='-shared'
 
-#######################################
-#read parameters
+# Read script parameters
 while [ $# -ne 0 ]
-  do
-   case $1 in
-   --with)
-     if [ $2 == mpi ]
-       then 
-       MPI=1
-       shift
-     elif [ $2 == openmp ]
-       then 
-       OPENMP=1
-       shift
-     elif [ $2 == debug ] 
-       then
-       DEBUG=1
-       shift
-     elif [ $2 == gpu ] 
-       then
-       GPU=1
-       shift
-     else 
-       echo 'bad parameter for --with'
-       ERROR=1
-     fi
-     ;;
-   --without)
-     if [ $2 == mpi ]
-       then 
-       MPI=0
-       shift
-     elif [ $2 == openmp ]
-       then 
-       OPENMP=0
-       shift
-     elif [ $2 == debug ] 
-       then
-       DEBUG=0
-       shift
-     else 
-       echo 'bad parameter for --without'
-       ERROR=1
-     fi
-     ;;
-   --help)
-       chelp
-       exit
-     ;;
-    --cc)
-       CC=' '$2' '
-       shift
-     ;;
-    --fc)
-       F90=' '$2' '
-       shift
-     ;;
+do
+    case $1 in
+        --with)
+            if [ $2 == mpi ]
+            then
+                MPI=1
+                shift
+            elif [ $2 == openmp ]
+            then
+                OPENMP=1
+                shift
+            elif [ $2 == debug ]
+            then
+                DEBUG=1
+                shift
+            elif [ $2 == gpu ]
+            then
+                GPU=1
+                shift
+            elif [ $2 == mkl ]
+            then
+                MKL=1
+                shift
+            elif [ $2 == ecg ]
+            then
+                ECG=1
+                shift
+            # elif [ $2 == docker ]
+            # then
+            #     DOCKER=1
+            #     shift
+            else
+                echo 'bad parameter for --with'
+                ERROR=1
+            fi
+        ;;
+        --without)
+            if [ $2 == mpi ]
+            then
+                MPI=0
+                shift
+            elif [ $2 == openmp ]
+            then
+                OPENMP=0
+                shift
+            elif [ $2 == debug ]
+            then
+                DEBUG=0
+                shift
+            elif [ $2 == gpu ]
+            then
+                GPU=0
+                shift
+            elif [ $2 == mkl ]
+            then
+                MKL=0
+                shift
+            elif [ $2 == ecg ]
+            then
+                ECG=0
+                shift
+            # elif [ $2 == docker ]
+            # then
+            #     DOCKER=0
+            #     shift
+            else
+                echo 'bad parameter for --without'
+                ERROR=1
+            fi
+        ;;
+        --help)
+            chelp
+            exit
+        ;;
+        --cc)
+            CC=' '$2' '
+            shift
+        ;;
+        --fc)
+            F90=' '$2' '
+            shift
+        ;;
         *)
-     echo 'bad argument' 
-     echo 'try ./configure --help' 
-     ERROR=1
-     ;;
-  esac    
-  shift
+            echo 'bad argument'
+            echo 'try ./configure --help'
+            ERROR=1
+        ;;
+    esac
+    shift
 done
 
-if [ $ERROR == 1 ]
-  then
-  echo 'configure FAILED' 
-  exit
+# Check ECG requirements
+if [ $ECG == 1 ]
+then
+    # MKL option must be activated
+    if [ $MKL == 0 ]
+    then
+        echo 'ECG solver requires preAlps, therefore MKL. Please configure with option --with mkl'
+        ERROR=1
+    fi
+    
+    # check path to preAlps
+    if [ -z "$PREALPSROOT" ]
+    then
+        echo 'ECG solver requires preAlps library. Make sure the environment variable \$PREALPSROOT is set.'
+        ERROR=1
+    else
+        # CPLM_CORE=utils/cplm_core
+        # CPLMDIR=utils/cplm_light
+        # CPLM_V0_DIR=utils/cplm_v0
+        LIBpreAlps='-L${PREALPSROOT}/lib/ -lpreAlps_release -lcplm_light -lcplm_v0 -lcplm_core'
+        INCpreAlps='-I${PREALPSROOT}/utils/cplm_core'
+        INCpreAlps+=' -I${PREALPSROOT}/utils/cplm_light'
+        INCpreAlps+=' -I${PREALPSROOT}/utils/cplm_v0'
+        INCpreAlps+=' -I${PREALPSROOT}/utils'
+        INCpreAlps+=' -I${PREALPSROOT}/src/preconditioners'
+        INCpreAlps+=' -I${PREALPSROOT}/src/solvers'
+    fi
+
+    # check path to metis
+    if [ -z "$METISROOT" ]
+    then
+        echo 'ECG solver requires metis library. Make sure the environment variable \$METISROOT is set.'
+        ERROR=1
+    else
+        METIS_INC='-I${METISROOT}/include'
+        METIS_LIB='-L${METISROOT}/lib -lmetis'
+    fi
 fi
 
-
-
-######### paths ############################
-if [ $MPI -eq 1 ]
-  then
-  LIBNAME='libmidapack'
+# Check path to mkl library
+if [[ $MKL -eq 1 ]] && [[ -z "$MKLROOT" ]]
+then
+    echo 'Option --with mkl is used. Make sure the environment variable \$MKLROOT is set.'
+    ERROR=1
 else
-  LIBNAME='libseqmidapack'
+    MKL_INC='-I${MKLROOT}/include'
+    MKL_LIB='-L${MKLROOT}/lib/intel64 -lmkl_rt'
 fi
+
+# Check path to cfitsio library
+if [ -z "$CFITSIOROOT" ]
+then
+    echo 'Mappraiser requires cfitsio library. Make sure the environment variable \$CFITSIOROOT is set.'
+    ERROR=1
+else
+    CFITSIO_INC='-I${CFITSIOROOT}/include'
+    CFITSIO_LIB='-L${CFITSIOROOT}/lib -lcfitsio'
+fi
+
+# Check if an install prefix has been defined
+if [ -z "$PREFIX" ]
+then
+    echo 'Please specify the installation directory through the environment variable \$PREFIX.'
+    ERROR=1
+fi
+
+# Exit in case of any error
+if [ $ERROR == 1 ]
+then
+    echo 'configure FAILED'
+    exit
+fi
+
+echo 'Final configuration options:'
+echo ' > MPI    = '$MPI
+echo ' > OPENMP = '$OPENMP
+echo ' > GPU    = '$GPU
+echo ' > DEBUG  = '$DEBUG
+echo ' > MKL    = '$MKL
+echo ' > ECG    = '$ECG
+# echo '  DOCKER = '$DOCKER
+
+
+################################################
+### Compilers, compilation flags, ... ##########
+################################################
+
+#FIXME: fix this section
+
+# Fortran
+
+if [ $F90 == 0 ]
+then
+    echo 'setting fortran compiler (gfortran) : '
+    path=$(which gfortran)
+    F90=$path
+    echo 'F90 = '$F90
+fi
+
+# C + MPI
+
+if [ $MPI -eq 1 ]
+then
+    echo 'setting mpi flag'
+    OPT=$OPT' -D W_MPI'
+    if [ $CC == 0 ]
+    then
+        if [ -z "$MPICC" ]
+        then
+            echo 'setting MPI compiler (mpicc) : '
+            path=$(which mpicc)
+            MPICC=$path
+        fi
+        CC='${MPICC}'
+    fi
+    echo 'MPICC = '$MPICC
+else
+    if [ $CC == 0 ]
+    then
+        if [ -z "$GCC" ]
+        then
+            echo 'setting C compiler (gcc) : '
+            path=$(which gcc)
+            GCC=$path
+        fi
+        CC='${GCC}'
+    fi
+    echo 'GCC = '$GCC
+fi
+
+# OpenMP
+
+if [ $OPENMP -eq 1 ]
+then
+    echo 'setting openmp flag'
+    OPT=$OPT' -D W_OPENMP'
+    CC=$CC' '$OPENMP_CFLAGS
+    LDFLAGS=$LDFLAGS' '$OPENMP_CFLAGS
+fi
+
+# Optimisations
+
+if [ $DEBUG -eq 1 ]
+then
+    echo 'setting mode debug'
+    OPT=$OPT' -g -O0'
+else
+    OPT=$OPT' -O3'
+fi
+
+# MKL
+
+if [ $MKL -eq 1 ]
+then
+    echo 'setting mkl flag'
+    OPT=$OPT' -D W_MKL'
+fi
+
+# ECG
+
+if [ $ECG -eq 1 ]
+then
+    echo 'setting ecg flag'
+    OPT=$OPT' -D W_ECG'
+fi
+
+# Add all the options to CC variable
+
+CC=$CC' ${OPT}'
+
+
+################################################
+### Paths ######################################
+################################################
+
+### Midapack ###
+
+if [ $MPI -eq 1 ]
+then
+    LIBNAME='libmidapack'
+else
+    LIBNAME='libseqmidapack'
+fi
+
 echo 'PROJECT = '$PROJECT > Makefile
 echo 'VERSION = '$VERSION >> Makefile
 echo 'DIR = '$DIR >> Makefile
 echo 'DIRTAR = '$DIRTAR >> Makefile
 echo 'LIBNAME = '$LIBNAME >> Makefile
 
-echo 'DIR = '$DIR > ./test/mapmat/Makefile
-echo 'MAPMAT = $(DIR)/src/mapmat/' >> ./test/mapmat/Makefile
+echo 'PREFIX = '$PREFIX >> Makefile
 
-echo 'DIR = '$DIR > ./test/toeplitz/Makefile
-echo 'TOEPLITZ = $(DIR)/src/toeplitz/' >> ./test/toeplitz/Makefile
+echo 'MIDAPACK_ROOT = ${PREFIX}/midapack' >> Makefile
+echo 'MIDAPACK_INC = ${MIDAPACK_ROOT}/include' >> Makefile
+echo 'MIDAPACK_OBJ = ${MIDAPACK_ROOT}/obj' >> Makefile
+echo 'MAPMAT_OBJ = ${MIDAPACK_OBJ}/mapmat' >> Makefile
+echo 'TOEPLITZ_OBJ = ${MIDAPACK_OBJ}/toeplitz' >> Makefile
+echo 'MIDAPACK_LIB = ${MIDAPACK_ROOT}/lib' >> Makefile
 
-####### compilers ###########################
-#fortran
-if [ $F90 == 0 ]
-  then
-  echo 'setting fortran compiler (gfortran) : '
-  path=$(which gfortran)
-  F90=$path
-  echo 'F90 = '$F90 
+echo 'MIDAPACK_ROOT = ${PREFIX}/midapack' > src/mapmat/Makefile
+echo 'MAPMAT_OBJ = ${MIDAPACK_ROOT}/obj/mapmat' >> src/mapmat/Makefile
+
+echo 'MIDAPACK_ROOT = ${PREFIX}/midapack' > src/toeplitz/Makefile
+echo 'TOEPLITZ_OBJ = ${MIDAPACK_ROOT}/obj/toeplitz' >> src/toeplitz/Makefile
+
+echo 'MPICC = '$MPICC >> Makefile
+echo 'LDFLAGS = '$LDFLAGS >> Makefile
+
+echo 'GCC = '$GCC  >> src/mapmat/Makefile
+echo 'MPICC = '$MPICC  >> src/mapmat/Makefile
+echo 'OPT = '$OPT >> src/mapmat/Makefile
+echo 'CC = '$CC  >> src/mapmat/Makefile
+
+echo 'GCC = '$GCC  >> src/toeplitz/Makefile
+echo 'MPICC = '$MPICC  >> src/toeplitz/Makefile
+echo 'OPT = '$OPT >> src/toeplitz/Makefile
+echo 'CC = '$CC  >> src/toeplitz/Makefile
+
+### old: test/matmap and test/toeplitz ###
+
+# echo 'DIR = '$DIR > test/mapmat/Makefile
+# echo 'MAPMAT = ${DIR}/src/mapmat/' >> test/mapmat/Makefile
+
+# echo 'DIR = '$DIR > test/toeplitz/Makefile
+# echo 'TOEPLITZ = ${DIR}/src/toeplitz/' >> test/toeplitz/Makefile
+
+# echo 'F90 = '$F90 >> test/mapmat/Makefile
+# echo 'GCC = '$GCC  >> test/mapmat/Makefile
+# echo 'MPICC = '$MPICC  >> test/mapmat/Makefile
+# echo 'OPT = '$OPT >> test/mapmat/Makefile
+# echo 'CC = '$CC  >> test/mapmat/Makefile
+
+# echo 'GCC = '$GCC  >> test/toeplitz/Makefile
+# echo 'MPICC = '$MPICC  >> test/toeplitz/Makefile
+# echo 'CC = '$CC  >> test/toeplitz/Makefile
+
+### Mappraiser ###
+
+echo 'DIR = '$DIR > test/mapmaking/mappraiser/Makefile
+echo 'DIR = '$DIR > test/mapmaking/mappraiser/src/Makefile
+
+echo 'PREFIX = '$PREFIX >> test/mapmaking/mappraiser/Makefile
+echo 'PREFIX = '$PREFIX >> test/mapmaking/mappraiser/src/Makefile
+
+echo 'MIDAPACK_LIB = ${PREFIX}/midapack/lib' >> test/mapmaking/mappraiser/Makefile
+echo 'MIDAPACK_LIB = ${PREFIX}/midapack/lib' >> test/mapmaking/mappraiser/src/Makefile
+
+if [ $MKL == 1 ]
+then
+    echo 'MKLROOT = '$MKLROOT >> test/mapmaking/mappraiser/Makefile
+    echo 'MKLROOT = '$MKLROOT >> test/mapmaking/mappraiser/src/Makefile
 fi
 
-# c + mpi
-if [ $MPI -eq 1 ]
-  then
-  OPT=$OPT' -D W_MPI'
-  if [ $CC == 0 ]
-    then
-    echo 'setting MPI compiler (mpicc) : '
-    path=$(which mpicc)
-    MPICC=$path
-    CC='$(MPICC)'
-  fi 
-  echo 'MPICC = '$MPICC 
-else
-  if [ $CC == 0 ]
-    then
-    echo 'setting C compiler (gcc) : '
-    path=$(which gcc)
-    GCC=$path
-    CC='$(GCC)'
-  fi
-  echo 'GCC = '$GCC 
-fi
-  
-
-#openmp
-if [ $OPENMP -eq 1 ]
-  then
-  echo 'setting openmp flag'
-  OPT=$OPT' -D W_OPENMP'
-  CC=$CC' -fopenmp'
+if [ $ECG == 1 ]
+then
+    echo 'PREALPSROOT = '$PREALPSROOT >> test/mapmaking/mappraiser/Makefile
+    echo 'PREALPSROOT = '$PREALPSROOT >> test/mapmaking/mappraiser/src/Makefile
+    
+    echo 'METISROOT = '$METISROOT >> test/mapmaking/mappraiser/Makefile
+    echo 'METISROOT = '$METISROOT >> test/mapmaking/mappraiser/src/Makefile
 fi
 
+echo 'CFITSIOROOT = '$CFITSIOROOT >> test/mapmaking/mappraiser/Makefile
+echo 'CFITSIOROOT = '$CFITSIOROOT >> test/mapmaking/mappraiser/src/Makefile
 
-#optimisations
-if [ $DEBUG -eq 1 ]
-  then
-  echo 'setting mode debug'
-  OPT=$OPT' -g' 
-else
-  OPT=$OPT' -O3' 
-fi  
-CC=$CC' $(OPT)'
+#FIXME: check path for openblas library in the case of build in Docker image ?
+# if [ $DOCKER == 1 ]
+# then
+#     if [ -z "$OPENBLASROOT" ]
+#     then
+#         echo '\$OPENBLASROOT is not set'
+#         ERROR=1
+#     else
+#         echo 'OPENBLASROOT = '$OPENBLASROOT >> test/mapmaking/mappraiser/Makefile
+#         echo 'OPENBLAS_INC = -I${OPENBLASROOT}/include' >> test/mapmaking/mappraiser/Makefile
+#         echo 'OPENBLAS_LIB = -L${OPENBLASROOT}/lib -lopenblas -lpthread -lgfortran' >> test/mapmaking/mappraiser/Makefile
+
+#         echo 'OPENBLASROOT = '$OPENBLASROOT >> test/mapmaking/mappraiser/src/Makefile
+#         echo 'OPENBLAS_INC = -I${OPENBLASROOT}/include' >> test/mapmaking/mappraiser/src/Makefile
+#         echo 'OPENBLAS_LIB = -L${OPENBLASROOT}/lib -lopenblas -lpthread -lgfortran' >> test/mapmaking/mappraiser/src/Makefile
+#     fi
+# fi
+
+echo 'MPICC = '$MPICC >> test/mapmaking/mappraiser/Makefile
+echo 'LDFLAGS = '$LDFLAGS >> test/mapmaking/mappraiser/Makefile
+echo 'MAPPRAISER_ROOT = ${PREFIX}/mappraiser' >> test/mapmaking/mappraiser/Makefile
+echo 'MAPPRAISER_OBJ = ${MAPPRAISER_ROOT}/obj' >> test/mapmaking/mappraiser/Makefile
+echo 'MAPPRAISER_LIB = ${MAPPRAISER_ROOT}/lib' >> test/mapmaking/mappraiser/Makefile
+echo 'MAPPRAISER_INC = ${MAPPRAISER_ROOT}/include' >> test/mapmaking/mappraiser/Makefile
+
+echo 'OPT = '$OPT >> test/mapmaking/mappraiser/src/Makefile
+echo 'CC = '$CC >> test/mapmaking/mappraiser/src/Makefile
+echo 'MAPPRAISER_ROOT = ${PREFIX}/mappraiser' >> test/mapmaking/mappraiser/src/Makefile
+echo 'MAPPRAISER_OBJ = ${MAPPRAISER_ROOT}/obj' >> test/mapmaking/mappraiser/src/Makefile
+echo 'MAPPRAISER_LIB = ${MAPPRAISER_ROOT}/lib' >> test/mapmaking/mappraiser/src/Makefile
 
 
-echo 'GCC = '$GCC  > ./src/mapmat/Makefile
-echo 'MPICC = '$MPICC  >> ./src/mapmat/Makefile
-echo 'OPT = '$OPT >> ./src/mapmat/Makefile
-echo 'CC = '$CC  >> ./src/mapmat/Makefile
+################################################
+### INC and LIB ################################
+################################################
 
-echo 'GCC = '$GCC  > ./src/toeplitz/Makefile
-echo 'MPICC = '$MPICC  >> ./src/toeplitz/Makefile
-echo 'OPT = '$OPT >> ./src/toeplitz/Makefile
-echo 'CC = '$CC  >> ./src/toeplitz/Makefile
+INC='-I${MIDAPACK_ROOT}/include'
+LIB='-L${MIDAPACK_LIB} -lmidapack'
 
-echo 'F90 = '$F90 >> ./test/mapmat/Makefile
-echo 'GCC = '$GCC  >> ./test/mapmat/Makefile
-echo 'MPICC = '$MPICC  >> ./test/mapmat/Makefile
-echo 'OPT = '$OPT >> ./test/mapmat/Makefile
-echo 'CC = '$CC  >> ./test/mapmat/Makefile
+# link MKL library (if needed)
 
-echo 'GCC = '$GCC  >> ./test/toeplitz/Makefile
-echo 'MPICC = '$MPICC  >> ./test/toeplitz/Makefile
-echo 'CC = '$CC  >> ./test/toeplitz/Makefile
-
-
-######## include  ##########################
-searchincpath fftw3.h
-FFTW_INC=$path
-echo 'FFTW_INC = -I'$FFTW_INC >> src/mapmat/Makefile
-echo 'FFTW_INC = -I'$FFTW_INC >> src/toeplitz/Makefile
-
-echo 'INC = -I$(DIR)/include -I'$FFTW_INC >> ./test/mapmat/Makefile
-echo 'INC = -I$(DIR)/include -I'$FFTW_INC >> ./test/toeplitz/Makefile
-######## libraries (for tests) #############
-if [ $MPI -eq 1 ]
-  then
-  echo 'LIB = -L$(DIR)/lib -lmidapack' >> ./test/mapmat/Makefile
-  echo 'LIB = -L$(DIR)/lib -lmidapack' >> ./test/toeplitz/Makefile
-else
-  echo 'LIB = -L$(DIR)/lib -lseqmidapack' >> ./test/mapmat/Makefile
-  echo 'LIB = -L$(DIR)/lib -lseqmidapack' >> ./test/toeplitz/Makefile
+if [ $MKL -eq 1 ]
+then
+    INC+=' '$MKL_INC
+    LIB+=' '$MKL_LIB
 fi
 
-#searchlibpath libfftw3.a
-#FFTW_LIB=$path
-#echo 'FFTW_LIB = -L'$FFTW_LIB -lfftw3 >> ./test/toeplitz/Makefile
-echo 'FFTW_LIB = -lfftw3 -lfftw3_threads' >> ./test/toeplitz/Makefile
+echo 'INC = '$INC >> test/mapmaking/mappraiser/Makefile
+echo 'LIB = '$LIB >> test/mapmaking/mappraiser/Makefile
+echo 'CFITSIO_INC = '$CFITSIO_INC >> test/mapmaking/mappraiser/Makefile
+echo 'CFITSIO_LIB = '$CFITSIO_LIB >> test/mapmaking/mappraiser/Makefile
 
-#############################################
+echo 'INC = '$INC >> test/mapmaking/mappraiser/src/Makefile
+echo 'LIB = '$LIB >> test/mapmaking/mappraiser/src/Makefile
+echo 'CFITSIO_INC = '$CFITSIO_INC >> test/mapmaking/mappraiser/src/Makefile
+echo 'CFITSIO_LIB = '$CFITSIO_LIB >> test/mapmaking/mappraiser/src/Makefile
 
- 
+# link preAlps and metis
+
+if [ $ECG -eq 1 ]
+then
+    INCpreAlps+=' '$METIS_INC
+    LIBpreAlps+=' '$METIS_LIB
+
+    echo 'INCpreAlps = '$INCpreAlps >> test/mapmaking/mappraiser/Makefile
+    echo 'LIBpreAlps = '$LIBpreAlps >> test/mapmaking/mappraiser/Makefile
+
+    echo 'INCpreAlps = '$INCpreAlps >> test/mapmaking/mappraiser/src/Makefile
+    echo 'LIBpreAlps = '$LIBpreAlps >> test/mapmaking/mappraiser/src/Makefile
+fi
+
+# searchincpath fftw3.h
+# FFTW_INC=$path
+# echo 'FFTW_INC = -I'$FFTW_INC >> src/mapmat/Makefile
+# echo 'FFTW_INC = -I'$FFTW_INC >> src/toeplitz/Makefile
+
+# echo 'INC = -I${DIR}/include -I'$FFTW_INC >> test/mapmat/Makefile
+# echo 'INC = -I${DIR}/include -I'$FFTW_INC >> test/toeplitz/Makefile
+
+# if [ $MPI -eq 1 ]
+# then
+#     echo 'LIB = -L${DIR}/lib -lmidapack' >> test/mapmat/Makefile
+#     echo 'LIB = -L${DIR}/lib -lmidapack' >> test/toeplitz/Makefile
+# else
+#     echo 'LIB = -L${DIR}/lib -lseqmidapack' >> test/mapmat/Makefile
+#     echo 'LIB = -L${DIR}/lib -lseqmidapack' >> test/toeplitz/Makefile
+# fi
+
+# searchlibpath libfftw3.a
+# FFTW_LIB=$path
+# echo 'FFTW_LIB = -L'$FFTW_LIB -lfftw3 >> test/toeplitz/Makefile
+# echo 'FFTW_LIB = -lfftw3 -lfftw3_threads' >> test/toeplitz/Makefile
+
+
+################################################
+### Write final Makefiles ######################
+################################################
+
 cat Makefile.in >> Makefile
-
 cat src/mapmat/Makefile.in >> src/mapmat/Makefile
-
-cat test/mapmat/Makefile.in >> test/mapmat/Makefile
-
 cat src/toeplitz/Makefile.in >> src/toeplitz/Makefile
 
-cat test/toeplitz/Makefile.in >> test/toeplitz/Makefile
+# Choose Mappraiser input Makefiles
+if [ $ECG == 1 ]
+then
+    MAPPRAISER_IN="test/mapmaking/mappraiser/Makefile-ecg.in"
+    MAPPRAISER_SRC_IN="test/mapmaking/mappraiser/src/Makefile-ecg.in"
+else
+    MAPPRAISER_IN="test/mapmaking/mappraiser/Makefile.in"
+    MAPPRAISER_SRC_IN="test/mapmaking/mappraiser/src/Makefile.in"
+fi
+
+cat $MAPPRAISER_IN >> test/mapmaking/mappraiser/Makefile
+cat $MAPPRAISER_SRC_IN >> test/mapmaking/mappraiser/src/Makefile
+
+# cat test/mapmat/Makefile.in >> test/mapmat/Makefile
+# cat test/toeplitz/Makefile.in >> test/toeplitz/Makefile
 
 if [ $ERROR == 1 ]
-  then
-  echo 'configure FAILED' 
-  exit
+then
+    echo 'configure FAILED'
+    exit
 else
-  echo 'Makefile has been successfully generated' 
+    echo 'Makefiles have been successfully generated.'
 fi
-    
