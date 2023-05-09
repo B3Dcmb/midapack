@@ -4,8 +4,12 @@
 #include <midapack.h>
 
 #ifdef __cplusplus
+
+#include <vector>
+
 namespace mappraiser {
-    void psd_from_tt ( int fftlen, int lambda, int psdlen, const double *tt, double *psd, double rate = 200.0 );
+    void psd_from_tt ( int fftlen, int lambda, int psdlen, const double *tt, std::vector<double> &psd,
+                       double rate = 200.0 );
 
     double compute_mean ( int samples, double *buf, bool subtract );
 
@@ -15,11 +19,12 @@ namespace mappraiser {
 
     double compute_variance_good ( int samples, double mean, const double *buf, const bool *valid );
 
-    int find_valid_samples ( Gap *gaps, int samples, int64_t id0, bool *valid );
+    int find_valid_samples ( Gap *gaps, size_t id0, std::vector<bool> &valid );
 
-    void remove_baseline ( double *buf, int samples, double *baseline, const bool *valid, bool rm );
+    void remove_baseline ( std::vector<double> &buf, std::vector<double> &baseline, const std::vector<bool> &valid,
+                           bool rm );
 
-    void sim_noise_tod ( int samples, int lambda, const double *tt, double *buf, u_int64_t realization,
+    void sim_noise_tod ( int samples, int lambda, const double *tt, std::vector<double> &buf, u_int64_t realization,
                          u_int64_t detindx, u_int64_t obsindx, u_int64_t telescope, double var_goal = 1.0,
                          bool verbose = false );
 
