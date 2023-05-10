@@ -574,7 +574,11 @@ def noise2invtt(
         pass
 
     # Estimate psd from noise timestream 
-    nperseg = nn # Length of segments used to estimate PSD (defines the lowest frequency we can estimate)
+
+    # Length of segments used to estimate PSD (defines the lowest frequency we can estimate)
+    nperseg = nn
+
+    # Compute a periofogram with Welch's method
     f, psd = scipy.signal.welch(nsetod, fsamp, window='hann', nperseg=nperseg, detrend='linear')
 
     # Fit the psd model to the periodogram (in log scale)

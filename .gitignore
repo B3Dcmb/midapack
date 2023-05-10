@@ -36,8 +36,8 @@
 *.pyc
 
 # Directories to ignore
-mappraiser/src/test/*
-libmidapack/test/*
+mappraiser/src/test
+libmidapack/test
 
 # System files
 .DS_Store
@@ -47,5 +47,5 @@ libmidapack/test/*
 *.code-workspace
 
 # build products
-build/*
-mappraiser/build/*
+build
+mappraiser/build

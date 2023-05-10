@@ -1322,7 +1322,6 @@ class Mappraiser(Operator):
             self._mappraiser_pixweights,
             self._mappraiser_signal,
             self._mappraiser_noise,
-            params["Lambda"],
             self._mappraiser_invtt,
         )
 

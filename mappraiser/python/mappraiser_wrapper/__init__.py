@@ -84,7 +84,6 @@ def MLmap(
     pixweights,
     signal,
     noise,
-    Lambda,
     invtt,
 ):
     """
@@ -103,7 +102,6 @@ def MLmap(
     * `pixweights`: Corresponding matrix values
     * `signal`: Signal buffer
     * `noise`: Noise buffer
-    * `Lambda`: Toeplitz matrix half-bandwidth
     * `invtt`: Inverse noise weights
 
     """
@@ -135,7 +133,7 @@ def MLmap(
         pixweights,
         signal,
         noise,
-        Lambda,
+        params["Lambda"],
         invtt,
     )
 

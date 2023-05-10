@@ -7,12 +7,12 @@ add_library(mappraiser SHARED)
 # ----------------------------------------------------------------------------------------#
 
 target_sources(mappraiser PRIVATE
-               "createToeplitz.c"
-               "iofiles.c"
-               "mappraiser.c"
-               "pcg_true.c"
-               "precond.c"
-               )
+        "create_toeplitz.c"
+        "iofiles.c"
+        "mappraiser.c"
+        "pcg_true.c"
+        "precond.c"
+        )
 
 if (ECG)
     target_sources(mappraiser PRIVATE "ecg.c")
@@ -23,8 +23,9 @@ endif ()
 # ----------------------------------------------------------------------------------------#
 
 target_include_directories(mappraiser PRIVATE
-                           "../include"
-                           )
+        "../include"
+        "../include/mappraiser"
+        )
 
 #target_include_directories(mappraiser PUBLIC
 #                           $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
