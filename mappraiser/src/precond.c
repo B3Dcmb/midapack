@@ -14,7 +14,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 
 // choose header based on compilation option
 #ifdef HAVE_MKL

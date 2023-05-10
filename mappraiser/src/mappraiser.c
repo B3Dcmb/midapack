@@ -11,14 +11,11 @@
 #include "mappraiser/create_toeplitz.h"
 #include "mappraiser/iofiles.h"
 #include "mappraiser/pcg_true.h"
-#include <errno.h>
 #include <math.h>
 #include <midapack.h>
 #include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <time.h>
 #include <unistd.h>
 
 int x2map_pol(double *mapI, double *mapQ, double *mapU, double *Cond, int *hits,
