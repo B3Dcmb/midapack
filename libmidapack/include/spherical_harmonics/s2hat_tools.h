@@ -190,7 +190,7 @@ int distribute_full_sky_map_into_local_maps_S2HAT(double* full_sky_map, double *
 /**/
 
 /* Collect submap from local_maps of S2HAT, given first and last pixel of submap */
-int collect_partial_map_from_pixels(double* local_map_s2hat, double *output_submap, int first_pix, int last_pix, S2HAT_parameters *S2HAT_params);
+// int collect_partial_map_from_pixels(double* local_map_s2hat, double *output_submap, int first_pix, int last_pix, S2HAT_parameters *S2HAT_params);
 
 /* Free covariance matrix */
 void free_covariance_matrix(double ** covariance_matrix_3x3, int lmax);

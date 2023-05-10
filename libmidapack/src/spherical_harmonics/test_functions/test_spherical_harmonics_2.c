@@ -2778,8 +2778,8 @@ int main_pixel_scheme_transition_v0(int argc, char** argv){
 // /* Collect submap from local_maps of S2HAT, given first and last pixel of submap */
 // int collect_partial_map_from_pixels(double* local_map_s2hat, double *output_submap, int first_pix, int last_pix, S2HAT_parameters *S2HAT_params);
 
-// int main_pixel_scheme_transition_v0(int argc, char** argv){
-int main(int argc, char** argv){
+int main_pixel_scheme_transition_v1(int argc, char** argv){
+// int main(int argc, char** argv){
     // char *path_mask = "/global/cscratch1/sd/mag/Masks_files/SO_wH.fits";
 
     char *path_mask = "/global/cscratch1/sd/mag/Masks_files/No_Mask.fits";
@@ -2791,11 +2791,11 @@ int main(int argc, char** argv){
     int i_index, ncomp;
     int index, index_2, ell_value;
 
-    int nside = 16;
+    int nside = 4;
     // int lmax = 3*nside-1 ;//1500;//025;
     // int lmax = 4;
     // int nstokes = 3;
-    char *path_CMB_map = "/global/cscratch1/sd/mag/xPure_data/Files_Launch/Map_band_limited_1024_0.fits";
+    // char *path_CMB_map = "/global/cscratch1/sd/mag/xPure_data/Files_Launch/Map_band_limited_1024_0.fits";
     // int *mask_binary;
     // double *CMB_map;
 
@@ -2842,16 +2842,71 @@ int main(int argc, char** argv){
     
     int i, j;
 
-    mask_binary=NULL;// = calloc(12*nside*nside, sizeof(int));
-    // int ga0, number_of_pixels_one_ring = 8;//6*512;
-    // for(i=0; i<number_of_pixels_one_ring; i++)
-    //     mask_binary[i+gap*number_of_pixels_one_ring]=1;
-    // mask_binary = calloc(npix,sizeof(int));
-    // for(i=10; i<npix/15; i++)
-    //     mask_binary[i]=1;
+    
+
+    
+
+
+
+    /////////////////////////////////////////
+    npix = 12*nside*nside;   
+    double *CMB_map; 
+    CMB_map = (double *) calloc( nstokes*npix,sizeof(double));
+    // read_TQU_maps(nside, CMB_map, path_CMB_map, nstokes);
+
+    int number_pixel_local = npix/nprocs;
+    if (rank == nprocs-1)
+        number_pixel_local += npix%nprocs;
+
+    int *indices_pixel_local = (int *)malloc(nstokes*number_pixel_local*sizeof(int));
+
+    int first_pixel = 30;
+    int size_area = 60;
+    
+    int criteria;
+    if (rank==0)
+        printf("Test criteria \n");
+    for (i=0; i<size_area; i++){
+        criteria = (first_pixel + i)/(npix/nprocs);
+        if (rank==1)
+            printf("--- criteria -- %d %d --", i, criteria);
+        for(j=0; j<nstokes; j++){
+            CMB_map[i + first_pixel + j*npix] = i + first_pixel + j*0.1;
+            if (( ( criteria >= rank) && ( criteria < rank+1)) || (criteria >= nprocs))
+                indices_pixel_local[i + j*number_pixel_local] = i + first_pixel + j*npix;
+        }
+    }
+    printf("\n");
+
+    printf("%d -- Test indices local \n", gangrank); fflush(stdout);
+    for(i=0; i<20; i++){
+        printf(" - %d %d - ", i, indices_pixel_local[i]);
+    }
+    printf("\n");
+    printf("%d -- Test indices local - 1 \n", gangrank); fflush(stdout); 
+    int first_pix2 = 40;
+    for(i=first_pix2; i<20+first_pix2; i++){
+        printf(" - %d %d - ", i, indices_pixel_local[i]);
+    }
+    printf("\n");
+
+
+    printf("Reading map - rank %d \n", gangrank);
+    fflush(stdout);
+
+    printf("Minute test1 - rank %d - %f \n", gangrank, CMB_map[0]);
+    // free(CMB_map);
+    // printf("Minute test2 - rank %d - %f \n", gangrank, new_CMB_map[0]);
+    printf("Changing map - rank %d \n", gangrank);
+    fflush(stdout);
 
     printf("Initializing S2HAT_param \n"); fflush(stdout);
     S2HAT_parameters S2HAT_params;
+    // mask_binary=NULL;// = calloc(12*nside*nside, sizeof(int));
+    mask_binary = calloc(12*nside*nside, sizeof(int));
+    // int ga0, number_of_pixels_one_ring = 8;//6*512;
+    for(i=first_pixel; i<size_area+first_pixel; i++)
+        mask_binary[i]=1;
     
     init_s2hat_parameters_superstruct(Files_path_WF_struct, mask_binary, nstokes, &S2HAT_params, gangcomm);
     
@@ -2864,40 +2919,276 @@ int main(int argc, char** argv){
     S2HAT_GLOBAL_parameters *Global_param_s2hat = S2HAT_params.Global_param_s2hat;
     S2HAT_LOCAL_parameters *Local_param_s2hat = S2HAT_params.Local_param_s2hat;
 
+    
+    
+    int root = 0;
+    
+    int* all_sky_pixels_observed = (int *)malloc(npix*sizeof(int));
 
+    printf("Getting into all_reduce -- %d \n", number_pixel_local); fflush(stdout);
 
-    /////////////////////////////////////////
-    npix = 12*nside*nside;   
-    double *CMB_map; 
-    CMB_map = (double *) malloc( nstokes*npix*sizeof(double));
-    read_TQU_maps(nside, CMB_map, path_CMB_map, nstokes);
-    printf("Reading map - rank %d \n", gangrank);
-    fflush(stdout);
+    all_reduce_to_all_indices_mappraiser(indices_pixel_local, number_pixel_local, nside, all_sky_pixels_observed, root, gangcomm);
+    
+    printf("Test 5 ! \n"); fflush(stdout);
+    if(rank==0){
+        printf("Test all reduce \n"); fflush(stdout);
+        for (i=0; i<npix; i++){
+            printf("-- %d %d -", i, all_sky_pixels_observed[i]);
+            if (i%20 == 0)
+                printf("\n");
+        }
+        printf("\n");
+    }
 
-    printf("Minute test1 - rank %d - %f \n", gangrank, CMB_map[0]);
-    free(CMB_map);
-    printf("Minute test2 - rank %d - %f \n", gangrank, new_CMB_map[0]);
-    printf("Changing map - rank %d \n", gangrank);
-    fflush(stdout);
-
-    double *local_map_pix;//, *local_map_pix_E, *local_map_pix_B;
-    local_map_pix = (double *) calloc( 3*Local_param_s2hat->map_size, sizeof(double));
+    
+    
+    double *local_map_pix; //, *local_map_pix_E, *local_map_pix_B;
+    local_map_pix = (double *) calloc( nstokes*Local_param_s2hat->map_size, sizeof(double));
     printf("###### Test8 - %ld \n", Local_param_s2hat->pixel_numbered_ring[0]); fflush(stdout);
     printf("###### TEST2 --- MPI struct - %d \n", Local_param_s2hat->gangcomm); fflush(stdout);
     printf("###### CMB Temp - %f \n", CMB_map[0]); fflush(stdout);
-    // printf("######2 CMB Temp - %f \n", CMB_map_temp[2*npix]); fflush(stdout);
+    // printf("######2 CMB Temp - %f \n", CMB_map_temp[2*npix]); fflush(stdout)
 
+    printf("Test 6 ! \n"); fflush(stdout);
     distribute_full_sky_map_into_local_maps_S2HAT(CMB_map, local_map_pix, &S2HAT_params);
     
 
+    printf("Test 6.5 ! \n"); fflush(stdout);
+
+    if(rank==0){
+        printf("Test distribute -- %d\n", Local_param_s2hat->map_size); fflush(stdout);
+        for (i=0; i<Local_param_s2hat->map_size*nstokes; i++){
+            printf("-- %d %f -", i, local_map_pix[i]);
+            if (i%20 == 0)
+                printf("\n");
+        }
+        printf("\n");
+    }
+
+    int first_pix_to_retrieve = 20;
+    int last_pix_to_retrieve = 60;
+    int size_submap_to_retrieve = last_pix_to_retrieve-first_pix_to_retrieve;
+
+    // double *output_submap = (double *)malloc(nstokes * size_submap_to_retrieve * sizeof(double));
+    // printf("Test 7 ! \n"); fflush(stdout);
+    // collect_partial_map_from_pixels(local_map_pix, output_submap, first_pix_to_retrieve, last_pix_to_retrieve, &S2HAT_params);
+
+    // if (rank==0){
+    //     printf("Test collect \n"); fflush(stdout);
+    //     for(j=0; j<nstokes; j++)
+    //         for (i=first_pix_to_retrieve; i<size_submap_to_retrieve; i++){
+    //             printf("-- %d %d %f -", i, j, output_submap[i + j*size_submap_to_retrieve]);
+    //         // printf("\n Other Stokes param -> \n");
+    //     }
+    //     printf("\n");
+    // }
 
     printf("Free 0 \n"); fflush(stdout);
     free(Files_path_WF_struct);
     printf("Free 1 \n"); fflush(stdout);
     free_s2hat_parameters_struct(&S2HAT_params);
 
+    free(CMB_map);
+    free(indices_pixel_local);
+    // free(output_submap);
+    free(local_map_pix);
     MPI_Finalize();
 
     return 0;
 }
 
+// int main_pixel_scheme_transition_v2(int argc, char** argv){
+int main(int argc, char** argv){
+    // char *path_mask = "/global/cscratch1/sd/mag/Masks_files/SO_wH.fits";
+
+    char *path_mask = "/global/cscratch1/sd/mag/Masks_files/No_Mask.fits";
+    // char *c_ell_path = "/global/homes/m/mag/midapack/test/spherical_harmonics/test_functions/c_ell_file_lmax_4.fits"; //// TO PUT !!!!
+    char *c_ell_path = "/global/homes/m/mag/midapack/libmidapack/src/spherical_harmonics/test_functions/c_ell_file_lmax_4.fits"; //// TO PUT !!!!
+    int *mask_binary;
+
+    int f_sky, npix;
+    int i_index, ncomp;
+    int index, index_2, ell_value;
+    int i, j;
+
+    int nside = 4;
+
+    int lmax = 4;
+    npix = 12*nside*nside;
+
+    int rank, nprocs;
+    MPI_Comm gangcomm;
+    
+
+    MPI_Init( &argc, &argv);
+    MPI_Comm_rank( MPI_COMM_WORLD, &rank);
+    MPI_Comm_size( MPI_COMM_WORLD, &nprocs);
+
+    printf("Initializing MPI %d %d \n", rank, nprocs);
+    fflush(stdout);
+
+    int gangrank = rank;
+    gangcomm = MPI_COMM_WORLD;
+
+    Files_path_WIENER_FILTER *Files_path_WF_struct = malloc( 1 * sizeof(Files_path_WIENER_FILTER));;
+
+    int number_correlations = 4; //3; // 6; // TO MODIFY LATER !!!!!!!
+    int nstokes = 3; //3;
+
+    init_files_struct_WF(Files_path_WF_struct, nside, lmax, c_ell_path, number_correlations);
+
+    /////////////////////////////////////////
+    npix = 12*nside*nside;   
+    double *CMB_map; 
+    CMB_map = (double *) calloc( nstokes*npix,sizeof(double));
+
+    int first_pixel = 30;
+    int size_area = 60;
+    int number_pixel_local = size_area/nprocs;
+    if (rank == nprocs-1)
+        number_pixel_local += size_area%nprocs;
+
+    int *indices_pixel_local = (int *)malloc(nstokes*number_pixel_local*sizeof(int));
+
+    
+    
+    int criteria;
+    // if (rank==0)
+    // for(j=0; j<nstokes; j++){
+        
+    //     // if (rank==2)
+    //         // printf("--- criteria -- %d %d --", i, criteria);
+    //     for (i=0; i<size_area; i++){
+    //         criteria = (i)/(number_pixel_local);
+    //         CMB_map[i + first_pixel + j*npix] = i + first_pixel + j*0.1;
+    //         if (( ( criteria >= rank) && ( criteria < rank+1)) || (criteria >= nprocs))
+    //             indices_pixel_local[i + j*number_pixel_local] = i + first_pixel + j*npix;
+    //     }
+    // }
+    for(j=0; j<nstokes; j++){
+        // if (rank==2)
+            // printf("--- criteria -- %d %d --", i, criteria);
+        for (i=0; i<number_pixel_local; i++){
+            indices_pixel_local[i + j*number_pixel_local] = i + first_pixel + rank*(size_area/nprocs) + j*npix;
+        }
+    }
+    // if (rank==2)
+    //     printf("\n");
+
+    printf("%d -- Test indices local \n", gangrank); fflush(stdout);
+    for(i=0; i<20; i++){
+        printf(" - %d %d %d - ", gangrank, i, indices_pixel_local[i]);
+    }
+    printf("\n");
+    // printf("%d -- Test indices local - 1 \n", gangrank); fflush(stdout); 
+    // int first_pix2 = 40;
+    // for(i=first_pix2; i<20+first_pix2; i++){
+    //     printf(" - %d %d - ", i, indices_pixel_local[i]);
+    // }
+    // printf("\n");
+
+
+    printf("Reading map - rank %d \n", gangrank);
+    fflush(stdout);
+
+    // printf("Minute test1 - rank %d - %f \n", gangrank, CMB_map[0]);
+    // free(CMB_map);
+    // printf("Minute test2 - rank %d - %f \n", gangrank, new_CMB_map[0]);
+    // printf("Changing map - rank %d \n", gangrank);
+    // fflush(stdout);
+
+    // printf("Initializing S2HAT_param \n"); fflush(stdout);
+    S2HAT_parameters S2HAT_params;
+    // mask_binary=NULL;// = calloc(12*nside*nside, sizeof(int));
+    mask_binary = calloc(12*nside*nside, sizeof(int));
+    // int ga0, number_of_pixels_one_ring = 8;//6*512;
+    for(i=first_pixel; i<size_area+first_pixel; i++)
+        mask_binary[i]=1;
+    
+    init_s2hat_parameters_superstruct(Files_path_WF_struct, mask_binary, nstokes, &S2HAT_params, gangcomm);
+    
+    // printf("--- Test2 init %d %d \n", Files_path_WF_struct->lmax_Wiener_Filter, lmax);
+    // printf("--- Test3 init %d \n", S2HAT_params.Global_param_s2hat->nlmax); fflush(stdout);
+    // printf("--- Test init3 # %d %d \n", Files_path_WF_struct->number_correlations, number_correlations); fflush(stdout);
+    // S2HAT_parameters *S2HAT_params = &S2HAT_params_;
+
+    S2HAT_GLOBAL_parameters *Global_param_s2hat = S2HAT_params.Global_param_s2hat;
+    S2HAT_LOCAL_parameters *Local_param_s2hat = S2HAT_params.Local_param_s2hat;
+
+    
+    
+    int root = 0;
+    
+    int* all_sky_pixels_observed = (int *)malloc(npix*sizeof(int));
+
+    printf("r %d ### Getting into all_reduce -- %d \n", rank, number_pixel_local); fflush(stdout);
+
+    all_reduce_to_all_indices_mappraiser(indices_pixel_local, number_pixel_local, nside, all_sky_pixels_observed, root, MPI_COMM_WORLD);
+    
+    printf("r %d ### Test 5 ! \n", rank); fflush(stdout);
+    if(rank==0){
+        printf("Test all reduce \n"); fflush(stdout);
+        for (i=0; i<npix; i++){
+            printf("-- %d %d -", i, all_sky_pixels_observed[i]);
+            if (i%20 == 0)
+                printf("\n");
+        }
+        printf("\n");
+    }
+
+    
+    
+    double *local_map_pix; //, *local_map_pix_E, *local_map_pix_B;
+    local_map_pix = (double *) calloc( nstokes*Local_param_s2hat->map_size, sizeof(double));
+    // printf("###### Test8 - %ld \n", Local_param_s2hat->pixel_numbered_ring[0]); fflush(stdout);
+    // printf("###### TEST2 --- MPI struct - %d \n", Local_param_s2hat->gangcomm); fflush(stdout);
+    // printf("###### CMB Temp - %f \n", CMB_map[0]); fflush(stdout);
+    // printf("######2 CMB Temp - %f \n", CMB_map_temp[2*npix]); fflush(stdout)
+
+    printf("r %d ### Test 6 ! -- %d \n", rank, Local_param_s2hat->map_size); fflush(stdout);
+    distribute_full_sky_map_into_local_maps_S2HAT(CMB_map, local_map_pix, &S2HAT_params);
+    
+
+    printf("r %d ### Test 6.5 ! \n", rank); fflush(stdout);
+
+    // if(rank==0){
+    //     printf("Test distribute -- %d\n", Local_param_s2hat->map_size); fflush(stdout);
+    //     for (i=0; i<Local_param_s2hat->map_size*nstokes; i++){
+    //         printf("-- %d %f -", i, local_map_pix[i]);
+    //         if (i%20 == 0)
+    //             printf("\n");
+    //     }
+    //     printf("\n");
+    // }
+
+    // int first_pix_to_retrieve = 20;
+    // int last_pix_to_retrieve = 60;
+    // int size_submap_to_retrieve = last_pix_to_retrieve-first_pix_to_retrieve;
+
+    // double *output_submap = (double *)malloc(nstokes * size_submap_to_retrieve * sizeof(double));
+    // printf("Test 7 ! \n"); fflush(stdout);
+    // collect_partial_map_from_pixels(local_map_pix, output_submap, first_pix_to_retrieve, last_pix_to_retrieve, &S2HAT_params);
+
+    // if (rank==0){
+    //     printf("Test collect \n"); fflush(stdout);
+    //     for(j=0; j<nstokes; j++)
+    //         for (i=first_pix_to_retrieve; i<size_submap_to_retrieve; i++){
+    //             printf("-- %d %d %f -", i, j, output_submap[i + j*size_submap_to_retrieve]);
+    //         // printf("\n Other Stokes param -> \n");
+    //     }
+    //     printf("\n");
+    // }
+
+    // printf("Free 0 \n"); fflush(stdout);
+    free(Files_path_WF_struct);
+    // printf("Free 1 \n"); fflush(stdout);
+    free_s2hat_parameters_struct(&S2HAT_params);
+
+    free(CMB_map);
+    free(indices_pixel_local);
+    // free(output_submap);
+    free(local_map_pix);
+    // MPI_Finalize();
+
+    return 0;
+}

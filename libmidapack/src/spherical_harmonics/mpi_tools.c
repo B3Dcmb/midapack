@@ -121,9 +121,10 @@ int mpi_create_subset(int number_ranks_to_divive, MPI_Comm initcomm, MPI_Comm *s
     
     // Get the group of the whole communicator
     MPI_Comm_group(initcomm, &global_mpi_group);
+    // MPI_Comm_dup(initcomm, &global_mpi_group);
 
     // Construct group containing all ranks under number_ranks_to_divive
-    MPI_Comm_group(initcomm, &mpi_subset_group);
+    // MPI_Comm_group(initcomm, &mpi_subset_group);
     MPI_Group_incl(global_mpi_group, number_ranks_to_divive, ranks_const, &mpi_subset_group);
     
     MPI_Comm_create_group(initcomm, mpi_subset_group, tag, subset_comm);
@@ -136,7 +137,8 @@ int mpi_create_subset(int number_ranks_to_divive, MPI_Comm initcomm, MPI_Comm *s
 
 int all_reduce_to_all_indices_mappraiser(int *indices_pixel_local, int number_pixel_local, int nside, int* all_sky_pixels_observed, int root, MPI_Comm world_comm)
 {
-    /* Will get the number_pixel_local first pixels of indices_pixel_local to build */
+    /* Will get the number_pixel_local first pixels of indices_pixel_local to build  mask */
+
     int i;
     // int *copy_ell_indices;
     int *com_val;
@@ -145,16 +147,25 @@ int all_reduce_to_all_indices_mappraiser(int *indices_pixel_local, int number_pi
 
     com_val=(int *) calloc( npix,sizeof(int)); // Npix or less because of trash_pix ? To check later
 
+    int rank, nprocs;
+    MPI_Comm_rank( world_comm, &rank);
+    MPI_Comm_size( world_comm, &nprocs);
+    printf("r %d --- Test 0 -- %d \n", rank, number_pixel_local); fflush(stdout);
     for (i=0; i<number_pixel_local; i++)
     {
+        if (rank == 5)
+            printf(" -- %d %d -- ", i, indices_pixel_local[i]); fflush(stdout);
         com_val[indices_pixel_local[i]] = 1;
     }
+    printf("\n");
 
+    printf("r %d --- Test 1 \n", rank); fflush(stdout);
     // s2m(com_val, indices_ones, indices_pixel_local, number_pixel_local); 
     MPI_Reduce(com_val, all_sky_pixels_observed, npix, MPI_INT, MPI_SUM, root, world_comm);	//maximum index
-
+    printf("r %d --- Test 3 \n", rank); fflush(stdout);
     // free(copy_ell_indices);
     free(com_val);
+    printf("r %d --- Test 4 \n", rank); fflush(stdout);
     return 0;
 }
 
@@ -185,30 +196,32 @@ int distribute_full_sky_map_into_local_maps_S2HAT(double* full_sky_map, double *
     // printf("Test2 distrib : %d %d %d %d \n", Local_param_s2hat->gangrank, Local_param_s2hat->gangsize, Local_param_s2hat->gangroot, Local_param_s2hat->gangcomm); fflush(stdout);
     // printf("######3 CMB Polar - %f \n", full_sky_map[0]); fflush(stdout);
 
-    /* Distribute full sky map in ring ordering, with convention [npix, nstokes] in column-wise order among procs, into local maps */
-    distribute_map(Global_param_s2hat->pixelization_scheme, 1, 0, nstokes, Local_param_s2hat->first_ring, Local_param_s2hat->last_ring, Local_param_s2hat->map_size, 
-        local_map_s2hat, full_sky_map, Local_param_s2hat->gangrank, Local_param_s2hat->gangsize, Local_param_s2hat->gangroot, Local_param_s2hat->gangcomm);
-    // 1 for the number of maps, 0 for the index of the current map
-
+    if (Local_param_s2hat->gangrank >= 0){
+        /* Distribute full sky map in ring ordering, with convention [npix, nstokes] in column-wise order among procs, into local maps */
+        distribute_map(Global_param_s2hat->pixelization_scheme, 1, 0, nstokes, Local_param_s2hat->first_ring, Local_param_s2hat->last_ring, Local_param_s2hat->map_size, 
+            local_map_s2hat, full_sky_map, Local_param_s2hat->gangrank, Local_param_s2hat->gangsize, Local_param_s2hat->gangroot, Local_param_s2hat->gangcomm);
+        // 1 for the number of maps, 0 for the index of the current map
+    }
     return 0;
 }
 
 
-int collect_partial_map_from_pixels(double* local_map_s2hat, double *output_submap, int first_pix, int last_pix, S2HAT_parameters *S2HAT_params){
-    // Collect specific pixels from all local_map_s2hat to form a submap given first and last pixels 
+// [WIP] - May not need it, for now only work for the first nstokes parameter, doesn't allow to recover the others
+// int collect_partial_map_from_pixels(double* local_map_s2hat, double *output_submap, int first_pix, int last_pix, S2HAT_parameters *S2HAT_params){
+//     // Collect specific pixels from all local_map_s2hat to form a submap given first and last pixels 
     
-    S2HAT_GLOBAL_parameters *Global_param_s2hat = S2HAT_params->Global_param_s2hat;
-    S2HAT_LOCAL_parameters *Local_param_s2hat = S2HAT_params->Local_param_s2hat;
-    int nstokes = S2HAT_params->nstokes;
-    int submap_size = last_pix - first_pix; // Submapsize given by pixel numbers
+//     S2HAT_GLOBAL_parameters *Global_param_s2hat = S2HAT_params->Global_param_s2hat;
+//     S2HAT_LOCAL_parameters *Local_param_s2hat = S2HAT_params->Local_param_s2hat;
+//     int nstokes = S2HAT_params->nstokes;
+//     int submap_size = last_pix - first_pix; // Submapsize given by pixel numbers
 
-    collect_partialmap(Global_param_s2hat->pixelization_scheme, 1, 0, nstokes, first_pix, last_pix, 
-        output_submap, Local_param_s2hat->first_ring, Local_param_s2hat->last_ring, submap_size, local_map_s2hat, 
-        Local_param_s2hat->gangrank, Local_param_s2hat->gangsize, Local_param_s2hat->gangroot, Local_param_s2hat->gangcomm);
-    // 1 map given, 0 is the number of the map
+//     collect_partialmap(Global_param_s2hat->pixelization_scheme, 1, 0, nstokes, first_pix, last_pix, 
+//         output_submap, Local_param_s2hat->first_ring, Local_param_s2hat->last_ring, submap_size, local_map_s2hat, 
+//         Local_param_s2hat->gangrank, Local_param_s2hat->gangsize, Local_param_s2hat->gangroot, Local_param_s2hat->gangcomm);
+//     // 1 map given, 0 is the number of the map
 
-    return 0;
-}
+//     return 0;
+// }
 
 
 

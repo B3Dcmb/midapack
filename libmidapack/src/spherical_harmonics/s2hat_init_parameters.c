@@ -101,6 +101,9 @@ int init_MPI_struct_s2hat_local_parameters(S2HAT_LOCAL_parameters *Local_param_s
     // Test case if we don't have to divide into two substructures of communicators
     if (number_ranks_s2hat < initsize){
         // printf("~~~22222~~~~ %d - %d %d TEST RANK for MPI_subgroup within init S2HAT_param \n", initrank, number_ranks_s2hat, initsize); fflush(stdout);
+        if (initrank==0)
+            printf("--- Creating MPI subset because %d total MPI processes vs %d processes needed by S2HAT \n", initsize, number_ranks_s2hat);
+
         mpi_create_subset(number_ranks_s2hat, initcomm, &s2hat_comm);
         // printf("~~~33333~~~~ %d - %d %d TEST RANK for MPI_subgroup within init S2HAT_param \n", initrank, number_ranks_s2hat, initsize); fflush(stdout);
         s2hat_rank = -1;
@@ -113,6 +116,8 @@ int init_MPI_struct_s2hat_local_parameters(S2HAT_LOCAL_parameters *Local_param_s
         }
     }
     else{
+        if (initrank==0)
+            printf("--- Using MPI default structure because %d total MPI processes sufficient for %d processes needed by S2HAT \n", initsize, number_ranks_s2hat);
         s2hat_rank = initrank;
         s2hat_size = initsize;
         s2hat_comm = initcomm;
