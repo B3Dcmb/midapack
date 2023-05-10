@@ -1,7 +1,7 @@
 #ifndef MAPPRAISER_PCG_TRUE_H
 #define MAPPRAISER_PCG_TRUE_H
 
-#include <midapack.h>
+#include "midapack.h"
 #include <stdbool.h>
 
 // Pixel share ponderation to deal with overlapping pixels between multiple MPI

@@ -12,7 +12,6 @@
 #include "mappraiser/iofiles.h"
 #include "mappraiser/pcg_true.h"
 #include <math.h>
-#include <midapack.h>
 #include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>

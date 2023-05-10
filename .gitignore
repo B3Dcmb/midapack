@@ -37,7 +37,7 @@
 
 # Directories to ignore
 mappraiser/src/test
-libmidapack/test
+algebra/test
 
 # System files
 .DS_Store
@@ -48,4 +48,3 @@ libmidapack/test
 
 # build products
 build
-mappraiser/build

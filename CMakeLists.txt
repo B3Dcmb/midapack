@@ -9,7 +9,7 @@
 # General configuration
 # ----------------------------------------------------------------------------------------#
 
-cmake_minimum_required(VERSION 3.14...3.25)
+cmake_minimum_required(VERSION 3.18)
 
 # Project name and a few useful settings
 project(midapack
@@ -45,9 +45,9 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 # the RPATH to be used when installing, but only if it's not a system directory
 list(FIND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES "${CMAKE_INSTALL_PREFIX}/lib" isSystemDir)
-if("${isSystemDir}" STREQUAL "-1")
+if ("${isSystemDir}" STREQUAL "-1")
     set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
-endif("${isSystemDir}" STREQUAL "-1")
+endif ("${isSystemDir}" STREQUAL "-1")
 
 # ----------------------------------------------------------------------------------------#
 # External packages
@@ -72,4 +72,5 @@ find_package(FFTW REQUIRED)
 # Subdirectories
 # ----------------------------------------------------------------------------------------#
 
-add_subdirectory(libmidapack/src)
+add_subdirectory(algebra/src)
+add_subdirectory(mappraiser)
