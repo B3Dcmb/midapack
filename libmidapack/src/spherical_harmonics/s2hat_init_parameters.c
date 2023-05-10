@@ -33,7 +33,6 @@ int get_main_s2hat_global_parameters(int nside, int *mask_binary, s2hat_pixeltyp
 
 
     if (mask_binary == NULL){
-        // printf( " //// Reading mask\n");
         mask_binary = (int *) malloc( npix*sizeof(int));
         int index;
         for (index=0;index<npix;index++){
@@ -41,15 +40,13 @@ int get_main_s2hat_global_parameters(int nside, int *mask_binary, s2hat_pixeltyp
         }
         f_sky = npix;
     }
-    
-    // printf( " //// Setting s2hat structure \n"); fflush(stdout);
 
     set_pixelization(pixchoice, *pixpar, pixelization_scheme);   /* Set C pixelization structure */
     mask2scan(mask_binary, *pixelization_scheme, scan_sky_structure_pixel); /* Set scan pixelization : s2hat structure containing all the info about sky coverage needed by the transforms */
     /* Scan pixelization will be used to avoid doing unecessary calculations */
         
     // printf( "F_sky = %f%%\n", (double)f_sky/(double)npix*100.); fflush(stdout);
-    // free(mask_binary); // ????? Problem ?
+    // free(mask_binary); // Problem ?
     return 0;
 }
 
@@ -97,15 +94,11 @@ int init_MPI_struct_s2hat_local_parameters(S2HAT_LOCAL_parameters *Local_param_s
 
     MPI_Comm s2hat_comm;
 
-    // printf("~~~~~~~~~~ %d TEST RANK for MPI_subgroup within init S2HAT_param \n", initrank); fflush(stdout);
-    // Test case if we don't have to divide into two substructures of communicators
     if (number_ranks_s2hat < initsize){
-        // printf("~~~22222~~~~ %d - %d %d TEST RANK for MPI_subgroup within init S2HAT_param \n", initrank, number_ranks_s2hat, initsize); fflush(stdout);
         if (initrank==0)
             printf("--- Creating MPI subset because %d total MPI processes vs %d processes needed by S2HAT \n", initsize, number_ranks_s2hat);
 
         mpi_create_subset(number_ranks_s2hat, initcomm, &s2hat_comm);
-        // printf("~~~33333~~~~ %d - %d %d TEST RANK for MPI_subgroup within init S2HAT_param \n", initrank, number_ranks_s2hat, initsize); fflush(stdout);
         s2hat_rank = -1;
         s2hat_size = 0;
         initroot = 0;
@@ -152,9 +145,6 @@ int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters *Global_param_s2h
 
     long int nplm;
     int *mvals;
-
-    // printf("%d ----- Test get_local_data_sizes : plms %d, nlmax %d, nmmax %d, gangrank %d, gangsize %d, gangroot %d \n",  Local_param_s2hat->gangrank, plms, nlmax, nmmax, Local_param_s2hat->gangrank, Local_param_s2hat->gangsize, Local_param_s2hat->gangroot);
-    // fflush(stdout);
     
     if (Local_param_s2hat->gangrank != -1){
         get_local_data_sizes( plms, pixelization_scheme, scan_sky_structure_pixel, nlmax, nmmax, Local_param_s2hat->gangrank, Local_param_s2hat->gangsize,
@@ -162,19 +152,12 @@ int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters *Global_param_s2h
         
         // int nmvals_2;
         // nmvals_2 = nummvalues(Local_param_s2hat->gangrank, Local_param_s2hat->gangsize, nmmax);
-        // printf("nmvals - %d, %d for rank %d \n", nmvals, nmvals_2, Local_param_s2hat->gangrank );
         // fflush(stdout);
         /* Estimates size of local data object, and set first_ring, last_ring, map_size
         see more info on https://apc.u-paris.fr/APC_CS/Recherche/Adamis/MIDAS09/software/s2hat/s2hat/docs/Cmanual/CgetLocalDataSizes.html */
 
-        // printf("--------Local_sizes obtained ! - %d : %d %d \n", Local_param_s2hat->gangrank, first_ring, last_ring);
-        // fflush(stdout);
-
         mvals = (int *) calloc( nmvals, sizeof( int));    /// TO FREE LATER !!!!!!
         find_mvalues( Local_param_s2hat->gangrank, Local_param_s2hat->gangsize, nmmax, nmvals, mvals);
-
-        // printf("--------Mvalues obtained ! - %d : %d \n", Local_param_s2hat->gangrank, mvals[0]);
-        // fflush(stdout);
 
         Local_param_s2hat->first_pixel_number = Global_param_s2hat->pixelization_scheme.fpix[first_ring-1];
         Local_param_s2hat->last_pixel_number = Global_param_s2hat->pixelization_scheme.fpix[last_ring-1] + Global_param_s2hat->pixelization_scheme.nph[last_ring-1]-1;
@@ -211,7 +194,6 @@ int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters *Global_param_s2h
         }
 
         Local_param_s2hat->pixel_numbered_ring = pixel_numbered_ring;
-        // printf("### Test - %ld %d \n", Local_param_s2hat->pixel_numbered_ring[0], map_size*nstokes); fflush(stdout);
 
         Local_param_s2hat->nmvals = nmvals;
         Local_param_s2hat->first_ring = first_ring;
@@ -246,17 +228,13 @@ int init_s2hat_parameters_superstruct(Files_path_WIENER_FILTER *Files_WF_struct,
     // init_MPI_struct_s2hat_local_parameters(Local_param_s2hat, Local_param_s2hat->gangrank, Local_param_s2hat->gangsize, Local_param_s2hat->gangroot, Local_param_s2hat->gangcomm); 
     init_MPI_struct_s2hat_local_parameters(Local_param_s2hat, Global_param_s2hat->scan_sky_structure_pixel.nringsobs, world_comm); 
     
-    // printf("))))))))~~~~ %d TEST RANK for MPI_subgroup within init S2HAT_param \n", rank); fflush(stdout);
-    // printf("--- Test initializing MPI struct - %d \n", Local_param_s2hat.gangrank);
+
     if (Local_param_s2hat->gangrank >= 0){
-        // printf("Initializing MPI struct - %d \n", Local_param_s2hat.gangrank);
         init_s2hat_local_parameters_struct(Global_param_s2hat, nstokes, Local_param_s2hat);
-        // printf("TEST --- MPI struct - %d \n", Local_param_s2hat.gangcomm);
         }
     // Initialization of Local_param_s2hat structure, including MPI parameters, first/last rings studied, size of pixels cut sky per rank, etc. -- see Wiener filter extension directory for more details
     
     int first_ring = Local_param_s2hat->first_ring;
-    // printf("Test verif : %d %ld \n", first_ring, Global_param_s2hat->pixelization_scheme.fpix[first_ring-1]); fflush(stdout);
 
     S2HAT_params->Global_param_s2hat = Global_param_s2hat;
     S2HAT_params->Local_param_s2hat = Local_param_s2hat;

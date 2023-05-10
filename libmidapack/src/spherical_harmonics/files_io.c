@@ -88,9 +88,6 @@ void read_fits_mask(int nside, double *mask, char *path_mask_file, int col)
     for( pixel_index=0; pixel_index<npix; pixel_index++) mask[pixel_index] = (double)tmp[pixel_index];
   }
 
-  // printf("Tmp test 3 : %ld %f \t", pixel_index, mask[pixel_index]);
-  // fflush(stdout);
-
   free( tmp);
 }
 

@@ -150,22 +150,14 @@ int all_reduce_to_all_indices_mappraiser(int *indices_pixel_local, int number_pi
     int rank, nprocs;
     MPI_Comm_rank( world_comm, &rank);
     MPI_Comm_size( world_comm, &nprocs);
-    printf("r %d --- Test 0 -- %d \n", rank, number_pixel_local); fflush(stdout);
     for (i=0; i<number_pixel_local; i++)
     {
-        if (rank == 5)
-            printf(" -- %d %d -- ", i, indices_pixel_local[i]); fflush(stdout);
         com_val[indices_pixel_local[i]] = 1;
     }
-    printf("\n");
 
-    printf("r %d --- Test 1 \n", rank); fflush(stdout);
     // s2m(com_val, indices_ones, indices_pixel_local, number_pixel_local); 
     MPI_Reduce(com_val, all_sky_pixels_observed, npix, MPI_INT, MPI_SUM, root, world_comm);	//maximum index
-    printf("r %d --- Test 3 \n", rank); fflush(stdout);
-    // free(copy_ell_indices);
     free(com_val);
-    printf("r %d --- Test 4 \n", rank); fflush(stdout);
     return 0;
 }
 
@@ -192,9 +184,6 @@ int distribute_full_sky_map_into_local_maps_S2HAT(double* full_sky_map, double *
     S2HAT_GLOBAL_parameters *Global_param_s2hat = S2HAT_params->Global_param_s2hat;
     S2HAT_LOCAL_parameters *Local_param_s2hat = S2HAT_params->Local_param_s2hat;
     int nstokes = S2HAT_params->nstokes;
-    // printf("Test distrib : %d %d %d %d \n", nstokes, Local_param_s2hat->first_ring, Local_param_s2hat->last_ring, Local_param_s2hat->map_size);
-    // printf("Test2 distrib : %d %d %d %d \n", Local_param_s2hat->gangrank, Local_param_s2hat->gangsize, Local_param_s2hat->gangroot, Local_param_s2hat->gangcomm); fflush(stdout);
-    // printf("######3 CMB Polar - %f \n", full_sky_map[0]); fflush(stdout);
 
     if (Local_param_s2hat->gangrank >= 0){
         /* Distribute full sky map in ring ordering, with convention [npix, nstokes] in column-wise order among procs, into local maps */
@@ -241,29 +230,19 @@ void free_s2hat_GLOBAL_parameters_struct(S2HAT_GLOBAL_parameters *Global_param_s
 }
 
 void free_s2hat_LOCAL_parameters_struct(S2HAT_LOCAL_parameters *Local_param_s2hat){
-    // printf("Freeing local 1 !") ; fflush(stdout);
     if (Local_param_s2hat->nmvals > 0){
-        // printf("Freeing local 1b !") ; fflush(stdout);
         free(Local_param_s2hat->mvals);
-    } 
-    // printf("Test - %ld \n", Local_param_s2hat->pixel_numbered_ring[0]); fflush(stdout);
-    // printf("Freeing local 2 !") ; fflush(stdout);
-    free(Local_param_s2hat->pixel_numbered_ring);
-    // printf("Freeing local 3 !") ; fflush(stdout);
-    
+    }
+    free(Local_param_s2hat->pixel_numbered_ring);    
     free(Local_param_s2hat);
 }
 
 void free_s2hat_parameters_struct(S2HAT_parameters *S2HAT_params){
 
     if (S2HAT_params->Local_param_s2hat->gangrank >= 0){
-        // printf("Freeing local !") ; fflush(stdout);
         free_s2hat_LOCAL_parameters_struct(S2HAT_params->Local_param_s2hat);
     }
-    // printf("Freeing global !") ; fflush(stdout);
     free_s2hat_GLOBAL_parameters_struct(S2HAT_params->Global_param_s2hat);
-    
-    // printf("Freeing superstruct !") ; fflush(stdout);
     // free(S2HAT_params);
 }
 

@@ -42,25 +42,17 @@ int apply_alm2pix(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parame
     switch(nstokes)
     {
         case 1: // Case only intensity
-            // printf("Test 0001 \n"); fflush(stdout);
         case 3: // Case with both intensity and polarization
-            // printf("Test 0003 \n"); fflush(stdout);
-            // s2hat_alm2map(0, Global_param_s2hat->pixelization_scheme, Global_param_s2hat->scan_sky_structure_pixel, Global_param_s2hat->nlmax, Global_param_s2hat->nmmax, 
-            //     Local_param_s2hat->nmvals, Local_param_s2hat->mvals, nmaps, 1, 
-            //     Local_param_s2hat->first_ring, Local_param_s2hat->last_ring, Local_param_s2hat->map_size, local_map_pix, lda, 
-            //     local_alm, Local_param_s2hat->nplm, NULL, 
-            //     Local_param_s2hat->gangsize, Local_param_s2hat->gangrank, Local_param_s2hat->gangcomm);
+
             s2hat_alm2map(Local_param_s2hat->plms, Global_param_s2hat->pixelization_scheme, Global_param_s2hat->scan_sky_structure_pixel, Global_param_s2hat->nlmax, Global_param_s2hat->nmmax, 
                 Local_param_s2hat->nmvals, Local_param_s2hat->mvals, nmaps, nstokes, 
                 Local_param_s2hat->first_ring, Local_param_s2hat->last_ring, Local_param_s2hat->map_size, local_map_pix, lda, 
                 local_alm, Local_param_s2hat->nplm, NULL, 
                 Local_param_s2hat->gangsize, Local_param_s2hat->gangrank, Local_param_s2hat->gangcomm);
             // The NULL argument correspond to precomputed Legendre polynomials, only relevant if plms != 0
-            // printf("Test 000F \n"); fflush(stdout);
             break;
 
         case 2: // Case with only polarization
-            // printf("Test 0002 \n"); fflush(stdout);
             spin=nstokes;
             s2hat_alm2map_spin( Global_param_s2hat->pixelization_scheme, Global_param_s2hat->scan_sky_structure_pixel, spin, Global_param_s2hat->nlmax, Global_param_s2hat->nmmax,
                 Local_param_s2hat->nmvals, Local_param_s2hat->mvals, nmaps,
@@ -101,9 +93,6 @@ int apply_pix2alm(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parame
     int spin;
 
     if (Local_param_s2hat->gangrank != -1){
-      // printf("Test pix2alm entry !\n");
-      // fflush(stdout);
-      // local_w8ring=(double *)calloc( nstokes*(Local_param_s2hat.last_ring-Local_param_s2hat.first_ring+1), sizeof(double));
       local_w8ring = (double *) malloc( nstokes*(Local_param_s2hat->last_ring-Local_param_s2hat->first_ring+1)*sizeof(double));
       for( i_ring=0; i_ring< nstokes*(Local_param_s2hat->last_ring-Local_param_s2hat->first_ring+1); i_ring++)
               local_w8ring[i_ring]=1.;
@@ -230,11 +219,9 @@ int alm2cls(s2hat_dcomplex* local_alm, double *c_ell_array, int nspec, S2HAT_par
     // int nspec = 6; // All 6 spectras TT, EE, BB, TE, TB, EB computed
 
     // c_ell_array = (double *) calloc( nstokes*(lmax+1), sizeof(double));
-    // printf("Test - gangrank %d", Local_param_s2hat.gangrank);
     if (Local_param_s2hat.gangrank == 0)
         collect_cls(nmaps, mapnum, ncomp, lmax, Local_param_s2hat.nmvals, Local_param_s2hat.mvals, lda, 
                 local_alm, nspec, c_ell_array, Local_param_s2hat.gangrank, Local_param_s2hat.gangsize, Local_param_s2hat.gangroot, Local_param_s2hat.gangcomm);
-    // printf("Test2 - gangrank %d %f %f", Local_param_s2hat.gangrank, *(c_ell_array), *(c_ell_array+lmax-1));
 
     return 0;
 }
