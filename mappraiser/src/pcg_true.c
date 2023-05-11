@@ -17,9 +17,8 @@
 
 int apply_weights(Tpltz *Nm1, double *tod);
 
-int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x,
-                 double *b, double *noise, double *cond, int *lhits, double tol,
-                 int K, int precond, int Z_2lvl) {
+int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double *b, double *noise, double *cond,
+                 int *lhits, double tol, int K, int precond, int Z_2lvl) {
     int    i, j, k;     // some indexes
     int    m, n;        // number of local time samples, number of local pixels
     int    rank, size;
@@ -50,13 +49,11 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x,
 
     if (Z_2lvl == 0) Z_2lvl = size;
 
-    build_precond(&p, &pixpond, &n, A, Nm1, &x, b, noise, cond, lhits, tol,
-                  Z_2lvl, precond);
+    build_precond(&p, &pixpond, &n, A, Nm1, &x, b, noise, cond, lhits, tol, Z_2lvl, precond);
 
     t = MPI_Wtime();
     if (rank == 0) {
-        printf("[rank %d] Preconditioner computation time = %lf \n", rank,
-               t - st);
+        printf("[rank %d] Preconditioner computation time = %lf \n", rank, t - st);
         // printf("[rank %d] trash_pix flag = %d \n", rank, A->trash_pix);
         // printf("[rank %d] nbr sky pixels = %d \n", rank, n);
         fflush(stdout);
@@ -107,22 +104,19 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x,
         for (i = 0; i < n; i++) // g2 = (g, g)
             localreduce += g[i] * g[i] * pixpond[i];
 
-        MPI_Allreduce(&localreduce, &res, 1, MPI_DOUBLE, MPI_SUM,
-                      MPI_COMM_WORLD);
+        MPI_Allreduce(&localreduce, &res, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     } else {
         res = g2pix;
     }
 
-    double g2pixB = g2pix;
-    double tol2rel =
-            tol * tol * res; // tol*tol*g2pixB; //*g2pixB; //tol; //*tol*g2;
-    res0 = res;
+    double g2pixB  = g2pix;
+    double tol2rel = tol * tol * res; // tol*tol*g2pixB; //*g2pixB; //tol; //*tol*g2;
+    res0           = res;
     // Test if already converged
     if (rank == 0) {
 
         res_rel = sqrt(res) / sqrt(res0);
-        printf("k = %d, res = %e, g2pix = %e, res_rel = %e, time = %lf\n", 0,
-               res, g2pix, res_rel, t - st);
+        printf("k = %d, res = %e, g2pix = %e, res_rel = %e, time = %lf\n", 0, res, g2pix, res_rel, t - st);
         char filename[256];
         sprintf(filename, "%s/pcg_residuals_%s.dat", outpath, ref);
         fp = fopen(filename, "wb");
@@ -156,8 +150,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x,
         coeff       = 0.0;
         localreduce = 0.0;
         for (i = 0; i < n; i++) localreduce += h[i] * AtNm1Ah[i] * pixpond[i];
-        MPI_Allreduce(&localreduce, &coeff, 1, MPI_DOUBLE, MPI_SUM,
-                      MPI_COMM_WORLD);
+        MPI_Allreduce(&localreduce, &coeff, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
         ro = g2pix / coeff;
 
@@ -174,15 +167,13 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x,
         for (i = 0; i < n; i++) // g2 = (Cg, g)
             localreduce += Cg[i] * g[i] * pixpond[i];
 
-        MPI_Allreduce(&localreduce, &g2pix, 1, MPI_DOUBLE, MPI_SUM,
-                      MPI_COMM_WORLD);
+        MPI_Allreduce(&localreduce, &g2pix, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
         localreduce = 0.0;
         for (i = 0; i < n; i++) // g2 = (Cg, g)
             localreduce += Cg[i] * (g[i] - gp[i]) * pixpond[i];
 
-        MPI_Allreduce(&localreduce, &g2pix_polak, 1, MPI_DOUBLE, MPI_SUM,
-                      MPI_COMM_WORLD);
+        MPI_Allreduce(&localreduce, &g2pix_polak, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
 
         t = MPI_Wtime();
         solve_time += (t - st);
@@ -193,16 +184,14 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x,
             for (i = 0; i < n; i++) // g2 = (Cg, g)
                 localreduce += g[i] * g[i] * pixpond[i];
 
-            MPI_Allreduce(&localreduce, &res, 1, MPI_DOUBLE, MPI_SUM,
-                          MPI_COMM_WORLD);
+            MPI_Allreduce(&localreduce, &res, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
         } else {
             res = g2pix_polak;
         }
 
         if (rank == 0) { // print iterate info
             res_rel = sqrt(res) / sqrt(res0);
-            printf("k = %d, res = %e, g2pix = %e, res_rel = %e, time = %lf\n",
-                   k, res, g2pix_polak, res_rel, t - st);
+            printf("k = %d, res = %e, g2pix = %e, res_rel = %e, time = %lf\n", k, res, g2pix_polak, res_rel, t - st);
             fwrite(&res_rel, sizeof(double), 1, fp);
         }
 
@@ -219,8 +208,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x,
         }
 
         if (g2pix_polak > g2pixp) {
-            if (rank == 0)
-                printf("--> g2pix > g2pixp pb (%e > %e) \n", g2pix, g2pixp);
+            if (rank == 0) printf("--> g2pix > g2pixp pb (%e > %e) \n", g2pix, g2pixp);
         }
 
         st = MPI_Wtime();
@@ -235,8 +223,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x,
 
     if (k == K) { // check unconverged
         if (rank == 0) {
-            printf("--> unconverged, max iterate reached (%le > %le)\n", res,
-                   tol2rel);
+            printf("--> unconverged, max iterate reached (%le > %le)\n", res, tol2rel);
             fclose(fp);
         }
     }

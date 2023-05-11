@@ -11,28 +11,27 @@
 #include "mappraiser/create_toeplitz.h"
 #include "mappraiser/iofiles.h"
 #include "mappraiser/pcg_true.h"
-#include <math.h>
+#ifdef WITH_ECG
+#include "mappraiser/ecg.h"
+#endif
 #include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 
-int x2map_pol(double *mapI, double *mapQ, double *mapU, double *Cond, int *hits,
-              int npix, double *x, int *lstid, double *cond, int *lhits,
-              int xsize);
+int x2map_pol(double *mapI, double *mapQ, double *mapU, double *Cond, int *hits, const double *x, const int *lstid,
+              const double *cond, const int *lhits, int xsize);
 
-void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
-           int Z_2lvl, int pointing_commflag, double tol, int maxiter,
-           int enlFac, int ortho_alg, int bs_red, int nside,
-           void *data_size_proc, int nb_blocks_loc, void *local_blocks_sizes,
-           int Nnz, void *pix, void *pixweights, void *signal, double *noise,
-           int lambda, double *invtt) {
-    int64_t M;             // Global number of rows
-    int m, Nb_t_Intervals; // local number of rows of the pointing matrix A, nbr
-                           // of stationary intervals
-    int64_t    gif;        // global indice for the first local line
+void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int Z_2lvl, int pointing_commflag,
+           double tol, int maxiter, int enlFac, int ortho_alg, int bs_red, int nside, void *data_size_proc,
+           int nb_blocks_loc, void *local_blocks_sizes, int Nnz, void *pix, void *pixweights, void *signal,
+           double *noise, int lambda, double *invtt) {
+    int64_t M;                          // Global number of rows
+    int     m, Nb_t_Intervals;          // local number of rows of the pointing matrix A, nbr
+                                        // of stationary intervals
+    int64_t    gif;                     // global indice for the first local line
     int        i, j, k;
-    Mat        A;          // pointing matrix structure
+    Mat        A;                       // pointing matrix structure
     int       *id_last_pix, *ll = NULL; // pixel-to-time-domain mapping
     int        nbr_valid_pixels;        // nbr of valid pixel indices
     double    *x, *cond = NULL;         // pixel domain vectors
@@ -46,8 +45,8 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     MPI_Comm_rank(comm, &rank);
     MPI_Comm_size(comm, &size);
     if (rank == 0) {
-        printf("\n############# MAPPRAISER : MidAPack PaRAllel Iterative Sky "
-               "EstimatoR vDev, May 2019 ################\n");
+        printf("\n############# MAPPRAISER : MidAPack PaRAllel Iterative Sky EstimatoR vDev, May 2019 "
+               "################\n");
         printf("Last compiled on %s at %s\n", __DATE__, __TIME__);
         printf("rank = %d, size = %d\n", rank, size);
         fflush(stdout);
@@ -74,8 +73,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     MPI_Allreduce(&nb_blocks_loc, &Nb_t_Intervals, 1, MPI_INT, MPI_SUM, comm);
     int nb_proc_shared_one_interval = 1; // max(1, size/Nb_t_Intervals );
     if (rank == 0) {
-        printf("[rank %d] size=%d \t m=%d \t Nb_t_Intervals=%d \n", rank, size,
-               m, Nb_t_Intervals);
+        printf("[rank %d] size=%d \t m=%d \t Nb_t_Intervals=%d \n", rank, size, m, Nb_t_Intervals);
         printf("[rank %d] Nb_t_Intervals_loc=%d \n", rank, Nb_t_Intervals_loc);
         fflush(stdout);
     }
@@ -93,8 +91,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
 
     t = MPI_Wtime();
     if (rank == 0) {
-        printf("[rank %d] Initializing pointing matrix time = %lf\n", rank,
-               t - st);
+        printf("[rank %d] Initializing pointing matrix time = %lf\n", rank, t - st);
         printf("  -> nbr of sky pixels = %d\n", A.lcount);
         printf("  -> valid sky pixels  = %d\n", nbr_valid_pixels);
         printf("  -> trash_pix flag    = %d\n", A.trash_pix);
@@ -139,10 +136,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     A.ll          = ll;
 
     t = MPI_Wtime();
-    if (rank == 0) {
-        printf("[rank %d] Total pixel-to-time-domain mapping time=%lf \n", rank,
-               t - st);
-    }
+    if (rank == 0) { printf("[rank %d] Total pixel-to-time-domain mapping time=%lf \n", rank, t - st); }
 
     // Map objects memory allocation
     // MatInit gives A.lcount which is used to compute nbr_valid_pixels
@@ -188,10 +182,8 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
 
     // Block definition
     tpltzblocks = (Block *) malloc(nb_blocks_loc * sizeof(Block));
-    defineBlocks_avg(tpltzblocks, invtt, nb_blocks_loc, local_blocks_sizes,
-                     lambda_block_avg, id0);
-    defineTpltz_avg(&Nm1, nrow, 1, mcol, tpltzblocks, nb_blocks_loc,
-                    nb_blocks_tot, id0, local_V_size, flag_stgy, comm);
+    defineBlocks_avg(tpltzblocks, invtt, nb_blocks_loc, local_blocks_sizes, lambda_block_avg, id0);
+    defineTpltz_avg(&Nm1, nrow, 1, mcol, tpltzblocks, nb_blocks_loc, nb_blocks_tot, id0, local_V_size, flag_stgy, comm);
 
     // print Toeplitz parameters for information
     if (rank == 0) {
@@ -207,16 +199,14 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     st = MPI_Wtime();
     // Conjugate Gradient
     if (solver == 0) {
-        PCG_GLS_true(outpath, ref, &A, &Nm1, x, signal, noise, cond, lhits, tol,
-                     maxiter, precond, Z_2lvl);
+        PCG_GLS_true(outpath, ref, &A, &Nm1, x, signal, noise, cond, lhits, tol, maxiter, precond, Z_2lvl);
     } else if (solver == 1) {
 #ifdef WITH_ECG
-        ECG_GLS(outpath, ref, &A, &Nm1, x, signal, noise, cond, lhits, tol,
-                maxiter, enlFac, ortho_alg, bs_red);
+        ECG_GLS(outpath, ref, &A, &Nm1, x, signal, noise, cond, lhits, tol, maxiter, enlFac, ortho_alg, bs_red);
 #else
         if (rank == 0)
-            printf("To use solver=1 (ECG), use configure option '--with "
-                   "ecg'.\n");
+            fprintf(stderr, "The choice of solver is 1 (=ECG), but the ECG source "
+                            "file has not been compiled.\n");
         exit(EXIT_FAILURE);
 #endif
     } else {
@@ -240,9 +230,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
 
     int *lstid;
     lstid = (int *) calloc(mapsize, sizeof(int));
-    for (i = 0; i < mapsize; i++) {
-        lstid[i] = A.lindices[i + (A.nnz) * (A.trash_pix)];
-    }
+    for (i = 0; i < mapsize; i++) { lstid[i] = A.lindices[i + (A.nnz) * (A.trash_pix)]; }
 
     if (rank != 0) {
         MPI_Send(&mapsize, 1, MPI_INT, 0, 0, comm);
@@ -253,7 +241,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     }
 
     if (rank == 0) {
-        int npix = 12 * pow(nside, 2);
+        int npix = 12 * nside * nside;
         int oldsize;
 
         double *mapI;
@@ -272,18 +260,28 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
                 oldsize = mapsize;
                 MPI_Recv(&mapsize, 1, MPI_INT, i, 0, comm, &status);
                 if (oldsize != mapsize) {
-                    lstid = (int *) realloc(lstid, mapsize * sizeof(int));
-                    x     = (double *) realloc(x, mapsize * sizeof(double));
-                    cond  = (double *) realloc(cond, mapsize * sizeof(double));
-                    lhits = (int *) realloc(lhits, mapsize * sizeof(int));
+                    int    *tmp1, *tmp4;
+                    double *tmp2, *tmp3;
+                    tmp1 = (int *) realloc(lstid, mapsize * sizeof(int));
+                    tmp2 = (double *) realloc(x, mapsize * sizeof(double));
+                    tmp3 = (double *) realloc(cond, mapsize * sizeof(double));
+                    tmp4 = (int *) realloc(lhits, mapsize * sizeof(int));
+                    if (tmp1 == NULL || tmp2 == NULL || tmp3 == NULL || tmp4 == NULL) {
+                        fprintf(stderr, "realloc failed while receiving data from proc %d", i);
+                        exit(EXIT_FAILURE);
+                    } else {
+                        lstid = tmp1;
+                        x     = tmp2;
+                        cond  = tmp3;
+                        lhits = tmp4;
+                    }
                 }
                 MPI_Recv(lstid, mapsize, MPI_INT, i, 1, comm, &status);
                 MPI_Recv(x, mapsize, MPI_DOUBLE, i, 2, comm, &status);
                 MPI_Recv(cond, mapsize / Nnz, MPI_DOUBLE, i, 3, comm, &status);
                 MPI_Recv(lhits, mapsize / Nnz, MPI_INT, i, 4, comm, &status);
             }
-            x2map_pol(mapI, mapQ, mapU, Cond, hits, npix, x, lstid, cond, lhits,
-                      mapsize);
+            x2map_pol(mapI, mapQ, mapU, Cond, hits, x, lstid, cond, lhits, mapsize);
         }
         printf("Checking output directory ... old files will be overwritten\n");
         char  Imap_name[256];
@@ -377,9 +375,8 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     // MPI_Finalize();
 }
 
-int x2map_pol(double *mapI, double *mapQ, double *mapU, double *Cond, int *hits,
-              int npix, double *x, int *lstid, double *cond, int *lhits,
-              int xsize) {
+int x2map_pol(double *mapI, double *mapQ, double *mapU, double *Cond, int *hits, const double *x, const int *lstid,
+              const double *cond, const int *lhits, int xsize) {
 
     int i;
 

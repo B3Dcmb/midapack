@@ -22,13 +22,11 @@ typedef struct {
 } Precond;
 
 // Block-Jacobi preconditioner
-int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b,
-                           double *cond, int *lhits);
+int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, double *cond, int *lhits);
 
 // Preconditioner constructor
-void build_precond(Precond **out_p, double **out_pixpond, int *out_n, Mat *A,
-                   Tpltz *Nm1, double **in_out_x, double *b, double *noise,
-                   double *cond, int *lhits, double tol, int Zn, int precond);
+void build_precond(Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tpltz *Nm1, double **in_out_x, double *b,
+                   double *noise, double *cond, int *lhits, double tol, int Zn, int precond);
 
 // Product of the preconditioner with a map vector
 void apply_precond(Precond *p, const Mat *A, Tpltz *Nm1, double *g, double *Cg);

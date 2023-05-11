@@ -16,18 +16,18 @@ if (NOT MIDAPACK_FOUND)
     ## Check for the header files
 
     find_path(MIDAPACK_INCLUDES
-              NAMES midapack.h
-              HINTS ${MIDAPACK_DIR} ${CMAKE_INSTALL_PREFIX}
-              PATH_SUFFIXES include midapack include/midapack
-              )
+            NAMES midapack.h
+            HINTS ${MIDAPACK_DIR} ${CMAKE_INSTALL_PREFIX}
+            PATH_SUFFIXES include midapack include/midapack
+            )
 
     ##____________________________________________________________________________
     ## Check for the library
 
     find_library(MIDAPACK_LIBRARIES midapack
-                 HINTS ${MIDAPACK_DIR} ${CMAKE_INSTALL_PREFIX}
-                 PATH_SUFFIXES lib
-                 )
+            HINTS ${MIDAPACK_DIR} ${CMAKE_INSTALL_PREFIX}
+            PATH_SUFFIXES lib
+            )
 
     ##____________________________________________________________________________
     ## Actions taken when all components have been found

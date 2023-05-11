@@ -15,10 +15,8 @@
 char *WORKDIR;
 int   IOVERBOSE = 0;
 
-// Copied from HEALPix write_healpix_map routine with little tweaks to pass
-// datatypes in arguments
-void write_map(void *signal, int type, long nside, const char *filename,
-               char nest, const char *coordsys) {
+// Copied from HEALPix write_healpix_map routine with little tweaks to pass datatypes in arguments
+void write_map(void *signal, int type, long nside, const char *filename, char nest, const char *coordsys) {
     fitsfile *fptr; /* pointer to the FITS file, defined in fitsio.h */
     int       status = 0, hdutype;
 
@@ -35,25 +33,18 @@ void write_map(void *signal, int type, long nside, const char *filename,
     fits_create_img(fptr, SHORT_IMG, 0, naxes, &status);
     fits_write_date(fptr, &status);
     fits_movabs_hdu(fptr, 1, &hdutype, &status);
-    fits_create_tbl(fptr, BINARY_TBL, 12L * nside * nside, 1, ttype, tform,
-                    tunit, "BINTABLE", &status);
-    fits_write_key(fptr, TSTRING, "PIXTYPE", "HEALPIX", "HEALPIX Pixelisation",
-                   &status);
+    fits_create_tbl(fptr, BINARY_TBL, 12L * nside * nside, 1, ttype, tform, tunit, "BINTABLE", &status);
+    fits_write_key(fptr, TSTRING, "PIXTYPE", "HEALPIX", "HEALPIX Pixelisation", &status);
 
     strcpy(order, nest ? "NESTED  " : "RING    ");
-    fits_write_key(fptr, TSTRING, "ORDERING", order,
-                   "Pixel ordering scheme, either RING or NESTED", &status);
-    fits_write_key(fptr, TLONG, "NSIDE", &nside,
-                   "Resolution parameter for HEALPIX", &status);
+    fits_write_key(fptr, TSTRING, "ORDERING", order, "Pixel ordering scheme, either RING or NESTED", &status);
+    fits_write_key(fptr, TLONG, "NSIDE", &nside, "Resolution parameter for HEALPIX", &status);
 
     UTIL_ASSERT(strlen(coordsys) >= 1, "bad ccordsys value");
     setCoordSysHP(coordsys[0], coordsys9);
-    fits_write_key(fptr, TSTRING, "COORDSYS", coordsys9,
-                   "Pixelisation coordinate system", &status);
+    fits_write_key(fptr, TSTRING, "COORDSYS", coordsys9, "Pixelisation coordinate system", &status);
 
-    fits_write_comment(fptr,
-                       "G = Galactic, E = ecliptic, C = celestial = equatorial",
-                       &status);
+    fits_write_comment(fptr, "G = Galactic, E = ecliptic, C = celestial = equatorial", &status);
 
     fits_write_col(fptr, type, 1, 1, 1, 12 * nside * nside, signal, &status);
     fits_close_file(fptr, &status);
@@ -80,14 +71,12 @@ static void setCoordSysHP(char coordsys, char *coordsys9) {
                 __FILE__, __LINE__);
 }
 
-static void util_fail_(const char *file, int line, const char *func,
-                       const char *msg) {
+static void util_fail_(const char *file, int line, const char *func, const char *msg) {
     fprintf(stderr, "%s, %i (%s):\n%s\n", file, line, func, msg);
     exit(1);
 }
 
-int ioReadfile(int block_size, int part_id, unsigned int *point_data,
-               double *signal) {
+int ioReadfile(int block_size, int part_id, unsigned int *point_data, double *signal) {
     int i;
 
     char  p_vectorFile[256];
@@ -99,10 +88,8 @@ int ioReadfile(int block_size, int part_id, unsigned int *point_data,
 
     FILE *fp;
 
-    sprintf(p_vectorFile, "%s%s%01d.dat", WORKDIR, p_vectorFileNameBasis,
-            part_id);
-    sprintf(s_vectorFile, "%s%s%01d.dat", WORKDIR, s_vectorFileNameBasis,
-            part_id);
+    sprintf(p_vectorFile, "%s%s%01d.dat", WORKDIR, p_vectorFileNameBasis, part_id);
+    sprintf(s_vectorFile, "%s%s%01d.dat", WORKDIR, s_vectorFileNameBasis, part_id);
 
     if (IOVERBOSE > 1) {
         printf(" Pointing file name: %s\n", p_vectorFile);
@@ -120,8 +107,8 @@ int ioReadfile(int block_size, int part_id, unsigned int *point_data,
     return 0;
 }
 
-int ioReadfile_pol(int jump, int loop, int block_size, int part_id,
-                   unsigned int *point_data, double *signal, double *pol_ang) {
+int ioReadfile_pol(int jump, int loop, int block_size, int part_id, unsigned int *point_data, double *signal,
+                   double *pol_ang) {
     int i;
 
     char  p_vectorFile[256];
@@ -136,12 +123,9 @@ int ioReadfile_pol(int jump, int loop, int block_size, int part_id,
 
     FILE *fp;
 
-    sprintf(p_vectorFile, "%s%s%01d.dat", WORKDIR, p_vectorFileNameBasis,
-            part_id);
-    sprintf(s_vectorFile, "%s%s%01d.dat", WORKDIR, s_vectorFileNameBasis,
-            part_id);
-    sprintf(pol_vectorFile, "%s%s%01d.dat", WORKDIR, pol_vectorFileNameBasis,
-            part_id);
+    sprintf(p_vectorFile, "%s%s%01d.dat", WORKDIR, p_vectorFileNameBasis, part_id);
+    sprintf(s_vectorFile, "%s%s%01d.dat", WORKDIR, s_vectorFileNameBasis, part_id);
+    sprintf(pol_vectorFile, "%s%s%01d.dat", WORKDIR, pol_vectorFileNameBasis, part_id);
 
     if (IOVERBOSE > 1) {
         printf(" Pointing file name: %s\n", p_vectorFile);
@@ -167,8 +151,8 @@ int ioReadfile_pol(int jump, int loop, int block_size, int part_id,
     return 0;
 }
 
-int ioReadTOAST_data(int jump, int loop, int block_size, int part_id,
-                     unsigned int *point_data, double *signal, double *wghts) {
+int ioReadTOAST_data(int jump, int loop, int block_size, int part_id, unsigned int *point_data, double *signal,
+                     double *wghts) {
     int i;
 
     char  p_vectorFile[256];
@@ -183,12 +167,9 @@ int ioReadTOAST_data(int jump, int loop, int block_size, int part_id,
 
     FILE *fp;
 
-    sprintf(p_vectorFile, "%s%s%01d.dat", WORKDIR, p_vectorFileNameBasis,
-            part_id);
-    sprintf(s_vectorFile, "%s%s%01d.dat", WORKDIR, s_vectorFileNameBasis,
-            part_id);
-    sprintf(wght_vectorFile, "%s%s%01d.dat", WORKDIR, wght_vectorFileNameBasis,
-            part_id);
+    sprintf(p_vectorFile, "%s%s%01d.dat", WORKDIR, p_vectorFileNameBasis, part_id);
+    sprintf(s_vectorFile, "%s%s%01d.dat", WORKDIR, s_vectorFileNameBasis, part_id);
+    sprintf(wght_vectorFile, "%s%s%01d.dat", WORKDIR, wght_vectorFileNameBasis, part_id);
 
     if (IOVERBOSE > 1) {
         printf(" Pixels file name: %s\n", p_vectorFile);
@@ -214,8 +195,7 @@ int ioReadTOAST_data(int jump, int loop, int block_size, int part_id,
     return 0;
 }
 
-int ioReadfilePure(int block_size, int part_id, unsigned int *point_data,
-                   double *signal) {
+int ioReadfilePure(int block_size, int part_id, unsigned int *point_data, double *signal) {
     int i;
 
     char  p_vectorFile[256];
@@ -227,10 +207,8 @@ int ioReadfilePure(int block_size, int part_id, unsigned int *point_data,
 
     FILE *fp;
 
-    sprintf(p_vectorFile, "%s%s%01d.dat", WORKDIR, p_vectorFileNameBasis,
-            part_id);
-    sprintf(s_vectorFile, "%s%s%01d.dat", WORKDIR, s_vectorFileNameBasis,
-            part_id);
+    sprintf(p_vectorFile, "%s%s%01d.dat", WORKDIR, p_vectorFileNameBasis, part_id);
+    sprintf(s_vectorFile, "%s%s%01d.dat", WORKDIR, s_vectorFileNameBasis, part_id);
 
     printf(" Pointing file name: %s\n", p_vectorFile);
     printf("   Signal file name: %s\n", s_vectorFile);
@@ -246,14 +224,12 @@ int ioReadfilePure(int block_size, int part_id, unsigned int *point_data,
     return 0;
 }
 
-int ioReadrandom(int block_size, int part_id, unsigned int *point_data,
-                 double *signal) {
+int ioReadrandom(int block_size, int part_id, unsigned int *point_data, double *signal) {
     int i;
 
     // Random generator:
     srand(part_id); // initialize the random generator
-    for (i = 0; i < block_size; i++)
-        signal[i] = 1.0 + (10 * ((double) rand()) / RAND_MAX - 1);
+    for (i = 0; i < block_size; i++) signal[i] = 1.0 + (10 * ((double) rand()) / RAND_MAX - 1);
 
     for (i = 0; i < block_size; i++) point_data[i] = i;
 
@@ -302,31 +278,23 @@ int ioReadTpltzrandom(int lambda, double *Tblock) {
     return 0;
 }
 
-int ioWritebinfile(int mapsize, int mappart_id, int *lstid, double *map,
-                   double *cond, int *lhits) {
+int ioWritebinfile(int mapsize, int mappart_id, int *lstid, double *map, double *cond, int *lhits) {
     int i;
 
     char  lstid_vectorFile[256];
     char  lhits_vectorFile[256];
     char  cond_vectorFile[256];
     char  x_vectorFile[256];
-    char *lstid_vectorFileNameBasis =
-            "/global/cscratch1/sd/elbouha/data_TOAST/output/mapout_lstid_";
-    char *lhits_vectorFileNameBasis =
-            "/global/cscratch1/sd/elbouha/data_TOAST/output/mapout_lhits_";
-    char *cond_vectorFileNameBasis =
-            "/global/cscratch1/sd/elbouha/data_TOAST/output/mapout_lcond_";
-    char *x_vectorFileNameBasis =
-            "/global/cscratch1/sd/elbouha/data_TOAST/output/mapout_";
+    char *lstid_vectorFileNameBasis = "/global/cscratch1/sd/elbouha/data_TOAST/output/mapout_lstid_";
+    char *lhits_vectorFileNameBasis = "/global/cscratch1/sd/elbouha/data_TOAST/output/mapout_lhits_";
+    char *cond_vectorFileNameBasis  = "/global/cscratch1/sd/elbouha/data_TOAST/output/mapout_lcond_";
+    char *x_vectorFileNameBasis     = "/global/cscratch1/sd/elbouha/data_TOAST/output/mapout_";
 
     FILE *fp;
 
-    sprintf(lstid_vectorFile, "%s%01d.dat", lstid_vectorFileNameBasis,
-            mappart_id);
-    sprintf(lhits_vectorFile, "%s%01d.dat", lhits_vectorFileNameBasis,
-            mappart_id);
-    sprintf(cond_vectorFile, "%s%01d.dat", cond_vectorFileNameBasis,
-            mappart_id);
+    sprintf(lstid_vectorFile, "%s%01d.dat", lstid_vectorFileNameBasis, mappart_id);
+    sprintf(lhits_vectorFile, "%s%01d.dat", lhits_vectorFileNameBasis, mappart_id);
+    sprintf(cond_vectorFile, "%s%01d.dat", cond_vectorFileNameBasis, mappart_id);
     sprintf(x_vectorFile, "%s%01d.dat", x_vectorFileNameBasis, mappart_id);
 
     //        printf(" Map file name: %s\n", lstid_vectorFile);
@@ -351,8 +319,7 @@ int ioWritebinfile(int mapsize, int mappart_id, int *lstid, double *map,
     return 0;
 }
 
-int ioReadbinfile(int mapsize, int mappart_id, int *lstid, double *map,
-                  double *cond, int *lhits) {
+int ioReadbinfile(int mapsize, int mappart_id, int *lstid, double *map, double *cond, int *lhits) {
 
     int i;
 
@@ -367,12 +334,9 @@ int ioReadbinfile(int mapsize, int mappart_id, int *lstid, double *map,
 
     FILE *fp;
 
-    sprintf(lstid_vectorFile, "%s%01d.dat", lstid_vectorFileNameBasis,
-            mappart_id);
-    sprintf(lhits_vectorFile, "%s%01d.dat", lhits_vectorFileNameBasis,
-            mappart_id);
-    sprintf(cond_vectorFile, "%s%01d.dat", cond_vectorFileNameBasis,
-            mappart_id);
+    sprintf(lstid_vectorFile, "%s%01d.dat", lstid_vectorFileNameBasis, mappart_id);
+    sprintf(lhits_vectorFile, "%s%01d.dat", lhits_vectorFileNameBasis, mappart_id);
+    sprintf(cond_vectorFile, "%s%01d.dat", cond_vectorFileNameBasis, mappart_id);
     sprintf(x_vectorFile, "%s%01d.dat", x_vectorFileNameBasis, mappart_id);
 
     printf(" Map id file name: %s\n", lstid_vectorFile);

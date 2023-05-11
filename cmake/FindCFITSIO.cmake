@@ -33,53 +33,53 @@
 
 if (NOT CFITSIO_FOUND)
 
-    if (NOT CFITSIO_DIR)
-        set(CFITSIO_DIR ${CMAKE_INSTALL_PREFIX})
-    endif (NOT CFITSIO_DIR)
+    #    if (NOT CFITSIO_DIR)
+    #        set(CFITSIO_DIR ${CMAKE_INSTALL_PREFIX})
+    #    endif (NOT CFITSIO_DIR)
 
     ##____________________________________________________________________________
     ## Check for the header files
 
     find_path(CFITSIO_INCLUDES
-              NAMES fitsio.h fitsio2.h
-              HINTS ${CFITSIO_DIR} ${CMAKE_INSTALL_PREFIX}
-              PATH_SUFFIXES include cfitsio include/cfitsio
-              )
+            NAMES fitsio.h fitsio2.h
+            HINTS ${CFITSIO_DIR} ENV CFITSIO_DIR ${CFITSIO_ROOT} ENV CFITSIO_ROOT
+            PATH_SUFFIXES include cfitsio include/cfitsio
+            )
 
     ##____________________________________________________________________________
     ## Check for the library
 
     find_library(CFITSIO_LIBRARIES cfitsio
-                 HINTS ${CFITSIO_DIR} ${CMAKE_INSTALL_PREFIX}
-                 PATH_SUFFIXES lib
-                 )
+            HINTS ${CFITSIO_DIR} ENV CFITSIO_DIR ${CFITSIO_ROOT} ENV CFITSIO_ROOT
+            PATH_SUFFIXES lib
+            )
 
     ##____________________________________________________________________________
     ## Determine library version
 
-#    if (CFITSIO_INCLUDES AND CFITSIO_LIBRARIES)
-#
-#        find_file(HAVE_TESTCFITSIO_CC TestCFITSIOLibraryVersion.cc
-#                  HINTS ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_MODULE_PATH}
-#                  )
-#
-#        try_run(run_TestCFITSIO compile_TestCFITSIO
-#                ${PROJECT_BINARY_DIR}/TestCFITSIO
-#                ${HAVE_TESTCFITSIO_CC}
-#                CMAKE_FLAGS -DINCLUDE_DIRECTORIES=${CFITSIO_INCLUDES} -DLINK_LIBRARIES=${CFITSIO_LIBRARIES}
-#                RUN_OUTPUT_VARIABLE CFITSIO_VERSION
-#                )
-#
-#        if (CFITSIO_VERSION)
-#            ## extract partial version numbers
-#            list(GET CFITSIO_VERSION 0 CFITSIO_VERSION_MAJOR)
-#            list(GET CFITSIO_VERSION 1 CFITSIO_VERSION_MINOR)
-#            ## assemble full version number
-#            set(CFITSIO_VERSION "${CFITSIO_VERSION_MAJOR}.${CFITSIO_VERSION_MINOR}")
-#        endif (CFITSIO_VERSION)
-#
-#    endif ()
-#
+    #    if (CFITSIO_INCLUDES AND CFITSIO_LIBRARIES)
+    #
+    #        find_file(HAVE_TESTCFITSIO_CC TestCFITSIOLibraryVersion.cc
+    #                  HINTS ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_MODULE_PATH}
+    #                  )
+    #
+    #        try_run(run_TestCFITSIO compile_TestCFITSIO
+    #                ${PROJECT_BINARY_DIR}/TestCFITSIO
+    #                ${HAVE_TESTCFITSIO_CC}
+    #                CMAKE_FLAGS -DINCLUDE_DIRECTORIES=${CFITSIO_INCLUDES} -DLINK_LIBRARIES=${CFITSIO_LIBRARIES}
+    #                RUN_OUTPUT_VARIABLE CFITSIO_VERSION
+    #                )
+    #
+    #        if (CFITSIO_VERSION)
+    #            ## extract partial version numbers
+    #            list(GET CFITSIO_VERSION 0 CFITSIO_VERSION_MAJOR)
+    #            list(GET CFITSIO_VERSION 1 CFITSIO_VERSION_MINOR)
+    #            ## assemble full version number
+    #            set(CFITSIO_VERSION "${CFITSIO_VERSION_MAJOR}.${CFITSIO_VERSION_MINOR}")
+    #        endif (CFITSIO_VERSION)
+    #
+    #    endif ()
+    #
     ##____________________________________________________________________________
     ## Actions taken when all components have been found
 
@@ -90,8 +90,8 @@ if (NOT CFITSIO_FOUND)
     if (CFITSIO_FOUND)
         if (NOT CFITSIO_FIND_QUIETLY)
             message(STATUS "Found components for CFITSIO")
-            message(STATUS "CFITSIO_DIR  = ${CFITSIO_DIR}")
-#            message(STATUS "CFITSIO_VERSION   = ${CFITSIO_VERSION}")
+            # message(STATUS "CFITSIO_DIR  = ${CFITSIO_DIR}")
+            # message(STATUS "CFITSIO_VERSION   = ${CFITSIO_VERSION}")
             message(STATUS "CFITSIO_INCLUDES  = ${CFITSIO_INCLUDES}")
             message(STATUS "CFITSIO_LIBRARIES = ${CFITSIO_LIBRARIES}")
         endif (NOT CFITSIO_FIND_QUIETLY)
@@ -105,7 +105,7 @@ if (NOT CFITSIO_FOUND)
     ## Mark advanced variables
 
     mark_as_advanced(
-            CFITSIO_DIR
+            # CFITSIO_DIR
             CFITSIO_INCLUDES
             CFITSIO_LIBRARIES
     )

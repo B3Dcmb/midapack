@@ -6,31 +6,29 @@
 
 find_package(MPI REQUIRED)
 
-find_package(CFITSIO)
+find_package(CFITSIO REQUIRED)
 
 option(ECG "Build mappraiser with ECG solver" OFF)
-option(USE_MKL "Use MKL as provider for BLAS/LAPACK libraries" OFF)
+option(MKL "Use MKL as provider for BLAS/LAPACK libraries" OFF)
 
 if (ECG)
     # ECG solver requires the use of MKL
-    set(USE_MKL ON)
+    set(MKL ON)
 
     # preAlps + metis dependencies
     # TODO simplify and move to a cmake module
 
+    find_package(METIS REQUIRED)
+
     # create interface library with ECG dependencies
-    add_library(ecg_deps INTERFACE)
+    add_library(preAlps INTERFACE)
 
-    if (NOT DEFINED ENV{PREALPSROOT})
+    if (NOT DEFINED ENV{PREALPS_ROOT})
 
-        message(FATAL_ERROR "ECG solver needs preAlps. The environment variable PREALPSROOT must be set.")
-
-    elseif (NOT DEFINED ENV{METISROOT})
-
-        message(FATAL_ERROR "ECG solver depends on metis. The environment variable METISROOT must be set.")
+        message(FATAL_ERROR "ECG solver needs preAlps. The environment variable PREALPS_ROOT must be set.")
 
     else ()
-        # all good, paths to preAlps and metis are provided
+        # all good, path to preAlps is provided
 
         # components of preAlps as imported static libraries
         add_library(preAlps_release STATIC IMPORTED)
@@ -40,44 +38,39 @@ if (ECG)
 
         set_property(
                 TARGET preAlps_release
-                PROPERTY IMPORTED_LOCATION $ENV{PREALPSROOT}/lib/libpreAlps_release.a
+                PROPERTY IMPORTED_LOCATION $ENV{PREALPS_ROOT}/lib/libpreAlps_release.a
         )
         set_property(
                 TARGET cplm_core
-                PROPERTY IMPORTED_LOCATION $ENV{PREALPSROOT}/lib/libcplm_core.a
+                PROPERTY IMPORTED_LOCATION $ENV{PREALPS_ROOT}/lib/libcplm_core.a
         )
         set_property(
                 TARGET cplm_light
-                PROPERTY IMPORTED_LOCATION $ENV{PREALPSROOT}/lib/libcplm_light.a
+                PROPERTY IMPORTED_LOCATION $ENV{PREALPS_ROOT}/lib/libcplm_light.a
         )
         set_property(
                 TARGET cplm_v0
-                PROPERTY IMPORTED_LOCATION $ENV{PREALPSROOT}/lib/libcplm_v0.a
+                PROPERTY IMPORTED_LOCATION $ENV{PREALPS_ROOT}/lib/libcplm_v0.a
         )
 
-        # metis as imported shared library
-        add_library(metis SHARED IMPORTED)
-        set_property(TARGET metis PROPERTY IMPORTED_LOCATION $ENV{METISROOT}/lib/libmetis.so)
-
         # link using the interface library
-        target_compile_options(ecg_deps
+        target_compile_options(preAlps
                 INTERFACE
-                -I$ENV{PREALPSROOT}/utils/cplm_core
-                -I$ENV{PREALPSROOT}/utils/cplm_light
-                -I$ENV{PREALPSROOT}/utils/cplm_v0
-                -I$ENV{PREALPSROOT}/utils
-                -I$ENV{PREALPSROOT}/src/preconditioners
-                -I$ENV{PREALPSROOT}/src/solvers
-                -I$ENV{METISROOT}/include
+                -I$ENV{PREALPS_ROOT}/utils/cplm_core
+                -I$ENV{PREALPS_ROOT}/utils/cplm_light
+                -I$ENV{PREALPS_ROOT}/utils/cplm_v0
+                -I$ENV{PREALPS_ROOT}/utils
+                -I$ENV{PREALPS_ROOT}/src/preconditioners
+                -I$ENV{PREALPS_ROOT}/src/solvers
                 )
-        target_link_libraries(ecg_deps INTERFACE preAlps_release cplm_light cplm_v0 cplm_core metis)
+        target_link_libraries(preAlps INTERFACE preAlps_release cplm_light cplm_v0 cplm_core)
 
     endif ()
 
 endif () # ECG
 
 # First look for MKL, since it will provide support for BLAS/LAPACK
-if (USE_MKL)
+if (MKL)
     find_package(MKL REQUIRED)
 endif ()
 

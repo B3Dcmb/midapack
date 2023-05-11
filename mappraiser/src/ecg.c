@@ -35,8 +35,7 @@
 /*                           FUNCTIONS PROTOTYPES                            */
 /*****************************************************************************/
 /* Build right hand side */
-int get_rhs(Mat *A, Tpltz *Nm1, double *b, double *noise, double *x,
-            double *rhs);
+int get_rhs(Mat *A, Tpltz *Nm1, double *b, double *noise, double *x, double *rhs);
 /* Preconditioner operator */
 double Opmmpreconditioner(Mat *A, Mat *BJ_inv, double *X, double *Y, int ncol);
 /* System matrix operator: A^T * N^-1 * A */
@@ -46,9 +45,8 @@ double Opmmmatrix(Mat *A, Tpltz *Nm1, double *X, double *Y, int ncol);
 /*****************************************************************************/
 /*                                 CODE                                      */
 /*****************************************************************************/
-int ECG_GLS(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double *b,
-            double *noise, double *cond, int *lhits, double tol, int maxIter,
-            int enlFac, int ortho_alg, int bs_red) {
+int ECG_GLS(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double *b, double *noise, double *cond, int *lhits,
+            double tol, int maxIter, int enlFac, int ortho_alg, int bs_red) {
     /*================ Get MPI rank & size parameters ================*/
     int rank, size;
     MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -58,11 +56,11 @@ int ECG_GLS(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double *b,
     // OT: I tested and it still works with OpenMP activated
     MKL_Set_Num_Threads(1);
     /*===================== Variables declaration ====================*/
-    int i, j, k; // looping indices
-    int N;       // Global number of pixels (no overlapping correction)
-    int m, n;    // local number of time samples, local number of pixels x nnz
-                 // (IQU)
-    double *tmp; // temporary pointer
+    int i, j, k;         // looping indices
+    int N = 0;           // Global number of pixels (no overlapping correction)
+    int m, n;            // local number of time samples, local number of pixels x nnz
+                         // (IQU)
+    double *tmp;         // temporary pointer
     Mat    *BJ_inv, *BJ; // Block-Jacobi preconditioner
 
     /*=== Pre-process degenerate pixels & build the preconditioner ===*/
@@ -90,8 +88,7 @@ int ECG_GLS(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double *b,
     double normres_init = 0.0;
     for (i = 0; i < n; i++) { normres_init += rhs[i] * rhs[i] * pixpond[i]; }
 
-    MPI_Allreduce(MPI_IN_PLACE, &normres_init, 1, MPI_DOUBLE, MPI_SUM,
-                  MPI_COMM_WORLD);
+    MPI_Allreduce(MPI_IN_PLACE, &normres_init, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     normres_init = sqrt(normres_init);
     if (rank == 0) {
         printf("GLOBAL ||r_0|| = %.6f \n", normres_init);
@@ -122,8 +119,7 @@ int ECG_GLS(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double *b,
 
     time_ECG_total = MPI_Wtime();
     // Allocate memory and initialize variables
-    preAlps_oECGInitialize(&ecg, rhs, &rci_request,
-                           A->lindices + (A->nnz) * (A->trash_pix));
+    preAlps_oECGInitialize(&ecg, rhs, &rci_request, A->lindices + (A->nnz) * (A->trash_pix));
     ecg.normb  = normres_init;
     rel_res[0] = 1.0;
 
@@ -146,12 +142,10 @@ int ECG_GLS(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double *b,
             rel_res[ecg.iter] = ecg.res / ecg.normb;
             if (stop == 1) break;
             if (ecg.ortho_alg == ORTHOMIN) {
-                time_invMV += Opmmpreconditioner(A, BJ_inv, ecg.R_p, ecg.Z_p,
-                                                 ecg.enlFac);
+                time_invMV += Opmmpreconditioner(A, BJ_inv, ecg.R_p, ecg.Z_p, ecg.enlFac);
                 // preconditioner ecg.R -> ecg.Z
             } else if (ecg.ortho_alg == ORTHODIR) {
-                time_invMV += Opmmpreconditioner(A, BJ_inv, ecg.AP_p, ecg.Z_p,
-                                                 ecg.bs);
+                time_invMV += Opmmpreconditioner(A, BJ_inv, ecg.AP_p, ecg.Z_p, ecg.bs);
                 // preconditioner ecg.AP -> ecg.Z
             }
         }
@@ -166,8 +160,7 @@ int ECG_GLS(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double *b,
         printf("*** TIMING,  invM x V time = %e s\n", time_invMV);
 
         char filename[256];
-        sprintf(filename, "%s/rel_res_%s_enlfac_%d_o=%d.txt", outpath, ref,
-                ecg.enlFac, ortho_alg);
+        sprintf(filename, "%s/rel_res_%s_enlfac_%d_o=%d.txt", outpath, ref, ecg.enlFac, ortho_alg);
         FILE *fp = fopen(filename, "w");
         for (i = 0; i <= ecg.iter; i++) { fprintf(fp, "%.15e\n", rel_res[i]); }
         fclose(fp);
@@ -190,8 +183,8 @@ int ECG_GLS(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double *b,
 /*                           FUNCTIONS DEFINITION                            */
 /*****************************************************************************/
 /* Build right hand side */
-int get_rhs(Mat *A, Tpltz *Nm1, double *b, double *noise, double *x,
-            double *rhs) {                     /* rhs = A^T*Nm1* (b - A*x_0 ) */
+/* rhs = A^T*Nm1* (b - A*x_0 ) */
+int get_rhs(Mat *A, Tpltz *Nm1, double *b, double *noise, double *x, double *rhs) {
     int     i;                                 // some indexes
     int     m, n;
     double *_g;                                // time domain vector
@@ -211,8 +204,8 @@ int get_rhs(Mat *A, Tpltz *Nm1, double *b, double *noise, double *x,
 }
 
 /* Preconditioner operator */
-double Opmmpreconditioner(Mat *A, Mat *BJ_inv, double *X, double *Y,
-                          int ncol) { // Y = M^-1 X
+// Y = M^-1 X
+double Opmmpreconditioner(Mat *A, Mat *BJ_inv, double *X, double *Y, int ncol) {
     double timing = MPI_Wtime();
 
     int     i, j;                              // some indexes
@@ -234,8 +227,7 @@ double Opmmpreconditioner(Mat *A, Mat *BJ_inv, double *X, double *Y,
 }
 
 /* System matrix operator: A^T * N^-1 * A */
-double Opmmmatrix(Mat *A, Tpltz *Nm1, double *X, double *Y,
-                  int ncol) { /* Y = A^T*Nm1*A * X */
+double Opmmmatrix(Mat *A, Tpltz *Nm1, double *X, double *Y, int ncol) { /* Y = A^T*Nm1*A * X */
     double timing = MPI_Wtime();
 
     int     i, j;                              // some indexes

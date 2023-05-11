@@ -34,28 +34,28 @@
 #
 
 #If environment variable FFTWDIR is specified, it has same effect as FFTW_ROOT
-if( NOT FFTW_ROOT AND ENV{FFTWDIR} )
-    set( FFTW_ROOT $ENV{FFTWDIR} )
-endif()
+if (NOT FFTW_ROOT AND ENV{FFTWDIR})
+    set(FFTW_ROOT $ENV{FFTWDIR})
+endif ()
 
 # Check if we can use PkgConfig
 find_package(PkgConfig)
 
 #Determine from PKG
-if( PKG_CONFIG_FOUND AND NOT FFTW_ROOT )
-    pkg_check_modules( PKG_FFTW QUIET "fftw3" )
-endif()
+if (PKG_CONFIG_FOUND AND NOT FFTW_ROOT)
+    pkg_check_modules(PKG_FFTW QUIET "fftw3")
+endif ()
 
 #Check whether to search static or dynamic libs
-set( CMAKE_FIND_LIBRARY_SUFFIXES_SAV ${CMAKE_FIND_LIBRARY_SUFFIXES} )
+set(CMAKE_FIND_LIBRARY_SUFFIXES_SAV ${CMAKE_FIND_LIBRARY_SUFFIXES})
 
-if( ${FFTW_USE_STATIC_LIBS} )
-    set( CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_STATIC_LIBRARY_SUFFIX} )
-else()
-    set( CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES_SAV} )
-endif()
+if (${FFTW_USE_STATIC_LIBS})
+    set(CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_STATIC_LIBRARY_SUFFIX})
+else ()
+    set(CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES_SAV})
+endif ()
 
-if( FFTW_ROOT )
+if (FFTW_ROOT)
     # find libs
 
     find_library(
@@ -138,7 +138,7 @@ if( FFTW_ROOT )
             NO_DEFAULT_PATH
             )
 
-else()
+else ()
 
     set(SEARCH_DIRS ${PKG_FFTW_LIBDIR} ${PKG_FFTW_LIBRARY_DIRS} ${LIB_INSTALL_DIR})
 
@@ -200,76 +200,76 @@ else()
             PATHS ${SEARCH_DIRS}
             )
 
-endif( FFTW_ROOT )
+endif (FFTW_ROOT)
 
 #--------------------------------------- components
 
 if (FFTW_DOUBLE_LIB)
     set(FFTW_DOUBLE_LIB_FOUND TRUE)
     set(FFTW_LIBRARIES ${FFTW_LIBRARIES} ${FFTW_DOUBLE_LIB})
-else()
+else ()
     set(FFTW_DOUBLE_LIB_FOUND FALSE)
-endif()
+endif ()
 
 if (FFTW_FLOAT_LIB)
     set(FFTW_FLOAT_LIB_FOUND TRUE)
     set(FFTW_LIBRARIES ${FFTW_LIBRARIES} ${FFTW_FLOAT_LIB})
-else()
+else ()
     set(FFTW_FLOAT_LIB_FOUND FALSE)
-endif()
+endif ()
 
 if (FFTW_LONGDOUBLE_LIB)
     set(FFTW_LONGDOUBLE_LIB_FOUND TRUE)
     set(FFTW_LIBRARIES ${FFTW_LIBRARIES} ${FFTW_LONGDOUBLE_LIB})
-else()
+else ()
     set(FFTW_LONGDOUBLE_LIB_FOUND FALSE)
-endif()
+endif ()
 
 if (FFTW_DOUBLE_THREADS_LIB)
     set(FFTW_DOUBLE_THREADS_LIB_FOUND TRUE)
     set(FFTW_LIBRARIES ${FFTW_LIBRARIES} ${FFTW_DOUBLE_THREADS_LIB})
-else()
+else ()
     set(FFTW_DOUBLE_THREADS_LIB_FOUND FALSE)
-endif()
+endif ()
 
 if (FFTW_FLOAT_THREADS_LIB)
     set(FFTW_FLOAT_THREADS_LIB_FOUND TRUE)
     set(FFTW_LIBRARIES ${FFTW_LIBRARIES} ${FFTW_FLOAT_THREADS_LIB})
-else()
+else ()
     set(FFTW_FLOAT_THREADS_LIB_FOUND FALSE)
-endif()
+endif ()
 
 if (FFTW_LONGDOUBLE_THREADS_LIB)
     set(FFTW_LONGDOUBLE_THREADS_LIB_FOUND TRUE)
     set(FFTW_LIBRARIES ${FFTW_LIBRARIES} ${FFTW_LONGDOUBLE_THREADS_LIB})
-else()
+else ()
     set(FFTW_LONGDOUBLE_THREADS_LIB_FOUND FALSE)
-endif()
+endif ()
 
 if (FFTW_DOUBLE_OPENMP_LIB)
     set(FFTW_DOUBLE_OPENMP_LIB_FOUND TRUE)
     set(FFTW_LIBRARIES ${FFTW_LIBRARIES} ${FFTW_DOUBLE_OPENMP_LIB})
-else()
+else ()
     set(FFTW_DOUBLE_OPENMP_LIB_FOUND FALSE)
-endif()
+endif ()
 
 if (FFTW_FLOAT_OPENMP_LIB)
     set(FFTW_FLOAT_OPENMP_LIB_FOUND TRUE)
     set(FFTW_LIBRARIES ${FFTW_LIBRARIES} ${FFTW_FLOAT_OPENMP_LIB})
-else()
+else ()
     set(FFTW_FLOAT_OPENMP_LIB_FOUND FALSE)
-endif()
+endif ()
 
 if (FFTW_LONGDOUBLE_OPENMP_LIB)
     set(FFTW_LONGDOUBLE_OPENMP_LIB_FOUND TRUE)
     set(FFTW_LIBRARIES ${FFTW_LIBRARIES} ${FFTW_LONGDOUBLE_OPENMP_LIB})
-else()
+else ()
     set(FFTW_LONGDOUBLE_OPENMP_LIB_FOUND FALSE)
-endif()
+endif ()
 
 #--------------------------------------- end components
 
-set( CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES_SAV} )
+set(CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES_SAV})
 
 include(FindPackageHandleStandardArgs)
 

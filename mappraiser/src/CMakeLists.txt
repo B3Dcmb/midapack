@@ -59,11 +59,18 @@ else ()
     message(FATAL_ERROR "Could not find cfitsio. Consider providing a hint (-D CFITSIO_DIR <path>).")
 endif ()
 
-# preAlps and metis
+# ECG solver dependencies
 
 if (ECG)
+    # preAlps
     target_compile_definitions(mappraiser PRIVATE WITH_ECG)
-    target_link_libraries(mappraiser PRIVATE ecg_deps)
+    target_link_libraries(mappraiser PRIVATE preAlps)
+
+    # METIS
+    if (METIS_FOUND)
+        target_include_directories(mappraiser PUBLIC "${METIS_INCLUDE_DIRS}")
+        target_link_libraries(mappraiser PUBLIC "${METIS_LIBRARIES}")
+    endif ()
 endif ()
 
 # MKL
