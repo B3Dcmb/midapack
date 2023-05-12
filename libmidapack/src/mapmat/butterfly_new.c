@@ -13,14 +13,6 @@
 #include "alm.h"
 #include "butterfly.h"
 
-int modified_set_or(int *A1, int n1, int *A2, int n2, int *A1orA2);
-// int set_and(int *A1, int n1, int *A2, int n2, int *A1andA2);
-int modified_card_or(int *A1, int n1, int *A2, int n2);
-// void m2s(double *mapval, double *submapval, int *subset, int count);
-// void subset2map(int *A, int nA, int *subA, int nsubA);
-// void s2m_sum(double *mapval, double *submapval, int *subset, int count);
-// void s2m_copy(double *mapval, double *submapval, int *subset, int count);
-
 
 int butterfly_reduce_init(int *indices, int count, int **R, int *nR, int **S, int *nS, int **com_indices, int *com_count, int steps, MPI_Comm comm){
 
@@ -370,6 +362,113 @@ int butterfly_reshuffle_init(int *indices_in, int count_in, int *indices_out, in
 
  return 0;
 }
+
+
+
+int mirror_butterfly(double *values_local, int *indices_local, int size_local, double *values_received, int *indices_received, int *size_received, int flag_mirror_unmirror_size_indices_data, MPI_Comm world_comm)
+{
+    /* Sends data of the excess processes, which are over the 2^k processes which will be used for the Butterfly scheme, back to the 2^k processes. 
+        The "mirror" step corresponds to sending the information of the excess processes (over 2^k) to the Butterfly processes, 
+        while the "unmirror" step corresponds to sending back the information of the Butterfly processes to the excess processes.
+    
+        The flag flag_mirror_unmirror_size_indices_data should be either MIRROR_SIZE, MIRROR_INDICES, MIRROR_DATA, UNMIRROR_SIZE, UNMIRROR_INDICES or UNMIRROR_DATA
+        to respectively mirror/unmirror the size of the data, indices of the data, or the data itself 
+    
+        The way this proceed is by taking the data of the N-2^k processes and send them respectively to the last N-2^k processes which will be used for the Butterfly scheme. 
+        This means the data of the process ranked 2^k will be send to the process ranked 2^k-1, and the data of the process ranked 2^k+10 will be send to the process ranked 2^k-11 
+        This function should be followed by reorder_indices to rearrange the indices and associated values, to make sure
+        the received indices are order monotonously and the redundant indices and values are treated correctly */
+    
+    int rank, size;
+    MPI_Comm_size(worldcomm, &size);
+    MPI_Comm_rank(worldcomm, &rank);
+    int i;
+    int number_steps_Butterfly = log_2(size);
+    int nb_rank_Butterfly = pow(2,number_steps_Butterfly);
+
+    int number_ranks_to_send = size - nb_rank_Butterfly;
+
+    int *list_rank_excess_butterfly = (int *)malloc(number_ranks_to_send*sizeof(int));
+    int *list_last_ranks_within_butterfly = (int *)malloc(number_ranks_to_send*sizeof(int));
+
+    for (i=0; i<number_ranks_to_send; i++){
+        list_rank_excess_butterfly[i] = nb_rank_Butterfly + i;
+        list_last_ranks_within_butterfly[i] = nb_rank_Butterfly - i - 1;
+    }
+
+    // First, communicate the sizes, determine which processes will receive/send data
+    int size_communicated = 0;
+    switch(flag_mirror_unmirror_size_indices_data)
+    {
+        case MIRROR_SIZES: // Case 0 : MIRROR - send only size and indices to be exchanged, to have the excess processes over 2^k to send their data to the last 2^k processes before the Butterfly scheme
+            mpi_send_data_from_list_rank(list_rank_excess_butterfly, list_last_ranks_within_butterfly, number_ranks_to_send, size_local, 1*sizeof(int), &size_communicated, world_comm);
+            *size_received = size_communicated;
+            break;
+
+        case MIRROR_INDICES:
+            size_communicated = *size_received;
+            mpi_send_data_from_list_rank(list_rank_excess_butterfly, list_last_ranks_within_butterfly, number_ranks_to_send, indices_local, size_communicated*sizeof(int), indices_received, world_comm);
+            break;
+
+        case MIRROR_DATA:
+            size_communicated = *size_received;
+            mpi_send_data_from_list_rank(list_rank_excess_butterfly, list_last_ranks_within_butterfly, number_ranks_to_send, values_local, size_communicated*sizeof(double), values_received, world_comm);
+            break;
+
+        case UNMIRROR_SIZE:
+            mpi_send_data_from_list_rank(list_last_ranks_within_butterfly, list_rank_excess_butterfly, number_ranks_to_send, size_local, 1*sizeof(int), &size_communicated, world_comm);
+            *size_received = size_communicated;
+            break;
+
+        case UNMIRROR_INDICES:
+            size_communicated = *size_received;
+            mpi_send_data_from_list_rank(list_last_ranks_within_butterfly, list_rank_excess_butterfly, number_ranks_to_send, indices_local, size_communicated*sizeof(int), indices_received, world_comm);
+            break;
+        
+        case UNMIRROR_DATA: // Case unmirror : the last processes within the 2^k butterfly processes send their data to the excess processes over the 2^k processes after the Butterfly scheme
+            size_communicated = *size_received;
+            mpi_send_data_from_list_rank(list_last_ranks_within_butterfly, list_rank_excess_butterfly, number_ranks_to_send, values_local, size_communicated*sizeof(double), values_received, world_comm);
+            break;
+    }
+
+    free(list_rank_excess_butterfly);
+    free(list_last_ranks_within_butterfly);
+}
+
+
+int construct_butterfly_struct(Butterfly_struct *Butterfly_obj, int *indices_in, int count_in, int *indices_out, int count_out, int flag_classic_or_reshuffle_butterfly, int do_we_need_to_project_into_different_scheme, MPI_Comm worlcomm)
+{
+    /* Initialize the butterfly communication, assuming the mirroring of the data have been already done */
+    int size;
+    MPI_Comm_size(comm, &size);
+
+    Butterfly_obj->classic_or_reshuffle_butterfly = flag_classic_or_reshuffle_butterfly;
+    // 0 if classic butterfly, e.g. if pixel distributions are the same before/after ; 1 if reshuffle butterfly
+
+    Butterfly_obj->steps = log_2(size);
+    Butterfly_obj->S = (int **)malloc(Butterfly_obj->steps * sizeof(int *)); // allocate sending maps tab
+    Butterfly_obj->R = (int **)malloc(Butterfly_obj->steps * sizeof(int *)); // allocate receiving maps tab
+    Butterfly_obj->nS = (int *)malloc(Butterfly_obj->steps * sizeof(int));   // allocate sending map sizes tab
+    Butterfly_obj->nR = (int *)malloc(Butterfly_obj->steps * sizeof(int));   // allocate receiving map size tab
+    // butterfly_init(A->lindices + (A->nnz) * (A->trash_pix), A->lcount - (A->nnz) * (A->trash_pix), A->R, A->nR, A->S, A->nS, &(A->com_indices), &(A->com_count), A->steps, comm);
+    
+    // Construct the butterfly communicator
+    MPI_Comm comm_butterfly;
+    mpi_create_subset(pow(2,log_2(size)), world_comm, &comm_butterfly);
+
+    switch(flag_classic_or_reshuffle_butterfly)
+    {
+        case 0: // Classic butterfly
+            butterfly_reduce_init(indices_in, count_in, Butterfly_obj->R, Butterfly_obj->nR, Butterfly_obj->S, Butterfly_obj->nS, &(Butterfly_obj->com_indices), &(Butterfly_obj->com_count), Butterfly_obj->steps, comm_butterfly);
+
+        case 1: // Reshuffle butterfly
+            butterfly_reshuffle_init(indices_in, count_in, indices_out, count_out, Butterfly_obj->R, Butterfly_obj->nR, Butterfly_obj->S, Butterfly_obj->nS, &(Butterfly_obj->com_indices), &(Butterfly_obj->com_count), Butterfly_obj->steps, comm_butterfly);
+    }
+
+    // Butterfly_obj->do_we_need_to_project_into_different_scheme = do_we_need_to_project_into_different_scheme;
+    return 0;
+}
+
 
 int modified_butterfly_reduce(int **R, int *nR, int nRmax, int **S, int *nS, int nSmax, double *val, int steps, MPI_Comm comm){
   /* double st, t; */

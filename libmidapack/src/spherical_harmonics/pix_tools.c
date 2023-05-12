@@ -19,11 +19,9 @@ void make_mask_binary(double* mask, int* mask_binary, int *f_sky, long npix){
   /* Function to transform the mask into binary (composed of 0 and 1 on pixel sky)*/
   long pixel;
   // mask_binary = (int *) calloc( npix, sizeof( int));
-  // printf("Tmp test %ld \n", npix);
   for( pixel=0; pixel<npix; pixel++)
       if( mask[pixel] != 0) {
           mask_binary[pixel] = 1;
-          // printf("Tmp test %ld \t", pixel,  );
           *f_sky = *f_sky + 1;
       }
       else{
@@ -34,19 +32,16 @@ void make_mask_binary(double* mask, int* mask_binary, int *f_sky, long npix){
 
 int convert_indices_nest2ring(int *indices_nest, int *indices_ring, long int number_of_indices, int nstokes, int nside){
   // Compute S2HAT ring version of MAPPRAISER nest map map_nest
-  // Expect map of nstokes*npix ; and number_of_indices to be the number of pixels * nstokes
+  // Expect map of nstokes*npix, with (nstokes, npix) for MAPPPRAISER convention (in column-wise order, so [TQUTQUTQUTQU])
+  // Expects as well number_of_indices to be the number of pixels * nstokes
+  // Return ring map with (npix, nstokes) for S2HAT convention (so [TTTTTTQQQQQUUUUU])
   long int ipix, indice_transformed, npix = 12*nside*nside;
-  printf("Indices nest2ring \n");
   for( ipix=0; ipix<number_of_indices; ipix++) {
-    // nest2ring(nside, indices_nest[ipix]%npix, &indice_transformed);
-    // indices_ring[ipix] = indice_transformed + (indices_nest[ipix]/npix)*npix;
+
     nest2ring(nside, indices_nest[ipix]/nstokes, &indice_transformed);
     indices_ring[ipix] = indice_transformed + (indices_nest[ipix]%nstokes)*npix;
     // Change indices in nest ordering into indices in ring ordering
-    // printf("- %d %d %ld %ld -", indices_nest[ipix], indices_nest[ipix]%npix, indice_transformed, indice_transformed + (indices_nest[ipix]/npix)*npix);
-    printf("- %d %d %ld %ld -", indices_nest[ipix], indices_nest[ipix]/nstokes, indice_transformed, indice_transformed + (indices_nest[ipix]%nstokes)*npix);
   }
-  printf(" \n");
   return 0;
 }
 
@@ -58,7 +53,6 @@ int convert_indices_ring2nest(int *indices_ring, int *indices_nest, long int num
   // Return nest map with (nstokes, npix) for MAPPPRAISER convention (so [TQUTQUTQUTQU])
 
   long int ipix, indice_transformed, npix = 12*nside*nside;
-  printf("Indices ring2nest \n");
   for( ipix=0; ipix<number_of_indices; ipix++) {
       // ring2nest(nside, indices_ring[ipix]%npix, &indice_transformed);
       // // indices_nest[ipix] = indice_transformed + (indices_ring[ipix]%nstokes)*npix;
@@ -66,10 +60,7 @@ int convert_indices_ring2nest(int *indices_ring, int *indices_nest, long int num
       ring2nest(nside, indices_ring[ipix]%npix, &indice_transformed);
       indices_nest[ipix] = indice_transformed*nstokes + (indices_ring[ipix]/npix);
     // Change indices in ring ordering into indices in nest ordering
-    // printf("- %d %d %ld %ld -", indices_ring[ipix], indices_ring[ipix]%npix, indice_transformed, indice_transformed + (indices_ring[ipix]/npix)*nstokes);
-    printf("- %d %d %ld %ld -", indices_ring[ipix], indices_ring[ipix]%npix, indice_transformed, indice_transformed*nstokes + indices_ring[ipix]/npix);
   }
-  printf("\n");
   return 0;
 }
 
@@ -86,21 +77,9 @@ int get_projectors_indices(int *indices_nest, int *ordered_indices_ring, int siz
   convert_indices_nest2ring(indices_nest, indices_ring, size_indices, nstokes, nside);
 
   memcpy(ordered_indices_ring, indices_ring, size_indices*sizeof(int));
-  
-  printf("--- test projector 0 ---- %d \n", size_indices);
-  for(i=0; i<size_indices; i++){
-    printf(" - %d %d %d - ", i, ordered_indices_ring[i], indices_ring[i]);
-  }
-  printf("\n");
 
   ssort(ordered_indices_ring, size_indices, 0); 
   // Argument flag=0 to use quicksort to sort the indices
-
-  printf("--- test projector 1 \n");
-  for(i=0; i<size_indices; i++){
-    printf(" - %d %d %d - ", i, ordered_indices_ring[i], indices_ring[i]);
-  }
-  printf("\n");
 
   for (i=0; i<size_indices; i++) 
   {

@@ -13,94 +13,222 @@
 #include "s2hat_tools.h"
 
 
-int mpi_send_data_from_above_treshold(int treshold_rank, double *data_init, int size_data, double *data_out, MPI_Comm world_comm)
-{
-    /* Redistribute data stored in local processes so that every processes with rank above the treshold_rank will send their data to processes
-        symmetrically to the treshold_rank
-        This means that the process with rank treshold_rank+1 will send its data to the process treshold_rank-1
+int elem_in_list_elem(int elem, int *list_elem, int size_list_elem){
+  /* Return the index of elem if it is in list_elem, -1 otherwise */
+  int i;
+  for(i=0; i<size_list_elem; i++){
+    if (elem == list_elem[i])
+      return i;
+  }
+  return -1;
+}
 
-        It is always assumed that the total number of processes in world_comm is strictly more than treshold_rank
+
+int mpi_send_data_from_list_rank(int *list_rank_sender, int *list_rank_receiver, int size_list_rank, void *data_init, size_t full_size_data, void *data_out, MPI_Comm world_comm)
+{
+    /* Redistribute data stored in list_rank_sender so that every processes with rank in list_rank_sender will send their data to processes
+        in list_rank_receiver
+        For a given i, this means that the process with rank list_rank_sender[i] will send its data to the process list_rank_receiver[i]
 
         This routine will be mostly used for butterfly scheme purposes
+
+        BEWARE : full_size_data is expected in BYTE (typically as a result of the application sizeof)
     */
     int i;
     int *ranks_not_const;
 
     int rank, size, difference_treshold, tag = 0;
-    double *buffer;
-
-
-    MPI_Comm_rank(world_comm, &rank);
-    MPI_Comm_size(world_comm, &size);
-    MPI_Request s_request, r_request;
-
-    if (rank >= treshold_rank - (size - treshold_rank))
-        {
-            buffer = malloc(size_data*sizeof(double));
-            if (rank > treshold_rank){
-                difference_treshold = rank - treshold_rank;
-
-                // buffer = malloc(size_data*sizeof(double));
-                memcpy(buffer, data_init, size_data*sizeof(double));
-                MPI_Isend(buffer, size_data, MPI_DOUBLE, treshold_rank-difference_treshold, tag, world_comm, &s_request);
-                // free(buffer);
-            }
-            if (rank < treshold_rank){
-                difference_treshold = treshold_rank - rank;
-
-                // buffer = malloc(size_data*sizeof(double));
-                MPI_Irecv(buffer, size_data, MPI_DOUBLE, treshold_rank + difference_treshold, tag, world_comm, &r_request);
-                memcpy(data_out, buffer, size_data*sizeof(double));
-                // free(buffer);
-            }
-            free(buffer);
-        }
-    
-    return 0;
-}
-
-int mpi_send_data_from_below_treshold(int treshold_rank, double *data_init, int size_data, double *data_out, MPI_Comm world_comm)
-{
-    /* Redistribute data stored in local processes so that every processes with rank below the treshold_rank, within the difference size-treshold_rank, 
-        will send their data to processes symmetrically to the treshold_rank
-        This means that the process with rank treshold_rank-1 will send its data to the process treshold_rank+1
-
-        It is always assumed that the total number of processes in world_comm is strictly more than treshold_rank
-
-        This routine will be mostly used for butterfly scheme purposes
-    */
-    int i;
-    int *ranks_not_const;
-
-    int rank, size, difference_treshold, tag = 0;
-    double *buffer;
-
+    void *buffer;
 
     MPI_Comm_rank(world_comm, &rank);
     MPI_Comm_size(world_comm, &size);
     MPI_Request s_request, r_request;
 
-    if (rank >= treshold_rank - (size - treshold_rank))
+    int index_rank_sender = elem_in_list_elem(rank, list_rank_sender, size_list_rank);
+    int index_rank_receiver = elem_in_list_elem(rank, list_rank_receiver, size_list_rank);
+
+
+    if ((index_rank_sender != -1) && (index_rank_receiver != -1))
         {
-            buffer = malloc(size_data*sizeof(double));
-            if (rank > treshold_rank){
-                difference_treshold = rank - treshold_rank;
-
-                memcpy(buffer, data_init, size_data*sizeof(double));
-                MPI_Irecv(buffer, size_data, MPI_DOUBLE, treshold_rank-difference_treshold, tag, world_comm, &s_request);
+            buffer = malloc(full_size_data);
+            if (index_rank_sender != -1){
+                // buffer = malloc(size_data*sizeof(double));
+                memcpy(buffer, data_init, full_size_data);
+                MPI_Isend(buffer, full_size_data, MPI_BYTE, list_rank_receiver[index_rank_sender], tag, world_comm, &s_request);
             }
-            if (rank < treshold_rank){
-                difference_treshold = treshold_rank - rank;
-
-                MPI_Isend(buffer, size_data, MPI_DOUBLE, treshold_rank + difference_treshold, tag, world_comm, &r_request);
-                memcpy(data_out, buffer, size_data*sizeof(double));
+            if (index_rank_receiver != -1){
+                // buffer = malloc(size_data*sizeof(double));
+                MPI_Irecv(buffer, full_size_data, MPI_BYTE, list_rank_sender[index_rank_receiver], tag, world_comm, &r_request);
+                memcpy(data_out, buffer, full_size_data);
             }
             free(buffer);
         }
-    
     return 0;
 }
 
+
+
+// int mpi_send_data_from_above_treshold(int treshold_rank, double *data_init, int size_data, double *data_out, MPI_Comm world_comm)
+// {
+//     /* Redistribute data stored in local processes so that every processes with rank above the treshold_rank will send their data to processes
+//         symmetrically to the treshold_rank
+//         This means that the process with rank treshold_rank+1 will send its data to the process treshold_rank-1
+
+//         It is always assumed that the total number of processes in world_comm is strictly more than treshold_rank
+
+//         This routine will be mostly used for butterfly scheme purposes
+//     */
+//     int i;
+//     int *ranks_not_const;
+
+//     int rank, size, difference_treshold, tag = 0;
+//     double *buffer;
+
+
+//     MPI_Comm_rank(world_comm, &rank);
+//     MPI_Comm_size(world_comm, &size);
+//     MPI_Request s_request, r_request;
+
+//     if (rank >= treshold_rank - (size - treshold_rank))
+//         {
+//             buffer = malloc(size_data*sizeof(double));
+//             if (rank > treshold_rank){
+//                 difference_treshold = rank - treshold_rank;
+
+//                 // buffer = malloc(size_data*sizeof(double));
+//                 memcpy(buffer, data_init, size_data*sizeof(double));
+//                 MPI_Isend(buffer, size_data, MPI_DOUBLE, treshold_rank-difference_treshold, tag, world_comm, &s_request);
+//                 // free(buffer);
+//             }
+//             if (rank < treshold_rank){
+//                 difference_treshold = treshold_rank - rank;
+
+//                 // buffer = malloc(size_data*sizeof(double));
+//                 MPI_Irecv(buffer, size_data, MPI_DOUBLE, treshold_rank + difference_treshold, tag, world_comm, &r_request);
+//                 memcpy(data_out, buffer, size_data*sizeof(double));
+//                 // free(buffer);
+//             }
+//             free(buffer);
+//         }
+    
+//     return 0;
+// }
+
+// int mpi_send_data_from_below_treshold(int treshold_rank, double *data_init, int size_data, double *data_out, MPI_Comm world_comm)
+// {
+//     /* Redistribute data stored in local processes so that every processes with rank below the treshold_rank, within the difference size-treshold_rank, 
+//         will send their data to processes symmetrically to the treshold_rank
+//         This means that the process with rank treshold_rank-1 will send its data to the process treshold_rank+1
+
+//         It is always assumed that the total number of processes in world_comm is strictly more than treshold_rank
+
+//         This routine will be mostly used for butterfly scheme purposes
+//     */
+//     int i;
+//     int *ranks_not_const;
+
+//     int rank, size, difference_treshold, tag = 0;
+//     double *buffer;
+
+
+//     MPI_Comm_rank(world_comm, &rank);
+//     MPI_Comm_size(world_comm, &size);
+//     MPI_Request s_request, r_request;
+
+//     if (rank >= treshold_rank - (size - treshold_rank))
+//         {
+//             buffer = malloc(size_data*sizeof(double));
+//             if (rank > treshold_rank){
+//                 difference_treshold = rank - treshold_rank;
+
+//                 memcpy(buffer, data_init, size_data*sizeof(double));
+//                 MPI_Irecv(buffer, size_data, MPI_DOUBLE, treshold_rank-difference_treshold, tag, world_comm, &s_request);
+//             }
+//             if (rank < treshold_rank){
+//                 difference_treshold = treshold_rank - rank;
+
+//                 MPI_Isend(buffer, size_data, MPI_DOUBLE, treshold_rank + difference_treshold, tag, world_comm, &r_request);
+//                 memcpy(data_out, buffer, size_data*sizeof(double));
+//             }
+//             free(buffer);
+//         }
+    
+//     return 0;
+// }
+
+// int butterfly_mirroring(double *values_to_send, int *indices_to_send, int number_elements_to_send, double *values_to_receive, int *indices_to_receive, MPI_Comm worldcomm){
+//   /* Sends data of the excess processes, which are over the 2^k processes which will be used for the Butterfly scheme,
+//      back to the 2^k processes. The way to proceed is by taking the data of the N-2^k processes and send them respectively to the last
+//      N-2^k processes which will be used for the Butterfly scheme. This means the data of the process ranked 2^k will be send to the process ranked 2^k-1,
+//      and the data of the process ranked 2^k+10 will be send to the process ranked 2^k-11 
+//      This function should be followed by butterfly_init_reorder to rearrange the indices and associated values, to make sure
+//      the received indices are order monotonously */
+
+//   int i, rank, size;
+//   MPI_Request s_request, r_request, s_request_1, r_request_1, s_request_2, r_request_2;
+//   int tag = 0;
+
+//   double *value_communicated;
+//   int *indices_communicated;
+
+//   int number_steps_Butterfly = log_2(size);
+//   int number_rank_used_Butterfly = pow(2,number_steps_Butterfly);
+//   int number_elements_to_receive;
+//   int number_ranks_to_send = size - number_rank_used_Butterfly;
+  
+//   int rank_excess = fabs(rank - number_rank_used_Butterfly);
+
+//   MPI_Comm_size(worldcomm, &size);
+//   MPI_Comm_rank(worldcomm, &rank);
+  
+  
+//   if (rank_excess <= number_ranks_to_send){
+    
+//     // First, send the number of elements to send/receive
+//     if (rank < number_rank_used_Butterfly){
+//       // MPI_Irecv(&number_elements_to_receive, 1, MPI_INT, rank + rank_excess, tag, worldcomm, &r_request);
+//       MPI_Recv(&number_elements_to_receive, 1, MPI_INT, rank + rank_excess, tag, worldcomm, &r_request);
+//     }
+//     if (rank >= number_rank_used_Butterfly){
+//       MPI_Send(&number_elements_to_send, 1, MPI_INT, rank - rank_excess - 1, tag, worldcomm);
+//     }
+
+//     // MPI_Wait(&r_request, MPI_STATUS_IGNORE);
+//     // MPI_Wait(&s_request, MPI_STATUS_IGNORE);
+
+//     // Then, send the data
+//     if (rank < number_rank_used_Butterfly){
+//       value_communicated = (double *)malloc(number_elements_to_receive*sizeof(double));
+//       indices_communicated = (int *)malloc(number_elements_to_receive*sizeof(int));
+
+//       MPI_Irecv(&value_communicated, number_elements_to_receive, MPI_DOUBLE, rank + rank_excess, tag+1, worldcomm, &r_request_1);
+//       MPI_Irecv(&value_communicated, number_elements_to_receive, MPI_INT, rank + rank_excess, tag+2, worldcomm, &r_request_2);
+//       MPI_Wait(&r_request_1, &r_request);
+//       MPI_Wait(&r_request_2, &r_request);
+
+//       memcpy(values_to_receive, value_communicated, number_elements_to_receive*sizeof(double));
+//       memcpy(indices_to_receive, indices_communicated, number_elements_to_receive*sizeof(int));
+//     }
+
+//     if (rank >= number_rank_used_Butterfly){
+//       value_communicated = (double *)malloc(number_elements_to_receive*sizeof(double));
+//       indices_communicated = (int *)malloc(number_elements_to_receive*sizeof(int));
+      
+//       memcpy(value_communicated, values_to_send, number_elements_to_receive*sizeof(double));
+//       memcpy(indices_communicated, indices_to_send, number_elements_to_receive*sizeof(int));
+      
+//       MPI_Isend(&values_to_send, number_elements_to_send, MPI_DOUBLE, rank - rank_excess - 1, tag+1, worldcomm, &s_request_1);
+//       MPI_Isend(&indices_to_send, number_elements_to_send, MPI_INT, rank - rank_excess - 1, tag+2, worldcomm, &s_request_2);
+//       MPI_Wait(&s_request_1, &r_request);
+//       MPI_Wait(&s_request_2, &r_request);
+//     }
+
+//     // MPI_Wait(&r_request, MPI_STATUS_IGNORE);
+//     // MPI_Wait(&s_request, MPI_STATUS_IGNORE);
+//     free(value_communicated);
+//     free(indices_communicated);
+//   }
+// }
 
 int mpi_create_subset(int number_ranks_to_divive, MPI_Comm initcomm, MPI_Comm *subset_comm)
 {
@@ -134,115 +262,3 @@ int mpi_create_subset(int number_ranks_to_divive, MPI_Comm initcomm, MPI_Comm *s
 
     return 0;
 }
-
-int all_reduce_to_all_indices_mappraiser(int *indices_pixel_local, int number_pixel_local, int nside, int* all_sky_pixels_observed, int root, MPI_Comm world_comm)
-{
-    /* Will get the number_pixel_local first pixels of indices_pixel_local to build  mask */
-
-    int i;
-    // int *copy_ell_indices;
-    int *com_val;
-
-    long int npix = 12*nside*nside;
-
-    com_val=(int *) calloc( npix,sizeof(int)); // Npix or less because of trash_pix ? To check later
-
-    int rank, nprocs;
-    MPI_Comm_rank( world_comm, &rank);
-    MPI_Comm_size( world_comm, &nprocs);
-    for (i=0; i<number_pixel_local; i++)
-    {
-        com_val[indices_pixel_local[i]] = 1;
-    }
-
-    // s2m(com_val, indices_ones, indices_pixel_local, number_pixel_local); 
-    MPI_Reduce(com_val, all_sky_pixels_observed, npix, MPI_INT, MPI_SUM, root, world_comm);	//maximum index
-    free(com_val);
-    return 0;
-}
-
-
-
-
-void mpi_broadcast_s2hat_global_struc(S2HAT_parameters *S2HAT_params){
-    /* Use s2hat routines to broadcast s2hat structures */
-    S2HAT_GLOBAL_parameters *Global_param_s2hat = S2HAT_params->Global_param_s2hat;
-    S2HAT_LOCAL_parameters *Local_param_s2hat = S2HAT_params->Local_param_s2hat;
-    if (Local_param_s2hat->gangrank != -1){
-        MPI_pixelizationBcast( &(Global_param_s2hat->pixelization_scheme), Local_param_s2hat->gangroot, Local_param_s2hat->gangrank, Local_param_s2hat->gangcomm);
-        MPI_scanBcast(Global_param_s2hat->pixelization_scheme, &(Global_param_s2hat->scan_sky_structure_pixel), Local_param_s2hat->gangroot, Local_param_s2hat->gangrank, Local_param_s2hat->gangcomm);
-        MPI_Bcast( &(Global_param_s2hat->pixpar.par1), 1, MPI_INT, Local_param_s2hat->gangroot, Local_param_s2hat->gangcomm);
-        MPI_Bcast( &(Global_param_s2hat->pixpar.par2), 1, MPI_INT, Local_param_s2hat->gangroot, Local_param_s2hat->gangcomm);
-        MPI_Bcast( &(Global_param_s2hat->nlmax), 1, MPI_INT, Local_param_s2hat->gangroot, Local_param_s2hat->gangcomm);
-        MPI_Bcast( &(Global_param_s2hat->nmmax), 1, MPI_INT, Local_param_s2hat->gangroot, Local_param_s2hat->gangcomm);
-        MPI_Bcast( &(Global_param_s2hat->nside), 1, MPI_INT, Local_param_s2hat->gangroot, Local_param_s2hat->gangcomm);
-    }
-}
-
-int distribute_full_sky_map_into_local_maps_S2HAT(double* full_sky_map, double *local_map_s2hat, S2HAT_parameters *S2HAT_params)
-{
-    S2HAT_GLOBAL_parameters *Global_param_s2hat = S2HAT_params->Global_param_s2hat;
-    S2HAT_LOCAL_parameters *Local_param_s2hat = S2HAT_params->Local_param_s2hat;
-    int nstokes = S2HAT_params->nstokes;
-
-    if (Local_param_s2hat->gangrank >= 0){
-        /* Distribute full sky map in ring ordering, with convention [npix, nstokes] in column-wise order among procs, into local maps */
-        distribute_map(Global_param_s2hat->pixelization_scheme, 1, 0, nstokes, Local_param_s2hat->first_ring, Local_param_s2hat->last_ring, Local_param_s2hat->map_size, 
-            local_map_s2hat, full_sky_map, Local_param_s2hat->gangrank, Local_param_s2hat->gangsize, Local_param_s2hat->gangroot, Local_param_s2hat->gangcomm);
-        // 1 for the number of maps, 0 for the index of the current map
-    }
-    return 0;
-}
-
-
-// [WIP] - May not need it, for now only work for the first nstokes parameter, doesn't allow to recover the others
-// int collect_partial_map_from_pixels(double* local_map_s2hat, double *output_submap, int first_pix, int last_pix, S2HAT_parameters *S2HAT_params){
-//     // Collect specific pixels from all local_map_s2hat to form a submap given first and last pixels 
-    
-//     S2HAT_GLOBAL_parameters *Global_param_s2hat = S2HAT_params->Global_param_s2hat;
-//     S2HAT_LOCAL_parameters *Local_param_s2hat = S2HAT_params->Local_param_s2hat;
-//     int nstokes = S2HAT_params->nstokes;
-//     int submap_size = last_pix - first_pix; // Submapsize given by pixel numbers
-
-//     collect_partialmap(Global_param_s2hat->pixelization_scheme, 1, 0, nstokes, first_pix, last_pix, 
-//         output_submap, Local_param_s2hat->first_ring, Local_param_s2hat->last_ring, submap_size, local_map_s2hat, 
-//         Local_param_s2hat->gangrank, Local_param_s2hat->gangsize, Local_param_s2hat->gangroot, Local_param_s2hat->gangcomm);
-//     // 1 map given, 0 is the number of the map
-
-//     return 0;
-// }
-
-
-
-
-void free_covariance_matrix(double ** covariance_matrix_NxN, int lmax){
-    int ell_value;
-    for (ell_value=0; ell_value<lmax+1; ell_value++){
-        free(covariance_matrix_NxN[ell_value]);
-    }
-    free(covariance_matrix_NxN);    
-}
-
-void free_s2hat_GLOBAL_parameters_struct(S2HAT_GLOBAL_parameters *Global_param_s2hat){
-    destroy_pixelization(Global_param_s2hat->pixelization_scheme);
-    destroy_scan(Global_param_s2hat->scan_sky_structure_pixel);
-    free(Global_param_s2hat);
-}
-
-void free_s2hat_LOCAL_parameters_struct(S2HAT_LOCAL_parameters *Local_param_s2hat){
-    if (Local_param_s2hat->nmvals > 0){
-        free(Local_param_s2hat->mvals);
-    }
-    free(Local_param_s2hat->pixel_numbered_ring);    
-    free(Local_param_s2hat);
-}
-
-void free_s2hat_parameters_struct(S2HAT_parameters *S2HAT_params){
-
-    if (S2HAT_params->Local_param_s2hat->gangrank >= 0){
-        free_s2hat_LOCAL_parameters_struct(S2HAT_params->Local_param_s2hat);
-    }
-    free_s2hat_GLOBAL_parameters_struct(S2HAT_params->Global_param_s2hat);
-    // free(S2HAT_params);
-}
-

@@ -28,28 +28,6 @@ typedef struct PCG_var{
     // Also note that in case we want to update from other domains of computation, the flags can take other values 2, 3, ...
 } PCG_var;
 
-
-typedef struct Butterfly_struct{
-
-    int		*com_indices, com_count; // communicated indices, and size
-    int		steps;			         // number of steps in the butterfly scheme
-    int		*nS, *nR;		         // number of indices (to send and to receive); size = steps
-    int		**R, **S;		         // sending or receiving indices
-
-    int classic_or_reshuffle_butterfly; 
-    // Flag to indicate if classic or reshuffled butterfly is used, e.g. if we expect the pixel distributions prior and after communication to be the same or different
-    // 0 for classic butterfly scheme with same pixel distributions prior/after ; 1 for after
-
-    // int do_we_need_to_project_into_different_scheme;
-    // Flag to indicate if we need to project the input pixel distribution into a different scheme
-    
-    int *projector_values;
-    // Projector for local values of map : allows to project the values from one pixel distribution to another
-    
-    int *ordered_indices;
-    // Stored ordered indices, only used for ring2nest and nest2ring transitions in which case it corresponds to ordered ring indices
-} Butterfly_struct;
-
 struct Harmonic_superstruct{
     /* Harmonic superstructure for harmonic operations, defined here using S2HAT */
 
@@ -61,6 +39,10 @@ struct Harmonic_superstruct{
     Butterfly_struct *S2HAT_to_MAPPRAISER;
     Butterfly_struct *MAPPRAISER_to_S2HAT;
     // Structures to use butterfly scheme, here to store the necessary structures to transition ring2nest and nest2ring
+    
+    Butterfly_struct_supplement *supplement;
+    // Possible supplemntary data to perform the Butterfly scheme
+    
 };
 
 

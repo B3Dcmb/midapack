@@ -83,9 +83,13 @@ elseif (LAPACK_FOUND)
     target_link_libraries(mappraiser PUBLIC LAPACK::LAPACK)
 endif ()
 
+# # Healpix/S2HAT
+
+# if (HEALPIX_FOUND)
+# set(HEADER_FILES ${HEALPIXROOT}"/include/chealpix.h")
 target_include_directories(mappraiser PRIVATE $ENV{HEALPIXROOT}/include)
 target_include_directories(mappraiser PRIVATE $ENV{S2HATROOT}/include)
-target_link_libraries(mappraiser PRIVATE $ENV{S2HATROOT}/lib/cori/intel/libs2hat_std.a )
+target_link_libraries(mappraiser PRIVATE $ENV{S2HATROOT}/lib/cori/intel/libs2hat_std.a)
 target_link_libraries(mappraiser PRIVATE $ENV{HEALPIXROOT}/lib/libchealpix.a)
 target_compile_definitions(mappraiser PRIVATE "-DHEALPIXDATA=${HEALPIXROOT}share/healpix/ -ls2hat_std")
 
