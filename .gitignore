@@ -36,7 +36,7 @@
 *.pyc
 
 # Directories to ignore
-mappraiser/src/test
+mappraiser/src/old_tests
 algebra/test
 
 # System files
