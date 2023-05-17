@@ -17,6 +17,9 @@
 
 /* Content of mpi_tools.c */
 
+/* Get elem in list_elem and return its index */
+int elem_in_list_elem(int elem, int *list_elem, int size_list_elem);
+
 /* Create a mpi communicator subset of the initial global communicator, by taking the number_ranks_to_divide first ranks within it*/
 int mpi_create_subset(int number_ranks_to_divive, MPI_Comm initcomm, MPI_Comm *subset_comm);
 /**/

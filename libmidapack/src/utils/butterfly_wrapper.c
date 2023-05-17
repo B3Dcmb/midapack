@@ -37,6 +37,8 @@ int mirror_butterfly(double *values_local, int *indices_local, int size_local, d
     int nb_rank_Butterfly = pow(2,number_steps_Butterfly);
 
     int number_ranks_to_send = size - nb_rank_Butterfly;
+    printf("r %d ~~~~ nb_steps %d ; nb_ranks %d ; number_ranks_to_send %d \n", rank, number_steps_Butterfly, nb_rank_Butterfly, number_ranks_to_send);
+    fflush(stdout);
 
     int *list_rank_excess_butterfly = (int *)malloc(number_ranks_to_send*sizeof(int));
     int *list_last_ranks_within_butterfly = (int *)malloc(number_ranks_to_send*sizeof(int));
@@ -46,6 +48,13 @@ int mirror_butterfly(double *values_local, int *indices_local, int size_local, d
         list_last_ranks_within_butterfly[i] = nb_rank_Butterfly - i - 1;
     }
 
+    int index_excess = elem_in_list_elem(rank, list_rank_excess_butterfly, number_ranks_to_send);
+    int index_within = elem_in_list_elem(rank, list_last_ranks_within_butterfly, number_ranks_to_send);
+
+    if (number_ranks_to_send>0)
+        printf("r %d ~~~~ nb_steps %d ; nb_ranks %d ; nb_rank_to_send %d ; rank excess %d ; rank_within %d ; flag %d \n", rank, number_steps_Butterfly, nb_rank_Butterfly, number_ranks_to_send, list_rank_excess_butterfly[0], list_last_ranks_within_butterfly[0], flag_mirror_unmirror_size_indices_data);
+    fflush(stdout);
+
     // First, communicate the sizes, determine which processes will receive/send data
     int size_communicated = 0;
     switch(flag_mirror_unmirror_size_indices_data)
@@ -53,31 +62,52 @@ int mirror_butterfly(double *values_local, int *indices_local, int size_local, d
         case MIRROR_SIZE: // Case 0 : MIRROR - send only size and indices to be exchanged, to have the excess processes over 2^k to send their data to the last 2^k processes before the Butterfly scheme
             mpi_send_data_from_list_rank(list_rank_excess_butterfly, list_last_ranks_within_butterfly, number_ranks_to_send, &size_local, 1*sizeof(int), &size_communicated, worldcomm);
             *size_received = size_communicated;
+            printf("r %d ~~~~ size received : %d, %d, %d \n", rank, size_local, *size_received, size_communicated);
             break;
 
         case MIRROR_INDICES:
             size_communicated = *size_received;
+            if (index_excess != -1)
+                size_communicated = size_local;
+            printf("###COM %d ~~~~ size %d ; indice send : %d \n", rank, size_communicated, indices_local[0]);
             mpi_send_data_from_list_rank(list_rank_excess_butterfly, list_last_ranks_within_butterfly, number_ranks_to_send, indices_local, size_communicated*sizeof(int), indices_received, worldcomm);
+            if (size_communicated>0)
+                printf("###COM %d ~~~~ size %d ; indice received : %d \n", rank, size_communicated, indices_received[size_communicated-1]);
             break;
 
         case MIRROR_DATA:
             size_communicated = *size_received;
+            if (index_excess != -1)
+                size_communicated = size_local;
             mpi_send_data_from_list_rank(list_rank_excess_butterfly, list_last_ranks_within_butterfly, number_ranks_to_send, values_local, size_communicated*sizeof(double), values_received, worldcomm);
             break;
 
         case UNMIRROR_SIZE:
             mpi_send_data_from_list_rank(list_last_ranks_within_butterfly, list_rank_excess_butterfly, number_ranks_to_send, &size_local, 1*sizeof(int), &size_communicated, worldcomm);
             *size_received = size_communicated;
+            // printf("UMr %d ~~~~ size received : %d, %d, %d \n", rank, size_local, *size_received, size_communicated);
             break;
 
         case UNMIRROR_INDICES:
             size_communicated = *size_received;
+            if (index_within != -1)
+                size_communicated = size_local;
+            // if (size_local>0)
+                // printf("###COMU %d ~~~~ size %d ; indice send : %d \n", rank, size_communicated, indices_local[0]);
             mpi_send_data_from_list_rank(list_last_ranks_within_butterfly, list_rank_excess_butterfly, number_ranks_to_send, indices_local, size_communicated*sizeof(int), indices_received, worldcomm);
+            if (size_communicated>0)
+                // printf("###COMU %d ~~~~ size %d ; indice received : %d \n", rank, size_communicated, indices_received[size_communicated-1]);
             break;
         
         case UNMIRROR_DATA: // Case unmirror : the last processes within the 2^k butterfly processes send their data to the excess processes over the 2^k processes after the Butterfly scheme
             size_communicated = *size_received;
+            if (index_within != -1)
+                size_communicated = size_local;
+            if (size_local>0)
+                printf("###COMU %d ~~~~ size %d ; value sent : %f \n", rank, size_communicated, values_local[0]);
             mpi_send_data_from_list_rank(list_last_ranks_within_butterfly, list_rank_excess_butterfly, number_ranks_to_send, values_local, size_communicated*sizeof(double), values_received, worldcomm);
+            if (size_communicated>0)
+                printf("###COMU %d ~~~~ size %d ; value received : %f \n", rank, size_communicated, values_received[size_communicated-1]);
             break;
     }
 
