@@ -10,9 +10,10 @@
 #include <unistd.h>
 
 #include <chealpix.h>
-#include "s2hat.h"
-#include "midapack.h"
-// #include "s2hat_tools.h"
+#include "../mapmat/csort.h"
+// #include "s2hat.h"
+// #include "midapack.h"
+#include "s2hat_tools.h"
 
 
 void make_mask_binary(double* mask, int* mask_binary, int *f_sky, long npix){

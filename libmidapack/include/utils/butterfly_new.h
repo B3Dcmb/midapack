@@ -31,23 +31,25 @@ typedef struct Butterfly_struct{
 typedef struct Butterfly_struct_supplement{
 
     // Indices obtained from mirroring
-    int *indices_from_mirror; // List of indices received in the mirroring step by the local MPI process  -> Will be used afterwards to resend back the relevant indices when unmirroring
+    int *indices_mirror; // List of indices received in the mirroring step by the local MPI process  -> Will be used afterwards to resend back the relevant indices when unmirroring
     int size_from_mirror; // Size of the indices obtained from mirroring
 
-    // int do_we_need_to_project_into_different_scheme;
-    // Flag to indicate if we need to project the input pixel distribution into a different scheme
-    
-    int *projector_values;
-    // Projector for local values of map : allows to project the values from one (pixel) distribution to another
-    // In the context of harmonic transformations, initialized for conversion between the nest pixel distribution of MAPPRAISER and ring pixel distribution of S2HAT
-    
+
     int new_size_local; // New size after mirroring when the redundant indices have been deleted
-    int *ordered_indices; // Indices ring used for butterfly scheme, obtained from both mirroring and any conversion of the (pixel) distribution
+    int *ordered_indices; // Ordered indices used for butterfly scheme, obtained from both mirroring and any conversion of the (pixel) distribution
     // This MUST BE ORDERED INDICES
-    // In the context of harmonic operations, it is used to store ordered indices, used for ring2nest and nest2ring transitions in which case it corresponds to ordered ring indices
-} Butterfly_struct;
+} Butterfly_struct_supplement;
 
 
+typedef struct Butterfly_superstruct{
+    Butterfly_struct *Butterfly_obj;
+    
+    Butterfly_struct_supplement *Butterfly_mirror_supp;
+    Butterfly_struct_supplement *Butterfly_unmirror_supp;
+
+} Butterfly_superstruct;
+
+/* Content of butterfly_new.c */
 int modified_set_or(int *A1, int n1, int *A2, int n2, int *A1orA2);
 // int set_and(int *A1, int n1, int *A2, int n2, int *A1andA2);
 int modified_card_or(int *A1, int n1, int *A2, int n2);
@@ -57,9 +59,24 @@ int modified_card_or(int *A1, int n1, int *A2, int n2);
 // void s2m_copy(double *mapval, double *submapval, int *subset, int count);
 
 int modified_butterfly_reduce(int **R, int *nR, int nRmax, int **S, int *nS, int nSmax, double *val, int steps, MPI_Comm comm);
+
 int butterfly_reshuffle(int **R, int *nR, int nRmax, int **S, int *nS, int nSmax, double *val, int steps, MPI_Comm comm);
+
 int butterfly_reduce_init(int *indices, int count, int **R, int *nR, int **S, int *nS, int **com_indices, int *com_count, int steps, MPI_Comm comm);
+
 int butterfly_reshuffle_init(int *indices_in, int count_in, int *indices_out, int count_out, int **R, int *nR, int **S, int *nS, int **com_indices, int *com_count, int steps, MPI_Comm comm);
 
-int mirror_butterfly(double *values_local, int *indices_local, int size_local, double *values_received, int *indices_received, int *size_received, int flag_mirror_unmirror_size_indices_data, MPI_Comm world_comm);
-int construct_butterfly_struct(Butterfly_struct *Butterfly_obj, int *indices_in, int count_in, int *indices_out, int count_out, int flag_classic_or_reshuffle_butterfly, int do_we_need_to_project_into_different_scheme, MPI_Comm worlcomm);
+/* Content of butterfly_wrapper.c */
+
+int mirror_butterfly(double *values_local, int *indices_local, int size_local, double *values_received, int *indices_received, int *size_received, int flag_mirror_unmirror_size_indices_data, MPI_Comm worldcomm);
+
+int construct_butterfly_struct(Butterfly_struct *Butterfly_obj, int *indices_in, int count_in, int *indices_out, int count_out, int flag_classic_or_reshuffle_butterfly, MPI_Comm worldcomm);
+
+int prepare_butterfly_communication(int *indices_in, int count_in, int *indices_out, int count_out, int flag_classic_or_reshuffle_butterfly, Butterfly_superstruct *Butterfly_superstruct, MPI_Comm worldcomm);
+
+int perform_butterfly_communication(double *values_to_communicate, int *indices_in, int count_in, double *values_out, int *indices_out, int count_out, Butterfly_superstruct *Butterfly_superstruct_obj, MPI_Comm worldcomm);
+
+
+int free_butterfly_struct(Butterfly_struct *Butterfly_obj);
+int free_butterfly_supplement(Butterfly_struct_supplement *Butterfly_supp);
+int free_butterfly_superstruct(Butterfly_superstruct *Butterfly_superstruct_obj);

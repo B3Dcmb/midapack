@@ -101,7 +101,7 @@ int init_harmonic_superstruct(int is_pixel_scheme_MAPPRAISER_ring, Mat *A, Harmo
     mirror_data_butterfly(NULL, NULL, number_pixels_MAPPRAISER, NULL, NULL, &new_number_pixels_local_MAPPRAISER, MIRROR_INDICES, world_comm);
 
     // MPI_Comm *comm_butterfly;
-    int nb_rank_Butterfly = pow(2,log_2(size));
+    int nb_rank_Butterfly = pow(2,log2(size));
     // mpi_create_subset(nb_rank_Butterfly, world_comm, comm_butterfly);
     construct_butterfly_struct(Butterfly_struct *Butterfly_obj, int *indices_in, int count_in, int *indices_out, int count_out, int flag_classic_or_reshuffle_butterfly, int do_we_need_to_project_into_different_scheme, MPI_Comm worlcomm)
 
@@ -143,62 +143,6 @@ int init_harmonic_superstruct(int is_pixel_scheme_MAPPRAISER_ring, Mat *A, Harmo
     // Attributing the Butterfly structures to Harmonic superstructure
 }
 
-int butterfly_communication(double *values_to_communicate, int *indices_in, int count_in, double *values_out, double *indices_out, int count_out, Butterfly_struct *Butterfly_obj)
-{
-    // Perform the butterfly communication
-    int k;
-    int nSmax, nRmax;
-    double *com_val, *values_ordered;
-
-    MPI_Comm comm_butterfly = Butterfly_obj->comm_butterfly;
-
-    for (k = 0; k < Butterfly_obj->steps; k++) /*compute max communication buffer size*/
-    {
-        if (Butterfly_obj->nR[k] > nRmax)
-            nRmax = Butterfly_obj->nR[k];
-        if (Butterfly_obj->nS[k] > nSmax)
-            nSmax = Butterfly_obj->nS[k];
-    }
-
-    /* Copy value */
-    com_val = (double *)malloc(Butterfly_obj->com_count * sizeof(double));
-    for (i = 0; i < Butterfly_obj->com_count; i++)
-        com_val[i] = 0.0;
-
-    // if (Butterfly_obj->do_we_need_to_project_into_different_scheme)
-    // {
-    //     // We work with a ring distribution
-    //     m2m(values_to_communicate, indices_in, count_in, com_val, Butterfly_struct->com_indices, Butterfly_struct->com_count);
-    // }
-    // else // If the pixel distribution is not in ring distribution, then it is expected to be in nest pixel distribution and we need to change it
-    // {   
-    //     // We work with a nest distribution
-    //     values_ordered = (double *)malloc(count_in*sizeof(double));
-    //     // Project the nest distribution into rings
-    //     project_values_into_different_scheme(values_to_communicate, count_in, Butterfly_struct->projector_values, values_ordered);
-
-    //     m2m(values_ordered, Butterfly_obj->ordered_indices, count_in, com_val, Butterfly_struct->com_indices, Butterfly_struct->com_count);
-    // }
-
-    m2m(values_to_communicate, Butterfly_obj->ordered_indices, count_in, com_val, Butterfly_struct->com_indices, Butterfly_struct->com_count);
-
-    switch(flag_classic_or_reshuffle_butterfly)
-    {
-        case 0: // Classic butterfly
-            modified_butterfly_reduce(Butterfly_obj->R, Butterfly_obj->nR, nRmax, Butterfly_obj->S, Butterfly_obj->nS, nSmax, com_val, Butterfly_obj->steps, comm);
-
-        case 1: // Reshuffle butterfly
-            butterfly_reshuffle(Butterfly_obj->R, Butterfly_obj->nR, nRmax, Butterfly_obj->S, Butterfly_obj->nS, nSmax, com_val, Butterfly_obj->steps, comm);
-    }
-    m2m(com_val, Butterfly_struct->com_indices, Butterfly_struct->com_count, values_out, indices_out, count_out);
-    
-    // if (Butterfly_obj->do_we_need_to_project_into_different_scheme == 0)
-    //     free(values_ordered);
-    
-    free(com_val);
-}
-
-
 int global_map_2_harmonic(double* local_pixel_map_MAPPRAISER, s2hat_dcomplex *local_alm_s2hat, Mat *A, Harmonic_superstruct *Harmonic_sup){
 //     // Transform local_maps pixel distribution from MAPPRAISER into a harmonic S2HAT a_lm distribution
 
@@ -226,7 +170,7 @@ int global_map_2_harmonic(double* local_pixel_map_MAPPRAISER, s2hat_dcomplex *lo
 
         int size_mirror = Harmonic_sup->Butterfly_struct_supplement->size_from_mirror;
         int *indices_from_mirror = Harmonic_sup->Butterfly_struct_supplement->indices_from_mirror;
-        int size_butterfly = pow(2, log_2(size));
+        int size_butterfly = pow(2, log2(size));
 
         double *unmirrored_local_pixel_map_ring = (double *)malloc(size_mirror*sizeof(double));
         mirror_data_butterfly(local_pixel_map_MAPPRAISER_ring, NULL, A->lcount - (A->nnz) * (A->trash_pix), unmirrored_local_pixel_map_ring, NULL, &(size_mirror), MIRROR_DATA, world_comm);
@@ -291,7 +235,7 @@ int global_harmonic_2_map(s2hat_dcomplex *local_alm_s2hat, double* local_pixel_m
 
         int size_mirror = Harmonic_sup->Butterfly_struct_supplement->size_from_mirror;
         int *indices_from_mirror = Harmonic_sup->Butterfly_struct_supplement->indices_from_mirror;
-        int size_butterfly = pow(2, log_2(size));
+        int size_butterfly = pow(2, log2(size));
 
         double *true_local_pixel_map_ring = (double *)calloc(size_from_mirror, sizeof(double));
         if (rank < size_butterfly)

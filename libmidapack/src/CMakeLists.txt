@@ -13,6 +13,7 @@ add_subdirectory(mapmat)
 add_subdirectory(toeplitz)
 # add_subdirectory(templates)
 add_subdirectory(spherical_harmonics)
+add_subdirectory(utils)
 
 # ----------------------------------------------------------------------------------------#
 # header files
@@ -23,6 +24,7 @@ target_include_directories(midapack PUBLIC
                            "../include/mapmat"
                            "../include/toeplitz"
                            "../include/spherical_harmonics"
+                           "../include/utils"
                            )
 
 #target_include_directories(midapack PUBLIC

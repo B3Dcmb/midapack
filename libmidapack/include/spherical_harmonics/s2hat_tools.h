@@ -8,7 +8,9 @@
 #ifdef W_MPI
 #include <mpi.h>
 #endif
-// #include "s2hat.h"
+
+#include <chealpix.h>
+#include "s2hat.h"
 // #include "midapack.h"
 
 
@@ -17,7 +19,7 @@
 #endif
 
 // typedef struct S2HAT_GLOBAL_parameters S2HAT_GLOBAL_parameters;
-typedef struct S2HAT_GLOBAL_parameters{
+typedef struct {
     /* Global parameters of S2HAT, to give to all processors */
     s2hat_pixeltype pixelization_scheme;
     s2hat_scandef scan_sky_structure_pixel;
@@ -29,7 +31,7 @@ typedef struct S2HAT_GLOBAL_parameters{
 } S2HAT_GLOBAL_parameters;
 
 // typedef struct S2HAT_LOCAL_parameters S2HAT_LOCAL_parameters;
-typedef struct S2HAT_LOCAL_parameters{
+typedef struct {
     /* Local parameters of S2HAT, dependent on each processor */
 
     int gangrank;
@@ -60,7 +62,7 @@ typedef struct S2HAT_LOCAL_parameters{
 
 // typedef enum { false, true } bool;
 
-typedef struct Files_path_WIENER_FILTER{
+typedef struct {
     /* Global parameters of S2HAT, to give to all processors */
     // bool use_mask_file; // Boolean  to determine if a mask is used or not ; if not, maskfile_path will not be considered
     // char *maskfile_path; // Path to mask file, of dimensions [12*nside**2, 3] in fits format (write_maps of Healpy can be used)
@@ -72,13 +74,18 @@ typedef struct Files_path_WIENER_FILTER{
 } Files_path_WIENER_FILTER;
 
 
-typedef struct S2HAT_parameters{
+typedef struct {
     S2HAT_GLOBAL_parameters *Global_param_s2hat;
     S2HAT_LOCAL_parameters *Local_param_s2hat;
     Files_path_WIENER_FILTER *Files_WF_struct;
 
     int size_alm; // Size of the alm ararys : lmax*mmax
     int nstokes; // Number of Stokes parameters : either 1 for intensity only, 2 for polarization only, 3 for intensity and polarization
+    
+    int *projector_values;
+    // Projector for local values of map : allows to project the values from one (pixel) distribution to another
+    // In the context of harmonic transformations, initialized for conversion between the nest pixel distribution of MAPPRAISER and ring pixel distribution of S2HAT
+
 } S2HAT_parameters;
 
 
@@ -174,11 +181,8 @@ int gather_map(double *local_map_pix, double *full_sky_map, int nstokes, S2HAT_p
 // Gather all S2HAT processes local maps into a full_sky_map
 /**/
 
-/* Content of mpi_tools.c */
+/* Content of s2hat_mpi_tools.c */
 
-/* Create a mpi communicator subset of the initial global communicator, by taking the number_ranks_to_divide first ranks within it*/
-int mpi_create_subset(int number_ranks_to_divive, MPI_Comm initcomm, MPI_Comm *subset_comm);
-/**/
 /* Sent to root all indices, so that root will contain all_sky_pixels_observed, a map in the form of a mask : 1 on the pixels observed, 0 otherwise */
 int all_reduce_to_all_indices_mappraiser(int *indices_pixel_local, int number_pixel_local, int nside, int* all_sky_pixels_observed, int root, MPI_Comm world_comm);
 
