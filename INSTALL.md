@@ -17,7 +17,7 @@ The following libraries are needed:
 - FFTW3
 - LAPACK (if not using MKL)
 - CFITSIO
-- MKL (only for ECG solver)
+- MKL (only required by the ECG solver)
 
 ## Building the project
 
@@ -32,8 +32,11 @@ cmake --install build
 
 (cmake >= 3.21 also has the command-line option `--install-prefix`)
 
+Usually it is useful to specify the MPI C compiler by passing the option `-DCMAKE_C_COMPILER=...`.
+
 It may be useful to prepend the installation path to your `LD_LIBARY_PATH`
 by adding the following line in your `.bashrc` (or equivalent):
+
 ```
 export LD_LIBRARY_PATH="${PREFIX}/lib:${LD_LIBRARY_PATH}"
 ```
@@ -47,18 +50,16 @@ The ECG (enlarged conjugate gradient) solver is optionally built by passing the 
 
 In that case, Mappraiser will also need:
 
-- preAlps (https://github.com/NLAFET/preAlps)
+- MKL (instead of any other LAPACK implementation)
 - METIS
+- preAlps (https://github.com/NLAFET/preAlps)
 
-Both libraries' locations are to be specified through environment variables `<library>ROOT`, which can be set for a
-one-time use:
+The location of the preAlps libraries are to be specified through a variable `PREALPS_ROOT`,
+which may be an environment variable or simply set for a one-time use:
 
 ```
-PREALPSROOT=<path> METISROOT=<path> cmake [...]
+PREALPS_ROOT=<path> cmake [...]
 ```
-
-In that case, since preAlps is compiled with Intel MKL, Mappraiser will search for an
-MKL-provided LAPACK implementation.
 
 ### Python
 

@@ -11,14 +11,10 @@
 /*                                  INCLUDE                                  */
 /*****************************************************************************/
 /* Standard headers */
-#include <errno.h>
 #include <math.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <unistd.h>
 /* MPI */
 #include <mpi.h>
 /* MKL */
@@ -28,14 +24,14 @@
 #include "mappraiser/pcg_true.h"
 #include "mappraiser/precond.h"
 /* preAlps */
-#include "overlap_ecg.h"
+#include <overlap_ecg.h>
 /*****************************************************************************/
 
 /*****************************************************************************/
 /*                           FUNCTIONS PROTOTYPES                            */
 /*****************************************************************************/
 /* Build right hand side */
-int get_rhs(Mat *A, Tpltz *Nm1, double *b, double *noise, double *x, double *rhs);
+int get_rhs(Mat *A, Tpltz *Nm1, const double *b, const double *noise, double *x, double *rhs);
 /* Preconditioner operator */
 double Opmmpreconditioner(Mat *A, Mat *BJ_inv, double *X, double *Y, int ncol);
 /* System matrix operator: A^T * N^-1 * A */
@@ -56,12 +52,12 @@ int ECG_GLS(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double *b, 
     // OT: I tested and it still works with OpenMP activated
     MKL_Set_Num_Threads(1);
     /*===================== Variables declaration ====================*/
-    int i, j, k;         // looping indices
-    int N = 0;           // Global number of pixels (no overlapping correction)
-    int m, n;            // local number of time samples, local number of pixels x nnz
-                         // (IQU)
-    double *tmp;         // temporary pointer
-    Mat    *BJ_inv, *BJ; // Block-Jacobi preconditioner
+    int     N = 0;      // Global number of pixels (no overlapping correction)
+    int     n;          // local number of pixels x nnz (IQU)
+    double *tmp;        // temporary pointer
+
+    Mat *BJ_inv = NULL; // Block-Jacobi preconditioner
+    Mat *BJ     = NULL;
 
     /*=== Pre-process degenerate pixels & build the preconditioner ===*/
     precondblockjacobilike(A, Nm1, BJ_inv, BJ, b, cond, lhits);
@@ -86,7 +82,7 @@ int ECG_GLS(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double *b, 
     get_rhs(A, Nm1, b, noise, x, rhs);
 
     double normres_init = 0.0;
-    for (i = 0; i < n; i++) { normres_init += rhs[i] * rhs[i] * pixpond[i]; }
+    for (int i = 0; i < n; i++) { normres_init += rhs[i] * rhs[i] * pixpond[i]; }
 
     MPI_Allreduce(MPI_IN_PLACE, &normres_init, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
     normres_init = sqrt(normres_init);
@@ -113,9 +109,9 @@ int ECG_GLS(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double *b, 
     double *rel_res = NULL; // relative residual
     rel_res         = (double *) malloc((maxIter) * sizeof(double));
     // timings
-    double time_ECG_total = 0;
-    double time_AV        = 0;
-    double time_invMV     = 0;
+    double time_ECG_total;
+    double time_AV    = 0;
+    double time_invMV = 0;
 
     time_ECG_total = MPI_Wtime();
     // Allocate memory and initialize variables
@@ -162,7 +158,7 @@ int ECG_GLS(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double *b, 
         char filename[256];
         sprintf(filename, "%s/rel_res_%s_enlfac_%d_o=%d.txt", outpath, ref, ecg.enlFac, ortho_alg);
         FILE *fp = fopen(filename, "w");
-        for (i = 0; i <= ecg.iter; i++) { fprintf(fp, "%.15e\n", rel_res[i]); }
+        for (int i = 0; i <= ecg.iter; i++) { fprintf(fp, "%.15e\n", rel_res[i]); }
         fclose(fp);
     }
     free(rel_res);
@@ -184,19 +180,14 @@ int ECG_GLS(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double *b, 
 /*****************************************************************************/
 /* Build right hand side */
 /* rhs = A^T*Nm1* (b - A*x_0 ) */
-int get_rhs(Mat *A, Tpltz *Nm1, double *b, double *noise, double *x, double *rhs) {
-    int     i;                                 // some indexes
-    int     m, n;
-    double *_g;                                // time domain vector
+int get_rhs(Mat *A, Tpltz *Nm1, const double *b, const double *noise, double *x, double *rhs) {
+    int     m = A->m; // number of local time samples
+    double *_g;       // time domain vector
 
-    m = A->m;                                  // number of local time samples
-    n = A->lcount - (A->nnz) * (A->trash_pix); // number of local pixels
-
-    _g = (double *) malloc(m * sizeof(double));
+    _g = (double *) malloc(A->m * sizeof(double));
 
     MatVecProd(A, x, _g, 0);
-    for (i = 0; i < m; i++)              //
-        _g[i] = b[i] + noise[i] - _g[i]; //
+    for (int i = 0; i < m; i++) _g[i] = b[i] + noise[i] - _g[i];
     stbmmProd(Nm1, _g);
     TrMatVecProd(A, _g, rhs, 0);
 
