@@ -168,3 +168,9 @@ install(DIRECTORY ${PROJECT_SOURCE_DIR}/mappraiser/include/
 # install the Python files
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/mappraiser/python/
         DESTINATION python)
+
+# ----------------------------------------------------------------------------------------#
+# compile tests
+# ----------------------------------------------------------------------------------------#
+
+add_subdirectory(test)

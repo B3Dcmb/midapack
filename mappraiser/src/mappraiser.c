@@ -1,20 +1,21 @@
 /**
  * @file mappraiser.c
- * @brief Process pointing, signal and noise data arrays to produce maps in
- * FITS format
+ * @brief Process pointing, signal and noise data arrays to produce maps in FITS format
  * @authors Hamza El Bouhargani
  * @date May 2019
  * @update June 2020 by Aygul Jamal
  */
 
-#include "fitsio.h"
 #include "mappraiser/create_toeplitz.h"
 #include "mappraiser/iofiles.h"
+#include "mappraiser/map.h"
 #include "mappraiser/pcg_true.h"
+
 #ifdef WITH_ECG
 #include "mappraiser/ecg.h"
 #endif
-#include <mpi.h>
+
+#include <fitsio.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
