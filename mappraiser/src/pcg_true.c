@@ -120,7 +120,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double
         char filename[256];
         sprintf(filename, "%s/pcg_residuals_%s.dat", outpath, ref);
         fp = fopen(filename, "wb");
-        fwrite(&res_rel, sizeof(double), 1, fp);
+        if (fp != NULL) fwrite(&res_rel, sizeof(double), 1, fp);
         fflush(stdout);
     }
 
@@ -192,7 +192,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double
         if (rank == 0) { // print iterate info
             res_rel = sqrt(res) / sqrt(res0);
             printf("k = %d, res = %e, g2pix = %e, res_rel = %e, time = %lf\n", k, res, g2pix_polak, res_rel, t - st);
-            fwrite(&res_rel, sizeof(double), 1, fp);
+            if (fp != NULL) fwrite(&res_rel, sizeof(double), 1, fp);
         }
 
         fflush(stdout);

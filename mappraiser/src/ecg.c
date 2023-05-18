@@ -52,15 +52,14 @@ int ECG_GLS(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double *b, 
     // OT: I tested and it still works with OpenMP activated
     MKL_Set_Num_Threads(1);
     /*===================== Variables declaration ====================*/
-    int     N = 0;      // Global number of pixels (no overlapping correction)
-    int     n;          // local number of pixels x nnz (IQU)
-    double *tmp;        // temporary pointer
+    int     N = 0;  // Global number of pixels (no overlapping correction)
+    int     n;      // local number of pixels x nnz (IQU)
+    double *tmp;    // temporary pointer
 
-    Mat *BJ_inv = NULL; // Block-Jacobi preconditioner
-    Mat *BJ     = NULL;
+    Mat BJ_inv, BJ; // Block-Jacobi preconditioner
 
     /*=== Pre-process degenerate pixels & build the preconditioner ===*/
-    precondblockjacobilike(A, Nm1, BJ_inv, BJ, b, cond, lhits);
+    precondblockjacobilike(A, Nm1, &BJ_inv, &BJ, b, cond, lhits);
     // Correct the pixels counter after pre-processing
     n = A->lcount - (A->nnz) * (A->trash_pix);
     // Reallocate memory for the well-conditioned map
@@ -120,7 +119,7 @@ int ECG_GLS(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double *b, 
     rel_res[0] = 1.0;
 
     // Finish initialization
-    time_invMV += Opmmpreconditioner(A, BJ_inv, ecg.R_p, ecg.P_p, ecg.bs);
+    time_invMV += Opmmpreconditioner(A, &BJ_inv, ecg.R_p, ecg.P_p, ecg.bs);
     // preconditioner ecg.R -> ecg.P
     time_AV += Opmmmatrix(A, Nm1, ecg.P_p, ecg.AP_p, ecg.bs);
     // block operator ecg.P -> ecg.AP
@@ -138,10 +137,10 @@ int ECG_GLS(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double *b, 
             rel_res[ecg.iter] = ecg.res / ecg.normb;
             if (stop == 1) break;
             if (ecg.ortho_alg == ORTHOMIN) {
-                time_invMV += Opmmpreconditioner(A, BJ_inv, ecg.R_p, ecg.Z_p, ecg.enlFac);
+                time_invMV += Opmmpreconditioner(A, &BJ_inv, ecg.R_p, ecg.Z_p, ecg.enlFac);
                 // preconditioner ecg.R -> ecg.Z
             } else if (ecg.ortho_alg == ORTHODIR) {
-                time_invMV += Opmmpreconditioner(A, BJ_inv, ecg.AP_p, ecg.Z_p, ecg.bs);
+                time_invMV += Opmmpreconditioner(A, &BJ_inv, ecg.AP_p, ecg.Z_p, ecg.bs);
                 // preconditioner ecg.AP -> ecg.Z
             }
         }
