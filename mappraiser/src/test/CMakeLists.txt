@@ -1,6 +1,6 @@
 # ECG segmentation fault debug
 
-add_executable(ecg_debug)
+add_executable(ecg_debug utils.c utils.h)
 
 target_sources(ecg_debug PRIVATE "ecg_debug.c")
 target_include_directories(ecg_debug PRIVATE
