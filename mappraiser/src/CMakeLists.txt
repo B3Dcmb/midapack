@@ -9,9 +9,14 @@ add_library(mappraiser SHARED)
 target_sources(mappraiser PRIVATE
         "create_toeplitz.c"
         "iofiles.c"
+        "mapping.c"
         "mappraiser.c"
+        "noise_weighting.c"
         "pcg_true.c"
         "precond.c"
+        "solver_info.c"
+        "gap_filling.cpp"
+        "rng.cpp"
         )
 
 if (ECG)
@@ -25,6 +30,7 @@ endif ()
 target_include_directories(mappraiser PRIVATE
         "../include"
         "../include/mappraiser"
+        "Random123"
         )
 
 #target_include_directories(mappraiser PUBLIC
@@ -47,7 +53,7 @@ target_link_libraries(mappraiser PUBLIC midapack)
 
 if (MPI_FOUND)
     target_compile_definitions(mappraiser PRIVATE W_MPI)
-    target_link_libraries(mappraiser PUBLIC MPI::MPI_C)
+    target_link_libraries(mappraiser PUBLIC MPI::MPI_C MPI::MPI_CXX)
 endif ()
 
 # CFITSIO
@@ -94,8 +100,9 @@ endif ()
 # ----------------------------------------------------------------------------------------#
 
 include(CheckCCompilerFlag)
+include(CheckCXXCompilerFlag)
 
-# macros that check if flag if supported for C, if so add to mappraiser compile options
+# macros that check if flag if supported for C and C++, if so add to mappraiser_base compile options
 macro(add_c_flag_if_avail FLAG)
     if (NOT "${FLAG}" STREQUAL "")
         # create a variable for checking the flag if supported, e.g.:
@@ -113,10 +120,28 @@ macro(add_c_flag_if_avail FLAG)
     endif ()
 endmacro()
 
-# macro that checks if list of flags are supported for C
+macro(add_cxx_flag_if_avail FLAG)
+    if (NOT "${FLAG}" STREQUAL "")
+        # create a variable for checking the flag if supported, e.g.:
+        #   -fp-model=precise --> cxx_fp_model_precise
+        string(REGEX REPLACE "^-" "cxx_" FLAG_NAME "${FLAG}")
+        string(REPLACE "-" "_" FLAG_NAME "${FLAG_NAME}")
+        string(REPLACE " " "_" FLAG_NAME "${FLAG_NAME}")
+        string(REPLACE "=" "_" FLAG_NAME "${FLAG_NAME}")
+
+        # runs check to see flag is supported by compiler
+        check_cxx_compiler_flag("${FLAG}" ${FLAG_NAME})
+        if (${FLAG_NAME})
+            target_compile_options(mappraiser PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${FLAG}>)
+        endif ()
+    endif ()
+endmacro()
+
+# macro that checks if list of flags are supported for C and C++
 macro(add_flags_if_avail)
     foreach (FLAG ${ARGN})
         add_c_flag_if_avail("${FLAG}")
+        add_cxx_flag_if_avail("${FLAG}")
     endforeach ()
 endmacro()
 

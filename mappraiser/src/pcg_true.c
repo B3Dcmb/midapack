@@ -8,30 +8,34 @@
  * @update Mar 2023 by Simon Biquard
  */
 
-#include "mappraiser/pcg_true.h"
 #include "mappraiser/precond.h"
+#include "mappraiser/pcg_true.h"
+#include "mappraiser/noise_weighting.h"
+#include "mappraiser/gap_filling.h"
+
 #include <math.h>
 #include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-int apply_weights(Tpltz *Nm1, double *tod);
-
-int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double *b, double *noise, double *cond,
-                 int *lhits, double tol, int K, int precond, int Z_2lvl) {
-    int    i, j, k;     // some indexes
-    int    m, n;        // number of local time samples, number of local pixels
-    int    rank, size;
+int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl)
+int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double *x, double *b, double *noise,
+                 double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl, Gap *Gaps, int64_t gif,
+                 int gap_stgy, u_int64_t realization, const u_int64_t *detindxs, const u_int64_t *obsindxs,
+                 const u_int64_t *telescopes) {
+    int i, j, k; // some indexes
+    int m, n;    // number of local time samples, number of local pixels
+    int rank, size;
     double localreduce; // reduce buffer
     double st, t;       // timers
     double solve_time = 0.0;
     double res, res0, res_rel;
 
-    double *_g, *ACg, *Ah, *Nm1Ah; // time domain vectors
-    double *g, *gp, *gt, *Cg, *h;  // map domain vectors
-    double *AtNm1Ah;               // map domain
-    double  ro, gamma, coeff;      // scalars
-    double  g2pix, g2pixp, g2pix_polak;
+    double *_g, *Ah, *Nm1Ah;      // time domain vectors
+    double *g, *gp, *gt, *Cg, *h; // map domain vectors
+    double *AtNm1Ah;              // map domain
+    double ro, gamma, coeff;      // scalars
+    double g2pix, g2pixp, g2pix_polak;
 
     Precond *p = NULL;
     double  *pixpond;
@@ -49,15 +53,45 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double
 
     if (Z_2lvl == 0) Z_2lvl = size;
 
-    build_precond(&p, &pixpond, &n, A, Nm1, &x, b, noise, cond, lhits, tol, Z_2lvl, precond);
+    build_precond(&p, &pixpond, &n, A, Nm1, &x, b, noise, cond, lhits, tol, Z_2lvl, precond, Gaps, gif);
 
     t = MPI_Wtime();
     if (rank == 0) {
-        printf("[rank %d] Preconditioner computation time = %lf \n", rank, t - st);
-        // printf("[rank %d] trash_pix flag = %d \n", rank, A->trash_pix);
-        // printf("[rank %d] nbr sky pixels = %d \n", rank, n);
+        printf("[rank %d] Preconditioner computation time = %lf\n", rank, t - st);
+        printf("[rank %d] trash_pix flag = %d\n", rank, A->trash_pix);
+        printf("[rank %d] nbr sky pixels = %d\n", rank, n);
         fflush(stdout);
     }
+
+    // TODO signal = signal + noise?
+
+    weight_stgy_t strategy;
+    gap_treatment:
+    switch (gap_stgy) {
+        case 0: // gap-filling
+            if (rank == 0)
+                printf("[proc %d] gap_stgy = %d (gap-filling)\n", rank, gap_stgy);
+            sim_constrained_noise(N, Nm1, noise, Gaps, realization, detindxs, obsindxs, telescopes, false);
+            strategy = BASIC;
+            break;
+        case 1: // nested PCG for noise-weighting
+            if (rank == 0)
+                printf("[proc %d] gap_stgy = %d (nested PCG)\n", rank, gap_stgy);
+            strategy = ITER;
+            break;
+        case 2: // gap-filling + nested PCG afterwards
+            if (rank == 0)
+                printf("[proc %d] gap_stgy = %d (gap-filling + nested PCG)\n", rank, gap_stgy);
+            sim_constrained_noise(N, Nm1, noise, Gaps, realization, detindxs, obsindxs, telescopes, false);
+            strategy = ITER_IGNORE;
+            break;
+        default:
+            if (rank == 0)
+                printf("[proc %d] invalid gap_stgy (%d), defaulting to 0\n", rank, gap_stgy);
+            gap_stgy = 0;
+            goto gap_treatment;
+    }
+    fflush(stdout);
 
     // map domain objects memory allocation
     h       = (double *) malloc(n * sizeof(double)); // descent direction
@@ -79,7 +113,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double
 
     for (i = 0; i < m; i++) _g[i] = b[i] + noise[i] - _g[i];
 
-    apply_weights(Nm1, _g);    // _g = Nm1 (d-Ax0)  (d = signal + noise)
+    apply_weights(Nm1, N, Gaps, _g, strategy, false); // _g = Nm1 (d-Ax0)  (d = signal + noise)
 
     TrMatVecProd(A, _g, g, 0); // g = At _g
 
@@ -93,7 +127,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double
     for (i = 0; i < n; i++) // g2pix = (Cg, g)
         localreduce += Cg[i] * g[i] * pixpond[i];
 
-    MPI_Allreduce(&localreduce, &g2pix, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(&localreduce, &g2pix, 1, MPI_DOUBLE, MPI_SUM, A->comm);
 
     t = MPI_Wtime();
     solve_time += (t - st);
@@ -135,15 +169,14 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double
     // PCG Descent Loop *********************************************
     for (k = 1; k < K; k++) {
 
-        // Swap g backup pointers (Ribière-Polak needs g from previous
-        // iteration)
+        // Swap g backup pointers (Ribière-Polak needs g from previous iteration)
         gt = gp;
         gp = g;
         g  = gt;
 
         MatVecProd(A, h, Ah, 0);            // Ah = A h
 
-        apply_weights(Nm1, Nm1Ah);          // Nm1Ah = Nm1 Ah   (Nm1Ah == Ah)
+        apply_weights(Nm1, N, Gaps, Nm1Ah, strategy, false); // Nm1Ah = Nm1 Ah   (Nm1Ah == Ah)
 
         TrMatVecProd(A, Nm1Ah, AtNm1Ah, 0); // AtNm1Ah = At Nm1Ah
 
@@ -167,13 +200,13 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double
         for (i = 0; i < n; i++) // g2 = (Cg, g)
             localreduce += Cg[i] * g[i] * pixpond[i];
 
-        MPI_Allreduce(&localreduce, &g2pix, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(&localreduce, &g2pix, 1, MPI_DOUBLE, MPI_SUM, A->comm);
 
         localreduce = 0.0;
         for (i = 0; i < n; i++) // g2 = (Cg, g)
             localreduce += Cg[i] * (g[i] - gp[i]) * pixpond[i];
 
-        MPI_Allreduce(&localreduce, &g2pix_polak, 1, MPI_DOUBLE, MPI_SUM, MPI_COMM_WORLD);
+        MPI_Allreduce(&localreduce, &g2pix_polak, 1, MPI_DOUBLE, MPI_SUM, A->comm);
 
         t = MPI_Wtime();
         solve_time += (t - st);
@@ -219,7 +252,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double
         for (j = 0; j < n; j++) // h = h * gamma + Cg
             h[j] = h[j] * gamma + Cg[j];
 
-    }             // End loop
+    } // End loop
 
     if (k == K) { // check unconverged
         if (rank == 0) {
@@ -236,31 +269,6 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double
     free(AtNm1Ah);
     free(Ah);
     free_precond(&p);
-
-    return 0;
-}
-
-/* Weights TOD data according to the adopted noise model*/
-int apply_weights(Tpltz *Nm1, double *tod) {
-    int t_id; // time sample index in local data
-    int i, j;
-
-    // Use straightforward loop for white noise model
-    if (Nm1->tpltzblocks[0].lambda == 1) {
-        // Here it is assumed that we use a single bandwidth for all TOD
-        // intervals, i.e. lambda is the same for all Toeplitz blocks
-        t_id = 0;
-        for (i = 0; i < Nm1->nb_blocks_loc; i++) {
-            for (j = 0; j < Nm1->tpltzblocks[i].n; j++) {
-                tod[t_id + j] = Nm1->tpltzblocks[i].T_block[0] * tod[t_id + j];
-            }
-            t_id += Nm1->tpltzblocks[i].n;
-        }
-    }
-    // Use stbmmProd routine for correlated noise model (No det-det correlations
-    // for now)
-    else
-        stbmmProd(Nm1, tod);
 
     return 0;
 }

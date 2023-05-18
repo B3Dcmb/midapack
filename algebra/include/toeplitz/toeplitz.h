@@ -86,6 +86,10 @@ defined structures.
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 //=========================================================================
 // Fixed parameters
 
@@ -397,6 +401,10 @@ int build_reshape(double *Vin, int *nocol, int nbcol, int lconc, int n, int m,
 int extract_result(double *Vout, int *nocol, int nbcol, int lconc, int n, int m,
                    int id0, int l, int lambda, int nfft, double *Vrshp,
                    int nrshp, int mrshp, int lrshp, int flag_format_rshp);
+
+#ifdef __cplusplus
+}
+#endif
 
 //=========================================================================
 #endif // TOEPLITZ_H

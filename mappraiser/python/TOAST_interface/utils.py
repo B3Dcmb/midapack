@@ -283,38 +283,20 @@ def restore_in_turns(
     return
 
 
-def compute_local_block_sizes(data, view, dets, buffer):
-    """Compute the sizes of the local data blocks and store them in the provided buffer."""
-    for iobs, ob in enumerate(data.obs):
-        views = ob.view[view]
-        for idet, det in enumerate(dets):
-            if det not in ob.local_detectors:
-                continue
-            # Loop over views
-            for vw in views:
-                view_samples = None
-                if vw.start is None:
-                    # This is a view of the whole obs
-                    view_samples = ob.n_local_samples
-                else:
-                    view_samples = vw.stop - vw.start
-                buffer[idet * len(data.obs) + iobs] += view_samples
-    return
-
-
-def compute_invtt(
+def compute_autocorrelations(
         nobs,
         ndet,
         mappraiser_noise,
         local_block_sizes,
         Lambda,
         fsamp,
-        buffer,
+        buffer_inv_tt,
+        buffer_tt,
         invtt_dtype,
-        print_info=False,
-        save_psd=False,
-        save_dir=None,
-        apod_window_type="chebwin",
+        print_info = False,
+        save_psd = False,
+        save_dir = "",
+        apod_window_type = "chebwin",
 ):
     """Compute the first lines of the blocks of the banded noise covariance and store them in the provided buffer."""
     offset = 0
@@ -327,7 +309,7 @@ def compute_invtt(
                 (idet * nobs + iobs) * Lambda + Lambda,
                 1,
             )
-            buffer[slc] = noise2invtt(
+            buffer_inv_tt[slc], buffer_tt[slc] = noise_autocorrelation(
                 nsetod,
                 blocksize,
                 Lambda,
@@ -359,7 +341,7 @@ def inverselogpsd_model(f, a, alpha, fknee, fmin):
     return a - np.log10(1 + ((f + fmin) / fknee) ** alpha)
 
 
-def noise2invtt(
+def noise_autocorrelation(
         nsetod,
         nn,
         Lambda,
@@ -367,9 +349,10 @@ def noise2invtt(
         idet,
         invtt_dtype,
         apod_window_type,
-        verbose=False,
-        save_psd=False,
-        save_dir=None,
+        nperseg = 0,
+        verbose = False,
+        save_psd = False,
+        save_dir = "",
 ):
     """Computes a periodogram from a noise timestream, and fits a PSD model
     to it, which is then used to build the first row of a Toeplitz block.
@@ -384,9 +367,10 @@ def noise2invtt(
     # Estimate psd from noise timestream
 
     # Length of segments used to estimate PSD (defines the lowest frequency we can estimate)
-    nperseg = nn
+    if nperseg == 0:
+        nperseg = nn
 
-    # Compute a periofogram with Welch's method
+    # Compute a periodogram with Welch's method
     f, psd = scipy.signal.welch(nsetod, fsamp, window='hann', nperseg=nperseg, detrend='linear')
 
     # Fit the psd model to the periodogram (in log scale)
@@ -413,10 +397,13 @@ def noise2invtt(
     f_full = np.fft.rfftfreq(nn, 1.0 / fsamp)
 
     # Compute inverse noise psd from fit and extrapolate (if needed) to lowest frequencies
-    psdm1 = inversepsd_model(f_full, 10 ** (-popt[0]), *popt[1:])
+    ipsd_fit = inversepsd_model(f_full, 10 ** (-popt[0]), *popt[1:])
+    psd_fit = psd_model(f_full, 10 ** (popt[0]), *popt[1:])
+    psd_fit[0] = 0.0
 
-    # Compute inverse noise autocorrelation functions
-    inv_tt = np.fft.irfft(psdm1, n=nn)
+    # Compute inverse noise auto-correlation functions
+    inv_tt = np.fft.irfft(ipsd_fit, n=nn)
+    tt = np.fft.irfft(psd_fit, n=nn)
 
     # Define apodization window
     # Only allow max lambda = nn//2
@@ -440,6 +427,18 @@ def noise2invtt(
 
     # Apply window
     inv_tt_w = np.multiply(window, inv_tt[:Lambda], dtype=invtt_dtype)
+    tt_w = np.multiply(window, tt[:Lambda], dtype=invtt_dtype)
+
+    # Keep the same norm
+    #
+    # rescale_tt = np.sqrt(np.sum(np.square(tt)) / np.sum(np.square(tt_w)))
+    # rescale_itt = np.sqrt(np.sum(np.square(inv_tt)) / np.sum(np.square(inv_tt_w)))
+    #
+    # print("correction for     tt = ", rescale_tt)
+    # print("correction for inv_tt = ", rescale_itt)
+    #
+    # tt_w *= rescale_tt
+    # inv_tt_w *= rescale_itt
 
     # Optionally save some PSDs for plots
     if save_psd:
@@ -454,13 +453,16 @@ def noise2invtt(
 
         # save fit of the PSD
         np.save(os.path.join(save_dir, "f_full.npy"), f_full[: nn // 2])
+        np.save(os.path.join(save_dir, "psd_fit.npy"), psd_fit[: nn // 2])
         # np.save(os.path.join(save_dir, "ipsd_fit.npy"), ipsd_fit[: nn // 2])
 
         # save effective PSDs
         ipsd_eff = compute_psd_eff(inv_tt_w, nn)
+        psd_eff = compute_psd_eff(tt_w, nn)
         np.save(os.path.join(save_dir, "ipsd_eff" + str(Lambda) + ".npy"), ipsd_eff)
+        np.save(os.path.join(save_dir, "psd_eff" + str(Lambda) + ".npy"), psd_eff)
 
-    return inv_tt_w
+    return inv_tt_w, tt_w
 
 
 def compute_psd_eff(t, n):

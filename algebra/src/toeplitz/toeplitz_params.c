@@ -118,22 +118,18 @@ int flag_stgy_init_zeros(Flag *flag_stgy) {
  */
 int flag_stgy_init_defined(Flag *flag_stgy) {
 
-    flag_stgy->flag_bs =
-            FLAG_BS;   // 0:auto 1:fixed 2:zero 3:3lambda 4:4lambda 5:formula2
-    flag_stgy->flag_nfft =
-            FLAG_NFFT; // 0:auto  1:fixed  2:numthreads  3:fftwthreads
-    flag_stgy->flag_fftw    = FLAG_FFTW;
-    flag_stgy->flag_no_rshp = FLAG_NO_RSHP; // 0:auto  1:yes  1:no
-    flag_stgy->flag_nofft   = FLAG_NOFFT;   // 0:auto  1:yes  1:no
-    flag_stgy->flag_blockingcomm =
-            FLAG_BLOCKINGCOMM;              // 0:auto 1:noblocking 2:blocking
-                               // 3:blocking_nooptim
-    flag_stgy->fixed_nfft   = FIXED_NFFT; // fixed init value for nfft
-    flag_stgy->fixed_bs     = FIXED_BS;   // fixed init value for blockside
+    flag_stgy->flag_bs = FLAG_BS;  //0:auto 1:fixed 2:zero 3:3lambda 4:4lambda 5:formula2
+    flag_stgy->flag_nfft = FLAG_NFFT;  //0:auto  1:fixed  2:numthreads  3:fftwthreads
+    flag_stgy->flag_fftw = FLAG_FFTW;
+    flag_stgy->flag_no_rshp = FLAG_NO_RSHP;  //0:auto  1:yes  1:no
+    flag_stgy->flag_nofft = FLAG_NOFFT; //0:auto  1:yes  1:no
+    flag_stgy->flag_blockingcomm = FLAG_BLOCKINGCOMM;  //0:auto 1:noblocking 2:blocking 3:blocking_nooptim
+    flag_stgy->fixed_nfft = FIXED_NFFT;  //fixed init value for nfft
+    flag_stgy->fixed_bs = FIXED_BS;    //fixed init value for blockside
     flag_stgy->flag_verbose = FLAG_VERBOSE;
     flag_stgy->flag_skip_build_gappy_blocks = FLAG_SKIP_BUILD_GAPPY_BLOCKS;
-    flag_stgy->flag_param_distmin_fixed     = FLAG_PARAM_DISTMIN_FIXED;
-    flag_stgy->flag_precompute_lvl          = FLAG_PRECOMPUTE_LVL;
+    flag_stgy->flag_param_distmin_fixed = FLAG_PARAM_DISTMIN_FIXED;
+    flag_stgy->flag_precompute_lvl = FLAG_PRECOMPUTE_LVL;
     return 0;
 }
 

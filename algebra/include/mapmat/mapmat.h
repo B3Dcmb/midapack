@@ -23,6 +23,10 @@
 #include "ring.h"
 #include <mpi.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define NONE        0
 #define RING        1
 #define BUTTERFLY   2
@@ -110,6 +114,10 @@ int MatInfo(Mat *A, int master, char *filename);
 #endif
 
 int greedyreduce(Mat *A, double *x);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // MAPMAT_H
 

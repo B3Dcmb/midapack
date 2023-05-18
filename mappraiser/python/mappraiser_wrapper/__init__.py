@@ -59,35 +59,45 @@ _mappraiser.MLmap.argtypes = [
     ct.c_int,  # ortho_alg
     ct.c_int,  # bs_red
     ct.c_int,  # nside
+    ct.c_int,  # gap_stgy
+    ct.c_uint64,  # realization
     npc.ndpointer(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"),  # data_size_proc
     ct.c_int,  # nb_blocks_loc
-    # local_blocks_sizes
-    npc.ndpointer(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"),
+    npc.ndpointer(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"),  # local_blocks_sizes
+    npc.ndpointer(dtype=np.uint64, ndim=1, flags="C_CONTIGUOUS"),  # detindxs
+    npc.ndpointer(dtype=np.uint64, ndim=1, flags="C_CONTIGUOUS"),  # obsindxs
+    npc.ndpointer(dtype=np.uint64, ndim=1, flags="C_CONTIGUOUS"),  # telescopes
     ct.c_int,  # Nnz
-    npc.ndpointer(dtype=PIXEL_TYPE, ndim=1, flags="C_CONTIGUOUS"),
-    npc.ndpointer(dtype=WEIGHT_TYPE, ndim=1, flags="C_CONTIGUOUS"),
-    npc.ndpointer(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"),
-    npc.ndpointer(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"),
+    npc.ndpointer(dtype=PIXEL_TYPE, ndim=1, flags="C_CONTIGUOUS"),  # pixels
+    npc.ndpointer(dtype=WEIGHT_TYPE, ndim=1, flags="C_CONTIGUOUS"),  # pixweights
+    npc.ndpointer(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"),  # signal
+    npc.ndpointer(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"),  # noise
     ct.c_int,  # lambda
-    npc.ndpointer(dtype=INVTT_TYPE, ndim=1, flags="C_CONTIGUOUS"),
+    npc.ndpointer(dtype=INVTT_TYPE, ndim=1, flags="C_CONTIGUOUS"),  # inv_tt
+    npc.ndpointer(dtype=INVTT_TYPE, ndim=1, flags="C_CONTIGUOUS"),  # tt
 ]
 
 
 def MLmap(
-    comm,
-    params,
-    data_size_proc,
-    nb_blocks_loc,
-    local_blocks_sizes,
-    nnz,
-    pixels,
-    pixweights,
-    signal,
-    noise,
-    invtt,
+        comm,
+        params,
+        data_size_proc,
+        nb_blocks_loc,
+        local_blocks_sizes,
+        detindxs,
+        obsindxs,
+        telescopes,
+        nnz,
+        pixels,
+        pixweights,
+        signal,
+        noise,
+        inv_tt,
+        tt,
 ):
     """
-    Compute the MLMV solution of the GLS estimator, assuming uniform detector weighting and a single PSD for all stationary intervals.
+    Compute the MLMV solution of the GLS estimator, assuming uniform detector weighting and a single PSD
+    for all stationary intervals.
     (These assumptions will be removed in future updates)
 
     Parameters
@@ -102,7 +112,8 @@ def MLmap(
     * `pixweights`: Corresponding matrix values
     * `signal`: Signal buffer
     * `noise`: Noise buffer
-    * `invtt`: Inverse noise weights
+    * `inv_tt`: Inverse noise correlation
+    * `tt`: Noise autocorrelation
 
     """
     if not available:
@@ -110,6 +121,8 @@ def MLmap(
 
     outpath = params["path_output"].encode("ascii")
     ref = params["ref"].encode("ascii")
+
+    comm.Barrier()
 
     _mappraiser.MLmap(
         encode_comm(comm),
@@ -125,16 +138,81 @@ def MLmap(
         params["ortho_alg"],
         params["bs_red"],
         params["nside"],
+        params["gap_stgy"],
+        params["realization"],
         data_size_proc,
         nb_blocks_loc,
         local_blocks_sizes,
+        detindxs,
+        obsindxs,
+        telescopes,
         nnz,
         pixels,
         pixweights,
         signal,
         noise,
         params["Lambda"],
-        invtt,
+        inv_tt,
+        tt,
+    )
+
+    return
+
+
+_mappraiser.gap_filling.restype = None
+_mappraiser.gap_filling.argtypes = [
+    MPI_Comm,  # comm
+    npc.ndpointer(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"),  # data_size_proc
+    ct.c_int,  # nb_blocks_loc
+    npc.ndpointer(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"),  # local_blocks_sizes
+    ct.c_int,  # Nnz
+    npc.ndpointer(dtype=INVTT_TYPE, ndim=1, flags="C_CONTIGUOUS"),  # tt
+    npc.ndpointer(dtype=INVTT_TYPE, ndim=1, flags="C_CONTIGUOUS"),  # inv_tt
+    ct.c_int,  # lambda
+    npc.ndpointer(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"),  # noise
+    npc.ndpointer(dtype=PIXEL_TYPE, ndim=1, flags="C_CONTIGUOUS"),  # indices
+    ct.c_uint64,  # realization
+    npc.ndpointer(dtype=np.uint64, ndim=1, flags="C_CONTIGUOUS"),  # detindxs
+    npc.ndpointer(dtype=np.uint64, ndim=1, flags="C_CONTIGUOUS"),  # obsindxs
+    npc.ndpointer(dtype=np.uint64, ndim=1, flags="C_CONTIGUOUS"),  # telescopes
+]
+
+
+def gap_filling(
+        comm,
+        data_size_proc,
+        nb_blocks_loc,
+        local_blocks_sizes,
+        params,
+        detindxs,
+        obsindxs,
+        telescopes,
+        nnz,
+        pixels,
+        signal,
+        inv_tt,
+        tt,
+):
+    if not available:
+        raise RuntimeError("No libmappraiser available, cannot perform gap-filling")
+
+    comm.Barrier()
+
+    _mappraiser.gap_filling(
+        encode_comm(comm),
+        data_size_proc,
+        nb_blocks_loc,
+        local_blocks_sizes,
+        nnz,
+        tt,
+        inv_tt,
+        params['Lambda'],
+        signal,
+        pixels,
+        params['realization'],
+        detindxs,
+        obsindxs,
+        telescopes,
     )
 
     return

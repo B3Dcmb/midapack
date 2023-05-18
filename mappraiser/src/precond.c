@@ -8,14 +8,18 @@
  */
 
 #include "mappraiser/precond.h"
+#include "mappraiser/mapping.h"
+
 #include <assert.h>
 #include <math.h>
 #include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
+// #include <stdbool.h>
 
-// choose header based on compilation option
+// choose header based on preprocessor directive
 #ifdef HAVE_MKL
 #include <mkl.h>
 #else
@@ -24,25 +28,24 @@
 
 #define eps 1.0e-15
 
-#define max(a, b)                                                                                                      \
-    ({                                                                                                                 \
-        __typeof__(a) _a = (a);                                                                                        \
-        __typeof__(b) _b = (b);                                                                                        \
-        _a > _b ? _a : _b;                                                                                             \
-    })
+#define max(a, b)            \
+({                           \
+    __typeof__ (a) _a = (a); \
+    __typeof__ (b) _b = (b); \
+    _a > _b ? _a : _b;       \
+})
 
-#define min(a, b)                                                                                                      \
-    ({                                                                                                                 \
-        __typeof__(a) _a = (a);                                                                                        \
-        __typeof__(b) _b = (b);                                                                                        \
-        _a < _b ? _a : _b;                                                                                             \
-    })
+#define min(a, b)            \
+({                           \
+    __typeof__ (a) _a = (a); \
+    __typeof__ (b) _b = (b); \
+    _a < _b ? _a : _b;       \
+})
 
 // do the local Atdiag(Nm1)A with as output a block-diagonal matrix (stored as a vector) in the pixel domain
 int getlocalW(const Mat *A, Tpltz *Nm1, double *vpixBlock, int *lhits) {
-    int i, j, k, l;                                 // some indexes
-    int m       = Nm1->local_V_size;                // number of local time samples
-    int nnz     = A->nnz;                           // number of non-zero entries
+    int m = Nm1->local_V_size;                      // number of local time samples
+    int nnz = A->nnz;                               // number of non-zero entries
     int n_valid = A->lcount - (A->trash_pix) * nnz; // size of map-domain objects
 
     // Define the indices for each process
@@ -58,10 +61,11 @@ int getlocalW(const Mat *A, Tpltz *Nm1, double *vpixBlock, int *lhits) {
     // double *vpixDiag;
     // vpixDiag = (double *) malloc(A->lcount *sizeof(double));
 
-    int istart, il, istartn;
-    for (i = 0; i < nnz * n_valid; i++) vpixBlock[i] = 0.0;
+    int64_t istart, il, istartn;
+    for (int i = 0; i < nnz * n_valid; i++)
+        vpixBlock[i] = 0.0;
 
-    int vShft = idpnew - Nm1->idp; //=Nm1->tpltzblocks[idv0].idv-Nm1->idp in principle
+    int64_t vShft = idpnew - Nm1->idp; //=Nm1->tpltzblocks[idv0].idv-Nm1->idp in principle
     /*
         printf("Nm1->idp=%d, idpnew=%d, vShft=%d\n", Nm1->idp, idpnew, vShft);
         printf("idv0=%d, idvn=%d\n", idv0, idvn);
@@ -74,14 +78,14 @@ int getlocalW(const Mat *A, Tpltz *Nm1, double *vpixBlock, int *lhits) {
 
     // go until the first piecewise stationary period
     int vpix_i, vpix_j = 0;
-    for (i = 0; i < vShft; i++) {
+    for (int i = 0; i < vShft; i++) {
         // only do something for valid pixels
         if (!A->trash_pix || (A->trash_pix && (A->indices[i * nnz] != 0))) {
             vpix_i = A->indices[i * nnz] / nnz - A->trash_pix;
             lhits[vpix_i] += 1;
-            for (j = 0; j < nnz; j++) {
+            for (int j = 0; j < nnz; j++) {
                 vpix_j = A->indices[i * nnz + j] - nnz * A->trash_pix;
-                for (k = 0; k < nnz; k++) {
+                for (int k = 0; k < nnz; k++) {
                     // value (j, k) of 3*3 block
                     vpixBlock[nnz * vpix_j + k] += A->values[i * nnz + j] * A->values[i * nnz + k];
                 }
@@ -92,8 +96,8 @@ int getlocalW(const Mat *A, Tpltz *Nm1, double *vpixBlock, int *lhits) {
     // temporary buffer for one diag value of Nm1
     double diagNm1;
     // loop on the blocks
-    for (k = idv0; k < (idv0 + Nm1->nb_blocks_loc); k++) {
-        if (nnew[idv0] > 0) {                      // if nnew==0, this is a wrong defined block
+    for (int k = idv0; k < (idv0 + Nm1->nb_blocks_loc); k++) {
+        if (nnew[idv0] > 0) { // if nnew==0, this is a wrong defined block
 
             if (k + 1 < idv0 + Nm1->nb_blocks_loc) // if there is a next block, compute his next first indice
                 istartn = Nm1->tpltzblocks[k + 1].idv - Nm1->idp;
@@ -124,15 +128,15 @@ int getlocalW(const Mat *A, Tpltz *Nm1, double *vpixBlock, int *lhits) {
             // a piecewise stationary period
             vpix_i = 0;
             vpix_j = 0;
-            for (i = istart; i < istart + il; i++) {
+            for (int64_t q = istart; q < istart + il; q++) {
                 // only do something for valid pixels
-                if (!A->trash_pix || (A->trash_pix && (A->indices[i * nnz] != 0))) {
-                    vpix_i = A->indices[i * nnz] / nnz - A->trash_pix;
+                if (!A->trash_pix || (A->trash_pix && (A->indices[q * nnz] != 0))) {
+                    vpix_i = A->indices[q * nnz] / nnz - A->trash_pix;
                     lhits[vpix_i] += 1;
-                    for (j = 0; j < nnz; j++) {
-                        vpix_j = A->indices[i * nnz + j] - nnz * A->trash_pix;
-                        for (l = 0; l < nnz; l++) {
-                            vpixBlock[nnz * vpix_j + l] += A->values[i * nnz + j] * A->values[i * nnz + l] * diagNm1;
+                    for (int j = 0; j < nnz; j++) {
+                        vpix_j = A->indices[q * nnz + j] - nnz * A->trash_pix;
+                        for (int l = 0; l < nnz; l++) {
+                            vpixBlock[nnz * vpix_j + l] += A->values[q * nnz + j] * A->values[q * nnz + l] * diagNm1;
                         }
                     }
                 }
@@ -141,14 +145,14 @@ int getlocalW(const Mat *A, Tpltz *Nm1, double *vpixBlock, int *lhits) {
             // continue until the next period if exist or to the last line of V
             vpix_i = 0;
             vpix_j = 0;
-            for (i = istart + il; i < istartn; i++) {
+            for (int64_t i = istart + il; i < istartn; i++) {
                 // only do something for valid pixels
                 if (!A->trash_pix || (A->trash_pix && (A->indices[i * nnz] != 0))) {
                     vpix_i = A->indices[i * nnz] / nnz - A->trash_pix;
                     lhits[vpix_i] += 1;
-                    for (j = 0; j < nnz; j++) {
+                    for (int j = 0; j < nnz; j++) {
                         vpix_j = A->indices[i * nnz + j] - nnz * A->trash_pix;
-                        for (l = 0; l < nnz; l++) {
+                        for (int l = 0; l < nnz; l++) {
                             vpixBlock[nnz * vpix_j + l] += A->values[i * nnz + j] * A->values[i * nnz + l];
                         }
                     }
@@ -163,7 +167,6 @@ int getlocalW(const Mat *A, Tpltz *Nm1, double *vpixBlock, int *lhits) {
 // do the local diag( At diag(Nm1) A ) with as output a vector in the pixel domain
 // This is an old deprecated routine
 int getlocDiagN(Mat *A, Tpltz Nm1, double *vpixDiag) {
-    int i, j, k;              // some indexes
     int m = Nm1.local_V_size; // number of local time samples
 
     //  int nnz=(A->nnz);
@@ -180,10 +183,11 @@ int getlocDiagN(Mat *A, Tpltz Nm1, double *vpixDiag) {
     // double *vpixDiag;
     // vpixDiag = (double *) malloc(A->lcount *sizeof(double));
 
-    int istart, il, istartn;
-    for (i = 0; i < A->lcount; i++) vpixDiag[i] = 0.0; // 0.0;
+    int64_t istart, il, istartn;
+    for (int i = 0; i < A->lcount; i++)
+        vpixDiag[i] = 0.0; // 0.0;
 
-    int vShft = idpnew - Nm1.idp;                      //=Nm1.tpltzblocks[idv0].idv-Nm1.idp in principle
+    int64_t vShft = idpnew - Nm1.idp; //=Nm1.tpltzblocks[idv0].idv-Nm1.idp in principle
     /*
         printf("Nm1.idp=%d, idpnew=%d, vShft=%d\n", Nm1.idp, idpnew, vShft);
         printf("idv0=%d, idvn=%d\n", idv0, idvn);
@@ -195,16 +199,16 @@ int getlocDiagN(Mat *A, Tpltz Nm1, double *vpixDiag) {
     */
 
     // go until the first piecewise stationary period
-    for (i = 0; i < vShft; i++) {
-        for (j = 0; j < (A->nnz); j++)
+    for (int i = 0; i < vShft; i++) {
+        for (int j = 0; j < (A->nnz); j++)
             vpixDiag[A->indices[i * (A->nnz) + j]] += (A->values[i * (A->nnz) + j] * A->values[i * (A->nnz) + j]);
     }
 
     // temporary buffer for one diag value of Nm1
-    int diagNm1;
+    double diagNm1;
     // loop on the blocks
-    for (k = idv0; k < (idv0 + Nm1.nb_blocks_loc); k++) {
-        if (nnew[idv0] > 0) {                     // if nnew==0, this is a wrong defined block
+    for (int k = idv0; k < (idv0 + Nm1.nb_blocks_loc); k++) {
+        if (nnew[idv0] > 0) { // if nnew==0, this is a wrong defined block
 
             if (k + 1 < idv0 + Nm1.nb_blocks_loc) // if there is a next block, compute his next first indice
                 istartn = Nm1.tpltzblocks[k + 1].idv - Nm1.idp;
@@ -230,17 +234,17 @@ int getlocDiagN(Mat *A, Tpltz Nm1, double *vpixDiag) {
             Nm1.idp);
             */
             // a piecewise stationary period
-            for (i = istart; i < istart + il; i++) {
-                for (j = 0; j < (A->nnz); j++)
+            for (int64_t i = istart; i < istart + il; i++) {
+                for (int j = 0; j < (A->nnz); j++)
                     vpixDiag[A->indices[i * (A->nnz) + j]] +=
                             (A->values[i * (A->nnz) + j] * A->values[i * (A->nnz) + j]) * diagNm1;
             }
 
             // continue until the next period if exist
-            for (i = istart + il; i < istartn; i++) {
-                for (j = 0; j < (A->nnz); j++)
-                    vpixDiag[A->indices[i * (A->nnz) + j]] +=
-                            (A->values[i * (A->nnz) + j] * A->values[i * (A->nnz) + j]);
+            for (int64_t i = istart + il; i < istartn; i++) {
+                for (int j = 0; j < (A->nnz); j++)
+                    vpixDiag[A->indices[i * (A->nnz) + j]] += (A->values[i * (A->nnz) + j] *
+                                                               A->values[i * (A->nnz) + j]);
             }
         }
     } // end of the loop over the blocks
@@ -453,7 +457,8 @@ void get_pixshare_pond(Mat *A, double *pixpond) {
 // }
 
 // Block diagonal jacobi preconditioner with degenerate pixels pre-processing
-int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, double *cond, int *lhits) {
+int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, double *noise, double *cond, int *lhits,
+                           Gap *Gaps, int64_t gif) {
     // MPI info
     int rank, size;
     MPI_Comm_rank(A->comm, &rank);
@@ -602,12 +607,16 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, 
             }
 
             // Set the corresponding signal time stream sample to zero
+            // Now that the timestream gaps are accounted for we also set the noise to zero
+            // as it will not be possible to separate it from the signal in real data
             b[j] = 0;
+            noise[j] = 0;
 
             // Point all the preceding gap samples to trash pixel and set them
             // to zero in the TOD
             while (A->ll[j] != -1) {
                 b[A->ll[j]] = 0;
+                noise[A->ll[j]] = 0;
                 for (int k = 0; k < nnz; k++) {
                     A->indices[A->ll[j] * nnz + k] = k - nnz;
                     A->values[A->ll[j] * nnz + k]  = 0;
@@ -662,12 +671,24 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, 
         if (A->indices[i] >= 0) A->indices[i] = A->lindices[A->indices[i]];
     }
 
-    // free  memory of original pointing matrix and synchronize
+    // free memory of original pointing matrix and synchronize
     MatFree(A);
 
     // Define new pointing matrix (marginalized over degenerate pixels and free
     // from gap samples)
     MatInit(A, m, nnz, A->indices, A->values, A->flag, MPI_COMM_WORLD);
+
+    // Here we have to build the Gap struct
+    // including the samples observing the degenerate pixels
+    // to do so we must first rebuild the pixel to time-domain mapping
+    Gaps->ngap = build_pixel_to_time_domain_mapping(A);
+
+    build_gap_struct(gif, Gaps, A);
+
+    if (rank == 0) {
+        printf("[rank %d] after degenerate pixels\n", rank);
+        printf("  -> detected %d timestream gaps\n", Gaps->ngap);
+    }
 
     // free memory
     free(A->id_last_pix);
@@ -1307,8 +1328,9 @@ void Lanczos_eig(Mat *A, Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ, double *x
 }
 
 // General routine for constructing a preconditioner
-void build_precond(Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tpltz *Nm1, double **in_out_x, double *b,
-                   double *noise, double *cond, int *lhits, double tol, int Zn, int precond) {
+void build_precond(Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tpltz *Nm1, double **in_out_x,
+                   double *b, double *noise, double *cond, int *lhits, double tol, int Zn, int precond,
+                   Gap *Gaps, int64_t gif) {
     int     rank, size, i;
     double  st, t;
     double *x;
@@ -1322,7 +1344,7 @@ void build_precond(Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tp
     p->precond = precond;
     p->Zn      = Zn;
 
-    precondblockjacobilike(A, Nm1, &(p->BJ_inv), &(p->BJ), b, cond, lhits);
+    precondblockjacobilike(A, Nm1, &(p->BJ_inv), &(p->BJ), b, noise, cond, lhits, Gaps, gif);
 
     p->n = (A->lcount) - (A->nnz) * (A->trash_pix);
 

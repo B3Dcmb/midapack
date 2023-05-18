@@ -10,6 +10,7 @@
 #include "mappraiser/iofiles.h"
 #include "mappraiser/map.h"
 #include "mappraiser/pcg_true.h"
+#include "mappraiser/mapping.h"
 
 #ifdef WITH_ECG
 #include "mappraiser/ecg.h"
@@ -24,21 +25,22 @@ int x2map_pol(double *mapI, double *mapQ, double *mapU, double *Cond, int *hits,
               const double *cond, const int *lhits, int xsize);
 
 void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int Z_2lvl, int pointing_commflag,
-           double tol, int maxiter, int enlFac, int ortho_alg, int bs_red, int nside, void *data_size_proc,
-           int nb_blocks_loc, void *local_blocks_sizes, int Nnz, void *pix, void *pixweights, void *signal,
-           double *noise, int lambda, double *invtt) {
-    int64_t M;                          // Global number of rows
-    int     m, Nb_t_Intervals;          // local number of rows of the pointing matrix A, nbr
-                                        // of stationary intervals
-    int64_t    gif;                     // global indice for the first local line
-    int        i, j, k;
-    Mat        A;                       // pointing matrix structure
-    int       *id_last_pix, *ll = NULL; // pixel-to-time-domain mapping
-    int        nbr_valid_pixels;        // nbr of valid pixel indices
-    double    *x, *cond = NULL;         // pixel domain vectors
-    int       *lhits = NULL;
-    double     st, t;                   // timer, start time
-    int        rank, size;
+           double tol, int maxiter, int enlFac, int ortho_alg, int bs_red, int nside, int gap_stgy,
+           u_int64_t realization, void *data_size_proc, int nb_blocks_loc, void *local_blocks_sizes,
+           u_int64_t *detindxs, u_int64_t *obsindxs, u_int64_t *telescopes, int Nnz, void *pix, void *pixweights,
+           void *signal, double *noise, int lambda, double *inv_tt, double *tt) {
+    int64_t M;             // Global number of rows
+    int m, Nb_t_Intervals; // local number of rows of the pointing matrix A, nbr of stationary intervals
+    int64_t gif;           // global indice for the first local line
+    int i, j, k;
+    Mat A;                   // pointing matrix structure
+    int nbr_valid_pixels;    // nbr of valid pixel indices
+    int ngap;                // nbr of timestream gaps
+    Gap Gaps;                // timestream gaps structure
+    double *x, *cond = NULL; // pixel domain vectors
+    int *lhits = NULL;
+    double st, t; // timer, start time
+    int rank, size;
     MPI_Status status;
 
     // mkl_set_num_threads(1); // Circumvent an MKL bug
@@ -81,13 +83,14 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
 
     // Pointing matrix initialization
 
-    st          = MPI_Wtime();
+    st = MPI_Wtime();
+
     A.trash_pix = 0;
     MatInit(&A, m, Nnz, pix, pixweights, pointing_commflag, comm);
 
-    // reduce the size of map-domain objects in case the trash_pix flag is
-    // raised
     nbr_valid_pixels = A.lcount;
+
+    // check if trash_pix flag was raised during MatInit
     if (A.trash_pix) { nbr_valid_pixels -= A.nnz; }
 
     t = MPI_Wtime();
@@ -103,41 +106,14 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
 
     st = MPI_Wtime();
 
-    // index of last sample pointing to each pixel
-    id_last_pix = (int *) malloc(nbr_valid_pixels / (A.nnz) * sizeof(int));
-
-    // linked list of time samples indexes
-    ll = (int *) malloc(m * sizeof(int));
-
-    if (id_last_pix == NULL || ll == NULL) {
-        printf("memory allocation failed");
-        exit(1);
-    }
-
-    // initialize the mapping arrays to -1
-    for (i = 0; i < m; i++) { ll[i] = -1; }
-    for (j = 0; j < nbr_valid_pixels / (A.nnz); j++) { id_last_pix[j] = -1; }
-
-    // build the linked list chain of time samples corresponding to each pixel
-    int vpix_i = 0;
-    for (i = 0; i < m; i++) {
-        // only do something for valid pixels
-        if (!A.trash_pix || (A.trash_pix && (A.indices[i * A.nnz] != 0))) {
-            vpix_i = A.indices[i * A.nnz] / A.nnz - A.trash_pix;
-            if (id_last_pix[vpix_i] == -1) {
-                id_last_pix[vpix_i] = i;
-            } else {
-                ll[i]               = id_last_pix[vpix_i];
-                id_last_pix[vpix_i] = i;
-            }
-        }
-    }
-
-    A.id_last_pix = id_last_pix;
-    A.ll          = ll;
+    ngap = build_pixel_to_time_domain_mapping(&A);
 
     t = MPI_Wtime();
-    if (rank == 0) { printf("[rank %d] Total pixel-to-time-domain mapping time=%lf \n", rank, t - st); }
+    if (rank == 0) {
+        printf("[rank %d] Total pixel-to-time-domain mapping time = %lf\n", rank, t - st);
+        printf("  -> detected %d timestream gaps\n", ngap);
+        fflush(stdout);
+    }
 
     // Map objects memory allocation
     // MatInit gives A.lcount which is used to compute nbr_valid_pixels
@@ -167,8 +143,11 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     Flag flag_stgy;
     flag_stgy_init_auto(&flag_stgy);
 
+    // skip build gappy blocks
+    flag_stgy.flag_skip_build_gappy_blocks = 1;
+
     // to print something on screen
-    flag_stgy.flag_verbose = 1;
+    // flag_stgy.flag_verbose = 1;
 
     // define Toeplitz blocks list and structure for Nm1
     Block *tpltzblocks;
@@ -183,14 +162,18 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
 
     // Block definition
     tpltzblocks = (Block *) malloc(nb_blocks_loc * sizeof(Block));
-    defineBlocks_avg(tpltzblocks, invtt, nb_blocks_loc, local_blocks_sizes, lambda_block_avg, id0);
+    defineBlocks_avg(tpltzblocks, inv_tt, nb_blocks_loc, local_blocks_sizes, lambda_block_avg, id0);
     defineTpltz_avg(&Nm1, nrow, 1, mcol, tpltzblocks, nb_blocks_loc, nb_blocks_tot, id0, local_V_size, flag_stgy, comm);
+
+    // define the noise covariance matrix
+    Tpltz N;
+    Block *tpltzblocks_N = (Block *) malloc(nb_blocks_loc * sizeof(Block));
+    defineBlocks_avg(tpltzblocks_N, tt, nb_blocks_loc, local_blocks_sizes, lambda_block_avg, id0);
+    defineTpltz_avg(&N, nrow, 1, mcol, tpltzblocks_N, nb_blocks_loc, nb_blocks_tot, id0, local_V_size, flag_stgy, comm);
 
     // print Toeplitz parameters for information
     if (rank == 0) {
-        printf("[rank %d] Noise model: Banded block Toeplitz, half bandwidth = "
-               "%d\n",
-               rank, lambda_block_avg);
+        printf("[rank %d] Noise model: Banded block Toeplitz, half bandwidth = %d\n", rank, lambda_block_avg);
     }
 
     MPI_Barrier(comm);
@@ -200,10 +183,11 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     st = MPI_Wtime();
     // Conjugate Gradient
     if (solver == 0) {
-        PCG_GLS_true(outpath, ref, &A, &Nm1, x, signal, noise, cond, lhits, tol, maxiter, precond, Z_2lvl);
+        PCG_GLS_true(outpath, ref, &A, &Nm1, &N, x, signal, noise, cond, lhits, tol, maxiter, precond, Z_2lvl, &Gaps,
+                     gif, gap_stgy, realization, detindxs, obsindxs, telescopes);
     } else if (solver == 1) {
 #ifdef WITH_ECG
-        ECG_GLS(outpath, ref, &A, &Nm1, x, signal, noise, cond, lhits, tol, maxiter, enlFac, ortho_alg, bs_red);
+        ECG_GLS(outpath, ref, &A, &Nm1, x, signal, noise, cond, lhits, tol, maxiter, enlFac, ortho_alg, bs_red, &Gaps, gif);
 #else
         if (rank == 0)
             fprintf(stderr, "The choice of solver is 1 (=ECG), but the ECG source "
@@ -224,8 +208,17 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     }
     fflush(stdout);
 
+    // free tpltz blocks
+    free(tpltzblocks);
+    free(tpltzblocks_N);
+
+    // free Gap structure
+    free(Gaps.id0gap);
+    free(Gaps.lgap);
+
     // write output to fits files:
-    st          = MPI_Wtime();
+    st = MPI_Wtime();
+
     int mapsize = A.lcount - (A.nnz) * (A.trash_pix);
     int map_id  = rank;
 
@@ -360,13 +353,11 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     }
     st = MPI_Wtime();
 
-    MatFree(&A);
-    A.indices = NULL;
-    A.values  = NULL; // free memory
+    // free map domain objects
     free(x);
     free(cond);
     free(lhits);
-    free(tpltzblocks);
+
     MPI_Barrier(comm);
     t = MPI_Wtime();
     if (rank == 0) {
