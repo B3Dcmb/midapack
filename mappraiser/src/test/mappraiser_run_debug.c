@@ -119,6 +119,9 @@ int main(int argc, char *argv[]) {
     sprintf(filename, "noise_%d.bin", rank);
     fillArrayFromFile(strcat(strcpy(tmp, datapath), filename), noise, ARRAY_SIZE(noise), sizeof(noise[0]));
 
+    // noiseless
+    // for (int i = 0; i < nb_samp; ++i) noise[i] = 0;
+
     // invtt
     double invtt[lambda * nb_blocks_loc];
     sprintf(filename, "invtt_%d.bin", rank);
