@@ -4,8 +4,8 @@ add_executable(debug_run utils.c utils.h)
 
 target_sources(debug_run PRIVATE "mappraiser_run_debug.c")
 target_include_directories(debug_run PRIVATE
-        "../../include"
-        "../../include/mappraiser"
+        "../include"
+        "../include/mappraiser"
         "${CMAKE_SOURCE_DIR}/algebra/include"
         )
 
