@@ -61,8 +61,6 @@ endif ()
 if (CFITSIO_FOUND)
     target_include_directories(mappraiser PRIVATE "${CFITSIO_INCLUDES}")
     target_link_libraries(mappraiser PUBLIC "${CFITSIO_LIBRARIES}")
-else ()
-    message(FATAL_ERROR "Could not find cfitsio. Consider providing a hint (-D CFITSIO_DIR <path>).")
 endif ()
 
 # ECG solver dependencies

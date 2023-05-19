@@ -87,6 +87,9 @@ how to use the library fonctionnalities.
 
 - The /mappraiser directory contains the MAPPRAISER map-making library.
 
+- The /mappraiser/examples directory contains an example python workflow demonstrating how MAPPRAISER
+can be used with TOAST to process time-domain data.
+
 For more details please check:
 
 - The online documentation for version 1.1b: https://b3dcmb.github.io/midapack/

@@ -1,10 +1,5 @@
 # MIDAPACK
 
-# Top-level CMakeLists file
-# - contains the call to the project() command and some global settings
-# - search for external dependencies: MPI, OpenMP, FFTW3
-# - add relevant subdirectories to the build
-
 # ----------------------------------------------------------------------------------------#
 # General configuration
 # ----------------------------------------------------------------------------------------#
@@ -53,27 +48,8 @@ if ("${isSystemDir}" STREQUAL "-1")
 endif ("${isSystemDir}" STREQUAL "-1")
 
 # ----------------------------------------------------------------------------------------#
-# External packages
-# ----------------------------------------------------------------------------------------#
-
-option(DISABLE_MPI OFF)
-option(DISABLE_OPENMP OFF)
-
-# Search for MPI and OpenMP if we want to use them
-if (NOT DISABLE_MPI)
-    find_package(MPI REQUIRED)
-endif ()
-
-if (NOT DISABLE_OPENMP)
-    find_package(OpenMP REQUIRED)
-endif ()
-
-# Search for FFTW (necessary for toeplitz module)
-find_package(FFTW REQUIRED)
-
-# ----------------------------------------------------------------------------------------#
 # Subdirectories
 # ----------------------------------------------------------------------------------------#
 
-add_subdirectory(algebra/src)
+add_subdirectory(algebra)
 add_subdirectory(mappraiser)

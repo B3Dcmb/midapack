@@ -7,24 +7,19 @@
 
 #include "mappraiser/create_toeplitz.h"
 
-char CHAR_RW = '\0'; // global variable for write mode
-
 int defineTpltz_avg(Tpltz *Nm1, int64_t nrow, int m_cw, int m_rw, Block *tpltzblocks, int nb_blocks_loc,
                     int nb_blocks_tot, int64_t idp, int local_V_size, Flag flag_stgy, MPI_Comm comm) {
 
-    // faire les allocs ici avec la structure Tpltz
-
-    Nm1->nrow = nrow;                   // glob //recup du fichier params apres (en variables
-                                        // globales)
-    Nm1->m_cw          = m_cw;          // glob
-    Nm1->m_rw          = m_rw;          // glob
-    Nm1->tpltzblocks   = tpltzblocks;   // toep
-    Nm1->nb_blocks_loc = nb_blocks_loc; // toep
-    Nm1->nb_blocks_tot = nb_blocks_tot; // toep
-    Nm1->idp           = idp;           // comput
-    Nm1->local_V_size  = local_V_size;  // comput
-    Nm1->flag_stgy     = flag_stgy;     // param
-    Nm1->comm          = comm;          // param
+    Nm1->nrow          = nrow;
+    Nm1->m_cw          = m_cw;
+    Nm1->m_rw          = m_rw;
+    Nm1->tpltzblocks   = tpltzblocks;
+    Nm1->nb_blocks_loc = nb_blocks_loc;
+    Nm1->nb_blocks_tot = nb_blocks_tot;
+    Nm1->idp           = idp;
+    Nm1->local_V_size  = local_V_size;
+    Nm1->flag_stgy     = flag_stgy;
+    Nm1->comm          = comm;
 
     return 0;
 }
