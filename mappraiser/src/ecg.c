@@ -52,9 +52,9 @@ int ECG_GLS(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double *b, 
     // OT: I tested and it still works with OpenMP activated
     MKL_Set_Num_Threads(1);
     /*===================== Variables declaration ====================*/
-    int     N = 0;  // Global number of pixels (no overlapping correction)
-    int     n;      // local number of pixels x nnz (IQU)
-    double *tmp;    // temporary pointer
+    int     N = 0; // Global number of pixels (no overlapping correction)
+    int     n;     // local number of pixels x nnz (IQU)
+    double *tmp;   // temporary pointer
 
     Mat BJ_inv, BJ; // Block-Jacobi preconditioner
 
@@ -198,9 +198,9 @@ int get_rhs(Mat *A, Tpltz *Nm1, const double *b, const double *noise, double *x,
 double Opmmpreconditioner(Mat *A, Mat *BJ_inv, double *X, double *Y, int ncol) {
     double timing = MPI_Wtime();
 
-    int     i, j;                              // some indexes
+    int     i, j; // some indexes
     int     n;
-    double *x, *Cg;                            // map domain vector
+    double *x, *Cg; // map domain vector
 
     n = A->lcount - (A->nnz) * (A->trash_pix); // number of local pixels
 
@@ -220,10 +220,10 @@ double Opmmpreconditioner(Mat *A, Mat *BJ_inv, double *X, double *Y, int ncol) {
 double Opmmmatrix(Mat *A, Tpltz *Nm1, double *X, double *Y, int ncol) { /* Y = A^T*Nm1*A * X */
     double timing = MPI_Wtime();
 
-    int     i, j;                              // some indexes
+    int     i, j; // some indexes
     int     m, n;
-    double *_g;                                // time domain vector
-    double *x, *g;                             // map domain vector
+    double *_g;    // time domain vector
+    double *x, *g; // map domain vector
 
     m = A->m;                                  // number of local time samples
     n = A->lcount - (A->nnz) * (A->trash_pix); // number of local pixels

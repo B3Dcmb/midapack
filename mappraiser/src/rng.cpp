@@ -33,90 +33,83 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
+#include "Random123/boxmuller.hpp"
 #include "Random123/threefry.h"
 #include "Random123/uniform.hpp"
-#include "Random123/boxmuller.hpp"
 
 #include "mappraiser/rng.h"
 
 typedef r123::Threefry2x64 RNG;
 
 // Unsigned 64bit random integers
-void mappraiser::rng_dist_uint64(size_t n,
-                                 uint64_t key1,
-                                 uint64_t key2,
-                                 uint64_t counter1,
-                                 uint64_t counter2,
+void mappraiser::rng_dist_uint64(size_t n, uint64_t key1, uint64_t key2, uint64_t counter1, uint64_t counter2,
                                  uint64_t *data) {
-    RNG rng;
-    RNG::ukey_type uk = {{key1, key2}};
+    RNG            rng;
+    RNG::ukey_type uk = {
+            {key1, key2}
+    };
 
     for (size_t i = 0; i < n; ++i) {
-        data[i] = rng(
-                RNG::ctr_type({{counter1, counter2 + i}}),
-                RNG::key_type(uk))[0];
+        data[i] = rng(RNG::ctr_type({
+                              {counter1, counter2 + i}
+        }),
+                      RNG::key_type(uk))[0];
     }
 }
 
 // Unsigned 64bit random integers x 2
-void mappraiser::rng_dist_uint64_2(size_t n,
-                                   uint64_t key1,
-                                   uint64_t key2,
-                                   uint64_t counter1,
-                                   uint64_t counter2,
+void mappraiser::rng_dist_uint64_2(size_t n, uint64_t key1, uint64_t key2, uint64_t counter1, uint64_t counter2,
                                    mappraiser::uint64_2 *data) {
-    RNG rng;
-    RNG::ukey_type uk = {{key1, key2}};
+    RNG            rng;
+    RNG::ukey_type uk = {
+            {key1, key2}
+    };
     RNG::ctr_type r;
 
     for (size_t i = 0; i < n; ++i) {
-        r = rng(RNG::ctr_type({{counter1, counter2 + i}}),
-                RNG::key_type(uk));
+        r         = rng(RNG::ctr_type({
+                        {counter1, counter2 + i}
+        }),
+                        RNG::key_type(uk));
         data[i].x = r[0];
         data[i].y = r[1];
     }
 }
 
 // Uniform double precision values on [0.0, 1.0]
-void mappraiser::rng_dist_uniform_01(size_t n,
-                                     uint64_t key1,
-                                     uint64_t key2,
-                                     uint64_t counter1,
-                                     uint64_t counter2,
+void mappraiser::rng_dist_uniform_01(size_t n, uint64_t key1, uint64_t key2, uint64_t counter1, uint64_t counter2,
                                      double *data) {
-    RNG rng;
-    RNG::ukey_type uk = {{key1, key2}};
+    RNG            rng;
+    RNG::ukey_type uk = {
+            {key1, key2}
+    };
 
     for (size_t i = 0; i < n; ++i) {
-        data[i] = r123::u01<double, uint64_t>(
-                rng(RNG::ctr_type({{counter1, counter2 + i}}),
-                    RNG::key_type(uk))[0]);
+        data[i] = r123::u01<double, uint64_t>(rng(RNG::ctr_type({
+                                                          {counter1, counter2 + i}
+        }),
+                                                  RNG::key_type(uk))[0]);
     }
 }
 
 // Uniform double precision values on [-1.0, 1.0]
-void mappraiser::rng_dist_uniform_11(size_t n,
-                                     uint64_t key1,
-                                     uint64_t key2,
-                                     uint64_t counter1,
-                                     uint64_t counter2,
+void mappraiser::rng_dist_uniform_11(size_t n, uint64_t key1, uint64_t key2, uint64_t counter1, uint64_t counter2,
                                      double *data) {
-    RNG rng;
-    RNG::ukey_type uk = {{key1, key2}};
+    RNG            rng;
+    RNG::ukey_type uk = {
+            {key1, key2}
+    };
 
     for (size_t i = 0; i < n; ++i) {
-        data[i] = r123::uneg11<double, uint64_t>(
-                rng(RNG::ctr_type({{counter1, counter2 + i}}),
-                    RNG::key_type(uk))[0]);
+        data[i] = r123::uneg11<double, uint64_t>(rng(RNG::ctr_type({
+                                                             {counter1, counter2 + i}
+        }),
+                                                     RNG::key_type(uk))[0]);
     }
 }
 
 // Normal distribution.
-void mappraiser::rng_dist_normal(size_t n,
-                                 uint64_t key1,
-                                 uint64_t key2,
-                                 uint64_t counter1,
-                                 uint64_t counter2,
+void mappraiser::rng_dist_normal(size_t n, uint64_t key1, uint64_t key2, uint64_t counter1, uint64_t counter2,
                                  double *data) {
     // First compute 64bit random integers
     auto *tmp = new mappraiser::uint64_2[n];
@@ -125,7 +118,7 @@ void mappraiser::rng_dist_normal(size_t n,
     // Now convert pairs of uniform randoms with Box-Muller transformation
     r123::double2 pair;
     for (size_t i = 0; i < n; i++) {
-        pair = r123::boxmuller(tmp[i].x, tmp[i].y);
+        pair    = r123::boxmuller(tmp[i].x, tmp[i].y);
         data[i] = pair.x;
     }
 

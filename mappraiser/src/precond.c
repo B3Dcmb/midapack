@@ -27,18 +27,18 @@
 
 #define eps 1.0e-15
 
-#define max(a, b)                                                                                                      \
-    ({                                                                                                                 \
-        __typeof__(a) _a = (a);                                                                                        \
-        __typeof__(b) _b = (b);                                                                                        \
-        _a > _b ? _a : _b;                                                                                             \
+#define max(a, b)               \
+    ({                          \
+        __typeof__(a) _a = (a); \
+        __typeof__(b) _b = (b); \
+        _a > _b ? _a : _b;      \
     })
 
-#define min(a, b)                                                                                                      \
-    ({                                                                                                                 \
-        __typeof__(a) _a = (a);                                                                                        \
-        __typeof__(b) _b = (b);                                                                                        \
-        _a < _b ? _a : _b;                                                                                             \
+#define min(a, b)               \
+    ({                          \
+        __typeof__(a) _a = (a); \
+        __typeof__(b) _b = (b); \
+        _a < _b ? _a : _b;      \
     })
 
 // do the local Atdiag(Nm1)A with as output a block-diagonal matrix (stored as a vector) in the pixel domain
@@ -95,7 +95,7 @@ int getlocalW(const Mat *A, Tpltz *Nm1, double *vpixBlock, int *lhits) {
     double diagNm1;
     // loop on the blocks
     for (int k = idv0; k < (idv0 + Nm1->nb_blocks_loc); k++) {
-        if (nnew[idv0] > 0) {                      // if nnew==0, this is a wrong defined block
+        if (nnew[idv0] > 0) { // if nnew==0, this is a wrong defined block
 
             if (k + 1 < idv0 + Nm1->nb_blocks_loc) // if there is a next block, compute his next first indice
                 istartn = Nm1->tpltzblocks[k + 1].idv - Nm1->idp;
@@ -184,7 +184,7 @@ int getlocDiagN(Mat *A, Tpltz Nm1, double *vpixDiag) {
     int64_t istart, il, istartn;
     for (int i = 0; i < A->lcount; i++) vpixDiag[i] = 0.0; // 0.0;
 
-    int64_t vShft = idpnew - Nm1.idp;                      //=Nm1.tpltzblocks[idv0].idv-Nm1.idp in principle
+    int64_t vShft = idpnew - Nm1.idp; //=Nm1.tpltzblocks[idv0].idv-Nm1.idp in principle
     /*
         printf("Nm1.idp=%d, idpnew=%d, vShft=%d\n", Nm1.idp, idpnew, vShft);
         printf("idv0=%d, idvn=%d\n", idv0, idvn);
@@ -205,7 +205,7 @@ int getlocDiagN(Mat *A, Tpltz Nm1, double *vpixDiag) {
     double diagNm1;
     // loop on the blocks
     for (int k = idv0; k < (idv0 + Nm1.nb_blocks_loc); k++) {
-        if (nnew[idv0] > 0) {                     // if nnew==0, this is a wrong defined block
+        if (nnew[idv0] > 0) { // if nnew==0, this is a wrong defined block
 
             if (k + 1 < idv0 + Nm1.nb_blocks_loc) // if there is a next block, compute his next first indice
                 istartn = Nm1.tpltzblocks[k + 1].idv - Nm1.idp;
@@ -377,7 +377,7 @@ int DiagAtA(Mat *A, double *diag, int pflag) {
 
     // Naive computation with a full defined diag(Nm1):
     for (i = 0; i < A->m; i++)
-        for (j = 0; j < A->nnz; j++)                                             /*<dot products */
+        for (j = 0; j < A->nnz; j++) /*<dot products */
             lvalues[A->indices[i * (A->nnz) + j]] +=
                     (A->values[i * (A->nnz) + j] * A->values[i * (A->nnz) + j]); //*vdiagNm1[i];
 
@@ -721,10 +721,10 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, 
 
 int precondjacobilike_avg(Mat A, Tpltz Nm1, double *c) {
 
-    int    i, j, k;               // some indexes
+    int    i, j, k; // some indexes
     int    m, n, rank, size;
-    double localreduce;           // reduce buffer
-    double st, t;                 // timers
+    double localreduce; // reduce buffer
+    double st, t;       // timers
 
     m = A.m;                      // number of local time samples
     n = A.lcount;                 // number of local pixels
@@ -750,16 +750,16 @@ int precondjacobilike_avg(Mat A, Tpltz Nm1, double *c) {
 
 int precondjacobilike(Mat A, Tpltz Nm1, int *lhits, double *cond, double *vpixDiag) {
 
-    int    i, j, k;               // some indexes
+    int    i, j, k; // some indexes
     int    m, n, rank, size;
-    double localreduce;           // reduce buffer
-    double st, t;                 // timers
+    double localreduce; // reduce buffer
+    double st, t;       // timers
 
     MPI_Comm_rank(A.comm, &rank); //
     MPI_Comm_size(A.comm, &size); //
 
-    m = A.m;                      // number of local time samples
-    n = A.lcount;                 // number of local pixels
+    m = A.m;      // number of local time samples
+    n = A.lcount; // number of local pixels
 
     // Compute local diag( At diag(N^1) A )
     getlocDiagN(&A, Nm1, vpixDiag);
@@ -823,7 +823,7 @@ void build_Z(const Mat *A, int Zn, double ***out_Z) {
     int     *count, *tcount;
     int     *rcount, *rindices;
     double  *rZ;
-    double **Z;                    // Zn * A->lcount, pointers to columns (ie column-major)
+    double **Z; // Zn * A->lcount, pointers to columns (ie column-major)
 
     MPI_Comm_rank(A->comm, &rank); // get rank and size of the communicator
     MPI_Comm_size(A->comm, &size);
@@ -842,7 +842,7 @@ void build_Z(const Mat *A, int Zn, double ***out_Z) {
 
     // Allocate buffers
     count    = (int *) calloc(group * A->lcount,
-                              sizeof(int));                      // the number of appereance in local processor
+                              sizeof(int)); // the number of appereance in local processor
     tcount   = (int *) calloc(A->lcount, sizeof(int));
     rcount   = (int *) malloc(group * lcount_max * sizeof(int)); // the number of appereance in neighbor processors
     rindices = (int *) malloc(lcount_max * sizeof(int));         // real indices in neighbor processors
@@ -1092,7 +1092,7 @@ void Lanczos_eig(Mat *A, Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ, double *x
                  double tol, const double *pixpond, int K, double ***out_Ritz_vectors, double ***out_Ritz_vectors_AZ) {
     int    i, j, k; // some indexes
     int    m, n, rank, size;
-    double st, t;   // timers
+    double st, t; // timers
     double solve_time = 0.0;
     double beta, alpha, result, dot;
     int    info = 0, lwork = -1;

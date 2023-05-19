@@ -13,7 +13,7 @@ static void util_fail_(const char *file, int line, const char *func, const char 
 #else
 #define UTIL_FUNC_NAME__ "unknown"
 #endif
-#define UTIL_ASSERT(cond, msg)                                                                                         \
+#define UTIL_ASSERT(cond, msg) \
     if (!(cond)) util_fail_(__FILE__, __LINE__, UTIL_FUNC_NAME__, msg)
 #define UTIL_FAIL(msg) util_fail_(__FILE__, __LINE__, UTIL_FUNC_NAME__, msg)
 

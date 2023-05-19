@@ -2,18 +2,21 @@
 BasedOnStyle: LLVM
 AccessModifierOffset: -4
 AlignAfterOpenBracket: Align
-AlignConsecutiveAssignments: Consecutive
-AlignConsecutiveMacros: Consecutive
-AlignConsecutiveBitFields: Consecutive
 AlignArrayOfStructures: Right
+AlignConsecutiveAssignments: Consecutive
+AlignConsecutiveBitFields: Consecutive
 AlignConsecutiveDeclarations: Consecutive
-AlignTrailingComments: Always
+AlignConsecutiveMacros: Consecutive
+AlignEscapedNewlines: Left
 AlignOperands: AlignAfterOperator
+AlignTrailingComments:
+  Kind: Always
+  OverEmptyLines: 0
 AllowAllArgumentsOnNextLine: false
-AllowAllConstructorInitializersOnNextLine: false
+#AllowAllConstructorInitializersOnNextLine: false
 AllowAllParametersOfDeclarationOnNextLine: false
 AllowShortBlocksOnASingleLine: Always
-AllowShortCaseLabelsOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: true
 AllowShortFunctionsOnASingleLine: All
 AllowShortIfStatementsOnASingleLine: Always
 AllowShortLambdasOnASingleLine: All

@@ -22,8 +22,8 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
                  double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl, Gap *Gaps, int64_t gif,
                  int gap_stgy, u_int64_t realization, const u_int64_t *detindxs, const u_int64_t *obsindxs,
                  const u_int64_t *telescopes) {
-    int    i, j, k;     // some indexes
-    int    m, n;        // number of local time samples, number of local pixels
+    int    i, j, k; // some indexes
+    int    m, n;    // number of local time samples, number of local pixels
     int    rank, size;
     double localreduce; // reduce buffer
     double st, t;       // timers
@@ -64,7 +64,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
 
     // TODO signal = signal + noise?
 
-    weight_stgy_t strategy;
+    WeightStgy strategy;
 gap_treatment:
     switch (gap_stgy) {
         case 0: // gap-filling
@@ -110,14 +110,14 @@ gap_treatment:
 
     apply_weights(Nm1, N, Gaps, _g, strategy, false); // _g = Nm1 (d-Ax0)  (d = signal + noise)
 
-    TrMatVecProd(A, _g, g, 0);                        // g = At _g
+    TrMatVecProd(A, _g, g, 0); // g = At _g
 
     apply_precond(p, A, Nm1, g, Cg);
 
     for (j = 0; j < n; j++) // h = Cg
         h[j] = Cg[j];
 
-    g2pix       = 0.0;      // g2pix = "Cg res"
+    g2pix       = 0.0; // g2pix = "Cg res"
     localreduce = 0.0;
     for (i = 0; i < n; i++) // g2pix = (Cg, g)
         localreduce += Cg[i] * g[i] * pixpond[i];
@@ -128,7 +128,7 @@ gap_treatment:
     solve_time += (t - st);
 
     if (TRUE_NORM == 1) {
-        res         = 0.0;      // g2 = "res"
+        res         = 0.0; // g2 = "res"
         localreduce = 0.0;
         for (i = 0; i < n; i++) // g2 = (g, g)
             localreduce += g[i] * g[i] * pixpond[i];
@@ -169,11 +169,11 @@ gap_treatment:
         gp = g;
         g  = gt;
 
-        MatVecProd(A, h, Ah, 0);                             // Ah = A h
+        MatVecProd(A, h, Ah, 0); // Ah = A h
 
         apply_weights(Nm1, N, Gaps, Nm1Ah, strategy, false); // Nm1Ah = Nm1 Ah   (Nm1Ah == Ah)
 
-        TrMatVecProd(A, Nm1Ah, AtNm1Ah, 0);                  // AtNm1Ah = At Nm1Ah
+        TrMatVecProd(A, Nm1Ah, AtNm1Ah, 0); // AtNm1Ah = At Nm1Ah
 
         coeff       = 0.0;
         localreduce = 0.0;
@@ -190,7 +190,7 @@ gap_treatment:
 
         apply_precond(p, A, Nm1, g, Cg);
 
-        g2pixp      = g2pix;    // g2p = "res"
+        g2pixp      = g2pix; // g2p = "res"
         localreduce = 0.0;
         for (i = 0; i < n; i++) // g2 = (Cg, g)
             localreduce += Cg[i] * g[i] * pixpond[i];
@@ -247,7 +247,7 @@ gap_treatment:
         for (j = 0; j < n; j++) // h = h * gamma + Cg
             h[j] = h[j] * gamma + Cg[j];
 
-    }             // End loop
+    } // End loop
 
     if (k == K) { // check unconverged
         if (rank == 0) {

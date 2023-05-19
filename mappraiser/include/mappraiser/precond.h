@@ -3,7 +3,7 @@
 
 #include <midapack.h>
 
-typedef struct {
+typedef struct precond_t {
     int     precond; // 0 = BJ, 1 = 2lvl a priori, 2 = 2lvl a posteriori
     int     n;
     int     Zn;

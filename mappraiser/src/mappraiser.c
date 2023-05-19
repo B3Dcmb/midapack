@@ -9,8 +9,8 @@
 #include "mappraiser/create_toeplitz.h"
 #include "mappraiser/iofiles.h"
 #include "mappraiser/map.h"
-#include "mappraiser/pcg_true.h"
 #include "mappraiser/mapping.h"
+#include "mappraiser/pcg_true.h"
 
 #ifdef WITH_ECG
 #include "mappraiser/ecg.h"
@@ -33,13 +33,13 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     int        m, Nb_t_Intervals; // local number of rows of the pointing matrix A, nbr of stationary intervals
     int64_t    gif;               // global indice for the first local line
     int        i, j, k;
-    Mat        A;                 // pointing matrix structure
-    int        nbr_valid_pixels;  // nbr of valid pixel indices
-    int        ngap;              // nbr of timestream gaps
-    Gap        Gaps;              // timestream gaps structure
-    double    *x, *cond = NULL;   // pixel domain vectors
+    Mat        A;                // pointing matrix structure
+    int        nbr_valid_pixels; // nbr of valid pixel indices
+    int        ngap;             // nbr of timestream gaps
+    Gap        Gaps;             // timestream gaps structure
+    double    *x, *cond = NULL;  // pixel domain vectors
     int       *lhits = NULL;
-    double     st, t;             // timer, start time
+    double     st, t; // timer, start time
     int        rank, size;
     MPI_Status status;
 

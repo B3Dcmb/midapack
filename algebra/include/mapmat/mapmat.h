@@ -47,28 +47,25 @@ extern "C" {
 /** @brief Matrix structure
     @n A* = (A0* | A1* | ... | Ap-1* )
     */
-typedef struct {
-    int  flag;      // flag for communication scheme (NONE, RING, BUTTERFLY ...)
-    int  m;         // number local rows
-    int  nnz;       // number non-zero per rows
-    int  trash_pix; // flag for presence of trash pixel
-    int *indices;   // column indices tab; size = m * nnz; can be a global or
-                  // local numbering
-    double *values; // non-zero values tab; size = m * nnz
-    int    *id_last_pix; // index of the last time sample pointing to each pixel
-                      // (no nnz repeat factor)
-    int *ll;             // linked list of time samples indexes linked by pixels
+typedef struct mat_t {
+    int     flag;        // flag for communication scheme (NONE, RING, BUTTERFLY ...)
+    int     m;           // number local rows
+    int     nnz;         // number non-zero per rows
+    int     trash_pix;   // flag for presence of trash pixel
+    int    *indices;     // column indices tab; size = m * nnz; can be a global or local numbering
+    double *values;      // non-zero values tab; size = m * nnz
+    int    *id_last_pix; // index of the last time sample pointing to each pixel (no nnz repeat factor)
+    int    *ll;          // linked list of time samples indexes linked by pixels
     //--------local shaping---------------
     int  lcount;
-    int *lindices; // local indices tab (monotony with global numbering); size =
-                   // lcount
+    int *lindices; // local indices tab (monotony with global numbering); size = lcount
 #ifdef W_MPI
     MPI_Comm comm; // MPI communicator
     //--------com shaping-----------------
     int  *com_indices, com_count; // communicated indices tab, and size
     int   steps;                  // number of steps in the communication scheme
-    int  *nS, *nR; // number of indices (to send and to receive); size = steps
-    int **R, **S;  // sending or receiving indices tab
+    int  *nS, *nR;                // number of indices (to send and to receive); size = steps
+    int **R, **S;                 // sending or receiving indices tab
 #endif
 } Mat;
 

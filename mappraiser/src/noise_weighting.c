@@ -29,7 +29,7 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
  * @param Gaps timestream gaps
  * @param tod data vector
  */
-void apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod, weight_stgy_t stgy, bool verbose) {
+void apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod, WeightStgy stgy, bool verbose) {
     int t_id = 0; // time sample index in local data
 
     int rank, size;
@@ -166,12 +166,12 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
     int ng = Gaps->ngap;                // number of gaps
     int m  = N_block->tpltzblocks[0].n; // size of the data
 
-    double res;                         // norm of residual
-    double coef_1, coef_2;              // scalars
-    double wtime;                       // timing variable
+    double res;            // norm of residual
+    double coef_1, coef_2; // scalars
+    double wtime;          // timing variable
 
-    bool stop       = false;            // stop iteration or continue
-    bool init_guess = x0 != NULL;       // starting vector provided or not
+    bool stop       = false;      // stop iteration or continue
+    bool init_guess = x0 != NULL; // starting vector provided or not
 
     if (ng == 0) ignore_gaps = true;
 
