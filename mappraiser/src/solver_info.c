@@ -6,8 +6,8 @@
  * @date Jan 2023
  */
 
-#include <stdio.h>
 #include <math.h>
+#include <stdio.h>
 
 #include "mappraiser/solver_info.h"
 
@@ -35,9 +35,7 @@ void solverinfo_print(SolverInfo *si) {
     printf("  res_norm      = %e\n", si->res_norm);
     if (si->store_hist) {
         fputs("  res_hist      = { ", stdout);
-        for (int j = 0; j < (si->n_iter) + 1; ++j) {
-            printf("%lf ", si->res_hist[j]);
-        }
+        for (int j = 0; j < (si->n_iter) + 1; ++j) { printf("%lf ", si->res_hist[j]); }
         puts("}");
     }
 }
@@ -45,29 +43,28 @@ void solverinfo_print(SolverInfo *si) {
 /// @brief Set default values for the solver parameters
 /// @param si SolverInfo struct
 void solverinfo_set_defaults(SolverInfo *si) {
-    si->max_steps = 100;
-    si->abs_res_reduct = 1e-14;
-    si->rel_res_reduct = 1e-06;
-    si->rel_res_growth = 1e+06;
+    si->max_steps          = 100;
+    si->abs_res_reduct     = 1e-14;
+    si->rel_res_reduct     = 1e-06;
+    si->rel_res_growth     = 1e+06;
     si->use_exact_residual = false;
 
     si->store_hist = false;
-    si->print = false;
+    si->print      = false;
 }
 
 /// @brief Initialise/allocate output variables of the solver, print initial message if needed
 /// @param si SolverInfo struct
 void solverinfo_init(SolverInfo *si) {
     si->has_converged = false;
-    si->has_diverged = false;
-    si->has_failed = false;
-    si->n_iter = 0;
-    si->conv_rate = 0.0;
-    si->res_norm = 0.0;
-    si->res_hist = NULL;
+    si->has_diverged  = false;
+    si->has_failed    = false;
+    si->n_iter        = 0;
+    si->conv_rate     = 0.0;
+    si->res_norm      = 0.0;
+    si->res_hist      = NULL;
 
-    if (si->store_hist)
-        si->res_hist = malloc((sizeof si->res_hist) * si->max_steps);
+    if (si->store_hist) si->res_hist = malloc((sizeof si->res_hist) * si->max_steps);
 
     if (si->print) {
         printf("PCG solver running with kmax = %d\n", si->max_steps);
@@ -84,8 +81,7 @@ void solverinfo_init(SolverInfo *si) {
 /// @param wtime [in] current walltime
 void solverinfo_update(SolverInfo *si, bool *stop, int step_nbr, double res, double wtime) {
     // if k=0, store the residual for later
-    if (step_nbr == 0)
-        si->r0 = res;
+    if (step_nbr == 0) si->r0 = res;
 
     // print information on screen if needed
     if (si->print) {
@@ -94,33 +90,31 @@ void solverinfo_update(SolverInfo *si, bool *stop, int step_nbr, double res, dou
     }
 
     // store residual history if needed
-    if (si->store_hist)
-        si->res_hist[step_nbr] = res;
+    if (si->store_hist) si->res_hist[step_nbr] = res;
 
     // stop the iteration if the maximal number of steps is reached
-    if (step_nbr >= si->max_steps)
-        *stop = true;
+    if (step_nbr >= si->max_steps) *stop = true;
 
     // check other stop conditions (convergence/divergence)
     if (res <= si->rel_res_reduct * si->rel_res_reduct * si->r0) {
         si->has_converged = true;
-        *stop = true;
+        *stop             = true;
     }
 
     if (res <= si->abs_res_reduct * si->abs_res_reduct) {
         si->has_converged = true;
-        *stop = true;
+        *stop             = true;
     }
 
     if (res >= si->rel_res_growth * si->rel_res_growth * si->r0) {
         si->has_diverged = true;
-        *stop = true;
+        *stop            = true;
     }
 
     // handle the case where iteration stops
     if (*stop) {
-        si->res_norm = res;
-        si->n_iter = step_nbr;
+        si->res_norm   = res;
+        si->n_iter     = step_nbr;
         si->solve_time = wtime - si->start_time;
     }
 }
@@ -130,7 +124,9 @@ void solverinfo_update(SolverInfo *si, bool *stop, int step_nbr, double res, dou
 void solverinfo_finalize(SolverInfo *si) {
     if ((si->n_iter < si->max_steps) && (si->store_hist)) {
         // res_history has size n_iter + 1 !!!
-        si->res_hist = realloc(si->res_hist, (sizeof si->res_hist) * (si->n_iter + 1));
+        double *tmp;
+        tmp = realloc(si->res_hist, (sizeof si->res_hist) * (si->n_iter + 1));
+        if (tmp != NULL) { si->res_hist = tmp; }
     }
 
     if (si->print) {
@@ -156,8 +152,6 @@ void solverinfo_finalize(SolverInfo *si) {
 /// @brief Free any allocated buffer inside the structure
 /// @param si SolverInfo struct
 void solverinfo_free(SolverInfo *si) {
-    if (si->res_hist) {
-        free(si->res_hist);
-    }
+    if (si->res_hist) { free(si->res_hist); }
     si->res_hist = NULL;
 }

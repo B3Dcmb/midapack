@@ -8,24 +8,23 @@
  * @update Mar 2023 by Simon Biquard
  */
 
-#include "mappraiser/precond.h"
 #include "mappraiser/pcg_true.h"
-#include "mappraiser/noise_weighting.h"
 #include "mappraiser/gap_filling.h"
+#include "mappraiser/noise_weighting.h"
+#include "mappraiser/precond.h"
 
 #include <math.h>
 #include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, double *x, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl)
 int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double *x, double *b, double *noise,
                  double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl, Gap *Gaps, int64_t gif,
                  int gap_stgy, u_int64_t realization, const u_int64_t *detindxs, const u_int64_t *obsindxs,
                  const u_int64_t *telescopes) {
-    int i, j, k; // some indexes
-    int m, n;    // number of local time samples, number of local pixels
-    int rank, size;
+    int    i, j, k;     // some indexes
+    int    m, n;        // number of local time samples, number of local pixels
+    int    rank, size;
     double localreduce; // reduce buffer
     double st, t;       // timers
     double solve_time = 0.0;
@@ -34,8 +33,8 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
     double *_g, *Ah, *Nm1Ah;      // time domain vectors
     double *g, *gp, *gt, *Cg, *h; // map domain vectors
     double *AtNm1Ah;              // map domain
-    double ro, gamma, coeff;      // scalars
-    double g2pix, g2pixp, g2pix_polak;
+    double  ro, gamma, coeff;     // scalars
+    double  g2pix, g2pixp, g2pix_polak;
 
     Precond *p = NULL;
     double  *pixpond;
@@ -66,28 +65,24 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
     // TODO signal = signal + noise?
 
     weight_stgy_t strategy;
-    gap_treatment:
+gap_treatment:
     switch (gap_stgy) {
         case 0: // gap-filling
-            if (rank == 0)
-                printf("[proc %d] gap_stgy = %d (gap-filling)\n", rank, gap_stgy);
+            if (rank == 0) printf("[proc %d] gap_stgy = %d (gap-filling)\n", rank, gap_stgy);
             sim_constrained_noise(N, Nm1, noise, Gaps, realization, detindxs, obsindxs, telescopes, false);
             strategy = BASIC;
             break;
         case 1: // nested PCG for noise-weighting
-            if (rank == 0)
-                printf("[proc %d] gap_stgy = %d (nested PCG)\n", rank, gap_stgy);
+            if (rank == 0) printf("[proc %d] gap_stgy = %d (nested PCG)\n", rank, gap_stgy);
             strategy = ITER;
             break;
         case 2: // gap-filling + nested PCG afterwards
-            if (rank == 0)
-                printf("[proc %d] gap_stgy = %d (gap-filling + nested PCG)\n", rank, gap_stgy);
+            if (rank == 0) printf("[proc %d] gap_stgy = %d (gap-filling + nested PCG)\n", rank, gap_stgy);
             sim_constrained_noise(N, Nm1, noise, Gaps, realization, detindxs, obsindxs, telescopes, false);
             strategy = ITER_IGNORE;
             break;
         default:
-            if (rank == 0)
-                printf("[proc %d] invalid gap_stgy (%d), defaulting to 0\n", rank, gap_stgy);
+            if (rank == 0) printf("[proc %d] invalid gap_stgy (%d), defaulting to 0\n", rank, gap_stgy);
             gap_stgy = 0;
             goto gap_treatment;
     }
@@ -115,7 +110,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
 
     apply_weights(Nm1, N, Gaps, _g, strategy, false); // _g = Nm1 (d-Ax0)  (d = signal + noise)
 
-    TrMatVecProd(A, _g, g, 0); // g = At _g
+    TrMatVecProd(A, _g, g, 0);                        // g = At _g
 
     apply_precond(p, A, Nm1, g, Cg);
 
@@ -174,11 +169,11 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
         gp = g;
         g  = gt;
 
-        MatVecProd(A, h, Ah, 0);            // Ah = A h
+        MatVecProd(A, h, Ah, 0);                             // Ah = A h
 
         apply_weights(Nm1, N, Gaps, Nm1Ah, strategy, false); // Nm1Ah = Nm1 Ah   (Nm1Ah == Ah)
 
-        TrMatVecProd(A, Nm1Ah, AtNm1Ah, 0); // AtNm1Ah = At Nm1Ah
+        TrMatVecProd(A, Nm1Ah, AtNm1Ah, 0);                  // AtNm1Ah = At Nm1Ah
 
         coeff       = 0.0;
         localreduce = 0.0;
@@ -252,7 +247,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
         for (j = 0; j < n; j++) // h = h * gamma + Cg
             h[j] = h[j] * gamma + Cg[j];
 
-    } // End loop
+    }             // End loop
 
     if (k == K) { // check unconverged
         if (rank == 0) {

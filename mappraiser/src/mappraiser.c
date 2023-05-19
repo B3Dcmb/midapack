@@ -29,18 +29,18 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
            u_int64_t realization, void *data_size_proc, int nb_blocks_loc, void *local_blocks_sizes,
            u_int64_t *detindxs, u_int64_t *obsindxs, u_int64_t *telescopes, int Nnz, void *pix, void *pixweights,
            void *signal, double *noise, int lambda, double *inv_tt, double *tt) {
-    int64_t M;             // Global number of rows
-    int m, Nb_t_Intervals; // local number of rows of the pointing matrix A, nbr of stationary intervals
-    int64_t gif;           // global indice for the first local line
-    int i, j, k;
-    Mat A;                   // pointing matrix structure
-    int nbr_valid_pixels;    // nbr of valid pixel indices
-    int ngap;                // nbr of timestream gaps
-    Gap Gaps;                // timestream gaps structure
-    double *x, *cond = NULL; // pixel domain vectors
-    int *lhits = NULL;
-    double st, t; // timer, start time
-    int rank, size;
+    int64_t    M;                 // Global number of rows
+    int        m, Nb_t_Intervals; // local number of rows of the pointing matrix A, nbr of stationary intervals
+    int64_t    gif;               // global indice for the first local line
+    int        i, j, k;
+    Mat        A;                 // pointing matrix structure
+    int        nbr_valid_pixels;  // nbr of valid pixel indices
+    int        ngap;              // nbr of timestream gaps
+    Gap        Gaps;              // timestream gaps structure
+    double    *x, *cond = NULL;   // pixel domain vectors
+    int       *lhits = NULL;
+    double     st, t;             // timer, start time
+    int        rank, size;
     MPI_Status status;
 
     // mkl_set_num_threads(1); // Circumvent an MKL bug
@@ -166,7 +166,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     defineTpltz_avg(&Nm1, nrow, 1, mcol, tpltzblocks, nb_blocks_loc, nb_blocks_tot, id0, local_V_size, flag_stgy, comm);
 
     // define the noise covariance matrix
-    Tpltz N;
+    Tpltz  N;
     Block *tpltzblocks_N = (Block *) malloc(nb_blocks_loc * sizeof(Block));
     defineBlocks_avg(tpltzblocks_N, tt, nb_blocks_loc, local_blocks_sizes, lambda_block_avg, id0);
     defineTpltz_avg(&N, nrow, 1, mcol, tpltzblocks_N, nb_blocks_loc, nb_blocks_tot, id0, local_V_size, flag_stgy, comm);
@@ -187,7 +187,8 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
                      gif, gap_stgy, realization, detindxs, obsindxs, telescopes);
     } else if (solver == 1) {
 #ifdef WITH_ECG
-        ECG_GLS(outpath, ref, &A, &Nm1, x, signal, noise, cond, lhits, tol, maxiter, enlFac, ortho_alg, bs_red, &Gaps, gif);
+        ECG_GLS(outpath, ref, &A, &Nm1, x, signal, noise, cond, lhits, tol, maxiter, enlFac, ortho_alg, bs_red, &Gaps,
+                gif);
 #else
         if (rank == 0)
             fprintf(stderr, "The choice of solver is 1 (=ECG), but the ECG source "

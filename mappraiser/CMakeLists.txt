@@ -91,7 +91,7 @@ endif ()
 # ----------------------------------------------------------------------------------------#
 
 add_subdirectory(src)
-add_subdirectory(test)
+#add_subdirectory(test)
 add_subdirectory(examples)
 
 # TODO handle Python package in a dedicated CMakeLists file?

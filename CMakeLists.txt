@@ -15,11 +15,14 @@ cmake_minimum_required(VERSION 3.18)
 project(midapack
         VERSION 2.1
         DESCRIPTION "Parallel software tools for high performance CMB data analysis"
-        LANGUAGES C)
+        LANGUAGES C CXX)
 
 # Enforce language standards
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
+
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Auxiliary files
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")

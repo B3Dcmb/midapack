@@ -16,7 +16,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 // #include <stdbool.h>
 
 // choose header based on preprocessor directive
@@ -28,24 +27,24 @@
 
 #define eps 1.0e-15
 
-#define max(a, b)            \
-({                           \
-    __typeof__ (a) _a = (a); \
-    __typeof__ (b) _b = (b); \
-    _a > _b ? _a : _b;       \
-})
+#define max(a, b)                                                                                                      \
+    ({                                                                                                                 \
+        __typeof__(a) _a = (a);                                                                                        \
+        __typeof__(b) _b = (b);                                                                                        \
+        _a > _b ? _a : _b;                                                                                             \
+    })
 
-#define min(a, b)            \
-({                           \
-    __typeof__ (a) _a = (a); \
-    __typeof__ (b) _b = (b); \
-    _a < _b ? _a : _b;       \
-})
+#define min(a, b)                                                                                                      \
+    ({                                                                                                                 \
+        __typeof__(a) _a = (a);                                                                                        \
+        __typeof__(b) _b = (b);                                                                                        \
+        _a < _b ? _a : _b;                                                                                             \
+    })
 
 // do the local Atdiag(Nm1)A with as output a block-diagonal matrix (stored as a vector) in the pixel domain
 int getlocalW(const Mat *A, Tpltz *Nm1, double *vpixBlock, int *lhits) {
-    int m = Nm1->local_V_size;                      // number of local time samples
-    int nnz = A->nnz;                               // number of non-zero entries
+    int m       = Nm1->local_V_size;                // number of local time samples
+    int nnz     = A->nnz;                           // number of non-zero entries
     int n_valid = A->lcount - (A->trash_pix) * nnz; // size of map-domain objects
 
     // Define the indices for each process
@@ -62,8 +61,7 @@ int getlocalW(const Mat *A, Tpltz *Nm1, double *vpixBlock, int *lhits) {
     // vpixDiag = (double *) malloc(A->lcount *sizeof(double));
 
     int64_t istart, il, istartn;
-    for (int i = 0; i < nnz * n_valid; i++)
-        vpixBlock[i] = 0.0;
+    for (int i = 0; i < nnz * n_valid; i++) vpixBlock[i] = 0.0;
 
     int64_t vShft = idpnew - Nm1->idp; //=Nm1->tpltzblocks[idv0].idv-Nm1->idp in principle
     /*
@@ -97,7 +95,7 @@ int getlocalW(const Mat *A, Tpltz *Nm1, double *vpixBlock, int *lhits) {
     double diagNm1;
     // loop on the blocks
     for (int k = idv0; k < (idv0 + Nm1->nb_blocks_loc); k++) {
-        if (nnew[idv0] > 0) { // if nnew==0, this is a wrong defined block
+        if (nnew[idv0] > 0) {                      // if nnew==0, this is a wrong defined block
 
             if (k + 1 < idv0 + Nm1->nb_blocks_loc) // if there is a next block, compute his next first indice
                 istartn = Nm1->tpltzblocks[k + 1].idv - Nm1->idp;
@@ -184,10 +182,9 @@ int getlocDiagN(Mat *A, Tpltz Nm1, double *vpixDiag) {
     // vpixDiag = (double *) malloc(A->lcount *sizeof(double));
 
     int64_t istart, il, istartn;
-    for (int i = 0; i < A->lcount; i++)
-        vpixDiag[i] = 0.0; // 0.0;
+    for (int i = 0; i < A->lcount; i++) vpixDiag[i] = 0.0; // 0.0;
 
-    int64_t vShft = idpnew - Nm1.idp; //=Nm1.tpltzblocks[idv0].idv-Nm1.idp in principle
+    int64_t vShft = idpnew - Nm1.idp;                      //=Nm1.tpltzblocks[idv0].idv-Nm1.idp in principle
     /*
         printf("Nm1.idp=%d, idpnew=%d, vShft=%d\n", Nm1.idp, idpnew, vShft);
         printf("idv0=%d, idvn=%d\n", idv0, idvn);
@@ -208,7 +205,7 @@ int getlocDiagN(Mat *A, Tpltz Nm1, double *vpixDiag) {
     double diagNm1;
     // loop on the blocks
     for (int k = idv0; k < (idv0 + Nm1.nb_blocks_loc); k++) {
-        if (nnew[idv0] > 0) { // if nnew==0, this is a wrong defined block
+        if (nnew[idv0] > 0) {                     // if nnew==0, this is a wrong defined block
 
             if (k + 1 < idv0 + Nm1.nb_blocks_loc) // if there is a next block, compute his next first indice
                 istartn = Nm1.tpltzblocks[k + 1].idv - Nm1.idp;
@@ -243,8 +240,8 @@ int getlocDiagN(Mat *A, Tpltz Nm1, double *vpixDiag) {
             // continue until the next period if exist
             for (int64_t i = istart + il; i < istartn; i++) {
                 for (int j = 0; j < (A->nnz); j++)
-                    vpixDiag[A->indices[i * (A->nnz) + j]] += (A->values[i * (A->nnz) + j] *
-                                                               A->values[i * (A->nnz) + j]);
+                    vpixDiag[A->indices[i * (A->nnz) + j]] +=
+                            (A->values[i * (A->nnz) + j] * A->values[i * (A->nnz) + j]);
             }
         }
     } // end of the loop over the blocks
@@ -609,13 +606,13 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, 
             // Set the corresponding signal time stream sample to zero
             // Now that the timestream gaps are accounted for we also set the noise to zero
             // as it will not be possible to separate it from the signal in real data
-            b[j] = 0;
+            b[j]     = 0;
             noise[j] = 0;
 
             // Point all the preceding gap samples to trash pixel and set them
             // to zero in the TOD
             while (A->ll[j] != -1) {
-                b[A->ll[j]] = 0;
+                b[A->ll[j]]     = 0;
                 noise[A->ll[j]] = 0;
                 for (int k = 0; k < nnz; k++) {
                     A->indices[A->ll[j] * nnz + k] = k - nnz;
@@ -1328,9 +1325,8 @@ void Lanczos_eig(Mat *A, Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ, double *x
 }
 
 // General routine for constructing a preconditioner
-void build_precond(Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tpltz *Nm1, double **in_out_x,
-                   double *b, double *noise, double *cond, int *lhits, double tol, int Zn, int precond,
-                   Gap *Gaps, int64_t gif) {
+void build_precond(Precond **out_p, double **out_pixpond, int *out_n, Mat *A, Tpltz *Nm1, double **in_out_x, double *b,
+                   double *noise, double *cond, int *lhits, double tol, int Zn, int precond, Gap *Gaps, int64_t gif) {
     int     rank, size, i;
     double  st, t;
     double *x;
