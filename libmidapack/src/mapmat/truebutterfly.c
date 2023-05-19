@@ -10,7 +10,7 @@
 #include <mpi.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include "mapmat.h"
 
 /** @brief Initialize tables for butterfly-like communication scheme (true means pair wise)
     This routine set up needed tables for the butterfly communication scheme.

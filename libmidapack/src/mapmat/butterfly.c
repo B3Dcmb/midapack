@@ -35,8 +35,8 @@
     @param comm MPI communicator
     @return 0 if no error
     @ingroup matmap_group22*/
-int butterfly_init(int *indices, int count, int **R, int *nR, int **S, int *nS, int **com_indices, int *com_count, int steps, MPI_Comm comm){
 
+int butterfly_init(int *indices, int count, int **R, int *nR, int **S, int *nS, int **com_indices, int *com_count, int steps, MPI_Comm comm){
   int i, k, p2k;
   int rank, size, rk, sk;
   int tag;

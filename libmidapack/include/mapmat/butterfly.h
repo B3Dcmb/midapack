@@ -19,3 +19,6 @@ int modified_butterfly_reduce(int **R, int *nR, int nRmax, int **S, int *nS, int
 int butterfly_reshuffle(int **R, int *nR, int nRmax, int **S, int *nS, int nSmax, double *val, int steps, MPI_Comm comm);
 int butterfly_reduce_init(int *indices, int count, int **R, int *nR, int **S, int *nS, int **com_indices, int *com_count, int steps, MPI_Comm comm);
 int butterfly_reshuffle_init(int *indices_in, int count_in, int *indices_out, int count_out, int **R, int *nR, int **S, int *nS, int **com_indices, int *com_count, int steps, MPI_Comm comm);
+
+int truebutterfly_init(int *indices, int count, int **R, int *nR, int **S, int *nS, int **com_indices, int *com_count, int steps, MPI_Comm comm);
+int truebutterfly_reduce(int **R, int *nR, int nRmax, int **S, int *nS, int nSmax, double *val, int steps, MPI_Comm comm);

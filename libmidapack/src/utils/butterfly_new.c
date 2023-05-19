@@ -540,11 +540,20 @@ int modified_set_or(int *A1, int n1, int *A2, int n2, int *A1orA2){
 
   /* added cases when either n1 or n2 are zero. One of which *has to* be nonzero. - rs 2022/06/09 */
 
-  int i=0, j=0, k= 0;
-
+  int i=0, j=0, k=0;
   if( n1 && n2) {
     while( i<n1 || j<n2){
-        if ((i == n1) || (j == n2)){
+        if ((i==n1) || (j==n2)){
+          if(i==n1){
+            A1orA2[k]=A2[j];
+            j++;
+          }
+          else{
+            A1orA2[k]=A1[i];
+            i++;
+          }
+        }
+        else if ((i == n1) || (j == n2)){
           if(i<n1){
             A1orA2[k]=A1[i];
             i++;
@@ -590,7 +599,6 @@ int modified_set_or(int *A1, int n1, int *A2, int n2, int *A1orA2){
       k=n1;
     }
   }
-
   return k;
 }
 
@@ -622,17 +630,21 @@ int modified_card_or(int *A1, int n1, int *A2, int n2){
 
   if (n1 && n2) {
     while( i<n1 || j<n2){
-      if(A1[i] < A2[j]){
-        if(i<n1-1){ i++; }
+      if ((i==n1) || (j==n2)){
+        if(i==n1){ j++;}
+        else{ i++; }
+      }
+      else if(A1[i] < A2[j]){
+        if(i<n1){ i++; }
         else{ j++; }
       }
       else if(A1[i] > A2[j]){
-        if(j<n2-1){ j++; }
+        if(j<n2){ j++; }
         else{ i++; }
       }
       else{
-        if(i<n1-1){ i++; }
-        if(j<n2-1){ j++; }
+        if(i<n1){ i++; }
+        if(j<n2){ j++; }
       }
       k++;
     }

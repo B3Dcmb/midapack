@@ -509,8 +509,8 @@ int main(int argc, char** argv){
     Butterfly_superstruct *Butterfly_superstruct_obj = (Butterfly_superstruct *)malloc(1*sizeof(Butterfly_superstruct));
     // int rank_to_receive = nprocs - rank - 1;
     // int rank_to_receive = fabs((rank-1)%nprocs);
-    int rank_to_receive = (rank+1)%nprocs;
-    // int rank_to_receive = rank;
+    // int rank_to_receive = (rank+1)%nprocs;
+    int rank_to_receive = rank;
     // int size_to_receive = (rank_to_receive + 10)/2;
     int size_to_receive = (rank_to_receive + 10);
     int *indices_to_receive;
@@ -527,8 +527,9 @@ int main(int argc, char** argv){
         indices_to_receive[i] = i+1 + rank_to_receive*100;
     }
 
-    int flag_classic_or_reshuffle_butterfly = 1;
-    // int flag_classic_or_reshuffle_butterfly = 0;
+
+    // int flag_classic_or_reshuffle_butterfly = 1;
+    int flag_classic_or_reshuffle_butterfly = 0;
     // construct_butterfly_struct(Butterfly_obj_classic, indices_local, size_local, indices_to_receive, size_to_receive, flag_classic_or_reshuffle_butterfly, worldcomm);
     printf("%d --- Preparing butterfly communication \n", rank); fflush(stdout);
     prepare_butterfly_communication(indices_local, size_local, indices_to_receive, size_to_receive, flag_classic_or_reshuffle_butterfly, Butterfly_superstruct_obj, worldcomm);

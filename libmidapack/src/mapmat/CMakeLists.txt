@@ -10,4 +10,5 @@ target_sources(midapack PRIVATE
                "mapmat.c"
                "mapmatc.c"
                "ring.c"
+               "truebutterfly.c"
                )
