@@ -58,9 +58,17 @@ void merge(int *A, int nA, int *B){
     @return size of the union 
     @ingroup matmap_group22*/
 int card_or(int *A1, int n1, int *A2, int n2){
-  int i=0, j=0, k= 0;
-  while( i<n1 || j<n2){
-    if(A1[i] < A2[j]){
+  int i=0, j=0, k=0;
+  while( (i<n1) || (j<n2)){
+    if ((i==n1) || (j==n2)){
+      if(i==n1){
+        j++;
+      }
+      else{
+        i++;
+      }
+    }
+    else if(A1[i] < A2[j]){
       if(i<n1){ i++; }
       else{ j++; }
     }
@@ -72,7 +80,7 @@ int card_or(int *A1, int n1, int *A2, int n2){
       if(i<n1){ i++; }
       if(j<n2){ j++; }
     }
-    k++; 
+    k++;
   }
   return k;
 }
@@ -115,10 +123,21 @@ int card_and(int *A1, int n1, int *A2, int n2){
     @param address to the set A1orA2
     @return number of elements in A1orA2 
     @ingroup matmap_group22*/
-int set_or(int *A1, int n1, int *A2, int n2, int *A1orA2){
-  int i=0, j=0, k= 0;
-  while( i<n1 || j<n2){
-    if(A1[i] < A2[j]){
+int set_or(int *A1, int n1, int *A2, int n2, int *A1orA2)
+{
+  int i=0, j=0, k=0;
+  while( (i<n1) || (j<n2)){
+    if ((i==n1) || (j==n2)){
+      if(i==n1){
+        A1orA2[k]=A2[j];
+        j++;
+      }
+      else{
+        A1orA2[k]=A1[i];
+        i++;
+      }
+    }
+    else if(A1[i] < A2[j]){
       if(i<n1){
         A1orA2[k]=A1[i];
         i++;

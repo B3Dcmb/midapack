@@ -77,6 +77,6 @@ int prepare_butterfly_communication(int *indices_in, int count_in, int *indices_
 int perform_butterfly_communication(double *values_to_communicate, int *indices_in, int count_in, double *values_out, int *indices_out, int count_out, Butterfly_superstruct *Butterfly_superstruct_obj, MPI_Comm worldcomm);
 
 
-int free_butterfly_struct(Butterfly_struct *Butterfly_obj);
-int free_butterfly_supplement(Butterfly_struct_supplement *Butterfly_supp);
-int free_butterfly_superstruct(Butterfly_superstruct *Butterfly_superstruct_obj);
+int free_butterfly_struct(Butterfly_struct *Butterfly_obj, int rank);
+int free_butterfly_supplement(Butterfly_struct_supplement *Butterfly_supp, int rank);
+int free_butterfly_superstruct(Butterfly_superstruct *Butterfly_superstruct_obj, int rank);

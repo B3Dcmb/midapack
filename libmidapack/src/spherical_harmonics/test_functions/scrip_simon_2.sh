@@ -20,4 +20,18 @@ srun -n 1 test_functions/test_spherical_harmonics_2
 
 cc test_functions/test_butterfly.c -Wall -I${PREFIX}/include/midapack -L${PREFIX}/lib -lmidapack -I${S2HATROOT}/include -lcfitsio -L${S2HATROOT}/lib/cori/intel/ -ls2hat_std   -L${HEALPIXROOT}/lib/ -I${HEALPIXROOT}/include/ -DHEALPIXDATA=${HEALPIXROOT}share/healpix/  -o test_functions/test_butterfly
 
+
 srun -n 2 test_functions/test_butterfly
+
+
+
+#### Test base funcs midapack
+
+cc test_functions/test_butterfly_1.c -Wall -I${PREFIX}/include/midapack -L${PREFIX}/lib -lmidapack -I${S2HATROOT}/include -lcfitsio -L${S2HATROOT}/lib/cori/intel/ -ls2hat_std   -L${HEALPIXROOT}/lib/ -I${HEALPIXROOT}/include/ -DHEALPIXDATA=${HEALPIXROOT}share/healpix/  -o test_functions/test_butterfly_1
+
+srun -n 2 test_functions/test_butterfly_1
+
+
+cc test_functions/test_als_0.c -Wall -I${PREFIX}/include/midapack -L${PREFIX}/lib -lmidapack -I${S2HATROOT}/include -lcfitsio -L${S2HATROOT}/lib/cori/intel/ -ls2hat_std   -L${HEALPIXROOT}/lib/ -I${HEALPIXROOT}/include/ -DHEALPIXDATA=${HEALPIXROOT}share/healpix/  -o test_functions/test_als_0
+
+srun -n 1 test_functions/test_als_0

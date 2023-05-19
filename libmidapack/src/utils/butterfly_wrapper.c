@@ -12,6 +12,8 @@
 
 #include "./mapmat/alm.h"
 #include "../mapmat/csort.h"
+#include "../mapmat/butterfly.h"
+#include "../mapmat/bitop.h"
 #include "butterfly_new.h"
 // #include "midapack.h"
 
@@ -33,12 +35,12 @@ int mirror_butterfly(double *values_local, int *indices_local, int size_local, d
     MPI_Comm_size(worldcomm, &size);
     MPI_Comm_rank(worldcomm, &rank);
     int i;
-    int number_steps_Butterfly = log2(size);
+    int number_steps_Butterfly = log_2(size);
     int nb_rank_Butterfly = pow(2,number_steps_Butterfly);
 
     int number_ranks_to_send = size - nb_rank_Butterfly;
-    printf("r %d ~~~~ nb_steps %d ; nb_ranks %d ; number_ranks_to_send %d \n", rank, number_steps_Butterfly, nb_rank_Butterfly, number_ranks_to_send);
-    fflush(stdout);
+    // printf("r %d ~~~~ nb_steps %d ; nb_ranks %d ; number_ranks_to_send %d \n", rank, number_steps_Butterfly, nb_rank_Butterfly, number_ranks_to_send);
+    // fflush(stdout);
 
     int *list_rank_excess_butterfly = (int *)malloc(number_ranks_to_send*sizeof(int));
     int *list_last_ranks_within_butterfly = (int *)malloc(number_ranks_to_send*sizeof(int));
@@ -51,9 +53,9 @@ int mirror_butterfly(double *values_local, int *indices_local, int size_local, d
     int index_excess = elem_in_list_elem(rank, list_rank_excess_butterfly, number_ranks_to_send);
     int index_within = elem_in_list_elem(rank, list_last_ranks_within_butterfly, number_ranks_to_send);
 
-    if (number_ranks_to_send>0)
-        printf("r %d ~~~~ nb_steps %d ; nb_ranks %d ; nb_rank_to_send %d ; rank excess %d ; rank_within %d ; flag %d \n", rank, number_steps_Butterfly, nb_rank_Butterfly, number_ranks_to_send, list_rank_excess_butterfly[0], list_last_ranks_within_butterfly[0], flag_mirror_unmirror_size_indices_data);
-    fflush(stdout);
+    // if (number_ranks_to_send>0)
+    //     printf("r %d ~~~~ nb_steps %d ; nb_ranks %d ; nb_rank_to_send %d ; rank excess %d ; rank_within %d ; flag %d \n", rank, number_steps_Butterfly, nb_rank_Butterfly, number_ranks_to_send, list_rank_excess_butterfly[0], list_last_ranks_within_butterfly[0], flag_mirror_unmirror_size_indices_data);
+    // fflush(stdout);
 
     // First, communicate the sizes, determine which processes will receive/send data
     int size_communicated = 0;
@@ -62,17 +64,17 @@ int mirror_butterfly(double *values_local, int *indices_local, int size_local, d
         case MIRROR_SIZE: // Case 0 : MIRROR - send only size and indices to be exchanged, to have the excess processes over 2^k to send their data to the last 2^k processes before the Butterfly scheme
             mpi_send_data_from_list_rank(list_rank_excess_butterfly, list_last_ranks_within_butterfly, number_ranks_to_send, &size_local, 1*sizeof(int), &size_communicated, worldcomm);
             *size_received = size_communicated;
-            printf("r %d ~~~~ size received : %d, %d, %d \n", rank, size_local, *size_received, size_communicated);
+            // printf("r %d ~~~~ size received : %d, %d, %d \n", rank, size_local, *size_received, size_communicated);
             break;
 
         case MIRROR_INDICES:
             size_communicated = *size_received;
             if (index_excess != -1)
                 size_communicated = size_local;
-            printf("###COM %d ~~~~ size %d ; indice send : %d \n", rank, size_communicated, indices_local[0]);
+            // printf("###COM %d ~~~~ size %d ; indice send : %d \n", rank, size_communicated, indices_local[0]);
             mpi_send_data_from_list_rank(list_rank_excess_butterfly, list_last_ranks_within_butterfly, number_ranks_to_send, indices_local, size_communicated*sizeof(int), indices_received, worldcomm);
             if (size_communicated>0)
-                printf("###COM %d ~~~~ size %d ; indice received : %d \n", rank, size_communicated, indices_received[size_communicated-1]);
+                // printf("###COM %d ~~~~ size %d ; indice received : %d \n", rank, size_communicated, indices_received[size_communicated-1]);
             break;
 
         case MIRROR_DATA:
@@ -103,11 +105,11 @@ int mirror_butterfly(double *values_local, int *indices_local, int size_local, d
             size_communicated = *size_received;
             if (index_within != -1)
                 size_communicated = size_local;
-            if (size_local>0)
-                printf("###COMU %d ~~~~ size %d ; value sent : %f \n", rank, size_communicated, values_local[0]);
+            // if (size_local>0)
+            //     printf("###COMU %d ~~~~ size %d ; value sent : %f \n", rank, size_communicated, values_local[0]);
             mpi_send_data_from_list_rank(list_last_ranks_within_butterfly, list_rank_excess_butterfly, number_ranks_to_send, values_local, size_communicated*sizeof(double), values_received, worldcomm);
-            if (size_communicated>0)
-                printf("###COMU %d ~~~~ size %d ; value received : %f \n", rank, size_communicated, values_received[size_communicated-1]);
+            // if (size_communicated>0)
+            //     printf("###COMU %d ~~~~ size %d ; value received : %f \n", rank, size_communicated, values_received[size_communicated-1]);
             break;
     }
 
@@ -129,27 +131,47 @@ int construct_butterfly_struct(Butterfly_struct *Butterfly_obj, int *indices_in,
     
     // Construct the butterfly communicator
     MPI_Comm comm_butterfly;
-    int number_steps = log2(size);
+    int number_steps = log_2(size);
+    // printf("%d ~~~~ TEST-1 \n", rank); fflush(stdout);
     mpi_create_subset(pow(2,number_steps), worldcomm, &comm_butterfly);
-    Butterfly_obj->comm_butterfly = comm_butterfly;
 
     Butterfly_obj->steps = number_steps;
+    // printf("%d ~~~~ TEST0 \n", rank); fflush(stdout);
 
     if (rank < pow(2,number_steps)){
+        Butterfly_obj->comm_butterfly = comm_butterfly;
         Butterfly_obj->S = (int **)malloc(Butterfly_obj->steps * sizeof(int *)); // allocate sending maps tab
         Butterfly_obj->R = (int **)malloc(Butterfly_obj->steps * sizeof(int *)); // allocate receiving maps tab
         Butterfly_obj->nS = (int *)malloc(Butterfly_obj->steps * sizeof(int));   // allocate sending map sizes tab
         Butterfly_obj->nR = (int *)malloc(Butterfly_obj->steps * sizeof(int));   // allocate receiving map size tab
         // butterfly_init(A->lindices + (A->nnz) * (A->trash_pix), A->lcount - (A->nnz) * (A->trash_pix), A->R, A->nR, A->S, A->nS, &(A->com_indices), &(A->com_count), A->steps, comm);
-
+        int nb_butterfly_ranks = pow(2,number_steps);
+        int i;
+        printf("%d [[]] Butterfly_init !! MODE %d ; nb_butterfly_ranks %d ; nb_steps %d ; count_in : %d ; count_out : %d \n", rank, flag_classic_or_reshuffle_butterfly, nb_butterfly_ranks, number_steps, count_in, count_out);
+        printf("%d [[]] indices_in : %d -", rank, indices_in[0]);
+        for (i=1; i<count_in; i++){
+            printf("- %d -", indices_in[i]);
+        }
+        printf("\n"); fflush(stdout);
+        printf("%d [[]] indices_out : %d -", rank, indices_out[0]);
+        for (i=1; i<count_out; i++){
+            printf("- %d -", indices_out[i]);
+        }
+        printf("\n"); fflush(stdout);
+        // printf("%d ~~~~ TEST1 \n", rank); fflush(stdout);
         switch(flag_classic_or_reshuffle_butterfly)
         {
             case 0: // Classic butterfly
-                butterfly_reduce_init(indices_in, count_in, Butterfly_obj->R, Butterfly_obj->nR, Butterfly_obj->S, Butterfly_obj->nS, &(Butterfly_obj->com_indices), &(Butterfly_obj->com_count), Butterfly_obj->steps, comm_butterfly);
+                // butterfly_reduce_init(indices_in, count_in, Butterfly_obj->R, Butterfly_obj->nR, Butterfly_obj->S, Butterfly_obj->nS, &(Butterfly_obj->com_indices), &(Butterfly_obj->com_count), Butterfly_obj->steps, comm_butterfly);
+                butterfly_init(indices_in, count_in, Butterfly_obj->R, Butterfly_obj->nR, Butterfly_obj->S, Butterfly_obj->nS, &(Butterfly_obj->com_indices), &(Butterfly_obj->com_count), Butterfly_obj->steps, comm_butterfly);
+                // butterfly_reduce_init(indices_out, count_out, Butterfly_obj->R, Butterfly_obj->nR, Butterfly_obj->S, Butterfly_obj->nS, &(Butterfly_obj->com_indices), &(Butterfly_obj->com_count), Butterfly_obj->steps, comm_butterfly);
+                break;
             case 1: // Reshuffle butterfly
                 butterfly_reshuffle_init(indices_in, count_in, indices_out, count_out, Butterfly_obj->R, Butterfly_obj->nR, Butterfly_obj->S, Butterfly_obj->nS, &(Butterfly_obj->com_indices), &(Butterfly_obj->com_count), Butterfly_obj->steps, comm_butterfly);
+                break;
         }
     }
+    printf("%d ~~~~ TEST2 \n", rank); fflush(stdout);
     return 0;
 }
 
@@ -160,40 +182,66 @@ int prepare_butterfly_communication(int *indices_in, int count_in, int *indices_
 
         Both indices_in and indices_out are expected to be ordered
     */
-    Butterfly_struct *Butterfly_forward_obj = Butterfly_superstruct_obj->Butterfly_obj;
-    Butterfly_struct_supplement *Butterfly_mirror_supp = Butterfly_superstruct_obj->Butterfly_mirror_supp;
-    Butterfly_struct_supplement *Butterfly_unmirror_supp = Butterfly_superstruct_obj->Butterfly_unmirror_supp;
+    int rank, nprocs;
+
+    MPI_Comm_rank( worldcomm, &rank);
+    MPI_Comm_size( worldcomm, &nprocs);
+
+    printf("%d ~~~ Prep : Starting preparing butterfly \n", rank); fflush(stdout);
+    Butterfly_struct *Butterfly_forward_obj = (Butterfly_struct *)malloc(1*sizeof(Butterfly_struct));
+    Butterfly_struct_supplement *Butterfly_mirror_supp = (Butterfly_struct_supplement *)malloc(1*sizeof(Butterfly_struct_supplement));
+    Butterfly_struct_supplement *Butterfly_unmirror_supp = (Butterfly_struct_supplement *)malloc(1*sizeof(Butterfly_struct_supplement));
+    
+    Butterfly_superstruct_obj->Butterfly_obj = Butterfly_forward_obj;
+    Butterfly_superstruct_obj->Butterfly_mirror_supp = Butterfly_mirror_supp;
+    Butterfly_superstruct_obj->Butterfly_unmirror_supp = Butterfly_unmirror_supp;
+
 
     // First, exchanges sizes and indices for mirroring and unmirroring steps
     int new_count_in, size_received_mirror, size_to_send_unmirror, new_size_mirror, new_size_unmirror;
     int *indices_received_mirror, *indices_to_send_unmirror;
 
+    printf("%d ~~~ Prep : Starting mirroring \n", rank); fflush(stdout);
     // Mirror step
     mirror_butterfly(NULL, NULL, count_in, NULL, NULL, &size_received_mirror, MIRROR_SIZE, worldcomm);
     indices_received_mirror = (int *)malloc(size_received_mirror*sizeof(int));
     mirror_butterfly(NULL, indices_in, count_in, NULL, indices_received_mirror, &size_received_mirror, MIRROR_INDICES, worldcomm);
     
+    printf("%d ~~~ Prep : Starting unmirroring \n", rank); fflush(stdout);
     // Unmirror step
     mirror_butterfly(NULL, NULL, count_out, NULL, NULL, &size_to_send_unmirror, MIRROR_SIZE, worldcomm);
     indices_to_send_unmirror = (int *)malloc(size_to_send_unmirror*sizeof(int));
-    mirror_butterfly(NULL, indices_out, count_in, NULL, indices_to_send_unmirror, &size_to_send_unmirror, MIRROR_INDICES, worldcomm);
+    mirror_butterfly(NULL, indices_out, count_out, NULL, indices_to_send_unmirror, &size_to_send_unmirror, MIRROR_INDICES, worldcomm);
 
+    printf("%d ~~~ Prep : Constructing indices mirroring \n", rank); fflush(stdout);
     // Construct the new indices tab for mirorring
-    int *ordered_indices_mirror = (int *)malloc((count_in+size_received_mirror)*sizeof(int));
-    memcpy(ordered_indices_mirror, indices_in, count_in*sizeof(int));
-    memcpy(ordered_indices_mirror+count_in, indices_received_mirror, size_received_mirror*sizeof(int));
-
-    new_size_mirror = ssort(ordered_indices_mirror, count_in+size_received_mirror, 0); // Argument flag=0 to use quicksort to sort the indices    
+    // int *ordered_indices_mirror = (int *)malloc((count_in+size_received_mirror)*sizeof(int));
+    // memcpy(ordered_indices_mirror, indices_in, count_in*sizeof(int));
+    // memcpy(ordered_indices_mirror+count_in, indices_received_mirror, size_received_mirror*sizeof(int));
+    new_size_mirror = modified_card_or(indices_in, count_in, indices_received_mirror, size_received_mirror);
+    int *ordered_indices_mirror = (int *)malloc(new_size_mirror*sizeof(int));
+    modified_set_or(indices_in, count_in, indices_received_mirror, size_received_mirror, ordered_indices_mirror);
+    // new_size_mirror = modified_set_or(indices_in, count_in, indices_received_mirror, size_received_mirror, ordered_indices_mirror);
+    // new_size_mirror = ssort(ordered_indices_mirror, count_in+size_received_mirror, 0); // Argument flag=0 to use quicksort to sort the indices    
     ordered_indices_mirror = realloc(ordered_indices_mirror, new_size_mirror*sizeof(int));
 
+    printf("%d ~~~ Prep : Constructing indices unmirroring \n", rank); fflush(stdout);
     // Construct the new indices tab for mirorring
-    int *ordered_indices_to_unmirror = (int *)malloc((count_out+size_to_send_unmirror)*sizeof(int));
-    memcpy(ordered_indices_to_unmirror, indices_out, count_out*sizeof(int));
-    memcpy(ordered_indices_to_unmirror+count_out, indices_to_send_unmirror, size_to_send_unmirror*sizeof(int));
+    // int *ordered_indices_to_unmirror = (int *)malloc((count_out+size_to_send_unmirror)*sizeof(int));
+    // memcpy(ordered_indices_to_unmirror, indices_out, count_out*sizeof(int));
+    // memcpy(ordered_indices_to_unmirror+count_out, indices_to_send_unmirror, size_to_send_unmirror*sizeof(int));
+    // new_size_unmirror = modified_card_or(indices_out, count_out, indices_to_send_unmirror, size_to_send_unmirror);
+    // int *ordered_indices_to_unmirror = (int *)malloc(new_size_unmirror*sizeof(int));
+    new_size_unmirror = modified_card_or(indices_out, count_out, indices_to_send_unmirror, size_to_send_unmirror);
+    int *ordered_indices_to_unmirror = (int *)malloc(new_size_unmirror*sizeof(int));
+    modified_set_or(indices_out, count_out, indices_to_send_unmirror, size_to_send_unmirror, ordered_indices_to_unmirror);
+    // new_size_unmirror = modified_set_or(indices_out, count_out, indices_to_send_unmirror, size_to_send_unmirror, ordered_indices_to_unmirror);
+    
 
-    new_size_unmirror = ssort(ordered_indices_to_unmirror, count_out+size_to_send_unmirror, 0); // Argument flag=0 to use quicksort to sort the indices    
-    ordered_indices_to_unmirror = realloc(ordered_indices_to_unmirror, new_size_mirror*sizeof(int));
+    // new_size_unmirror = ssort(ordered_indices_to_unmirror, count_out+size_to_send_unmirror, 0); // Argument flag=0 to use quicksort to sort the indices    
+    // ordered_indices_to_unmirror = realloc(ordered_indices_to_unmirror, new_size_unmirror*sizeof(int));
 
+    printf("%d ~~~ Prep : Attributing values computed \n", rank); fflush(stdout);
     // Preparing mirroring
     Butterfly_mirror_supp->indices_mirror = indices_received_mirror; // List of indices received in the mirroring step by the local MPI process  -> Will be used afterwards to resend back the relevant indices when unmirroring
     Butterfly_mirror_supp->size_from_mirror = size_received_mirror; // Size of the indices obtained from mirroring
@@ -214,9 +262,40 @@ int prepare_butterfly_communication(int *indices_in, int count_in, int *indices_
     if (new_size_unmirror == 0){
         new_size_unmirror = count_out;
     }
+    int k;
+    if (rank < pow(2,log_2(nprocs))){
+        
+        printf("%d ~~~ Prep : Constructing butterfly_struct \n", rank);
+        printf("%d ~~~ Post-mirroring check 0 !! %d \n", rank, Butterfly_mirror_supp->new_size_local);
+        printf("%d ~~~ ordered_indices_mirror : %d", rank, Butterfly_mirror_supp->ordered_indices[0]);
+        for (k=1; k<Butterfly_mirror_supp->new_size_local; k++){
+            printf("- %d -",Butterfly_mirror_supp->ordered_indices[k]);
+        }
+        printf("\n");
+        printf("%d ~~~ Post-unmirroring check 0 !! %d \n", rank, Butterfly_unmirror_supp->new_size_local);
+        printf("%d ~~~ ordered_indices_to_unmirror : %d", rank, Butterfly_unmirror_supp->ordered_indices[0]);
+        for (k=1; k<Butterfly_unmirror_supp->new_size_local; k++){
+            printf("- %d -",Butterfly_unmirror_supp->ordered_indices[k]);
+        }
+        printf("\n"); fflush(stdout);
+    }
     // Construct the Butterfly_struct
     construct_butterfly_struct(Butterfly_forward_obj, ordered_indices_mirror, new_size_mirror, ordered_indices_to_unmirror, new_size_unmirror, flag_classic_or_reshuffle_butterfly, worldcomm);
+    
+    printf("%d ~~~ Out of butterfly_struct construct 0 !! \n", rank); fflush(stdout);
 
+    if (rank < pow(2,log_2(nprocs))){
+        int *com_indices = Butterfly_forward_obj->com_indices;
+        printf("%d ~~~ Post-constructing butterfly_struct check 0 !! %d \n", rank, Butterfly_forward_obj->com_count); fflush(stdout);
+        if(Butterfly_forward_obj->com_count){
+            printf("%d ~~~ com_indices : %d", rank, com_indices[0]);
+            for (k=1; k<Butterfly_forward_obj->com_count; k++){
+                printf("- %d -",com_indices[k]);
+            }
+            printf("\n"); fflush(stdout);
+        }
+    }
+    printf("%d ~~~~ TEST3 \n", rank); fflush(stdout);
     return 0;
 }
 
@@ -232,11 +311,12 @@ int perform_butterfly_communication(double *values_to_communicate, int *indices_
     int k;
     int nSmax, nRmax;
     double *com_val, *values_received_butterfly;
+    double *values_to_unmirror;
 
     int rank, size;
     MPI_Comm_rank(worldcomm, &rank);
     MPI_Comm_size(worldcomm, &size);
-    int number_steps = log2(size);
+    int number_steps = log_2(size);
 
     MPI_Comm comm_butterfly = Butterfly_obj->comm_butterfly;
 
@@ -248,7 +328,12 @@ int perform_butterfly_communication(double *values_to_communicate, int *indices_
         double *values_butterfly = (double *)malloc(Butterfly_mirror_supp->new_size_local*sizeof(double));
         m2m(values_received, Butterfly_mirror_supp->indices_mirror, Butterfly_mirror_supp->size_from_mirror, values_butterfly, Butterfly_mirror_supp->ordered_indices, Butterfly_mirror_supp->new_size_local);
         m2m(values_to_communicate, indices_in, count_in, values_butterfly, Butterfly_mirror_supp->ordered_indices, Butterfly_mirror_supp->new_size_local);
-        
+        printf("%d »»»»»»»» Post-mirroring check !! %d \n", rank, Butterfly_mirror_supp->new_size_local);
+        printf("%d »»»»»»»» ordered_indices values_butterfly : %d %f", rank, Butterfly_mirror_supp->ordered_indices[0], values_butterfly[0]);
+        for (k=1; k<Butterfly_mirror_supp->new_size_local; k++){
+            printf("- %d %f -",Butterfly_mirror_supp->ordered_indices[k], values_butterfly[k]);
+        }
+        printf("\n"); fflush(stdout);
 
         // Compute max communication buffer size
         nRmax = Butterfly_obj->nR[0];
@@ -261,66 +346,113 @@ int perform_butterfly_communication(double *values_to_communicate, int *indices_
         }
 
         /* Copy value */
-        com_val = (double *)malloc(Butterfly_obj->com_count * sizeof(double));
-        for (k = 0; k < Butterfly_obj->com_count; k++)
-            com_val[k] = 0.0;
+        com_val = (double *)calloc(Butterfly_obj->com_count,sizeof(double));
+        // for (k = 0; k < Butterfly_obj->com_count; k++)
+        //     com_val[k] = 0.0;
 
-        m2m(values_butterfly, Butterfly_mirror_supp->ordered_indices, count_in, com_val, Butterfly_obj->com_indices, Butterfly_obj->com_count);
+        m2m(values_butterfly, Butterfly_mirror_supp->ordered_indices, Butterfly_mirror_supp->new_size_local, com_val, Butterfly_obj->com_indices, Butterfly_obj->com_count);
         free(values_butterfly);
+        printf("%d <<<<<< Set-up before Butterfly !! %d \n", rank, Butterfly_obj->com_count); fflush(stdout);
+        if (Butterfly_obj->com_count){
+            printf("%d <<<<<< com_indices com_val : %d %f", rank, Butterfly_obj->com_indices[0], com_val[0]);
+            for (k=1; k<Butterfly_obj->com_count; k++){
+                printf("- %d %f -",Butterfly_obj->com_indices[k], com_val[k]);
+            }
+            printf("\n"); fflush(stdout);
+        }
+        
         switch(Butterfly_obj->classic_or_reshuffle_butterfly)
         {
             case 0: // Classic butterfly
-                modified_butterfly_reduce(Butterfly_obj->R, Butterfly_obj->nR, nRmax, Butterfly_obj->S, Butterfly_obj->nS, nSmax, com_val, Butterfly_obj->steps, Butterfly_obj->comm_butterfly);
+                // modified_butterfly_reduce(Butterfly_obj->R, Butterfly_obj->nR, nRmax, Butterfly_obj->S, Butterfly_obj->nS, nSmax, com_val, Butterfly_obj->steps, Butterfly_obj->comm_butterfly);
+                butterfly_reduce(Butterfly_obj->R, Butterfly_obj->nR, nRmax, Butterfly_obj->S, Butterfly_obj->nS, nSmax, com_val, Butterfly_obj->steps, Butterfly_obj->comm_butterfly);
+                break;
 
             case 1: // Reshuffle butterfly
                 butterfly_reshuffle(Butterfly_obj->R, Butterfly_obj->nR, nRmax, Butterfly_obj->S, Butterfly_obj->nS, nSmax, com_val, Butterfly_obj->steps, Butterfly_obj->comm_butterfly);
+                break;
+        }
+        printf("%d <<<<<< Results from Butterfly !! %d \n", rank, Butterfly_obj->com_count);
+        if (Butterfly_obj->com_count){
+            printf("%d <<<<<< com_indices com_val : %d %f", rank, Butterfly_obj->com_indices[0], com_val[0]);
+            for (k=1; k<Butterfly_obj->com_count; k++){
+                printf("- %d %f -",Butterfly_obj->com_indices[k], com_val[k]);
+            }
+            printf("\n");
         }
         values_received_butterfly = (double *)malloc(Butterfly_unmirror_supp->new_size_local*sizeof(double));
         m2m(com_val, Butterfly_obj->com_indices, Butterfly_obj->com_count, values_received_butterfly, Butterfly_unmirror_supp->ordered_indices, Butterfly_unmirror_supp->new_size_local);
         free(com_val);
 
-        double *values_to_unmirror = (double *)malloc(Butterfly_unmirror_supp->size_from_mirror*sizeof(int));
-        m2m(values_received_butterfly, Butterfly_unmirror_supp->ordered_indices, Butterfly_unmirror_supp->new_size_local, values_to_unmirror, Butterfly_unmirror_supp->indices_mirror, Butterfly_unmirror_supp->size_from_mirror);
-        mirror_butterfly(values_to_unmirror, NULL, Butterfly_unmirror_supp->size_from_mirror, NULL, NULL, &(Butterfly_unmirror_supp->size_from_mirror), UNMIRROR_DATA, worldcomm);
-
         m2m(values_received_butterfly, Butterfly_unmirror_supp->ordered_indices, Butterfly_unmirror_supp->new_size_local, values_out, indices_out, count_out);
-        free(values_to_unmirror);
+        printf("%d >>>>>>> Results sent out !! %d \n", rank, count_out);
+        printf("%d >>>>>>> indices_out values_out : %d %f", rank, indices_out[0], values_out[0]);
+        for (k=1; k<count_out; k++){
+            printf("- %d %f -",indices_out[k], values_out[k]);
+        }
+        printf("\n");
+        values_to_unmirror = (double *)malloc(Butterfly_unmirror_supp->size_from_mirror*sizeof(int));
+        // m2m(values_received_butterfly, Butterfly_unmirror_supp->ordered_indices, Butterfly_unmirror_supp->new_size_local, values_out, indices_out, count_out);
+        m2m(values_received_butterfly, Butterfly_unmirror_supp->ordered_indices, Butterfly_unmirror_supp->new_size_local, values_to_unmirror, Butterfly_unmirror_supp->indices_mirror, Butterfly_unmirror_supp->size_from_mirror);
+        // mirror_butterfly(values_to_unmirror, NULL, Butterfly_unmirror_supp->size_from_mirror, NULL, NULL, &(Butterfly_unmirror_supp->size_from_mirror), UNMIRROR_DATA, worldcomm);
+        printf("%d Test perform #### Unmirror_data : %f \n", rank, values_to_unmirror[0]);
+
         free(values_received_butterfly);
     }
 
     if (rank >= pow(2,number_steps)){
-        mirror_butterfly(NULL, NULL, count_out, values_out, NULL, &(count_out), UNMIRROR_DATA, worldcomm);
+        // mirror_butterfly(NULL, NULL, 0, values_out, NULL, &(count_out), UNMIRROR_DATA, worldcomm);
+        printf("%d Test perform #### Unmirror_data : %f \n", rank, values_out[0]);
     }
+
+    mirror_butterfly(values_to_unmirror, NULL, Butterfly_unmirror_supp->size_from_mirror, values_out, NULL, &(count_out), UNMIRROR_DATA, worldcomm);
+
+    if (Butterfly_unmirror_supp->size_from_mirror)
+        free(values_to_unmirror);
     free(values_received);
     return 0;
 }
 
-int free_butterfly_struct(Butterfly_struct *Butterfly_obj)
-{
-    free(Butterfly_obj->R);
-    free(Butterfly_obj->nR);
-    free(Butterfly_obj->S);
-    free(Butterfly_obj->nS);
 
+int free_butterfly_struct(Butterfly_struct *Butterfly_obj, int rank)
+{
+
+    printf("%d fffff Free 0a \n", rank); fflush(stdout);
+    if (rank < pow(2, Butterfly_obj->steps)){
+        free(Butterfly_obj->R);
+        free(Butterfly_obj->nR);
+        free(Butterfly_obj->S);
+        free(Butterfly_obj->nS);
+    }
+    printf("%d fffff Free 0b \n", rank); fflush(stdout);
     free(Butterfly_obj);
     return 0;
 }
 
-int free_butterfly_supplement(Butterfly_struct_supplement *Butterfly_supp)
+int free_butterfly_supplement(Butterfly_struct_supplement *Butterfly_supp, int rank)
 {
-    free(Butterfly_supp->indices_mirror);
-    free(Butterfly_supp->ordered_indices);
-
+    printf("%d fffff Free 1a - %d \n", rank, Butterfly_supp->size_from_mirror); fflush(stdout);
+    if (Butterfly_supp->size_from_mirror)
+        free(Butterfly_supp->indices_mirror);
+    printf("%d fffff Free 1b - %d \n", rank, Butterfly_supp->new_size_local); fflush(stdout);
+    if (Butterfly_supp->new_size_local)
+        free(Butterfly_supp->ordered_indices);
+    printf("%d fffff Free 1c \n", rank); fflush(stdout);
     free(Butterfly_supp);
     return 0;
 }
 
 
-int free_butterfly_superstruct(Butterfly_superstruct *Butterfly_superstruct_obj)
+int free_butterfly_superstruct(Butterfly_superstruct *Butterfly_superstruct_obj, int rank)
 {
-    free_butterfly_struct(Butterfly_superstruct_obj->Butterfly_obj);
-    free_butterfly_supplement(Butterfly_superstruct_obj->Butterfly_mirror_supp);
-    free_butterfly_supplement(Butterfly_superstruct_obj->Butterfly_unmirror_supp);
+    printf("%d fffff Free 0 \n", rank); fflush(stdout);
+    free_butterfly_struct(Butterfly_superstruct_obj->Butterfly_obj, rank);
+    printf("%d fffff Free 1 \n", rank); fflush(stdout);
+    free_butterfly_supplement(Butterfly_superstruct_obj->Butterfly_mirror_supp, rank);
+    printf("%d fffff Free 2 \n", rank); fflush(stdout);
+    free_butterfly_supplement(Butterfly_superstruct_obj->Butterfly_unmirror_supp, rank);
+    printf("%d fffff Free 3 \n", rank); fflush(stdout);
+    free(Butterfly_superstruct_obj);
     return 0;
 }
 

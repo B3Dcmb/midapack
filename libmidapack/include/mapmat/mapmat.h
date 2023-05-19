@@ -14,7 +14,6 @@
 
 #include <mpi.h>
 #include "butterfly.h"
-#include "butterfly_new.h"
 #include "alm.h"
 #include "als.h"
 #include "bitop.h"
