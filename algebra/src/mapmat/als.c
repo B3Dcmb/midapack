@@ -69,28 +69,32 @@ void merge(int *A, int nA, int *B) {
     @param A2 set of indices
     @return size of the union
     @ingroup matmap_group22*/
-int card_or(int *A1, int n1, int *A2, int n2) {
-    int i = 0, j = 0, k = 0;
-    while (i < n1 || j < n2) {
-        if (A1[i] < A2[j]) {
-            if (i < n1) {
-                i++;
-            } else {
-                j++;
-            }
-        } else if (A1[i] > A2[j]) {
-            if (j < n2) {
-                j++;
-            } else {
-                i++;
-            }
-        } else {
-            if (i < n1) { i++; }
-            if (j < n2) { j++; }
-        }
-        k++;
+int card_or(int *A1, int n1, int *A2, int n2){
+  int i=0, j=0, k=0;
+  while( (i<n1) || (j<n2)){
+    if ((i==n1) || (j==n2)){
+      if(i==n1){
+        j++;
+      }
+      else{
+        i++;
+      }
     }
-    return k;
+    else if(A1[i] < A2[j]){
+      if(i<n1){ i++; }
+      else{ j++; }
+    }
+    else if(A1[i] > A2[j]){
+      if(j<n2){ j++; }
+      else{ i++; }
+    }
+    else{
+      if(i<n1){ i++; }
+      if(j<n2){ j++; }
+    }
+    k++;
+  }
+  return k;
 }
 
 /** Compute \f$ card(A_1 \cap A_2) \f$
@@ -129,33 +133,48 @@ int card_and(int *A1, int n1, int *A2, int n2) {
     @param address to the set A1orA2
     @return number of elements in A1orA2
     @ingroup matmap_group22*/
-int set_or(int *A1, int n1, int *A2, int n2, int *A1orA2) {
-    int i = 0, j = 0, k = 0;
-    while (i < n1 || j < n2) {
-        if (A1[i] < A2[j]) {
-            if (i < n1) {
-                A1orA2[k] = A1[i];
-                i++;
-            } else {
-                A1orA2[k] = A2[j];
-                j++;
-            }
-        } else if (A1[i] > A2[j]) {
-            if (j < n2) {
-                A1orA2[k] = A2[j];
-                j++;
-            } else {
-                A1orA2[k] = A1[i];
-                i++;
-            }
-        } else {
-            A1orA2[k] = A1[i];
-            i++;
-            j++;
-        }
-        k++;
+int set_or(int *A1, int n1, int *A2, int n2, int *A1orA2)
+{
+  int i=0, j=0, k=0;
+  while( (i<n1) || (j<n2)){
+    if ((i==n1) || (j==n2)){
+      if(i==n1){
+        A1orA2[k]=A2[j];
+        j++;
+      }
+      else{
+        A1orA2[k]=A1[i];
+        i++;
+      }
     }
-    return k;
+    else if(A1[i] < A2[j]){
+      if(i<n1){
+        A1orA2[k]=A1[i];
+        i++;
+      }
+      else{
+        A1orA2[k]=A2[j];
+        j++;
+      }
+    }
+    else if(A1[i] > A2[j]){
+      if(j<n2){
+        A1orA2[k]=A2[j];
+        j++;  
+      }
+      else{
+        A1orA2[k]=A1[i];
+        i++;
+      }
+    }
+    else{
+      A1orA2[k]=A1[i];
+      i++;  
+      j++;    
+    }
+    k++;
+  }
+  return k;
 }
 
 /** Compute \f$ A_1 \cap A_2 \f$
