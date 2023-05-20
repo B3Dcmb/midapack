@@ -42,10 +42,10 @@ typedef struct Butterfly_struct_supplement{
 
 
 typedef struct Butterfly_superstruct{
-    Butterfly_struct *Butterfly_obj;
+    Butterfly_struct Butterfly_obj;
     
-    Butterfly_struct_supplement *Butterfly_mirror_supp;
-    Butterfly_struct_supplement *Butterfly_unmirror_supp;
+    Butterfly_struct_supplement Butterfly_mirror_supp;
+    Butterfly_struct_supplement Butterfly_unmirror_supp;
 
 } Butterfly_superstruct;
 
