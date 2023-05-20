@@ -682,9 +682,14 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, 
 
     build_gap_struct(gif, Gaps, A);
 
+    int global_gap_count = compute_global_gap_count(A->comm, Gaps);
+
     if (rank == 0) {
         printf("[rank %d] after degenerate pixels\n", rank);
-        printf("  -> detected %d timestream gaps\n", Gaps->ngap);
+        printf("  -> # of timestream gaps [local]  = %d\n", Gaps->ngap);
+        printf("  -> # of timestream gaps [global] = %d\n", global_gap_count);
+        //        print_gap_info(Gaps);
+        fflush(stdout);
     }
 
     // free memory

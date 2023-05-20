@@ -116,3 +116,20 @@ void build_gap_struct(int64_t gif, Gap *Gaps, Mat *A) {
         }
     }
 }
+
+int compute_global_gap_count(MPI_Comm comm, Gap *gaps) {
+    int gap_count = gaps->ngap;
+    MPI_Allreduce(MPI_IN_PLACE, &gap_count, 1, MPI_INT, MPI_SUM, comm);
+    return gap_count;
+}
+
+void print_gap_info(Gap *gaps) {
+    printf("Local Gap structure\n");
+    printf("  { ngap: %d\n", gaps->ngap);
+    printf("    lgap: ");
+    for (int i = 0; i < gaps->ngap; ++i) { printf("%d ", gaps->lgap[i]); }
+    printf("\n");
+    printf("    id0gap: ");
+    for (int i = 0; i < gaps->ngap; ++i) { printf("%ld ", gaps->id0gap[i]); }
+    printf("}\n");
+}

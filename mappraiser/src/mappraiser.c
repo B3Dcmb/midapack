@@ -80,6 +80,11 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
         printf("[rank %d] Nb_t_Intervals_loc=%d \n", rank, Nb_t_Intervals_loc);
         fflush(stdout);
     }
+    /*
+        for (i = 0; i < m; i++) {
+            noise[i] = 0;
+        }
+    */
 
     // Pointing matrix initialization
 
@@ -110,8 +115,8 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
 
     t = MPI_Wtime();
     if (rank == 0) {
-        printf("[rank %d] Total pixel-to-time-domain mapping time = %lf\n", rank, t - st);
-        printf("  -> detected %d timestream gaps\n", ngap);
+        printf("[rank %d] Pixel-to-time-domain mapping time = %lf s\n", rank, t - st);
+        printf("  -> # of timestream gaps [local]  = %d\n", ngap);
         fflush(stdout);
     }
 
