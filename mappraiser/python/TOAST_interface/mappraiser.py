@@ -239,18 +239,29 @@ class Mappraiser(Operator):
 
     bandwidth = Int(16384, help="Half-bandwidth for the noise model")
 
-    # additional parameters for the solver (C library)
+    # Additional parameters for the C library
+
+    # solver
     solver = Int(0, help="Choose mapmaking solver (0->PCG, 1->ECG)")
-    z_2lvl = Int(0, help="Size of 2lvl deflation space")
-    precond = Int(0, help="Choose preconditioner (0->BJ, 1->2lvl a priori, 2->2lvl a posteriori")
-    ortho_alg = Int(1, help="Orthogonalization scheme for ECG (O->odir, 1->omin)")
-    ptcomm_flag = Int(6, help="Choose collective communication scheme")
     tol = Float(1e-6, help="Convergence threshold for the iterative solver")
     maxiter = Int(3000, help="Maximum number of iterations allowed for the solver")
     enlFac = Int(1, help="Enlargement factor for ECG")
     bs_red = Int(0, help="Use dynamic search reduction")
-    gap_stgy = Int(0, help="Strategy for handling timestream gaps"
-                           "(0->gap-filling, 1->nested PCG")
+
+    # preconditioner
+    precond = Int(0, help="Choose preconditioner (0->BJ, 1->2lvl a priori, 2->2lvl a posteriori")
+    z_2lvl = Int(0, help="Size of 2lvl deflation space")
+    ortho_alg = Int(1, help="Orthogonalization scheme for ECG (O->odir, 1->omin)")
+
+    # communication algorithm
+    ptcomm_flag = Int(6, help="Choose collective communication scheme")
+
+    # gap treatment strategy
+    # 0 -> perfect noise reconstruction (only possible on simulations)
+    # 1 -> gap filling with a constrained noise realization
+    # 2 -> "nested PCG" i.e. invert the noise covariance matrix with a PCG at each noise weighting operation
+    # 3 -> gap filling + nested PCG (to correct for non-Toeplitz character of the inverse noise covariance)
+    gap_stgy = Int(0, help="Strategy for handling timestream gaps")
     realization = Int(0, help="Noise realization index (for gap-filling)")
 
     @traitlets.validate("shared_flag_mask")
@@ -347,6 +358,21 @@ class Mappraiser(Operator):
         check = proposal["value"]
         if check:
             raise traitlets.TraitError("MC mode is not currently supported")
+        return check
+
+    # Checks for mapmaker parameters (solver, ...)
+    @traitlets.validate("gap_stgy")
+    def _check_gap_stgy(self, proposal):
+        check = proposal["value"]
+        if check not in (0, 1, 2, 3):
+            msg = "Invalid gap_stgy - accepted values are:\n"
+            msg += "0 -> perfect noise reconstruction (use original simulated noise)\n"
+            msg += "1 -> gap filling with a constrained noise realization\n"
+            msg += "2 -> 'nested PCG' i.e. invert the noise covariance matrix with a PCG at each noise weighting " \
+                   "operation\n"
+            msg += "3 -> gap filling + nested PCG (to correct for non-Toeplitz character of the inverse noise " \
+                   "covariance)"
+            raise traitlets.TraitError(msg)
         return check
 
     def __init__(self, **kwargs):

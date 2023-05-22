@@ -604,16 +604,13 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, 
             }
 
             // Set the corresponding signal time stream sample to zero
-            // Now that the timestream gaps are accounted for we also set the noise to zero
-            // as it will not be possible to separate it from the signal in real data
+            // (equivalent to a perfect noise reconstruction)
             b[j]     = 0;
-            noise[j] = 0;
 
             // Point all the preceding gap samples to trash pixel and set them
             // to zero in the TOD
             while (A->ll[j] != -1) {
                 b[A->ll[j]]     = 0;
-                noise[A->ll[j]] = 0;
                 for (int k = 0; k < nnz; k++) {
                     A->indices[A->ll[j] * nnz + k] = k - nnz;
                     A->values[A->ll[j] * nnz + k]  = 0;

@@ -65,26 +65,33 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
     // TODO signal = signal + noise?
 
     WeightStgy strategy;
-gap_treatment:
     switch (gap_stgy) {
-        case 0: // gap-filling
-            if (rank == 0) printf("[proc %d] gap_stgy = %d (gap-filling)\n", rank, gap_stgy);
+        case 0:
+            // perfect noise reconstruction
+            if (rank == 0) printf("[proc %d] gap_stgy = %d (perfect noise reconstruction)\n", rank, gap_stgy);
+            strategy = BASIC;
+            break;
+        case 1:
+            // gap filling with constrained noise realization
+            if (rank == 0) printf("[proc %d] gap_stgy = %d (gap filling)\n", rank, gap_stgy);
             sim_constrained_noise(N, Nm1, noise, Gaps, realization, detindxs, obsindxs, telescopes, false);
             strategy = BASIC;
             break;
-        case 1: // nested PCG for noise-weighting
+        case 2:
+            // nested PCG
             if (rank == 0) printf("[proc %d] gap_stgy = %d (nested PCG)\n", rank, gap_stgy);
             strategy = ITER;
             break;
-        case 2: // gap-filling + nested PCG afterwards
-            if (rank == 0) printf("[proc %d] gap_stgy = %d (gap-filling + nested PCG)\n", rank, gap_stgy);
+        case 3:
+            // gap filling + nested PCG (ignoring gaps)
+            if (rank == 0) printf("[proc %d] gap_stgy = %d (gap filling + nested PCG)\n", rank, gap_stgy);
             sim_constrained_noise(N, Nm1, noise, Gaps, realization, detindxs, obsindxs, telescopes, false);
             strategy = ITER_IGNORE;
             break;
         default:
             if (rank == 0) printf("[proc %d] invalid gap_stgy (%d), defaulting to 0\n", rank, gap_stgy);
             gap_stgy = 0;
-            goto gap_treatment;
+            strategy = BASIC;
     }
     fflush(stdout);
 
