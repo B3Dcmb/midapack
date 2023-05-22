@@ -39,7 +39,7 @@ int main_Butterfly_mirorring(int argc, char** argv){
     values_local = (double *)malloc(size_local*sizeof(double));
 
     for (i=0; i<size_local; i++){
-        indices_local[i] = i+1 + rank*10;
+        indices_local[i] = i+1 + rank*100;
         values_local[i] = rank + (i+1)*0.01;
     }
     
@@ -465,7 +465,7 @@ int main_Butterfly_scheme_tests_v0(int argc, char** argv){ // WORKS ONLY WITH PO
 // int free_butterfly_superstruct(Butterfly_superstruct *Butterfly_superstruct_obj);
 
 
-// int main_Butterfly_scheme_tests(int argc, char** argv){
+// int main_Butterfly_scheme_tests_vfinale(int argc, char** argv){
 int main(int argc, char** argv){
 
     int rank, nprocs;
@@ -510,7 +510,7 @@ int main(int argc, char** argv){
     Butterfly_superstruct Butterfly_superstruct_obj_;
     // int rank_to_receive = nprocs - rank - 1;
     // int rank_to_receive = fabs((rank-1)%nprocs);
-    int rank_to_receive = (rank+3)%nprocs;
+    int rank_to_receive = (rank+1)%nprocs;
     // int rank_to_receive = rank;
     // int size_to_receive = (rank_to_receive + 10)/2;
     int size_to_receive = (rank_to_receive + 10);
@@ -569,10 +569,11 @@ int main(int argc, char** argv){
     }
 
 
+    printf("%d #### Test new_size_local %d \n", rank, Butterfly_mirror_supp->new_size_local); fflush(stdout);
     int *test_ordered_indices = (int *)malloc(Butterfly_mirror_supp->new_size_local*sizeof(int));
-    // test_ordered_indices = memcpy(test_ordered_indices, Butterfly_mirror_supp->ordered_indices, Butterfly_mirror_supp->new_size_local*sizeof(int));
-    for (i=0; i<Butterfly_mirror_supp->new_size_local; i++)
-        test_ordered_indices[i] = Butterfly_mirror_supp->ordered_indices[i];
+    test_ordered_indices = memcpy(test_ordered_indices, Butterfly_mirror_supp->ordered_indices, Butterfly_mirror_supp->new_size_local*sizeof(int));
+    // for (i=0; i<Butterfly_mirror_supp->new_size_local; i++)
+    //     test_ordered_indices[i] = Butterfly_mirror_supp->ordered_indices[i];
     
     // Butterfly_struct_supplement *Butterfly_mirror_supp = Butterfly_superstruct_obj->Butterfly_mirror_supp;
     // Butterfly_struct_supplement *Butterfly_unmirror_supp = Butterfly_superstruct_obj->Butterfly_unmirror_supp;
@@ -644,9 +645,6 @@ int main(int argc, char** argv){
     // }
 
 
-    printf("%d --- ##### Free step \n", rank); fflush(stdout);
-    // free_butterfly_superstruct(Butterfly_superstruct_obj, rank);
-
     printf("%d - Free 1 \n", rank); fflush(stdout);
     // free_butterfly_supplement(Butterfly_superstruct_obj->Butterfly_mirror_supp, rank);
     printf("%d - Free 2 \n", rank); fflush(stdout);
@@ -666,9 +664,22 @@ int main(int argc, char** argv){
             printf("- %d %d -", Butterfly_mirror_supp->ordered_indices[i], test_ordered_indices[i]);
         }
         printf("\n"); fflush(stdout);
+        printf("%d #####F Butterfly_supplement tests indices_mirror !! nb_butterfly_ranks %d ; nb_steps %d ; size_from_mirror : %d \n", rank, nb_butterfly_ranks, number_steps, Butterfly_mirror_supp->size_from_mirror); fflush(stdout);
+        if (Butterfly_mirror_supp->size_from_mirror){
+            printf("%d #####F indices_mirror : %d -", rank, Butterfly_mirror_supp->indices_mirror[0]); fflush(stdout);
+            for (i=1; i<Butterfly_mirror_supp->size_from_mirror; i++){
+                printf("- %d -", Butterfly_mirror_supp->indices_mirror[i]);
+            }
+            printf("\n"); fflush(stdout);
+        }
         // int *ordered_indices__ = Butterfly_mirror_supp->ordered_indices;
         // free(ordered_indices__);
     }
+
+    printf("%d #### Test2 new_size_local %d \n", rank, Butterfly_mirror_supp->new_size_local); fflush(stdout);
+    printf("%d --- ##### Free step \n", rank); fflush(stdout);
+    free_butterfly_superstruct(Butterfly_superstruct_obj, rank);
+
     printf("%d - Free 5 \n", rank); fflush(stdout);
     // free(Butterfly_superstruct_obj->Butterfly_mirror_supp);
     
@@ -676,9 +687,10 @@ int main(int argc, char** argv){
     free(values_local);
     free(indices_to_receive);
     free(values_to_receive);
-    free(test_ordered_indices);
+    
     printf("%d --- END TEST 1 \n", rank); fflush(stdout);
-
+    free(test_ordered_indices);
+    
 
     printf("%d - Done ! \n", rank);
 

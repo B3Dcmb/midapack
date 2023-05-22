@@ -23,7 +23,7 @@ int elem_in_list_elem(int elem, int *list_elem, int size_list_elem)
 }
 
 
-int mpi_send_data_from_list_rank(int *list_rank_sender, int *list_rank_receiver, int size_list_rank, void *data_init, size_t full_size_data, void *data_out, MPI_Comm world_comm)
+int mpi_send_data_from_list_rank(int *list_rank_sender, int *list_rank_receiver, int size_list_rank, void *data_init, size_t full_size_data, void *data_out, int tag, MPI_Comm world_comm)
 {
     /* Redistribute data stored in list_rank_sender so that every processes with rank in list_rank_sender will send their data to processes
         in list_rank_receiver
@@ -36,7 +36,7 @@ int mpi_send_data_from_list_rank(int *list_rank_sender, int *list_rank_receiver,
     int i;
     int *ranks_not_const;
 
-    int rank, size, difference_treshold, tag = 0;
+    int rank, size, difference_treshold; //, tag = 0;
     void *buffer;
 
     MPI_Comm_rank(world_comm, &rank);
@@ -46,33 +46,38 @@ int mpi_send_data_from_list_rank(int *list_rank_sender, int *list_rank_receiver,
 
     int index_rank_sender = elem_in_list_elem(rank, list_rank_sender, size_list_rank);
     int index_rank_receiver = elem_in_list_elem(rank, list_rank_receiver, size_list_rank);
-    // printf("func-mpi r %d ---- indexes found sender %d and receiver %d ; size_list_rank %d \n", rank, index_rank_sender, index_rank_receiver, size_list_rank);
-    // printf("func-mpi r %d ---- ranks found sender %d and receiver %d ; size_list_rank %d \n", rank, list_rank_sender[index_rank_receiver], list_rank_receiver[index_rank_sender], size_list_rank);
+    printf("func-mpi r %d ---- indexes found sender %d and receiver %d ; size_list_rank %d \n", rank, index_rank_sender, index_rank_receiver, size_list_rank);
+    printf("func-mpi r %d ---- ranks found sender %d and receiver %d ; size_list_rank %d \n", rank, list_rank_sender[index_rank_receiver], list_rank_receiver[index_rank_sender], size_list_rank);
     
 
     if ((index_rank_sender != -1) || (index_rank_receiver != -1))
         {
-            buffer = malloc(full_size_data);
+            // buffer = malloc(full_size_data);
             if (index_rank_sender != -1){
                 // buffer = malloc(size_data*sizeof(double));
-                memcpy(buffer, data_init, full_size_data);
+                // memcpy(buffer, data_init, full_size_data);
                 // MPI_Isend(buffer, full_size_data, MPI_BYTE, list_rank_receiver[index_rank_sender], tag, world_comm, &s_request);
-                MPI_Send(buffer, full_size_data, MPI_BYTE, list_rank_receiver[index_rank_sender], tag, world_comm);
-                // printf("func-mpi r %d ---- send to %d with index %d \n", rank, list_rank_receiver[index_rank_sender], index_rank_sender);
-                // fflush(stdout);
+                MPI_Send(data_init, full_size_data, MPI_BYTE, list_rank_receiver[index_rank_sender], tag+index_rank_sender, world_comm);
+                printf("func-mpi r %d ---- send to %d with index %d ; size_t %zu \n", rank, list_rank_receiver[index_rank_sender], index_rank_sender, full_size_data);
+                fflush(stdout);
+                // MPI_Wait(&s_request, &mpi_status);
             }
             if (index_rank_receiver != -1){
                 // buffer = malloc(size_data*sizeof(double));
                 // MPI_Irecv(buffer, full_size_data, MPI_BYTE, list_rank_sender[index_rank_receiver], tag, world_comm, &r_request);
-                MPI_Recv(buffer, full_size_data, MPI_BYTE, list_rank_sender[index_rank_receiver], tag, world_comm, &mpi_status);
-                // printf("func-mpi r %d ---- receive from %d with index %d \n", rank, list_rank_sender[index_rank_receiver], index_rank_receiver);
-                // fflush(stdout);
-                memcpy(data_out, buffer, full_size_data);
+                MPI_Recv(data_out, full_size_data, MPI_BYTE, list_rank_sender[index_rank_receiver], tag+index_rank_receiver, world_comm, &mpi_status);
+                int number_amount;
+                MPI_Get_count(&mpi_status, MPI_DOUBLE, &number_amount);
+                printf("func-mpi r %d ---- receive from %d with index %d ; size_t %zu \n", rank, list_rank_sender[index_rank_receiver], index_rank_receiver, full_size_data);
+                printf("func-mpi r %d ---- received %d numbers from %d, tag = %d\n", rank, number_amount, mpi_status.MPI_SOURCE, mpi_status.MPI_TAG);
+                // memcpy(data_out, buffer, full_size_data);
                 // printf("2func-mpi r %d ---- receive from %d with index %d \n", rank, list_rank_sender[index_rank_receiver], index_rank_receiver);
                 // fflush(stdout);
+                // MPI_Wait(&r_request, &mpi_status);
+                
             }
-            // printf("TEST9 r %d \n", rank); fflush(stdout);
-            free(buffer);
+            printf("func-mpi TEST9 r %d \n", rank); fflush(stdout);
+            // free(buffer);
             // printf("TEST10 r %d \n", rank); fflush(stdout);
         }
     return 0;

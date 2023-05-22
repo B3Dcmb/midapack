@@ -137,20 +137,19 @@ int butterfly_reduce_init(int *indices, int count, int **R, int *nR, int **S, in
     tag++;
   }
 
-  for(k=0; k<steps; k++){
-    printf("%d ###COMinit0 Post-getting com_indices check 000000 ; iter %d !! nS %d nR %d \n", rank, k, nS[k], nR[k]);
-    printf("%d ###COMinit S[k] : %d", rank, S[k][0]);
-    for (i=1; i<nS[k]; i++){
-        printf("- %d -",S[k][i]);
-    }
-    printf("\n");
-    printf("%d ###COMinit R[k] : %d", rank, R[k][0]);
-    for (i=1; i<nR[k]; i++){
-        printf("- %d -",R[k][i]);
-    }
-    printf("\n"); fflush(stdout);
-
-  }
+  // for(k=0; k<steps; k++){
+    // printf("%d ###COMinit0 Post-getting com_indices check 000000 ; iter %d !! nS %d nR %d \n", rank, k, nS[k], nR[k]);
+    // printf("%d ###COMinit S[k] : %d", rank, S[k][0]);
+    // for (i=1; i<nS[k]; i++){
+        // printf("- %d -",S[k][i]);
+    // }
+    // printf("\n");
+    // printf("%d ###COMinit R[k] : %d", rank, R[k][0]);
+    // for (i=1; i<nR[k]; i++){
+    //     printf("- %d -",R[k][i]);
+    // }
+    // printf("\n"); fflush(stdout);
+  // }
 
   /* Now we work locally */
   int **USR, *nUSR, **U, *nU;
@@ -180,40 +179,40 @@ int butterfly_reduce_init(int *indices, int count, int **R, int *nR, int **S, in
   *com_count=nU[steps-1];
   *com_indices = (int *) malloc(*com_count * sizeof(int));
   memcpy(*com_indices, U[steps-1], *com_count * sizeof(int));
-  printf("%d ###COMinit Post-getting U[steps-1] check 0 !! *com_count %d %d \n", rank, *com_count, nU[steps-1]);
-  printf("%d ###COMinit U[steps-1] : %d", rank, U[steps-1][0]);
-  for (i=1; i<*com_count; i++){
-      printf("- %d -",U[steps-1][i]);
-  }
-  printf("\n"); fflush(stdout);
+  // printf("%d ###COMinit Post-getting U[steps-1] check 0 !! *com_count %d %d \n", rank, *com_count, nU[steps-1]);
+  // printf("%d ###COMinit U[steps-1] : %d", rank, U[steps-1][0]);
+  // for (i=1; i<*com_count; i++){
+  //     printf("- %d -",U[steps-1][i]);
+  // }
+  // printf("\n"); fflush(stdout);
   /* ==================================================================== */
 
   for(k=0; k<steps; k++){
     subset2map(*com_indices, *com_count, S[k], nS[k]);
     subset2map(*com_indices, *com_count, R[k], nR[k]);
-    printf("%d ###COMinit Post-getting com_indices check 0 ; iter %d !! nS %d nR %d \n", rank, k, nS[k], nR[k]);
-    printf("%d ###COMinit S[k] : %d", rank, S[k][0]);
-    for (i=1; i<nS[k]; i++){
-        printf("- %d -",S[k][i]);
-    }
-    printf("\n");
-    printf("%d ###COMinit R[k] : %d", rank, R[k][0]);
-    for (i=1; i<nR[k]; i++){
-        printf("- %d -",R[k][i]);
-    }
-    printf("\n"); fflush(stdout);
+    // printf("%d ###COMinit Post-getting com_indices check 0 ; iter %d !! nS %d nR %d \n", rank, k, nS[k], nR[k]);
+    // printf("%d ###COMinit S[k] : %d", rank, S[k][0]);
+    // for (i=1; i<nS[k]; i++){
+    //     printf("- %d -",S[k][i]);
+    // }
+    // printf("\n");
+    // printf("%d ###COMinit R[k] : %d", rank, R[k][0]);
+    // for (i=1; i<nR[k]; i++){
+    //     printf("- %d -",R[k][i]);
+    // }
+    // printf("\n"); fflush(stdout);
 
   }
   free(USR);
   free(U);
 
   int *com_indices_2 = *com_indices;
-  printf("%d ###COMinit Post-constructing com_indices check 0 !! %d \n", rank, *com_count);
-      printf("%d ###COMinit com_indices : %d", rank, com_indices_2[0]);
-      for (i=1; i<*com_count; i++){
-          printf("- %d -",com_indices_2[i]);
-      }
-      printf("\n"); fflush(stdout);
+  // printf("%d ###COMinit Post-constructing com_indices check 0 !! %d \n", rank, *com_count);
+  //     printf("%d ###COMinit com_indices : %d", rank, com_indices_2[0]);
+  //     for (i=1; i<*com_count; i++){
+  //         printf("- %d -",com_indices_2[i]);
+  //     }
+  //     printf("\n"); fflush(stdout);
 
  return 0;
 }
@@ -248,21 +247,21 @@ int butterfly_reshuffle_init(int *indices_in, int count_in, int *indices_out, in
 
     if(k==0){     					/* S^0 := A */
       nS[k] = count_out;
-      printf("bfy %d ||||||| iter %d ; TEST100 - %d \n", rank, k, count_out); fflush(stdout);
+      // printf("bfy %d ||||||| iter %d ; TEST100 - %d \n", rank, k, count_out); fflush(stdout);
       if( nS[k]) {                                      /* do not allocate zero length objects */
          S[k] = (int *) malloc(nS[k] * sizeof(int));
          memcpy( S[k], indices_out, nS[k]*sizeof(int));
       }
-      printf("bfy %d ||||||| iter %d ; TEST101 - %d \n", rank, k, count_out); fflush(stdout);
+      // printf("bfy %d ||||||| iter %d ; TEST101 - %d \n", rank, k, count_out); fflush(stdout);
     }
     else{      						/* S^k := S^{k-1} \cup R^{k-1} */
-      printf("bfy %d ||||||| iter %d ; TEST102 - %d \n", rank, k, count_out); fflush(stdout);
+      // printf("bfy %d ||||||| iter %d ; TEST102 - %d \n", rank, k, count_out); fflush(stdout);
       nS[k] = modified_card_or(S[k-1], nS[k-1], I[steps-k], nI[steps-k]);
       if( nS[k]) {
 	    S[k] = (int *) malloc(nS[k] * sizeof(int));
         modified_set_or(S[k-1], nS[k-1], I[steps-k], nI[steps-k], S[k]);
       }
-      printf("bfy %d ||||||| iter %d ; TEST103 - %d \n", rank, k, count_out); fflush(stdout);
+      // printf("bfy %d ||||||| iter %d ; TEST103 - %d \n", rank, k, count_out); fflush(stdout);
     }
 
     MPI_Irecv(&nI[steps-k-1], 1, MPI_INT, rk, tag, comm, &r_request);	/* receive number of indices */
@@ -277,7 +276,7 @@ int butterfly_reshuffle_init(int *indices_in, int count_in, int *indices_out, in
     if( nS[k]) MPI_Isend(S[k], nS[k], MPI_INT, sk, tag, comm, &s_request);			        /* send indices */
     if( nI[steps-k-1]) MPI_Wait(&r_request, MPI_STATUS_IGNORE);
     if( nS[k]) MPI_Wait(&s_request, MPI_STATUS_IGNORE);
-    printf("bfy %d ||||||| iter %d ; TEST104 - %d \n", rank, k, count_out); fflush(stdout);
+    // printf("bfy %d ||||||| iter %d ; TEST104 - %d \n", rank, k, count_out); fflush(stdout);
     p2k/=2;
     tag++;
   }
@@ -324,15 +323,15 @@ int butterfly_reshuffle_init(int *indices_in, int count_in, int *indices_out, in
     tag++;
   }
 
-  printf("bfy %d ||||||| iter %d ; TEST105 - %d \n", rank, k, count_out); fflush(stdout);
+  // printf("bfy %d ||||||| iter %d ; TEST105 - %d \n", rank, k, count_out); fflush(stdout);
   tag=0;
   p2k=1;
   for(k=0; k<steps; k++){		/* butterfly last pass : know that Sending tab is S = I \cap J, so send S and we'll get R */
     sk=(rank+p2k)%size;
     rk=(rank+size-p2k)%size;
-    printf("bfy %d ||||||| iter %d ; TEST105aa - %d \n", rank, k, nS[k]); fflush(stdout);
+    // printf("bfy %d ||||||| iter %d ; TEST105aa - %d \n", rank, k, nS[k]); fflush(stdout);
     nS[k] = card_and(I[k], nI[k], J[k], nJ[k]);
-    printf("bfy %d ||||||| iter %d ; TEST105ab - %d, %d \n", rank, k, nS[k], nJ[k]); fflush(stdout);
+    // printf("bfy %d ||||||| iter %d ; TEST105ab - %d, %d \n", rank, k, nS[k], nJ[k]); fflush(stdout);
     if( nS[k]) {
        S[k] = (int *) malloc(nJ[k] *sizeof(int));
        set_and( I[k], nI[k], J[k], nJ[k], S[k]);	/* S^k=I^k \cap J^k */
@@ -357,30 +356,30 @@ int butterfly_reshuffle_init(int *indices_in, int count_in, int *indices_out, in
     p2k*=2;
     tag++;
   }
-  printf("bfy %d ||||||| iter %d ; TEST106 - %d \n", rank, k, count_out); fflush(stdout);
+  // printf("bfy %d ||||||| iter %d ; TEST106 - %d \n", rank, k, count_out); fflush(stdout);
   /* Now we work locally */
   int **USR, *nUSR, **U, *nU;
-  printf("bfy %d ||||||| iter %d ; TEST106?? - %d ; %d \n", rank, k, count_out, steps); fflush(stdout);
+  // printf("bfy %d ||||||| iter %d ; TEST106?? - %d ; %d \n", rank, k, count_out, steps); fflush(stdout);
   USR = (int **) malloc(steps*sizeof(int *));
   nUSR = (int *) malloc(steps*sizeof(int));
   U = (int **) malloc(steps*sizeof(int *));
   nU = (int *) malloc(steps*sizeof(int));
-  printf("bfy %d ||||||| iter %d ; TEST???? - %d \n", rank, k, count_out); fflush(stdout);
+  // printf("bfy %d ||||||| iter %d ; TEST???? - %d \n", rank, k, count_out); fflush(stdout);
 
   for(k=0; k<steps; k++){
-    printf("bfy %d ||||||| iter %d ; TEST106a0 - %d \n", rank, k, count_out); fflush(stdout);
+    // printf("bfy %d ||||||| iter %d ; TEST106a0 - %d \n", rank, k, count_out); fflush(stdout);
     nUSR[k] = modified_card_or(S[k], nS[k], R[k], nR[k]);
-    printf("bfy %d ||||||| iter %d ; TEST106a - %d \n", rank, k, count_out); fflush(stdout);
+    // printf("bfy %d ||||||| iter %d ; TEST106a - %d \n", rank, k, count_out); fflush(stdout);
     if( nUSR[k]) {
        // printf("bfy %d ||||||| iter %d ; TEST106aa - %d --- case %d, %d -- test %d %d \n", rank, k, count_out, nS[k], nR[k], S[k][nS[k]-1], USR[k][nS[k]-1]); fflush(stdout);
-       printf("bfy %d ||||||| iter %d ; TEST106aa - %d --- case %d, %d -- test %d \n", rank, k, count_out, nS[k], nR[k], S[k][nS[k]-1]); fflush(stdout);
+       // printf("bfy %d ||||||| iter %d ; TEST106aa - %d --- case %d, %d -- test %d \n", rank, k, count_out, nS[k], nR[k], S[k][nS[k]-1]); fflush(stdout);
        USR[k] = (int *) malloc(nUSR[k]*sizeof(int));
        modified_set_or(S[k], nS[k], R[k], nR[k], USR[k]);
-       printf("bfy %d ||||||| iter %d ; TEST106ab - %d \n", rank, k, count_out); fflush(stdout);
+       // printf("bfy %d ||||||| iter %d ; TEST106ab - %d \n", rank, k, count_out); fflush(stdout);
     }
   }
   for(k=0; k<steps; k++){
-    printf("bfy %d ||||||| iter %d ; TEST106b - %d \n", rank, k, count_out); fflush(stdout);
+    // printf("bfy %d ||||||| iter %d ; TEST106b - %d \n", rank, k, count_out); fflush(stdout);
     if(k==0){
       nU[k]=nUSR[k];
       if( nU[k]) {
@@ -395,9 +394,9 @@ int butterfly_reshuffle_init(int *indices_in, int count_in, int *indices_out, in
         modified_set_or(U[k-1], nU[k-1], USR[k], nUSR[k], U[k]);
       }
     }
-    printf("bfy %d ||||||| iter %d ; TEST106c - %d \n", rank, k, count_out); fflush(stdout);
+    // printf("bfy %d ||||||| iter %d ; TEST106c - %d \n", rank, k, count_out); fflush(stdout);
   }
-  printf("bfy %d ||||||| iter %d ; TEST107 - %d \n", rank, k, count_out); fflush(stdout);
+  // printf("bfy %d ||||||| iter %d ; TEST107 - %d \n", rank, k, count_out); fflush(stdout);
   *com_count=nU[steps-1];
   if( *com_count) {
      *com_indices = (int *) malloc(*com_count * sizeof(int));
@@ -413,10 +412,10 @@ int butterfly_reshuffle_init(int *indices_in, int count_in, int *indices_out, in
        if(nR[k]) subset2map(*com_indices, *com_count, R[k], nR[k]);
     }
   }
-  printf("bfy %d ||||||| iter %d ; TEST108 - %d \n", rank, k, count_out); fflush(stdout);
+  // printf("bfy %d ||||||| iter %d ; TEST108 - %d \n", rank, k, count_out); fflush(stdout);
   free(USR);
   free(U);
-  printf("bfy %d ||||||| iter %d ; TEST109 - %d \n", rank, k, count_out); fflush(stdout);
+  // printf("bfy %d ||||||| iter %d ; TEST109 - %d \n", rank, k, count_out); fflush(stdout);
  return 0;
 }
 

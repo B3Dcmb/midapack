@@ -9,8 +9,8 @@
 #include <unistd.h>
 
 // #include "s2hat.h"
-// #include "midapack.h"
-#include "s2hat_tools.h"
+#include "midapack.h"
+// #include "s2hat_tools.h"
 
 
 
