@@ -38,16 +38,22 @@ int mpi_send_data_from_list_rank(int *list_rank_sender, int *list_rank_receiver,
 
     int rank, size, difference_treshold; //, tag = 0;
     void *buffer;
+    
 
     MPI_Comm_rank(world_comm, &rank);
     MPI_Comm_size(world_comm, &size);
+    printf("func-mpi r %d ---- Starting ! size_t %zu \n", rank, full_size_data); fflush(stdout);
+    if (full_size_data == 0)
+        return 0;
+
     MPI_Request s_request, r_request;
     MPI_Status mpi_status;
 
     int index_rank_sender = elem_in_list_elem(rank, list_rank_sender, size_list_rank);
     int index_rank_receiver = elem_in_list_elem(rank, list_rank_receiver, size_list_rank);
-    printf("func-mpi r %d ---- indexes found sender %d and receiver %d ; size_list_rank %d \n", rank, index_rank_sender, index_rank_receiver, size_list_rank);
-    printf("func-mpi r %d ---- ranks found sender %d and receiver %d ; size_list_rank %d \n", rank, list_rank_sender[index_rank_receiver], list_rank_receiver[index_rank_sender], size_list_rank);
+    
+    printf("func-mpi r %d ---- indexes found sender %d and receiver %d ; size_list_rank %d \n", rank, index_rank_sender, index_rank_receiver, size_list_rank); fflush(stdout);
+    printf("func-mpi r %d ---- ranks found sender %d and receiver %d ; size_list_rank %d \n", rank, list_rank_sender[index_rank_receiver], list_rank_receiver[index_rank_sender], size_list_rank); fflush(stdout);
     
 
     if ((index_rank_sender != -1) || (index_rank_receiver != -1))
@@ -74,7 +80,6 @@ int mpi_send_data_from_list_rank(int *list_rank_sender, int *list_rank_receiver,
                 // printf("2func-mpi r %d ---- receive from %d with index %d \n", rank, list_rank_sender[index_rank_receiver], index_rank_receiver);
                 // fflush(stdout);
                 // MPI_Wait(&r_request, &mpi_status);
-                
             }
             printf("func-mpi TEST9 r %d \n", rank); fflush(stdout);
             // free(buffer);
