@@ -239,6 +239,8 @@ class Mappraiser(Operator):
 
     bandwidth = Int(16384, help="Half-bandwidth for the noise model")
 
+    downscale = Int(1, help="Scale down the noise by the sqrt of this number to artifically increase S/N ratio")
+
     # Additional parameters for the C library
 
     # solver
@@ -1116,8 +1118,12 @@ class Mappraiser(Operator):
             self._mappraiser_invtt = self._mappraiser_invtt_raw.array()
             self._mappraiser_tt = self._mappraiser_tt_raw.array()
 
-        # Compute noise autocorrelation and inverse autocorrelation functions
         if not self.noiseless:
+            # Scale down the noise if we want
+            if self.downscale > 1:
+                self._mappraiser_noise /= np.sqrt(self.downscale)
+
+            # Compute noise autocorrelation and inverse autocorrelation functions
             compute_autocorrelations(
                 len(data.obs),
                 len(all_dets),
