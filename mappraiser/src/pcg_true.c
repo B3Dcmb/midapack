@@ -73,8 +73,11 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
             break;
         case 1:
             // gap filling with constrained noise realization
-            if (rank == 0) printf("[proc %d] gap_stgy = %d (gap filling)\n", rank, gap_stgy);
+            if (rank == 0) printf("[proc %d] gap_stgy = %d (gap filling)... ", rank, gap_stgy);
+            st = MPI_Wtime();
             sim_constrained_noise(N, Nm1, noise, Gaps, realization, detindxs, obsindxs, telescopes, false);
+            t = MPI_Wtime();
+            if (rank == 0) printf("gaps filled in %lf seconds\n", t - st);
             strategy = BASIC;
             break;
         case 2:
@@ -84,8 +87,11 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
             break;
         case 3:
             // gap filling + nested PCG (ignoring gaps)
-            if (rank == 0) printf("[proc %d] gap_stgy = %d (gap filling + nested PCG)\n", rank, gap_stgy);
+            if (rank == 0) printf("[proc %d] gap_stgy = %d (gap filling + nested PCG)... ", rank, gap_stgy);
+            st = MPI_Wtime();
             sim_constrained_noise(N, Nm1, noise, Gaps, realization, detindxs, obsindxs, telescopes, false);
+            t = MPI_Wtime();
+            if (rank == 0) printf("gaps filled in %lf seconds\n", t - st);
             strategy = ITER_IGNORE;
             break;
         default:
