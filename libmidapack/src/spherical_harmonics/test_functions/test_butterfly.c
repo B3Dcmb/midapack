@@ -763,7 +763,8 @@ int main(int argc, char** argv){
     }
 
     indices_to_receive = (int *)malloc(size_to_receive*sizeof(int));
-    values_to_receive = (double *)malloc(size_to_receive*sizeof(double));
+    // values_to_receive = (double *)malloc(size_to_receive*sizeof(double));
+    values_to_receive = (double *)calloc(size_to_receive,sizeof(double));
 
     for (i=0; i<size_to_receive; i++){
         indices_to_receive[i] = i+1 + rank_to_receive*100;
