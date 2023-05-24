@@ -1436,6 +1436,19 @@ class Mappraiser(Operator):
         # -> call mappraiser in normal mode
         # -> if self.mcmode: self._cached=True
 
+        # my_rank = data.comm.world_rank
+        # data_size_proc.tofile(params["path_output"] + "/data_size_proc_{}.bin".format(my_rank))
+        # self._mappraiser_invtt.tofile(params["path_output"] + "/invtt_{}.bin".format(my_rank))
+        # self._mappraiser_tt.tofile(params["path_output"] + "/tt_{}.bin".format(my_rank))
+        # self._mappraiser_blocksizes.tofile(params["path_output"] + "/local_blocks_sizes_{}.bin".format(my_rank))
+        # self._mappraiser_noise.tofile(params["path_output"] + "/noise_{}.bin".format(my_rank))
+        # self._mappraiser_pixels.tofile(params["path_output"] + "/pixels_{}.bin".format(my_rank))
+        # self._mappraiser_pixweights.tofile(params["path_output"] + "/pixweights_{}.bin".format(my_rank))
+        # self._mappraiser_signal.tofile(params["path_output"] + "/signal_{}.bin".format(my_rank))
+        # self._mappraiser_detindxs.tofile(params["path_output"] + "/detindxs_{}.bin".format(my_rank))
+        # self._mappraiser_obsindxs.tofile(params["path_output"] + "/obsindxs_{}.bin".format(my_rank))
+        # self._mappraiser_telescopes.tofile(params["path_output"] + "/telescopes_{}.bin".format(my_rank))
+
         mappraiser.MLmap(
             data.comm.comm_world,
             params,

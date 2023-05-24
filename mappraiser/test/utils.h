@@ -5,6 +5,10 @@
 #ifndef MAPPRAISER_TEST_UTILS_H
 #define MAPPRAISER_TEST_UTILS_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
@@ -26,5 +30,9 @@ __attribute__((unused)) void printArray(const void *array, size_t size, size_t e
 __attribute__((unused)) void printInt(const void *element);
 __attribute__((unused)) void printDouble(const void *element);
 __attribute__((unused)) void printFloat(const void *element);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // MAPPRAISER_TEST_UTILS_H

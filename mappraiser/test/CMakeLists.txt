@@ -1,8 +1,7 @@
 # Executable for running mappraiser without TOAST workflow
 
-add_executable(debug_run utils.c utils.h)
+add_executable(debug_run debug_run.cpp utils.c)
 
-target_sources(debug_run PRIVATE "mappraiser_run_debug.c")
 target_include_directories(debug_run PRIVATE
         "../include"
         "../include/mappraiser"
@@ -13,4 +12,4 @@ target_include_directories(debug_run PRIVATE
 target_compile_definitions(debug_run PRIVATE W_MPI)
 
 # libraries
-target_link_libraries(debug_run PRIVATE mappraiser MPI::MPI_C)
+target_link_libraries(debug_run PRIVATE mappraiser MPI::MPI_CXX)

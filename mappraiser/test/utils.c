@@ -26,7 +26,7 @@ void fillArrayFromFile(const char *filename, void *array, size_t size, size_t el
     FILE *file = fopen(filename, "rb"); // Open the file in binary mode
 
     if (file == NULL) {
-        printf("Failed to open the file %s\n", filename);
+        fprintf(stderr, "Failed to open the file %s\n", filename);
         return;
     }
 
