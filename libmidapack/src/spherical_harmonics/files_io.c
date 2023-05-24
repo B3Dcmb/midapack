@@ -10,8 +10,8 @@
 #include <fitsio.h>
 #include <unistd.h>
 // #include "s2hat.h"
-// #include "midapack.h"
-#include "s2hat_tools.h"
+#include "midapack.h"
+// #include "s2hat_tools.h"
 
 #define EXIT_INFO(Y,Z,args...) { FILE *X=stdout; fprintf( X, "[%s:%d] "Z,__func__, __LINE__, ##args); fflush(X); MPI_Abort( MPI_COMM_WORLD, Y); exit(Y); }
 #define INFO(Y,args...)        { FILE *X=stdout; fprintf( X, Y, ##args); fflush(X); }

@@ -10,10 +10,10 @@
 #include <unistd.h>
 
 #include <chealpix.h>
-#include "../mapmat/csort.h"
+// #include "../mapmat/csort.h"
 // #include "s2hat.h"
-// #include "midapack.h"
-#include "s2hat_tools.h"
+#include "midapack.h"
+// #include "s2hat_tools.h"
 
 
 void make_mask_binary(double* mask, int* mask_binary, int *f_sky, long npix){
@@ -29,7 +29,6 @@ void make_mask_binary(double* mask, int* mask_binary, int *f_sky, long npix){
         mask_binary[pixel] = 0;
       }
   }
-
 
 int convert_indices_nest2ring(int *indices_nest, int *indices_ring, long int number_of_indices, int nstokes, int nside){
   // Compute S2HAT ring version of MAPPRAISER nest map map_nest
@@ -64,7 +63,6 @@ int convert_indices_ring2nest(int *indices_ring, int *indices_nest, long int num
   }
   return 0;
 }
-
 
 int get_projectors_indices(int *indices_nest, int *ordered_indices_ring, int size_indices, int nstokes, int nside, int *projector_ring2nest, int *projector_nest2ring)
 {
@@ -101,7 +99,7 @@ int get_projectors_indices(int *indices_nest, int *ordered_indices_ring, int siz
   return 0;
 }
 
-int project_values_into_different_scheme(double *values_in, int number_values, int *projector_in2out, double *values_out)
+int project_values_into_different_scheme(void *values_in, int number_values, int *projector_in2out, void *values_out)
 {
   int i;
   for (i=0; i<number_values; i++)
@@ -150,8 +148,8 @@ int gather_map(double *local_map_pix, double *full_sky_map, int nstokes, S2HAT_p
 {
     // Gather all S2HAT processes local maps into a full_sky_map
 
-    S2HAT_GLOBAL_parameters *Global_param_s2hat = S2HAT_params->Global_param_s2hat;
-    S2HAT_LOCAL_parameters *Local_param_s2hat = S2HAT_params->Local_param_s2hat;
+    S2HAT_GLOBAL_parameters *Global_param_s2hat = &(S2HAT_params->Global_param_s2hat);
+    S2HAT_LOCAL_parameters *Local_param_s2hat = &(S2HAT_params->Local_param_s2hat);
     // int nstokes = 3;
     collect_map(Global_param_s2hat->pixelization_scheme, 1, 0, nstokes, full_sky_map, Local_param_s2hat->first_ring, Local_param_s2hat->last_ring, Local_param_s2hat->map_size,
             local_map_pix, Local_param_s2hat->gangrank, Local_param_s2hat->gangsize, Local_param_s2hat->gangroot, Local_param_s2hat->gangcomm);

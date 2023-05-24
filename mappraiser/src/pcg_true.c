@@ -106,7 +106,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, PCG_var *PCG_vari
 
         get_mask_from_indices(A, mask_binary, nside, 0);
 
-        init_harmonic_superstruct(is_pixel_scheme_ring, A, Harmonic_sup, mask_binary);
+        init_harmonic_superstruct(A, Harmonic_sup, mask_binary);
         free(mask_binary);
         // Initialization of S2HAT_parameters structure
 
@@ -114,7 +114,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, PCG_var *PCG_vari
         // The S2HAT_parameters structure has been initialized, definition of the varariable corresponding to the global S2HAT parameters which will be known by all mpi-tasks
 
         // Prepare to allocate non-empty alm
-        size_alm = (Harmonic_sup->S2HAT_parameters->Global_param_s2hat->nlmax+1)*Harmonic_sup->S2HAT_parameters->Global_param_s2hat->nmmax;
+        size_alm = Harmonic_sup->S2HAT_params.size_alm;
     }
     // End of Wiener filter initialization
 
@@ -134,23 +134,23 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, PCG_var *PCG_vari
 
     // Create PCG_var struct for h, the descent direction
     PCG_var *Descent_dir_var = (PCG_var *)malloc(1*sizeof(PCG_var)); // corresponds to g
-    initialize_PCG_var_struct(Descent_dir_var, h, PCG_variable->domain_PCG_computation, PCG_variable->bool_apply_filter, PCG_variable->nstokes);
+    initialize_PCG_var_struct(Descent_dir_var, h, PCG_variable->domain_PCG_computation, PCG_variable->bool_apply_filter);
     // Define Descent_dir_var = h (in pixel space), will allocate alm only if relevant, ie if PCG_variable->bool_apply_filter==1 or PCG_variable->domain_PCG_computation==1
 
     // Create PCG_var struct for g, the residual
     PCG_var *Residual_var = (PCG_var *)malloc(1*sizeof(PCG_var)); // corresponds to g
-    initialize_PCG_var_struct(Residual_var, g, PCG_variable->domain_PCG_computation, PCG_variable->bool_apply_filter, PCG_variable->nstokes);
+    initialize_PCG_var_struct(Residual_var, g, PCG_variable->domain_PCG_computation, PCG_variable->bool_apply_filter);
     // Define Residual_var = g (in pixel space), will allocate alm only if relevant, ie if PCG_variable->bool_apply_filter==1 or PCG_variable->domain_PCG_computation==1
 
     // Create PCG_var struct for gp, the residual of previous iteration
     PCG_var *Last_Iter_Res_var = (PCG_var *)malloc(1*sizeof(PCG_var)); // corresponds to Cg
-    initialize_PCG_var_struct(Last_Iter_Res_var, gp, PCG_variable->domain_PCG_computation, PCG_variable->bool_apply_filter, PCG_variable->nstokes);
+    initialize_PCG_var_struct(Last_Iter_Res_var, gp, PCG_variable->domain_PCG_computation, PCG_variable->bool_apply_filter);
     // Define Last_Iter_Res_var = gp (in pixel space), will allocate alm only if relevant, ie if PCG_variable->bool_apply_filter==1 or PCG_variable->domain_PCG_computation==1
 
 
     // Create PCG_var struct for Cg, the preconditionned residual
     PCG_var *PrecRes_var = (PCG_var *)malloc(1*sizeof(PCG_var)); // corresponds to Cg
-    initialize_PCG_var_struct(PrecRes_var, Cg, PCG_variable->domain_PCG_computation, PCG_variable->bool_apply_filter, PCG_variable->nstokes);
+    initialize_PCG_var_struct(PrecRes_var, Cg, PCG_variable->domain_PCG_computation, PCG_variable->bool_apply_filter);
     // Define PrecRes_var = Cg (in pixel space), will allocate alm only if relevant, ie if PCG_variable->bool_apply_filter==1 or PCG_variable->domain_PCG_computation==1
 
     st = MPI_Wtime();
@@ -443,21 +443,22 @@ int apply_sys_matrix(Mat *A, Tpltz *Nm1, struct Precond *p, Harmonic_superstruct
 
     if(output_variable->bool_apply_filter==1)
     {
-        S2HAT_parameters *S2HAT_params = Harmonic_sup->S2HAT_parameters;
+        S2HAT_parameters *S2HAT_params = &(Harmonic_sup->S2HAT_params);
 
         local_alm_in = (s2hat_dcomplex *) malloc( S2HAT_params->size_alm * sizeof(s2hat_dcomplex));
         local_alm_out = (s2hat_dcomplex *) malloc( S2HAT_params->size_alm * sizeof(s2hat_dcomplex));
 
         global_map_2_harmonic(input_variable->local_map_pix,local_alm_in, A, Harmonic_sup);
 
-        apply_inv_covariance_matrix_to_alm(local_alm_in, local_alm_out, p->inverse_covariance_matrix, input_variable->nstokes, S2HAT_params);
+        apply_inv_covariance_matrix_to_alm(local_alm_in, local_alm_out, p->inverse_covariance_matrix, S2HAT_params);
+        free(local_alm_in);
 
         // Do the addition of (C^{-1} + P^T N^{-1} P) in pixel or harmonic space
         switch (output_variable->domain_PCG_computation)
         {
             case 0: // Addition done in pixel domain
             new_local_variable_pix = (double *)malloc(p->n*sizeof(double));
-            global_harmonic_2_map(local_alm_out, new_local_variable_pix, A, Harmonic_sup);
+            global_harmonic_2_map(new_local_variable_pix, local_alm_out, A, Harmonic_sup);
             // Transformation of a_lm back into pixel domain
 
             for (i = 0; i < p->n; ++i)

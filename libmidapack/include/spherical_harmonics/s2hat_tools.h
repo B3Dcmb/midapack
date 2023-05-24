@@ -75,16 +75,18 @@ typedef struct {
 
 
 typedef struct {
-    S2HAT_GLOBAL_parameters *Global_param_s2hat;
-    S2HAT_LOCAL_parameters *Local_param_s2hat;
-    Files_path_WIENER_FILTER *Files_WF_struct;
+    S2HAT_GLOBAL_parameters Global_param_s2hat;
+    S2HAT_LOCAL_parameters Local_param_s2hat;
+    Files_path_WIENER_FILTER Files_WF_struct;
 
     int size_alm; // Size of the alm ararys : lmax*mmax
     int nstokes; // Number of Stokes parameters : either 1 for intensity only, 2 for polarization only, 3 for intensity and polarization
     
-    int *projector_values;
+    int *local_projector_values_ring2nest;
+    int *local_projector_values_nest2ring;
     // Projector for local values of map : allows to project the values from one (pixel) distribution to another
-    // In the context of harmonic transformations, initialized for conversion between the nest pixel distribution of MAPPRAISER and ring pixel distribution of S2HAT
+    // In the context of harmonic transformations, initialized for conversion between the nest pixel distribution of MAPPRAISER with n_stokes as the leading order of the array
+    // and ring pixel distribution of S2HAT with npix the leading order of the array
 
 } S2HAT_parameters;
 
@@ -97,7 +99,7 @@ typedef struct {
 int get_main_s2hat_global_parameters(int nside, int *maskfile_binary, s2hat_pixeltype *pixelization_scheme, s2hat_scandef *scan_sky_structure_pixel, s2hat_pixparameters *pixpar);
 /**/
 /* Create wrapper structure s2hat of local parameters of s2hat, which will differ for all processors */
-int init_s2hat_global_parameters(Files_path_WIENER_FILTER Files_WF_struct, int *mask_binary, int lmax, S2HAT_GLOBAL_parameters *Global_param_s2hat);
+int init_s2hat_global_parameters(Files_path_WIENER_FILTER *Files_WF_struct, int *mask_binary, int lmax, S2HAT_GLOBAL_parameters *Global_param_s2hat);
 /**/
 /* Initialize MPI parameters of local parameters wrapper structure of s2hat, which will differ for all processors */
 int init_MPI_struct_s2hat_local_parameters(S2HAT_LOCAL_parameters *Local_param_s2hat, int number_ranks_s2hat, MPI_Comm initcomm);
@@ -170,7 +172,7 @@ int convert_indices_ring2nest(int *indices_ring, int *indices_nest, long int num
 int get_projectors_indices(int *indices_nest, int *ordered_indices_ring, int size_indices, int nstokes, int nside, int *projector_ring2nest, int *projector_nest2ring);
 // Get projectors for ring2nest and nest2ring for maps on a specific proc
 
-int project_values_into_different_scheme(double *values_in, int number_values, int *projector_in2out, double *values_out);
+int project_values_into_different_scheme(void *values_in, int number_values, int *projector_in2out, void *values_out);
 // Use the projectors found in get_projectors_indices to project the maps in 1 scheme or the other
 
 void convert_full_map_nest2ring(double *map_nest, double *map_ring, int nside, int nstokes);

@@ -9,8 +9,8 @@
 #include <unistd.h>
 
 // #include "s2hat.h"
-// #include "midapack.h"
-#include "s2hat_tools.h"
+#include "midapack.h"
+// #include "s2hat_tools.h"
 
 
 int all_reduce_to_all_indices_mappraiser(int *indices_pixel_local, int number_pixel_local, int nside, int* all_sky_pixels_observed, int root, MPI_Comm world_comm)
@@ -44,8 +44,8 @@ int all_reduce_to_all_indices_mappraiser(int *indices_pixel_local, int number_pi
 
 void mpi_broadcast_s2hat_global_struc(S2HAT_parameters *S2HAT_params){
     /* Use s2hat routines to broadcast s2hat structures */
-    S2HAT_GLOBAL_parameters *Global_param_s2hat = S2HAT_params->Global_param_s2hat;
-    S2HAT_LOCAL_parameters *Local_param_s2hat = S2HAT_params->Local_param_s2hat;
+    S2HAT_GLOBAL_parameters *Global_param_s2hat = &(S2HAT_params->Global_param_s2hat);
+    S2HAT_LOCAL_parameters *Local_param_s2hat = &(S2HAT_params->Local_param_s2hat);
     if (Local_param_s2hat->gangrank != -1){
         MPI_pixelizationBcast( &(Global_param_s2hat->pixelization_scheme), Local_param_s2hat->gangroot, Local_param_s2hat->gangrank, Local_param_s2hat->gangcomm);
         MPI_scanBcast(Global_param_s2hat->pixelization_scheme, &(Global_param_s2hat->scan_sky_structure_pixel), Local_param_s2hat->gangroot, Local_param_s2hat->gangrank, Local_param_s2hat->gangcomm);
@@ -59,8 +59,8 @@ void mpi_broadcast_s2hat_global_struc(S2HAT_parameters *S2HAT_params){
 
 int distribute_full_sky_map_into_local_maps_S2HAT(double* full_sky_map, double *local_map_s2hat, S2HAT_parameters *S2HAT_params)
 {
-    S2HAT_GLOBAL_parameters *Global_param_s2hat = S2HAT_params->Global_param_s2hat;
-    S2HAT_LOCAL_parameters *Local_param_s2hat = S2HAT_params->Local_param_s2hat;
+    S2HAT_GLOBAL_parameters *Global_param_s2hat = &(S2HAT_params->Global_param_s2hat);
+    S2HAT_LOCAL_parameters *Local_param_s2hat = &(S2HAT_params->Local_param_s2hat);
     int nstokes = S2HAT_params->nstokes;
 
     if (Local_param_s2hat->gangrank >= 0){
@@ -104,7 +104,7 @@ void free_covariance_matrix(double ** covariance_matrix_NxN, int lmax){
 void free_s2hat_GLOBAL_parameters_struct(S2HAT_GLOBAL_parameters *Global_param_s2hat){
     destroy_pixelization(Global_param_s2hat->pixelization_scheme);
     destroy_scan(Global_param_s2hat->scan_sky_structure_pixel);
-    free(Global_param_s2hat);
+    // free(Global_param_s2hat);
 }
 
 void free_s2hat_LOCAL_parameters_struct(S2HAT_LOCAL_parameters *Local_param_s2hat){
@@ -112,15 +112,15 @@ void free_s2hat_LOCAL_parameters_struct(S2HAT_LOCAL_parameters *Local_param_s2ha
         free(Local_param_s2hat->mvals);
     }
     free(Local_param_s2hat->pixel_numbered_ring);    
-    free(Local_param_s2hat);
+    // free(Local_param_s2hat);
 }
 
 void free_s2hat_parameters_struct(S2HAT_parameters *S2HAT_params){
 
-    if (S2HAT_params->Local_param_s2hat->gangrank >= 0){
-        free_s2hat_LOCAL_parameters_struct(S2HAT_params->Local_param_s2hat);
+    if (S2HAT_params->Local_param_s2hat.gangrank >= 0){
+        free_s2hat_LOCAL_parameters_struct(&(S2HAT_params->Local_param_s2hat));
     }
-    free_s2hat_GLOBAL_parameters_struct(S2HAT_params->Global_param_s2hat);
+    free_s2hat_GLOBAL_parameters_struct(&(S2HAT_params->Global_param_s2hat));
     // free(S2HAT_params);
 }
 

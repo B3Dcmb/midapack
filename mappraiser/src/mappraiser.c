@@ -215,16 +215,15 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
 
     // Files_path_WIENER_FILTER *Files_path_WF_struct = NULL; // Initialization of Files_Wiener_filter structure
     // Wiener filter file_paths extension initialization ///////////////
-    Harmonic_superstruct *Harmonic_sup = NULL;
-    S2HAT_parameters *S2HAT_params = NULL;
+    Harmonic_superstruct Harmonic_sup;
     
     if ((bool_apply_filter == 1) || (domain_PCG_computation == 0))
     {   
-        Harmonic_sup = (Harmonic_superstruct *)malloc(1*sizeof(Harmonic_superstruct));
-        S2HAT_params = (S2HAT_parameters *)malloc(1*sizeof(S2HAT_parameters));
-        Harmonic_sup->S2HAT_parameters = (S2HAT_parameters *)malloc(1*sizeof(S2HAT_parameters));
-        Harmonic_sup->S2HAT_parameters->Files_WF_struct = (Files_path_WIENER_FILTER *)malloc(1*sizeof(Files_path_WIENER_FILTER)); // Initialization of Files_Wiener_filter structure
-        init_files_struct_WF(Harmonic_sup->S2HAT_parameters->Files_WF_struct, nside, lmax_Wiener_Filter, c_ell_path, number_correlations);
+        // Harmonic_sup = (Harmonic_superstruct *)malloc(1*sizeof(Harmonic_superstruct));
+        // S2HAT_params = (S2HAT_parameters *)malloc(1*sizeof(S2HAT_parameters));
+        // Harmonic_sup->S2HAT_parameters = (S2HAT_parameters *)malloc(1*sizeof(S2HAT_parameters));
+        // Harmonic_sup->S2HAT_parameters->Files_WF_struct = (Files_path_WIENER_FILTER *)malloc(1*sizeof(Files_path_WIENER_FILTER)); // Initialization of Files_Wiener_filter structure
+        init_files_struct_WF(&(Harmonic_sup.S2HAT_params.Files_WF_struct), nside, lmax_Wiener_Filter, c_ell_path, number_correlations);
         // Attribution of paths of c_ells (for covariance matrix), the corresponding number of correlations included and mask_file as well as a bool (use_mask_file) to determine if a mask should be used or not
     }
 
@@ -232,7 +231,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     PCG_var *PCG_variable = (PCG_var *) malloc(1*sizeof(PCG_var));
     // s2hat_dcomplex *local_alm = NULL;
     double *local_map_pix = NULL;
-    initialize_PCG_var_struct(PCG_variable, local_map_pix, domain_PCG_computation, bool_apply_filter, A.nnz);
+    initialize_PCG_var_struct(PCG_variable, local_map_pix, domain_PCG_computation, bool_apply_filter);
 
     int is_pixel_scheme_ring = 0; // Pixel scheme from TOAST is not ring but nest
 
@@ -248,7 +247,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     if (solver == 0)
     {
         // PCG_GLS_true(outpath, ref, &A, Nm1, x, signal, noise, cond, lhits, tol, maxiter, precond, Z_2lvl, *Files_path_WF_struct, domain_PCG_computation, bool_apply_filter);
-        PCG_GLS_true(outpath, ref, &A, &Nm1, PCG_variable, signal, noise, cond, lhits, tol, maxiter, precond, Z_2lvl, is_pixel_scheme_ring, nside, Harmonic_sup);
+        PCG_GLS_true(outpath, ref, &A, &Nm1, PCG_variable, signal, noise, cond, lhits, tol, maxiter, precond, Z_2lvl, is_pixel_scheme_ring, nside, &Harmonic_sup);
     }
     else if (solver == 1)
     {

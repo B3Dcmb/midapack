@@ -15,8 +15,8 @@
 // #include "fitsio.h"
 #include <unistd.h>
 // #include "s2hat.h"
-// #include "midapack.h"
-#include "s2hat_tools.h"
+#include "midapack.h"
+// #include "s2hat_tools.h"
 
 
 
@@ -68,7 +68,7 @@ int get_covariance_matrix_NxN(char *c_ell_path, int number_correl, double **cova
         
         */
     int nstokes = S2HAT_params->nstokes;
-    S2HAT_GLOBAL_parameters *Global_param_s2hat = S2HAT_params->Global_param_s2hat;
+    S2HAT_GLOBAL_parameters *Global_param_s2hat = &(S2HAT_params->Global_param_s2hat);
     int lmax = Global_param_s2hat->nlmax;
     int correl_index, ell_value;
     double *c_ell_array;
@@ -110,8 +110,8 @@ int get_inverse_covariance_matrix_NxN(S2HAT_parameters *S2HAT_params, double **i
     /* Function to obtain inverse of covariance matrix in harmonic domain, from given c_ells
     */
 
-    Files_path_WIENER_FILTER *Files_path_WF_struct = S2HAT_params->Files_WF_struct;
-    S2HAT_GLOBAL_parameters *Global_param_s2hat = S2HAT_params->Global_param_s2hat;
+    Files_path_WIENER_FILTER *Files_path_WF_struct = &(S2HAT_params->Files_WF_struct);
+    S2HAT_GLOBAL_parameters *Global_param_s2hat = &(S2HAT_params->Global_param_s2hat);
     int nstokes = S2HAT_params->nstokes;
 
     double **covariance_matrix;

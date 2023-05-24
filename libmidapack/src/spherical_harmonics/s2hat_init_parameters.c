@@ -51,7 +51,7 @@ int get_main_s2hat_global_parameters(int nside, int *mask_binary, s2hat_pixeltyp
 }
 
 
-int init_s2hat_global_parameters(Files_path_WIENER_FILTER Files_WF_struct, int *mask_binary, int lmax, S2HAT_GLOBAL_parameters *Global_param_s2hat){
+int init_s2hat_global_parameters(Files_path_WIENER_FILTER *Files_WF_struct, int *mask_binary, int lmax, S2HAT_GLOBAL_parameters *Global_param_s2hat){
     /* Create s2hat structure of global parameters of s2hat, which must be distributed to all processors
     All processors must have those same s2hat structure 
     Full documentation here : https://apc.u-paris.fr/APC_CS/Recherche/Adamis/MIDAS09/software/s2hat/s2hat/docs/S2HATdocs.html */ 
@@ -61,7 +61,7 @@ int init_s2hat_global_parameters(Files_path_WIENER_FILTER Files_WF_struct, int *
     s2hat_pixparameters pixpar;
     // char *maskfile_path = Files_WF_struct.maskfile_path;
     // bool use_mask_file = Files_WF_struct.use_mask_file;
-    int nside = Files_WF_struct.nside;
+    int nside = Files_WF_struct->nside;
     
     get_main_s2hat_global_parameters(nside, mask_binary, &pixelization_scheme, &scan_sky_structure_pixel, &pixpar);
 
@@ -171,28 +171,28 @@ int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters *Global_param_s2h
         // Getting last pixel number of ring probed by local proc, in S2HAT convention
         number_pixels_local = last_pixel_number_ring - first_pixel_number_ring;
         
-        
-        pixel_numbered_ring = (long int *)malloc(map_size*nstokes * sizeof(long int));
-        for(i=0; i<number_pixels_local; i++)
-        {
-            for (j=0; j<nstokes; j++)
-                pixel_numbered_ring[i + j*map_size] = i + first_pixel_number_ring + j*number_pixel_total;
-        }
+        if (map_size){
+            pixel_numbered_ring = (long int *)malloc(map_size*nstokes * sizeof(long int));
 
-        first_pixel_south_hermisphere =  number_pixel_total -  last_pixel_number_ring;
-        if (last_ring == Global_param_s2hat->pixelization_scheme.nringsall)
-        {
-            first_pixel_south_hermisphere += Global_param_s2hat->pixelization_scheme.nph[last_ring-1];
-            // If last_ring is equal to the nringsall, which includes the northern rings and the equatorial ring,
-            // Then the last ring corresponds to the equatorial ring, which has already been viewed, and we need to avoid redistributing its pixel numberings
-        }
+            for(i=0; i<number_pixels_local; i++)
+            {
+                for (j=0; j<nstokes; j++)
+                    pixel_numbered_ring[i + j*map_size] = i + first_pixel_number_ring + j*number_pixel_total;
+            }
+            first_pixel_south_hermisphere =  number_pixel_total -  last_pixel_number_ring;
+            if (last_ring == Global_param_s2hat->pixelization_scheme.nringsall)
+            {
+                first_pixel_south_hermisphere += Global_param_s2hat->pixelization_scheme.nph[last_ring-1];
+                // If last_ring is equal to the nringsall, which includes the northern rings and the equatorial ring,
+                // Then the last ring corresponds to the equatorial ring, which has already been viewed, and we need to avoid redistributing its pixel numberings
+            }
 
-        for(i=first_pixel_south_hermisphere; i<number_pixels_local; i++)
-        {
-            for (j=0; j<nstokes; j++)
-                pixel_numbered_ring[ i + j*map_size] = i + first_pixel_south_hermisphere + j*number_pixel_total;
+            for(i=first_pixel_south_hermisphere; i<number_pixels_local; i++)
+            {
+                for (j=0; j<nstokes; j++)
+                    pixel_numbered_ring[ i + j*map_size] = i + first_pixel_south_hermisphere + j*number_pixel_total;
+            }
         }
-
         Local_param_s2hat->pixel_numbered_ring = pixel_numbered_ring;
 
         Local_param_s2hat->nmvals = nmvals;
@@ -216,19 +216,21 @@ int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters *Global_param_s2h
 int init_s2hat_parameters_superstruct(Files_path_WIENER_FILTER *Files_WF_struct, int *mask_binary, int nstokes, S2HAT_parameters *S2HAT_params, MPI_Comm world_comm)
 {   // Initalize both S2HAT_GLOBAL_parameters and S2HAT_LOCAL_parameters for superstructure of S2HAT
     // S2HAT_GLOBAL_parameters Global_param_s2hat;
-    S2HAT_GLOBAL_parameters *Global_param_s2hat = (S2HAT_GLOBAL_parameters *) malloc( 1 * sizeof(S2HAT_GLOBAL_parameters));
-    init_s2hat_global_parameters(*Files_WF_struct, mask_binary, Files_WF_struct->lmax_Wiener_Filter, Global_param_s2hat); 
-    // Initialization of Global_param_s2hat structure, for sky pixelization scheme and lmax_WF choice
+    // S2HAT_GLOBAL_parameters *Global_param_s2hat = (S2HAT_GLOBAL_parameters *) malloc( 1 * sizeof(S2HAT_GLOBAL_parameters));
+    // init_s2hat_global_parameters(*Files_WF_struct, mask_binary, Files_WF_struct->lmax_Wiener_Filter, Global_param_s2hat);
 
+    init_s2hat_global_parameters(Files_WF_struct, mask_binary, Files_WF_struct->lmax_Wiener_Filter, &(S2HAT_params->Global_param_s2hat));
+    // Initialization of Global_param_s2hat structure, for sky pixelization scheme and lmax_WF choice
+    S2HAT_GLOBAL_parameters *Global_param_s2hat = &(S2HAT_params->Global_param_s2hat);
 
     int rank;
     MPI_Comm_rank( world_comm, &rank);
 
-    S2HAT_LOCAL_parameters *Local_param_s2hat = (S2HAT_LOCAL_parameters *) malloc( 1 * sizeof(S2HAT_LOCAL_parameters));
-    // init_MPI_struct_s2hat_local_parameters(Local_param_s2hat, Local_param_s2hat->gangrank, Local_param_s2hat->gangsize, Local_param_s2hat->gangroot, Local_param_s2hat->gangcomm); 
-    init_MPI_struct_s2hat_local_parameters(Local_param_s2hat, Global_param_s2hat->scan_sky_structure_pixel.nringsobs, world_comm); 
+    // S2HAT_LOCAL_parameters *Local_param_s2hat = (S2HAT_LOCAL_parameters *) malloc( 1 * sizeof(S2HAT_LOCAL_parameters));
+    // init_MPI_struct_s2hat_local_parameters(Local_param_s2hat, Global_param_s2hat->scan_sky_structure_pixel.nringsobs, world_comm);
+    init_MPI_struct_s2hat_local_parameters(&(S2HAT_params->Local_param_s2hat), Global_param_s2hat->scan_sky_structure_pixel.nringsobs, world_comm); 
     
-
+    S2HAT_LOCAL_parameters *Local_param_s2hat = &(S2HAT_params->Local_param_s2hat);
     if (Local_param_s2hat->gangrank >= 0){
         init_s2hat_local_parameters_struct(Global_param_s2hat, nstokes, Local_param_s2hat);
         }
@@ -236,13 +238,12 @@ int init_s2hat_parameters_superstruct(Files_path_WIENER_FILTER *Files_WF_struct,
     
     int first_ring = Local_param_s2hat->first_ring;
 
-    S2HAT_params->Global_param_s2hat = Global_param_s2hat;
-    S2HAT_params->Local_param_s2hat = Local_param_s2hat;
-    S2HAT_params->Files_WF_struct = Files_WF_struct;
+    // S2HAT_params->Global_param_s2hat = Global_param_s2hat;
+    // S2HAT_params->Local_param_s2hat = Local_param_s2hat;
+    S2HAT_params->Files_WF_struct = *Files_WF_struct;
     // Initialization of final superstructure S2HAT_params
 
-    S2HAT_params->size_alm = Global_param_s2hat->nlmax+1*Global_param_s2hat->nmmax;
+    S2HAT_params->size_alm = (Global_param_s2hat->nlmax+1)*Global_param_s2hat->nmmax;
     S2HAT_params->nstokes = nstokes;
-
     return 0;
 }

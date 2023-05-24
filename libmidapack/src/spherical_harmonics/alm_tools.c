@@ -10,8 +10,8 @@
 #include <unistd.h>
 
 // #include "s2hat.h"
-// #include "midapack.h"
-#include "s2hat_tools.h"
+#include "midapack.h"
+// #include "s2hat_tools.h"
 
 
 int apply_alm2pix(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parameters *S2HAT_params){
@@ -26,8 +26,8 @@ int apply_alm2pix(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parame
     
     int nstokes = S2HAT_params->nstokes; // Getting number of Stokes parameters
 
-    S2HAT_GLOBAL_parameters *Global_param_s2hat = S2HAT_params->Global_param_s2hat;
-    S2HAT_LOCAL_parameters *Local_param_s2hat = S2HAT_params->Local_param_s2hat;
+    S2HAT_GLOBAL_parameters *Global_param_s2hat = &(S2HAT_params->Global_param_s2hat);
+    S2HAT_LOCAL_parameters *Local_param_s2hat = &(S2HAT_params->Local_param_s2hat);
     // Getting global and local S2HAT parameters needed for the computation
     
     if (Local_param_s2hat->gangrank < 0)
@@ -74,8 +74,8 @@ int apply_pix2alm(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parame
     Here the HEALpix convention has been chosen
     Output will be in the form I, E, B
     */
-    S2HAT_GLOBAL_parameters *Global_param_s2hat = S2HAT_params->Global_param_s2hat;
-    S2HAT_LOCAL_parameters *Local_param_s2hat = S2HAT_params->Local_param_s2hat;
+    S2HAT_GLOBAL_parameters *Global_param_s2hat = &(S2HAT_params->Global_param_s2hat);
+    S2HAT_LOCAL_parameters *Local_param_s2hat = &(S2HAT_params->Local_param_s2hat);
     // Getting global and local S2HAT parameters needed for the computation
     
     if (Local_param_s2hat->gangrank < 0)
@@ -132,19 +132,19 @@ int apply_pix2alm(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parame
 int apply_inv_covariance_matrix_to_alm(s2hat_dcomplex *input_local_alm, s2hat_dcomplex *out_local_alm, double **inv_covariance_matrix, S2HAT_parameters *S2HAT_params){
     /* Apply inverse of covariance matrix to input_local_alm */
 
-    S2HAT_GLOBAL_parameters Global_param_s2hat = *(S2HAT_params->Global_param_s2hat);
-    S2HAT_LOCAL_parameters Local_param_s2hat = *(S2HAT_params->Local_param_s2hat);
+    S2HAT_GLOBAL_parameters Global_param_s2hat = S2HAT_params->Global_param_s2hat;
+    S2HAT_LOCAL_parameters Local_param_s2hat = S2HAT_params->Local_param_s2hat;
 
 
     int ell_value, m_value, index_stokes, line_index, nmvals;
     int nstokes = S2HAT_params->nstokes;
     // int nstokes = 3;
-    int lmax = S2HAT_params->Global_param_s2hat->nlmax;
+    int lmax = Global_param_s2hat.nlmax;
 
     if (Local_param_s2hat.gangrank != -1){
 
     
-      nmvals = S2HAT_params->Local_param_s2hat->nmvals; // Total number of m values
+      nmvals = Local_param_s2hat.nmvals; // Total number of m values
     // int *mvals = Local_param_s2hat->mvals; // Values of m the considered processor contain
 
         double res_real, res_imag;
@@ -202,8 +202,8 @@ int alm2cls(s2hat_dcomplex* local_alm, double *c_ell_array, int nspec, S2HAT_par
 
     */
 
-    S2HAT_GLOBAL_parameters Global_param_s2hat = *(S2HAT_params->Global_param_s2hat);
-    S2HAT_LOCAL_parameters Local_param_s2hat = *(S2HAT_params->Local_param_s2hat);
+    S2HAT_GLOBAL_parameters Global_param_s2hat = S2HAT_params->Global_param_s2hat;
+    S2HAT_LOCAL_parameters Local_param_s2hat = S2HAT_params->Local_param_s2hat;
     int nstokes = S2HAT_params->nstokes;
 
     int lmax = Global_param_s2hat.nlmax;

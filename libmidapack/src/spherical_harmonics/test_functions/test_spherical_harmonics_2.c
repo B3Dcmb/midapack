@@ -9,7 +9,7 @@
 // #include "fitsio.h"
 // #include <mpi.h>
 #include <unistd.h>
-#include "s2hat.h"
+// #include "s2hat.h"
 #include <chealpix.h>
 
 #include "midapack.h"
@@ -754,8 +754,8 @@ int main_alm_pix_tools_v0(int argc, char** argv){
 }
 
 // Only polarization alm2map tests
-int main_alm_pix_tools_v1(int argc, char** argv){
-// int main(int argc, char** argv){
+// int main_alm_pix_tools_v1(int argc, char** argv){
+int main(int argc, char** argv){
 
     // char *path_mask = "/global/cscratch1/sd/mag/Masks_files/SO_wH.fits";
     // char *path_mask = "/global/cscratch1/sd/mag/Masks_files/No_Mask.fits";
@@ -826,11 +826,12 @@ int main_alm_pix_tools_v1(int argc, char** argv){
     
 
     printf("--- Test2 init %d %d \n", Files_path_WF_struct.lmax_Wiener_Filter, lmax);
-    printf("--- Test3 init %d \n", S2HAT_params.Global_param_s2hat->nlmax); fflush(stdout);
+    // printf("--- Test3 init %d \n", S2HAT_params.Global_param_s2hat->nlmax); fflush(stdout);
+    printf("--- Test3 init %d \n", S2HAT_params.Global_param_s2hat.nlmax); fflush(stdout);
     // S2HAT_parameters *S2HAT_params = &S2HAT_params_;
 
-    S2HAT_GLOBAL_parameters *Global_param_s2hat = S2HAT_params.Global_param_s2hat;
-    S2HAT_LOCAL_parameters *Local_param_s2hat = S2HAT_params.Local_param_s2hat;
+    S2HAT_GLOBAL_parameters *Global_param_s2hat = &(S2HAT_params.Global_param_s2hat);
+    S2HAT_LOCAL_parameters *Local_param_s2hat = &(S2HAT_params.Local_param_s2hat);
     int first_ring = Local_param_s2hat->first_ring;
     printf("Test verif3 : %d %ld \n", first_ring, Global_param_s2hat->pixelization_scheme.fpix[first_ring-1]); fflush(stdout);
     printf("###### Test4 - %ld \n", Local_param_s2hat->pixel_numbered_ring[0]);
@@ -2997,8 +2998,8 @@ int main_pixel_scheme_transition_v1(int argc, char** argv){
     return 0;
 }
 
-// int main_pixel_scheme_transition_v2(int argc, char** argv){
-int main(int argc, char** argv){
+int main_pixel_scheme_transition_v2(int argc, char** argv){
+// int main(int argc, char** argv){
     // char *path_mask = "/global/cscratch1/sd/mag/Masks_files/SO_wH.fits";
 
     char *path_mask = "/global/cscratch1/sd/mag/Masks_files/No_Mask.fits";
