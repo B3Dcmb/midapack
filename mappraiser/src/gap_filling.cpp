@@ -16,6 +16,63 @@
 #include <complex>
 #include <fftw3.h>
 #include <iostream>
+#include <numeric>
+
+mappraiser::GapFillInfo::GapFillInfo(int a, int b) : n_blocks(a), current_block(0), n_gaps(b) {
+    nbIterations.resize(n_blocks);
+    times.resize(n_blocks);
+    validFracs.resize(n_blocks);
+}
+
+void mappraiser::GapFillInfo::timer_start() { _start = std::chrono::system_clock::now(); }
+
+void mappraiser::GapFillInfo::timer_stop() { _end = std::chrono::system_clock::now(); }
+
+double mappraiser::GapFillInfo::elapsed_seconds() {
+    // compute duration
+    auto elapsed = _end - _start;
+
+    // convert in seconds
+    auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed);
+
+    // return elapsed seconds
+    return static_cast<double>(milliseconds.count()) / 1000;
+}
+
+double mappraiser::GapFillInfo::get_mean_iterations() {
+    double sum = std::accumulate(nbIterations.begin(), nbIterations.end(), 0.0);
+    return sum / static_cast<double>(nbIterations.size());
+}
+
+double mappraiser::GapFillInfo::get_mean_seconds() {
+    double sum = std::accumulate(times.begin(), times.end(), 0.0);
+    return sum / static_cast<double>(times.size());
+}
+
+void mappraiser::GapFillInfo::print_recap() {
+    if (n_gaps == 0) {
+        std::cout << "no local gaps (100% valid samples)" << std::endl;
+    } else {
+        const auto minmax_iter    = std::minmax_element(nbIterations.begin(), nbIterations.end());
+        const auto minmax_seconds = std::minmax_element(times.begin(), times.end());
+        std::cout << "blocks = " << n_blocks << std::endl
+                  << "  iter/block = " << get_mean_iterations() << std::endl
+                  << "         min = " << *minmax_iter.first << " (block "
+                  << std::distance(nbIterations.begin(), minmax_iter.first) << ")" << std::endl
+                  << "         max = " << *minmax_iter.second << " (block "
+                  << std::distance(nbIterations.begin(), minmax_iter.second) << ")" << std::endl
+                  << "  time/block = " << get_mean_seconds() << " s" << std::endl
+                  << "         min = " << *minmax_seconds.first << " s (block "
+                  << std::distance(times.begin(), minmax_seconds.first) << ")" << std::endl
+                  << "         max = " << *minmax_seconds.second << " s (block "
+                  << std::distance(times.begin(), minmax_seconds.second) << ")" << std::endl;
+    }
+}
+
+void mappraiser::GapFillInfo::print_recap(const std::string &pref) {
+    std::cout << pref << " ";
+    print_recap();
+}
 
 void mappraiser::psd_from_tt(int fftlen, int lambda, int psdlen, const double *tt, std::vector<double> &psd,
                              double rate) {
@@ -243,9 +300,12 @@ void mappraiser::sim_noise_tod(int samples, int lambda, const double *tt, std::v
     fftw_destroy_plan(p);
 }
 
-void mappraiser::sim_constrained_noise_block(Tpltz *N_block, Tpltz *Nm1_block, double *noise, Gap *gaps,
-                                             u_int64_t realization, u_int64_t detindx, u_int64_t obsindx,
-                                             u_int64_t telescope, bool verbose) {
+void mappraiser::sim_constrained_noise_block(mappraiser::GapFillInfo &gfi, Tpltz *N_block, Tpltz *Nm1_block,
+                                             double *noise, Gap *gaps, u_int64_t realization, u_int64_t detindx,
+                                             u_int64_t obsindx, u_int64_t telescope) {
+    // start a timer
+    gfi.timer_start();
+
     // get the number of samples, the global first index and the bandwidth
     const int  samples = N_block->tpltzblocks[0].n;
     const auto id0     = static_cast<size_t>(N_block->tpltzblocks[0].idv);
@@ -259,14 +319,11 @@ void mappraiser::sim_constrained_noise_block(Tpltz *N_block, Tpltz *Nm1_block, d
     std::vector<bool> valid(samples);
     int               n_good = mappraiser::find_valid_samples(gaps, id0, valid);
 
-    if (verbose)
-        std::cout << "  proportion of valid samples = " << std::ceil(100 * n_good / samples) << " %" << std::endl;
+    gfi.store_validFrac(std::ceil(100 * n_good / samples));
 
     // remove baseline (moving average)
     std::vector<double> baseline(samples);
     mappraiser::remove_baseline(rhs, baseline, valid, true);
-
-    if (verbose) std::cout << "  removed baseline" << std::endl;
 
     /*
         // compute the mean (from valid samples)
@@ -286,22 +343,17 @@ void mappraiser::sim_constrained_noise_block(Tpltz *N_block, Tpltz *Nm1_block, d
     mappraiser::sim_noise_tod(samples, lambda, N_block->tpltzblocks[0].T_block, xi, realization, detindx, obsindx,
                               telescope, -1.0, false);
 
-    if (verbose) std::cout << "  generated random noise realization" << std::endl;
-
     // rhs = noise - xi
     for (int i = 0; i < samples; ++i) { rhs[i] -= xi[i]; }
 
     // invert the system N x = (noise - xi)
-    if (verbose) std::cout << "  inverting Toeplitz system with PCG..." << std::endl;
-
-    apply_weights(Nm1_block, N_block, gaps, rhs.data(), ITER, false);
+    int nb_iterations = apply_weights(Nm1_block, N_block, gaps, rhs.data(), ITER, false);
+    gfi.store_nbIterations(nb_iterations);
 
     // compute the constrained realization
     std::vector<double> constrained(samples);
     std::copy(rhs.begin(), rhs.end(), constrained.begin());
     stbmmProd(N_block, constrained.data());
-
-    if (verbose) std::cout << "  computed full constrained realization" << std::endl;
 
     int c = 0; // to go through baseline vector
 
@@ -318,43 +370,81 @@ void mappraiser::sim_constrained_noise_block(Tpltz *N_block, Tpltz *Nm1_block, d
 
     // copy final result into noise vector
     std::copy(constrained.begin(), constrained.end(), noise);
+
+    // stop timer and store elapsed seconds for this block
+    gfi.timer_stop();
+    gfi.store_time();
 }
 
-void mappraiser::sim_constrained_noise(Tpltz *N, Tpltz *Nm1, double *noise, Gap *gaps, u_int64_t realization,
-                                       const u_int64_t *detindxs, const u_int64_t *obsindxs,
-                                       const u_int64_t *telescopes, bool verbose) {
-    // Loop through toeplitz blocks
-    int     t_id = 0;
-    double *noise_block;
-    Tpltz   N_block, Nm1_block;
+void mappraiser::sim_constrained_noise(mappraiser::GapFillInfo &gfi, Tpltz *N, Tpltz *Nm1, double *noise, Gap *gaps,
+                                       u_int64_t realization, const u_int64_t *detindxs, const u_int64_t *obsindxs,
+                                       const u_int64_t *telescopes) {
+    if (gfi.n_gaps == 0) {
+        // nothing to do
+        return;
+    } else {
+        // Loop through toeplitz blocks
+        int     t_id = 0;
+        double *noise_block;
+        Tpltz   N_block, Nm1_block;
 
-    for (int i = 0; i < N->nb_blocks_loc; ++i) {
-        if (verbose) std::cout << "Processing block n° " << i << std::endl;
+        for (int i = 0; i < N->nb_blocks_loc; ++i) {
+            // define single-block Tpltz structures
+            set_tpltz_struct(&N_block, N, &N->tpltzblocks[i]);
+            set_tpltz_struct(&Nm1_block, Nm1, &Nm1->tpltzblocks[i]);
 
-        // define single-block Tpltz structures
-        set_tpltz_struct(&N_block, N, &N->tpltzblocks[i]);
-        set_tpltz_struct(&Nm1_block, Nm1, &Nm1->tpltzblocks[i]);
+            // pointer to current block in the tod
+            noise_block = (noise + t_id);
 
-        // pointer to current block in the tod
-        noise_block = (noise + t_id);
+            // compute a constrained noise realization for this block
+            gfi.set_current_block(i);
+            mappraiser::sim_constrained_noise_block(gfi, &N_block, &Nm1_block, noise_block, gaps, realization,
+                                                    detindxs[i], obsindxs[i], telescopes[i]);
 
-        // compute a constrained noise realization for the current block
-        mappraiser::sim_constrained_noise_block(&N_block, &Nm1_block, noise_block, gaps, realization, detindxs[i],
-                                                obsindxs[i], telescopes[i], verbose);
-
-        t_id += N->tpltzblocks[i].n;
+            t_id += N->tpltzblocks[i].n;
+        }
     }
 }
 
-void sim_constrained_noise(Tpltz *N, Tpltz *Nm1, double *noise, Gap *gaps, u_int64_t realization,
-                           const u_int64_t *detindxs, const u_int64_t *obsindxs, const u_int64_t *telescopes,
-                           bool verbose) {
-    if (gaps->ngap == 0)
-        // nothing to do!
-        return;
-    else
-        // run gap-filling routine
-        mappraiser::sim_constrained_noise(N, Nm1, noise, gaps, realization, detindxs, obsindxs, telescopes, verbose);
+void perform_gap_filling(MPI_Comm comm, Tpltz *N, Tpltz *Nm1, double *noise, Gap *gaps, u_int64_t realization,
+                         const u_int64_t *detindxs, const u_int64_t *obsindxs, const u_int64_t *telescopes,
+                         bool verbose) {
+    int rank, size;
+    MPI_Comm_rank(comm, &rank);
+    MPI_Comm_size(comm, &size);
+
+    if (rank == 0) {
+        std::cout << "[rank " << rank << "] starting gap filling routine" << std::endl;
+        fflush(stdout);
+    }
+
+    double st = MPI_Wtime();
+
+    mappraiser::GapFillInfo gfi(N->nb_blocks_loc, gaps->ngap);
+    mappraiser::sim_constrained_noise(gfi, N, Nm1, noise, gaps, realization, detindxs, obsindxs, telescopes);
+
+    MPI_Barrier(comm);
+    double t = MPI_Wtime();
+
+    if (rank == 0) {
+        std::cout << "[rank " << rank << "] performed gap filling in " << t - st << " seconds (all procs)" << std::endl;
+        fflush(stdout);
+    }
+
+    if (verbose) {
+        if (rank == 0) std::cout << "--- gap filling recap ---" << std::endl;
+        int proc = 0;
+        while (proc < size) {
+            if (proc == rank) {
+                // print recap
+                std::string prefix = "[rank " + std::to_string(rank) + "]";
+                gfi.print_recap(prefix);
+                fflush(stdout);
+            }
+            MPI_Barrier(comm);
+            ++proc;
+        }
+    }
 }
 
 void gap_filling(MPI_Comm comm, const int *data_size_proc, int nb_blocks_loc, int *local_blocks_sizes, int nnz,
@@ -398,7 +488,7 @@ void gap_filling(MPI_Comm comm, const int *data_size_proc, int nb_blocks_loc, in
     Gap G;
 
     // fake pointing weights
-    double *weights = (double *) (calloc(m, sizeof *weights));
+    auto *weights = (double *) (calloc(m, sizeof(double)));
 
     A.trash_pix = 0;
     MatInit(&A, m, nnz, indices, weights, 6, comm);
@@ -415,8 +505,8 @@ void gap_filling(MPI_Comm comm, const int *data_size_proc, int nb_blocks_loc, in
     }
 
     MatFree(&A);
-    A.indices = NULL;
-    A.values  = NULL;
+    A.indices = nullptr;
+    A.values  = nullptr;
 
     // Build Toeplitz matrices
     MPI_Barrier(comm);
@@ -446,7 +536,7 @@ void gap_filling(MPI_Comm comm, const int *data_size_proc, int nb_blocks_loc, in
     MPI_Barrier(comm);
     double start = MPI_Wtime();
 
-    sim_constrained_noise(&N, &Nm1, noise, &G, realization, detindxs, obsindxs, telescopes, rank == 0);
+    perform_gap_filling(comm, &N, &Nm1, noise, &G, realization, detindxs, obsindxs, telescopes, true);
 
     MPI_Barrier(comm);
     double end = MPI_Wtime();

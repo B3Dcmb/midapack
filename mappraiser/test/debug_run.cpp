@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
 
     // Run parameters
 
-    const int       solver            = 1;
+    const int       solver            = 0;
     const int       precond           = 0;
     const int       Z_2lvl            = 0;
     const int       pointing_commflag = 6;
@@ -93,7 +93,7 @@ int main(int argc, char *argv[]) {
 
     if (rank == 0) std::cout << "Loading data from " << data_path << "..." << std::endl;
 
-    //    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(MPI_COMM_WORLD);
 
     // data distribution
 
@@ -109,8 +109,8 @@ int main(int argc, char *argv[]) {
     fillArrayFromFile(fname.c_str(), local_blocks_sizes.data(), local_blocks_sizes.size(),
                       sizeof(local_blocks_sizes[0]));
 
-    MPI_Barrier(MPI_COMM_WORLD);
-    if (rank == 0) std::cout << "  loaded local_blocks_sizes" << std::endl;
+    //    MPI_Barrier(MPI_COMM_WORLD);
+    //    if (rank == 0) std::cout << "  loaded local_blocks_sizes" << std::endl;
 
     // pixels
 
@@ -118,8 +118,8 @@ int main(int argc, char *argv[]) {
     fname = data_path + "/pixels_" + std::to_string(rank) + ".bin";
     fillArrayFromFile(fname.c_str(), pix.data(), pix.size(), sizeof(pix[0]));
 
-    MPI_Barrier(MPI_COMM_WORLD);
-    if (rank == 0) std::cout << "  loaded pixels" << std::endl;
+    //    MPI_Barrier(MPI_COMM_WORLD);
+    //    if (rank == 0) std::cout << "  loaded pixels" << std::endl;
 
     // pixweights
 
@@ -127,8 +127,8 @@ int main(int argc, char *argv[]) {
     fname = data_path + "/pixweights_" + std::to_string(rank) + ".bin";
     fillArrayFromFile(fname.c_str(), pixweights.data(), pixweights.size(), sizeof(pixweights[0]));
 
-    MPI_Barrier(MPI_COMM_WORLD);
-    if (rank == 0) std::cout << "  loaded pixweights" << std::endl;
+    //    MPI_Barrier(MPI_COMM_WORLD);
+    //    if (rank == 0) std::cout << "  loaded pixweights" << std::endl;
 
     // signal
 
@@ -136,8 +136,8 @@ int main(int argc, char *argv[]) {
     fname = data_path + "/signal_" + std::to_string(rank) + ".bin";
     fillArrayFromFile(fname.c_str(), signal.data(), signal.size(), sizeof(signal[0]));
 
-    MPI_Barrier(MPI_COMM_WORLD);
-    if (rank == 0) std::cout << "  loaded signal" << std::endl;
+    //    MPI_Barrier(MPI_COMM_WORLD);
+    //    if (rank == 0) std::cout << "  loaded signal" << std::endl;
 
     // noise
 
@@ -147,8 +147,8 @@ int main(int argc, char *argv[]) {
 
     if (noiseless_run) std::fill(noise.begin(), noise.end(), 0);
 
-    MPI_Barrier(MPI_COMM_WORLD);
-    if (rank == 0) std::cout << "  loaded noise" << std::endl;
+    //    MPI_Barrier(MPI_COMM_WORLD);
+    //    if (rank == 0) std::cout << "  loaded noise" << std::endl;
 
     // invtt
 
@@ -156,8 +156,8 @@ int main(int argc, char *argv[]) {
     fname = data_path + "/invtt_" + std::to_string(rank) + ".bin";
     fillArrayFromFile(fname.c_str(), inv_tt.data(), inv_tt.size(), sizeof(inv_tt[0]));
 
-    MPI_Barrier(MPI_COMM_WORLD);
-    if (rank == 0) std::cout << "  loaded inv_tt" << std::endl;
+    //    MPI_Barrier(MPI_COMM_WORLD);
+    //    if (rank == 0) std::cout << "  loaded inv_tt" << std::endl;
 
     // tt
 
@@ -165,8 +165,8 @@ int main(int argc, char *argv[]) {
     fname = data_path + "/tt_" + std::to_string(rank) + ".bin";
     fillArrayFromFile(fname.c_str(), tt.data(), tt.size(), sizeof(tt[0]));
 
-    MPI_Barrier(MPI_COMM_WORLD);
-    if (rank == 0) std::cout << "  loaded tt" << std::endl;
+    //    MPI_Barrier(MPI_COMM_WORLD);
+    //    if (rank == 0) std::cout << "  loaded tt" << std::endl;
 
     // detindxs
 
@@ -174,8 +174,8 @@ int main(int argc, char *argv[]) {
     fname = data_path + "/detindxs_" + std::to_string(rank) + ".bin";
     fillArrayFromFile(fname.c_str(), detindxs.data(), detindxs.size(), sizeof(detindxs[0]));
 
-    MPI_Barrier(MPI_COMM_WORLD);
-    if (rank == 0) std::cout << "  loaded detindxs" << std::endl;
+    //    MPI_Barrier(MPI_COMM_WORLD);
+    //    if (rank == 0) std::cout << "  loaded detindxs" << std::endl;
 
     // obsindxs
 
@@ -183,8 +183,8 @@ int main(int argc, char *argv[]) {
     fname = data_path + "/obsindxs_" + std::to_string(rank) + ".bin";
     fillArrayFromFile(fname.c_str(), obsindxs.data(), obsindxs.size(), sizeof(obsindxs[0]));
 
-    MPI_Barrier(MPI_COMM_WORLD);
-    if (rank == 0) std::cout << "  loaded obsindxs" << std::endl;
+    //    MPI_Barrier(MPI_COMM_WORLD);
+    //    if (rank == 0) std::cout << "  loaded obsindxs" << std::endl;
 
     // telescopes
 
@@ -192,14 +192,16 @@ int main(int argc, char *argv[]) {
     fname = data_path + "/telescopes_" + std::to_string(rank) + ".bin";
     fillArrayFromFile(fname.c_str(), telescopes.data(), telescopes.size(), sizeof(telescopes[0]));
 
-    MPI_Barrier(MPI_COMM_WORLD);
-    if (rank == 0) std::cout << "  loaded telescopes" << std::endl;
+    //    MPI_Barrier(MPI_COMM_WORLD);
+    //    if (rank == 0) std::cout << "  loaded telescopes" << std::endl;
 
     //____________________________________________________________
     // Call MLmap
 
     char *outpath = (char *) output_path.c_str();
     char *ref     = (char *) "run0";
+
+    MPI_Barrier(MPI_COMM_WORLD);
 
     MLmap(MPI_COMM_WORLD, outpath, ref, solver, precond, Z_2lvl, pointing_commflag, tol, maxiter, enlFac, ortho_alg,
           bs_red, nside, gap_stgy, realization, data_size_proc.data(), nb_blocks_loc, local_blocks_sizes.data(),

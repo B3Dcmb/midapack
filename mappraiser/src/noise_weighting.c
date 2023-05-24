@@ -28,8 +28,9 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
  * @param N Toeplitz noise covariance
  * @param Gaps timestream gaps
  * @param tod data vector
+ * @return number of PCG iterations if there is a single data block, 0 otherwise
  */
-void apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod, WeightStgy stgy, bool verbose) {
+int apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod, WeightStgy stgy, bool verbose) {
     int t_id = 0; // time sample index in local data
 
     int rank, size;
@@ -55,6 +56,8 @@ void apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod, WeightStgy stgy
             // (no det-det correlations for now)
             stbmmProd(Nm1, tod);
         }
+        return 0;
+
     } else {
         // we want to do a nested PCG
         // i.e. iteratively solve Nx=b to apply the noise weights
@@ -116,10 +119,12 @@ void apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod, WeightStgy stgy
                 // update our index of local samples
                 t_id += block.n;
             }
+            return 0;
 
         } else {
 
             PCG_single_block(N, Nm1, Gaps, tod, NULL, &si, ignore_gaps);
+            return si.n_iter;
         }
 
         if (si.store_hist) solverinfo_free(&si);

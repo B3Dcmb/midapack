@@ -54,6 +54,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
 
     build_precond(&p, &pixpond, &n, A, Nm1, &x, b, noise, cond, lhits, tol, Z_2lvl, precond, Gaps, gif);
 
+    MPI_Barrier(A->comm);
     t = MPI_Wtime();
     if (rank == 0) {
         printf("[rank %d] Preconditioner computation time = %lf\n", rank, t - st);
@@ -68,38 +69,35 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
     switch (gap_stgy) {
         case 0:
             // perfect noise reconstruction
-            if (rank == 0) printf("[proc %d] gap_stgy = %d (perfect noise reconstruction)\n", rank, gap_stgy);
+            if (rank == 0) printf("[rank %d] gap_stgy = %d (perfect noise reconstruction)\n", rank, gap_stgy);
             strategy = BASIC;
             break;
         case 1:
             // gap filling with constrained noise realization
-            if (rank == 0) printf("[proc %d] gap_stgy = %d (gap filling)... ", rank, gap_stgy);
-            st = MPI_Wtime();
-            sim_constrained_noise(N, Nm1, noise, Gaps, realization, detindxs, obsindxs, telescopes, false);
-            t = MPI_Wtime();
-            if (rank == 0) printf("gaps filled in %lf seconds\n", t - st);
+            if (rank == 0) printf("[rank %d] gap_stgy = %d (gap filling)\n", rank, gap_stgy);
+            perform_gap_filling(A->comm, N, Nm1, noise, Gaps, realization, detindxs, obsindxs, telescopes, true);
             strategy = BASIC;
             break;
         case 2:
             // nested PCG
-            if (rank == 0) printf("[proc %d] gap_stgy = %d (nested PCG)\n", rank, gap_stgy);
+            if (rank == 0) printf("[rank %d] gap_stgy = %d (nested PCG)\n", rank, gap_stgy);
             strategy = ITER;
             break;
         case 3:
             // gap filling + nested PCG (ignoring gaps)
-            if (rank == 0) printf("[proc %d] gap_stgy = %d (gap filling + nested PCG)... ", rank, gap_stgy);
-            st = MPI_Wtime();
-            sim_constrained_noise(N, Nm1, noise, Gaps, realization, detindxs, obsindxs, telescopes, false);
-            t = MPI_Wtime();
-            if (rank == 0) printf("gaps filled in %lf seconds\n", t - st);
+            if (rank == 0) printf("[rank %d] gap_stgy = %d (gap filling + nested PCG)\n", rank, gap_stgy);
+            perform_gap_filling(A->comm, N, Nm1, noise, Gaps, realization, detindxs, obsindxs, telescopes, true);
             strategy = ITER_IGNORE;
             break;
         default:
-            if (rank == 0) printf("[proc %d] invalid gap_stgy (%d), defaulting to 0\n", rank, gap_stgy);
+            if (rank == 0) printf("[rank %d] invalid gap_stgy (%d), defaulting to 0\n", rank, gap_stgy);
             gap_stgy = 0;
             strategy = BASIC;
     }
     fflush(stdout);
+    MPI_Barrier(A->comm);
+
+    if (rank == 0) printf("\n[rank %d] Start iterating\n", rank);
 
     // map domain objects memory allocation
     h       = (double *) malloc(n * sizeof(double)); // descent direction
