@@ -42,11 +42,11 @@ int main(int argc, char *argv[]) {
 
     char datapath[1024];
     strcpy(datapath, directory);
-    strcat(datapath, "/../../../../mappraiser/src/test/data_bin/");
+    strcat(datapath, "/../../../mappraiser/test/data_bin/");
 
     char outpath[1024];
     strcpy(outpath, directory);
-    strcat(outpath, "/../../../../mappraiser/src/test/out_ecg_debug");
+    strcat(outpath, "/../../../mappraiser/test/out_ecg_debug");
 
     // proc 0 will create the output directory
     if (rank == 0) {
