@@ -79,7 +79,8 @@ void mappraiser::GapFillInfo::print_recap() const {
 
 void mappraiser::GapFillInfo::print_curr_block() const {
     std::cout << "[id " << _id << "] block = " << current_block << "/" << n_blocks
-              << "; time = " << times[current_block] << "; n_iter = " << nbIterations[current_block] << std::endl;
+              << "; time = " << times[current_block] << "; n_iter = " << nbIterations[current_block]
+              << "; valid fraction = " << validFracs[current_block] << std::endl;
 }
 
 void mappraiser::psd_from_tt(int fftlen, int lambda, int psdlen, const double *tt, std::vector<double> &psd,
