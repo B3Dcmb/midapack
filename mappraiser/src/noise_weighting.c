@@ -9,11 +9,19 @@
 #include "mappraiser/noise_weighting.h"
 #include "mappraiser/solver_info.h"
 
+#ifndef NDEBUG
+#include <assert.h>
+#endif
+
 #include <mpi.h>
 #include <stdbool.h>
 #include <stdlib.h>
 
 void reset_tod_gaps(double *tod, Tpltz *N, Gap *Gaps);
+
+void reset_block_gaps(double *tod, Tpltz *tmat_block, Gap *gaps);
+
+void gappy_tpltz_mult(Tpltz *tmat_block, double *tod, Gap *gaps);
 
 void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_block, const double *x0, SolverInfo *si,
                       bool ignore_gaps);
@@ -148,6 +156,49 @@ void set_tpltz_struct(Tpltz *single_block_struct, Tpltz *full_struct, Block *blo
     single_block_struct->comm          = full_struct->comm;
 }
 
+void reset_tod_gaps(double *tod, Tpltz *N, Gap *Gaps) {
+#ifdef DEBUG
+    double start = MPI_Wtime();
+#endif
+    reset_gaps(&tod, N->idp, N->local_V_size, N->m_cw, N->nrow, N->m_rw, Gaps->id0gap, Gaps->lgap, Gaps->ngap);
+#ifdef DEBUG
+    double duration = MPI_Wtime() - start;
+    printf(" reset_tod_gaps (size=%d) in %lf seconds\n", N->local_V_size, duration);
+    fflush(stdout);
+#endif
+}
+
+void reset_block_gaps(double *tod, Tpltz *tmat_block, Gap *gaps) {
+    // useful quantities
+    int64_t idv = tmat_block->tpltzblocks[0].idv; // global row index of data block
+    int     n   = tmat_block->tpltzblocks[0].n;   // size of data block
+
+    int64_t id0g; // variable to store position of first gap sample
+    int     lg;   // variable to store gap length
+
+    // loop over the gaps
+    for (int i = 0; i < gaps->ngap; ++i) {
+        id0g = gaps->id0gap[i];
+        lg   = gaps->lgap[i];
+        // check if gap is relevant for the given data block
+        if (idv < id0g + lg && id0g < idv + n) {
+            for (int64_t j = id0g; j < id0g + lg; ++j) {
+                // set intersection of tod and gap to zero
+                if (idv <= j && j < n + idv) tod[j - idv] = 0;
+            }
+        }
+    }
+}
+
+void gappy_tpltz_mult(Tpltz *tmat_block, double *tod, Gap *gaps) {
+#ifndef NDEBUG
+    assert(tmat_block->nb_blocks_loc == 1);
+#endif
+    reset_block_gaps(tod, tmat_block, gaps);
+    stbmmProd(tmat_block, tod);
+    reset_block_gaps(tod, tmat_block, gaps);
+}
+
 /**
  * @brief Iteratively solve Nx=b in order to compute an inverse noise-weighted timestream.
  * Here it is assumed that we work with a single toeplitz block.
@@ -161,6 +212,9 @@ void set_tpltz_struct(Tpltz *single_block_struct, Tpltz *full_struct, Block *blo
  */
 void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_block, const double *x0, SolverInfo *si,
                       bool ignore_gaps) {
+#ifndef NDEBUG
+    assert(N_block->nb_blocks_loc == 1 && Nm1_block->nb_blocks_loc == 1);
+#endif
     // initialize the SolverInfo struct
     solverinfo_init(si);
 
@@ -195,7 +249,8 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
     si->start_time = MPI_Wtime();
 
     // reset gaps of the rhs
-    if (!ignore_gaps) reset_tod_gaps(tod_block, N_block, Gaps);
+    // if (!ignore_gaps) reset_tod_gaps(tod_block, N_block, Gaps);
+    if (!ignore_gaps) reset_block_gaps(tod_block, N_block, Gaps);
 
     _r = malloc((sizeof *_r) * m);
     r  = malloc((sizeof *r) * m);
@@ -236,14 +291,16 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
         stbmmProd(N_block, _r);
 #ifdef DEBUG
         t = MPI_Wtime();
-        printf(" (pcg) 1st call to stbmmProd (size=%d) in %lf seconds\n", N_block->local_V_size, t - st);
+        printf(" (pcg) 1st call to stbmmProd (size=%d) in %lf seconds\n", m, t - st);
         fflush(stdout);
 #endif
     } else {
-        gstbmmProd(N_block, _r, Gaps);
+        // gstbmmProd(N_block, _r, Gaps);
+        gappy_tpltz_mult(N_block, _r, Gaps);
 #ifdef DEBUG
         t = MPI_Wtime();
-        printf(" (pcg) 1st call to gstbmmProd (size=%d) in %lf seconds\n", N_block->local_V_size, t - st);
+        // printf(" (pcg) 1st call to gstbmmProd (size=%d) in %lf seconds\n", m, t - st);
+        printf(" (pcg) 1st call to gappy_tpltz_mult (size=%d) in %lf seconds\n", m, t - st);
         fflush(stdout);
 #endif
     }
@@ -288,8 +345,10 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
         for (int i = 0; i < m; ++i) z[i] = r[i];
 
         if (ignore_gaps) stbmmProd(Nm1_block, z);
-        else
-            gstbmmProd(Nm1_block, z, Gaps);
+        else {
+            // gstbmmProd(Nm1_block, z, Gaps);
+            gappy_tpltz_mult(Nm1_block, z, Gaps);
+        }
 
         // set initial search direction (p0 = z0)
         for (int i = 0; i < m; ++i) p[i] = z[i];
@@ -303,8 +362,10 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
             for (int i = 0; i < m; ++i) _r[i] = p[i];
 
             if (ignore_gaps) stbmmProd(N_block, _r);
-            else
-                gstbmmProd(N_block, _r, Gaps);
+            else {
+                // gstbmmProd(N_block, _r, Gaps);
+                gappy_tpltz_mult(N_block, _r, Gaps);
+            }
 
             // compute alpha = (r,z)/(p,Np)
             coef_1 = 0.0; // (r,z)
@@ -329,8 +390,10 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
 
             // apply preconditioner (z = M^{-1} r)
             if (ignore_gaps) stbmmProd(Nm1_block, z);
-            else
-                gstbmmProd(Nm1_block, z, Gaps);
+            else {
+                // gstbmmProd(Nm1_block, z, Gaps);
+                gappy_tpltz_mult(Nm1_block, z, Gaps);
+            }
 
             // compute coeff for new search direction
             coef_2 = 0.0; // new (r,z)
@@ -364,18 +427,6 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
     }
 
     solverinfo_finalize(si);
-}
-
-void reset_tod_gaps(double *tod, Tpltz *N, Gap *Gaps) {
-#ifdef DEBUG
-    double start = MPI_Wtime();
-#endif
-    reset_gaps(&tod, N->idp, N->local_V_size, N->m_cw, N->nrow, N->m_rw, Gaps->id0gap, Gaps->lgap, Gaps->ngap);
-#ifdef DEBUG
-    double duration = MPI_Wtime() - start;
-    printf(" reset_tod_gaps (size=%d) in %lf seconds\n", N->local_V_size, duration);
-    fflush(stdout);
-#endif
 }
 
 /*
