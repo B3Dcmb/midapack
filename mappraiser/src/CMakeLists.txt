@@ -2,6 +2,9 @@
 
 add_library(mappraiser SHARED)
 
+# define DEBUG symbol if compiling in Debug build type
+target_compile_definitions(mappraiser PRIVATE "$<$<CONFIG:DEBUG>:DEBUG>")
+
 # ----------------------------------------------------------------------------------------#
 # sources files
 # ----------------------------------------------------------------------------------------#

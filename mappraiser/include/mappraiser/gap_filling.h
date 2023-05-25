@@ -14,16 +14,17 @@ namespace mappraiser {
     class GapFillInfo {
     public:
         GapFillInfo(int, int);
+        GapFillInfo(int, int, int);
 
         void   timer_start();
         void   timer_stop();
-        double elapsed_seconds();
+        double elapsed_seconds() const;
 
-        double get_mean_iterations();
-        double get_mean_seconds();
+        double get_mean_iterations() const;
+        double get_mean_seconds() const;
 
-        void print_recap();
-        void print_recap(const std::string &pref);
+        void print_recap() const;
+        void print_curr_block() const;
 
         void set_current_block(int i) { current_block = i; }
 
@@ -31,6 +32,7 @@ namespace mappraiser {
         void store_time() { times[current_block] = elapsed_seconds(); }
         void store_validFrac(double f) { validFracs[current_block] = f; }
 
+        const int n_gaps; // number of local timestream gaps
     private:
         int n_blocks;      // number of data blocks to treat
         int current_block; // current block index
@@ -43,8 +45,8 @@ namespace mappraiser {
         std::chrono::time_point<std::chrono::system_clock> _start;
         std::chrono::time_point<std::chrono::system_clock> _end;
 
-    public:
-        const int n_gaps; // number of local timestream gaps
+        // internal id for printing
+        int _id;
     };
 
     void psd_from_tt(int fftlen, int lambda, int psdlen, const double *tt, std::vector<double> &psd,

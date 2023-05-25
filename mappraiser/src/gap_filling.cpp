@@ -18,7 +18,14 @@
 #include <iostream>
 #include <numeric>
 
-mappraiser::GapFillInfo::GapFillInfo(int a, int b) : n_blocks(a), current_block(0), n_gaps(b) {
+mappraiser::GapFillInfo::GapFillInfo(int blocks, int gaps) : n_gaps(gaps), n_blocks(blocks), current_block(0), _id(0) {
+    nbIterations.resize(n_blocks);
+    times.resize(n_blocks);
+    validFracs.resize(n_blocks);
+}
+
+mappraiser::GapFillInfo::GapFillInfo(int blocks, int gaps, int id)
+    : n_gaps(gaps), n_blocks(blocks), current_block(0), _id(id) {
     nbIterations.resize(n_blocks);
     times.resize(n_blocks);
     validFracs.resize(n_blocks);
@@ -28,7 +35,7 @@ void mappraiser::GapFillInfo::timer_start() { _start = std::chrono::system_clock
 
 void mappraiser::GapFillInfo::timer_stop() { _end = std::chrono::system_clock::now(); }
 
-double mappraiser::GapFillInfo::elapsed_seconds() {
+double mappraiser::GapFillInfo::elapsed_seconds() const {
     // compute duration
     auto elapsed = _end - _start;
 
@@ -39,17 +46,18 @@ double mappraiser::GapFillInfo::elapsed_seconds() {
     return static_cast<double>(milliseconds.count()) / 1000;
 }
 
-double mappraiser::GapFillInfo::get_mean_iterations() {
+double mappraiser::GapFillInfo::get_mean_iterations() const {
     double sum = std::accumulate(nbIterations.begin(), nbIterations.end(), 0.0);
     return sum / static_cast<double>(nbIterations.size());
 }
 
-double mappraiser::GapFillInfo::get_mean_seconds() {
+double mappraiser::GapFillInfo::get_mean_seconds() const {
     double sum = std::accumulate(times.begin(), times.end(), 0.0);
     return sum / static_cast<double>(times.size());
 }
 
-void mappraiser::GapFillInfo::print_recap() {
+void mappraiser::GapFillInfo::print_recap() const {
+    std::cout << "[id " << _id << "] ";
     if (n_gaps == 0) {
         std::cout << "no local gaps (100% valid samples)" << std::endl;
     } else {
@@ -69,9 +77,8 @@ void mappraiser::GapFillInfo::print_recap() {
     }
 }
 
-void mappraiser::GapFillInfo::print_recap(const std::string &pref) {
-    std::cout << pref << " ";
-    print_recap();
+void mappraiser::GapFillInfo::print_curr_block() const {
+    std::cout << "[id " << _id << "] current_block = " << current_block << std::endl;
 }
 
 void mappraiser::psd_from_tt(int fftlen, int lambda, int psdlen, const double *tt, std::vector<double> &psd,
@@ -402,6 +409,11 @@ void mappraiser::sim_constrained_noise(mappraiser::GapFillInfo &gfi, Tpltz *N, T
                                                     detindxs[i], obsindxs[i], telescopes[i]);
 
             t_id += N->tpltzblocks[i].n;
+
+#ifdef DEBUG
+            gfi.print_curr_block();
+            fflush(stdout);
+#endif
         }
     }
 }
@@ -420,7 +432,7 @@ void perform_gap_filling(MPI_Comm comm, Tpltz *N, Tpltz *Nm1, double *noise, Gap
 
     double st = MPI_Wtime();
 
-    mappraiser::GapFillInfo gfi(N->nb_blocks_loc, gaps->ngap);
+    mappraiser::GapFillInfo gfi(N->nb_blocks_loc, gaps->ngap, rank);
     mappraiser::sim_constrained_noise(gfi, N, Nm1, noise, gaps, realization, detindxs, obsindxs, telescopes);
 
     MPI_Barrier(comm);
@@ -437,8 +449,7 @@ void perform_gap_filling(MPI_Comm comm, Tpltz *N, Tpltz *Nm1, double *noise, Gap
         while (proc < size) {
             if (proc == rank) {
                 // print recap
-                std::string prefix = "[rank " + std::to_string(rank) + "]";
-                gfi.print_recap(prefix);
+                gfi.print_recap();
                 fflush(stdout);
             }
             MPI_Barrier(comm);
