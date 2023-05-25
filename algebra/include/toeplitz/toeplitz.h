@@ -274,7 +274,7 @@ int stbmm(double **V, int nrow, int m_cw, int m_rw, Block *tpltzblocks, int nb_b
 int gstbmm(double **V, int nrow, int m_cw, int m_rw, Block *tpltzblocks, int nb_blocks, int64_t idp, int local_V_size,
            int64_t *id0gap, int *lgap, int ngap, Flag flag_stgy);
 
-int reset_gaps(double **V, int id0, int local_V_size, int m, int nrow, int m_rowwise, const int64_t *id0gap,
+int reset_gaps(double **V, int64_t id0, int local_V_size, int m, int64_t nrow, int m_rowwise, const int64_t *id0gap,
                const int *lgap, int ngap);
 
 // Mpi routines (group 12)

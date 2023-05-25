@@ -239,6 +239,10 @@ void mappraiser::remove_baseline(std::vector<double> &buf, std::vector<double> &
 void mappraiser::sim_noise_tod(int samples, int lambda, const double *tt, std::vector<double> &buf,
                                u_int64_t realization, u_int64_t detindx, u_int64_t obsindx, u_int64_t telescope,
                                double var_goal, bool verbose) {
+#ifdef DEBUG
+    double st = MPI_Wtime();
+#endif
+
     // Logical size of the fft
     // this could be modified to be a power of 2, for example
     int fftlen = samples;
@@ -307,6 +311,12 @@ void mappraiser::sim_noise_tod(int samples, int lambda, const double *tt, std::v
     // Free allocated memory
     fftw_free(pdata);
     fftw_destroy_plan(p);
+
+#ifdef DEBUG
+    double t = MPI_Wtime();
+    printf("sim_noise_tod (size=%d) in %lf seconds\n", samples, t - st);
+    fflush(stdout);
+#endif
 }
 
 void mappraiser::sim_constrained_noise_block(mappraiser::GapFillInfo &gfi, Tpltz *N_block, Tpltz *Nm1_block,

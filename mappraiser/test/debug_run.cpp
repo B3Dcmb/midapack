@@ -79,7 +79,7 @@ int main(int argc, char *argv[]) {
     const int       nside             = 512;
     const int       Nnz               = 3;
     const int       lambda            = 8192;
-    const int       gap_stgy          = 1;
+    const int       gap_stgy          = 3;
     const u_int64_t realization       = 0;
 
     // bool to fill noise vector with zeros

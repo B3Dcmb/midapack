@@ -175,6 +175,10 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
     double coef_1, coef_2; // scalars
     double wtime;          // timing variable
 
+#ifdef DEBUG
+    double st, t; // timers for debug mode
+#endif
+
     bool stop       = false;      // stop iteration or continue
     bool init_guess = x0 != NULL; // starting vector provided or not
 
@@ -225,9 +229,24 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
     }
 
     // apply system matrix (_r = Nx0)
-    if (ignore_gaps) stbmmProd(N_block, _r);
-    else
+#ifdef DEBUG
+    st = MPI_Wtime();
+#endif
+    if (ignore_gaps) {
+        stbmmProd(N_block, _r);
+#ifdef DEBUG
+        t = MPI_Wtime();
+        printf(" (pcg) 1st call to stbmmProd (size=%d) in %lf seconds\n", N_block->local_V_size, t - st);
+        fflush(stdout);
+#endif
+    } else {
         gstbmmProd(N_block, _r, Gaps);
+#ifdef DEBUG
+        t = MPI_Wtime();
+        printf(" (pcg) 1st call to gstbmmProd (size=%d) in %lf seconds\n", N_block->local_V_size, t - st);
+        fflush(stdout);
+#endif
+    }
 
     // compute initial residual (r = b - Nx0)
     res = 0.0; // (r,r)
@@ -348,7 +367,15 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
 }
 
 void reset_tod_gaps(double *tod, Tpltz *N, Gap *Gaps) {
+#ifdef DEBUG
+    double start = MPI_Wtime();
+#endif
     reset_gaps(&tod, N->idp, N->local_V_size, N->m_cw, N->nrow, N->m_rw, Gaps->id0gap, Gaps->lgap, Gaps->ngap);
+#ifdef DEBUG
+    double duration = MPI_Wtime() - start;
+    printf(" reset_tod_gaps (size=%d) in %lf seconds\n", N->local_V_size, duration);
+    fflush(stdout);
+#endif
 }
 
 /*

@@ -224,9 +224,8 @@ int mpi_gstbmm(double **V, int nrow, int m, int m_rowwise, Block *tpltzblocks,
 */
 
 // put zeros on V for the gaps location
-int reset_gaps(double **V, int id0, int local_V_size, int m, int nrow,
-               int m_rowwise, const int64_t *id0gap, const int *lgap,
-               int ngap) {
+int reset_gaps(double **V, int64_t id0, int local_V_size, int m, int64_t nrow, int m_rowwise, const int64_t *id0gap,
+               const int *lgap, int ngap) {
     int i, j, k, l;
 
     for (j = 0; j < m; j++) {
@@ -234,8 +233,7 @@ int reset_gaps(double **V, int id0, int local_V_size, int m, int nrow,
 #pragma omp parallel for private(i) schedule(dynamic, 1)
         for (k = 0; k < ngap; k++)
             for (i = 0; i < lgap[k]; i++)
-                if (id0gap[k] + i + j * nrow >= id0
-                    && id0gap[k] + i + j * nrow < id0 + local_V_size) {
+                if (id0gap[k] + i + j * nrow >= id0 && id0gap[k] + i + j * nrow < id0 + local_V_size) {
                     for (l = 0; l < m_rowwise; l++)
                         (*V)[id0gap[k] + i + j * nrow - id0
                              + l * local_V_size] = 0.;
