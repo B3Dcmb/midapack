@@ -78,7 +78,8 @@ void mappraiser::GapFillInfo::print_recap() const {
 }
 
 void mappraiser::GapFillInfo::print_curr_block() const {
-    std::cout << "[id " << _id << "] current_block = " << current_block << std::endl;
+    std::cout << "[id " << _id << "] block = " << current_block << "/" << n_blocks
+              << "; time = " << times[current_block] << "; n_iter = " << nbIterations[current_block] << std::endl;
 }
 
 void mappraiser::psd_from_tt(int fftlen, int lambda, int psdlen, const double *tt, std::vector<double> &psd,
@@ -411,8 +412,10 @@ void mappraiser::sim_constrained_noise(mappraiser::GapFillInfo &gfi, Tpltz *N, T
             t_id += N->tpltzblocks[i].n;
 
 #ifdef DEBUG
-            gfi.print_curr_block();
-            fflush(stdout);
+            if (i % 50 == 0) {
+                gfi.print_curr_block();
+                fflush(stdout);
+            }
 #endif
         }
     }
