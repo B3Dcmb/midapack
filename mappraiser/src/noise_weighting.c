@@ -17,7 +17,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-void reset_tod_gaps(double *tod, Tpltz *N, Gap *Gaps);
+__attribute__((unused)) void reset_tod_gaps(double *tod, Tpltz *N, Gap *Gaps);
 
 void reset_block_gaps(double *tod, Tpltz *tmat_block, Gap *gaps);
 
@@ -156,7 +156,7 @@ void set_tpltz_struct(Tpltz *single_block_struct, Tpltz *full_struct, Block *blo
     single_block_struct->comm          = full_struct->comm;
 }
 
-void reset_tod_gaps(double *tod, Tpltz *N, Gap *Gaps) {
+__attribute__((unused)) void reset_tod_gaps(double *tod, Tpltz *N, Gap *Gaps) {
 #ifdef DEBUG
     double start = MPI_Wtime();
 #endif
@@ -170,22 +170,21 @@ void reset_tod_gaps(double *tod, Tpltz *N, Gap *Gaps) {
 
 void reset_block_gaps(double *tod, Tpltz *tmat_block, Gap *gaps) {
     // useful quantities
-    int64_t idv = tmat_block->tpltzblocks[0].idv; // global row index of data block
-    int     n   = tmat_block->tpltzblocks[0].n;   // size of data block
-
-    int64_t id0g; // variable to store position of first gap sample
-    int     lg;   // variable to store gap length
+    Block  *b   = &(tmat_block->tpltzblocks[0]);
+    int64_t idv = b->idv; // global row index of data block
+    int     n   = b->n;   // size of data block
 
     // loop over the gaps
-    for (int i = 0; i < gaps->ngap; ++i) {
-        id0g = gaps->id0gap[i];
-        lg   = gaps->lgap[i];
-        // check if gap is relevant for the given data block
-        if (idv < id0g + lg && id0g < idv + n) {
-            for (int64_t j = id0g; j < id0g + lg; ++j) {
-                // set intersection of tod and gap to zero
-                if (idv <= j && j < n + idv) tod[j - idv] = 0;
-            }
+    for (int i = b->first_gap; i <= b->last_gap; ++i) {
+#ifndef NDEBUG
+        int64_t id0g = gaps->id0gap[i];
+        int     lg   = gaps->lgap[i];
+        // assert that gap is relevant for the given data block
+        assert(idv < id0g + lg && id0g < idv + n);
+#endif
+        // set intersection of tod and gap to zero
+        for (int64_t j = id0g; j < id0g + lg; ++j) {
+            if (idv <= j && j < n + idv) tod[j - idv] = 0;
         }
     }
 }
@@ -228,10 +227,6 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
     double res;            // norm of residual
     double coef_1, coef_2; // scalars
     double wtime;          // timing variable
-
-#ifdef DEBUG
-    double st, t; // timers for debug mode
-#endif
 
     bool stop       = false;      // stop iteration or continue
     bool init_guess = x0 != NULL; // starting vector provided or not
@@ -284,25 +279,11 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
     }
 
     // apply system matrix (_r = Nx0)
-#ifdef DEBUG
-    st = MPI_Wtime();
-#endif
     if (ignore_gaps) {
         stbmmProd(N_block, _r);
-#ifdef DEBUG
-        t = MPI_Wtime();
-        printf(" (pcg) 1st call to stbmmProd (size=%d) in %lf seconds\n", m, t - st);
-        fflush(stdout);
-#endif
     } else {
         // gstbmmProd(N_block, _r, Gaps);
         gappy_tpltz_mult(N_block, _r, Gaps);
-#ifdef DEBUG
-        t = MPI_Wtime();
-        // printf(" (pcg) 1st call to gstbmmProd (size=%d) in %lf seconds\n", m, t - st);
-        printf(" (pcg) 1st call to gappy_tpltz_mult (size=%d) in %lf seconds\n", m, t - st);
-        fflush(stdout);
-#endif
     }
 
     // compute initial residual (r = b - Nx0)
@@ -344,8 +325,9 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
         // apply preconditioner (z0 = M^{-1} * r0)
         for (int i = 0; i < m; ++i) z[i] = r[i];
 
-        if (ignore_gaps) stbmmProd(Nm1_block, z);
-        else {
+        if (ignore_gaps) {
+            stbmmProd(Nm1_block, z);
+        } else {
             // gstbmmProd(Nm1_block, z, Gaps);
             gappy_tpltz_mult(Nm1_block, z, Gaps);
         }
@@ -389,8 +371,9 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
             }
 
             // apply preconditioner (z = M^{-1} r)
-            if (ignore_gaps) stbmmProd(Nm1_block, z);
-            else {
+            if (ignore_gaps) {
+                stbmmProd(Nm1_block, z);
+            } else {
                 // gstbmmProd(Nm1_block, z, Gaps);
                 gappy_tpltz_mult(Nm1_block, z, Gaps);
             }

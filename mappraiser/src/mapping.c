@@ -7,6 +7,8 @@
 
 #include "mappraiser/mapping.h"
 
+#include <stdbool.h>
+
 /**
  * @brief Build the pixel-to-time-domain mapping, i.e.
  * i) A->id_last_pix which contains the indexes of the last samples pointing to each pixel
@@ -71,28 +73,27 @@ int build_pixel_to_time_domain_mapping(Mat *A) {
 
 /**
  * @brief Build the gap structure for the local samples.
- *
  * @param gif global row index offset of the local data
- * @param Gaps Gap structure (Gaps->ngap must already be computed!)
+ * @param gaps Gap structure (Gaps->ngap must already be computed!)
  * @param A pointing matrix structure
  */
-void build_gap_struct(int64_t gif, Gap *Gaps, Mat *A) {
+void build_gap_struct(int64_t gif, Gap *gaps, Mat *A) {
     // allocate the arrays
 
     // only test correct allocation if ngap > 0 because
     // behaviour of malloc(0) is implementation-defined
     // free(NULL) produces no error
 
-    Gaps->id0gap = malloc((sizeof Gaps->id0gap) * Gaps->ngap);
-    Gaps->lgap   = malloc((sizeof Gaps->lgap) * Gaps->ngap);
+    gaps->id0gap = malloc((sizeof gaps->id0gap) * gaps->ngap);
+    gaps->lgap   = malloc((sizeof gaps->lgap) * gaps->ngap);
 
-    if (Gaps->ngap > 0) {
-        int i         = Gaps->ngap - 1;    // index of the gap being computed
+    if (gaps->ngap > 0) {
+        int i         = gaps->ngap - 1;    // index of the gap being computed
         int lengap    = 1;                 // length of the current gap
         int j         = A->id_last_pix[0]; // index to go through linked time samples
         int gap_start = j;                 // index of the first sample of the gap
 
-        if (Gaps->id0gap == NULL || Gaps->lgap == NULL) {
+        if (gaps->id0gap == NULL || gaps->lgap == NULL) {
             printf("malloc of id0gap or lgap failed\n");
             exit(EXIT_FAILURE);
         }
@@ -107,13 +108,55 @@ void build_gap_struct(int64_t gif, Gap *Gaps, Mat *A) {
                 ++lengap;
             } else {
                 // different gap, or no flagged samples remaining
-                Gaps->id0gap[i] = gif + gap_start; // global row index
-                Gaps->lgap[i]   = lengap;
+                gaps->id0gap[i] = gif + gap_start; // global row index
+                gaps->lgap[i]   = lengap;
                 lengap          = 1;
                 --i;
             }
             gap_start = j;
         }
+    }
+}
+
+bool gap_overlaps_with_block(Gap *gaps, int i_gap, Block *block) {
+    int64_t id0g = gaps->id0gap[i_gap];
+    int64_t idv  = block->idv;
+    int     lg   = gaps->lgap[i_gap];
+    int     n    = block->n;
+    return (idv < id0g + lg) && (id0g < idv + n);
+}
+
+void compute_gaps_per_block(Gap *gaps, int nb_blocks, Block *blocks) {
+    int    i_gap = 0; // index to go through the gaps
+    Block *b;         // pointer to the current block
+
+    for (int i = 0; i < nb_blocks; ++i) {
+        // find the relevant gaps for this block
+        b = &(blocks[i]);
+
+        // reset the information
+        b->first_gap = -1;
+        b->last_gap  = -1;
+
+        // find the first relevant gap
+        while (b->first_gap == -1) {
+            bool check = gap_overlaps_with_block(gaps, i_gap, b);
+            if (check) b->first_gap = i_gap;
+            else ++i_gap;
+        }
+
+        // go through relevant gaps
+        while (gap_overlaps_with_block(gaps, i_gap, b)) { ++i_gap; }
+
+        // store the last one
+        b->last_gap = i_gap - 1;
+    }
+}
+
+void copy_gap_info(int nb_blocks, Block *src, Block *dest) {
+    for (int i = 0; i < nb_blocks; ++i) {
+        dest[i].first_gap = src[i].first_gap;
+        dest[i].last_gap  = src[i].last_gap;
     }
 }
 
@@ -123,7 +166,7 @@ int compute_global_gap_count(MPI_Comm comm, Gap *gaps) {
     return gap_count;
 }
 
-void print_gap_info(Gap *gaps) {
+__attribute__((unused)) void print_gap_info(Gap *gaps) {
     printf("Local Gap structure\n");
     printf("  { ngap: %d\n", gaps->ngap);
     printf("    lgap: ");

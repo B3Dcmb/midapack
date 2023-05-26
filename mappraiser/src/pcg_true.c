@@ -10,6 +10,7 @@
 
 #include "mappraiser/pcg_true.h"
 #include "mappraiser/gap_filling.h"
+#include "mappraiser/mapping.h"
 #include "mappraiser/noise_weighting.h"
 #include "mappraiser/precond.h"
 
@@ -53,6 +54,9 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
     if (Z_2lvl == 0) Z_2lvl = size;
 
     build_precond(&p, &pixpond, &n, A, Nm1, &x, b, noise, cond, lhits, tol, Z_2lvl, precond, Gaps, gif);
+
+    compute_gaps_per_block(Gaps, Nm1->nb_blocks_loc, Nm1->tpltzblocks);
+    copy_gap_info(Nm1->nb_blocks_loc, Nm1->tpltzblocks, N->tpltzblocks);
 
     MPI_Barrier(A->comm);
     t = MPI_Wtime();

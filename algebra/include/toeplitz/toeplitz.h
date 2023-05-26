@@ -157,6 +157,8 @@ typedef struct tpltz_block_t {
     double *T_block; // pointer of the Toeplitz data
     int     lambda;
     int     n;
+    int     first_gap; // index of the first relevant local gap
+    int     last_gap;  // index of the last relevant local gap
     /* For precomputed fftw
          int bs;
          int nfft;
