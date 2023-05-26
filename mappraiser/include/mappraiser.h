@@ -10,6 +10,7 @@
 #include "mappraiser/pcg_true.h"
 #include "mappraiser/precond.h"
 #include "mappraiser/solver_info.h"
+#include "mappraiser/stopwatch.h"
 
 #include "mappraiser/gap_filling.h"
 #include "mappraiser/rng.h"

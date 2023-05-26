@@ -5,8 +5,6 @@
 
 #ifdef __cplusplus
 
-#include <chrono>
-#include <string>
 #include <vector>
 
 namespace mappraiser {
@@ -16,10 +14,6 @@ namespace mappraiser {
         GapFillInfo(int, int);
         GapFillInfo(int, int, int);
 
-        void   timer_start();
-        void   timer_stop();
-        double elapsed_seconds() const;
-
         double get_mean_iterations() const;
         double get_mean_seconds() const;
 
@@ -27,23 +21,23 @@ namespace mappraiser {
         void print_curr_block() const;
 
         void set_current_block(int i) { current_block = i; }
+        void set_current_size(int n) { current_size = n; }
 
-        void store_nbIterations(int n) { nbIterations[current_block] = n; }
-        void store_time() { times[current_block] = elapsed_seconds(); }
-        void store_validFrac(double f) { validFracs[current_block] = f; }
+        void store_nb_iterations(int n) { nb_iterations[current_block] = n; }
+        void store_block_time(double milliseconds) { block_times[current_block] = milliseconds * 0.001; }
+        void store_pcg_time(double milliseconds) { pcg_times[current_block] = milliseconds * 0.001; }
+        void store_valid_frac(double f) { valid_fracs[current_block] = f; }
 
         const int n_gaps; // number of local timestream gaps
     private:
         int n_blocks;      // number of data blocks to treat
         int current_block; // current block index
+        int current_size;  // size of current block
 
-        std::vector<int>    nbIterations; // number of PCG iterations for each block
-        std::vector<double> times;        // total time for each block
-        std::vector<double> validFracs;   // proportion of valid samples in each block
-
-        // timepoints
-        std::chrono::time_point<std::chrono::system_clock> _start;
-        std::chrono::time_point<std::chrono::system_clock> _end;
+        std::vector<int>    nb_iterations; // number of PCG iterations for each block
+        std::vector<double> block_times;   // total time for each block
+        std::vector<double> pcg_times;     // PCG time for each block
+        std::vector<double> valid_fracs;   // proportion of valid samples in each block
 
         // internal id for printing
         int _id;

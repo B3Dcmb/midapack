@@ -10,6 +10,7 @@
 #include "mappraiser/mapping.h"
 #include "mappraiser/noise_weighting.h"
 #include "mappraiser/rng.h"
+#include "mappraiser/stopwatch.h"
 
 #include <algorithm>
 #include <cmath>
@@ -18,42 +19,30 @@
 #include <iostream>
 #include <numeric>
 
-mappraiser::GapFillInfo::GapFillInfo(int blocks, int gaps) : n_gaps(gaps), n_blocks(blocks), current_block(0), _id(0) {
-    nbIterations.resize(n_blocks);
-    times.resize(n_blocks);
-    validFracs.resize(n_blocks);
+mappraiser::GapFillInfo::GapFillInfo(int blocks, int gaps)
+    : n_gaps(gaps), n_blocks(blocks), current_block(0), current_size(0), _id(0) {
+    nb_iterations.resize(n_blocks);
+    block_times.resize(n_blocks);
+    pcg_times.resize(n_blocks);
+    valid_fracs.resize(n_blocks);
 }
 
 mappraiser::GapFillInfo::GapFillInfo(int blocks, int gaps, int id)
-    : n_gaps(gaps), n_blocks(blocks), current_block(0), _id(id) {
-    nbIterations.resize(n_blocks);
-    times.resize(n_blocks);
-    validFracs.resize(n_blocks);
-}
-
-void mappraiser::GapFillInfo::timer_start() { _start = std::chrono::system_clock::now(); }
-
-void mappraiser::GapFillInfo::timer_stop() { _end = std::chrono::system_clock::now(); }
-
-double mappraiser::GapFillInfo::elapsed_seconds() const {
-    // compute duration
-    auto elapsed = _end - _start;
-
-    // convert in seconds
-    auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed);
-
-    // return elapsed seconds
-    return static_cast<double>(milliseconds.count()) / 1000;
+    : n_gaps(gaps), n_blocks(blocks), current_block(0), current_size(0), _id(id) {
+    nb_iterations.resize(n_blocks);
+    block_times.resize(n_blocks);
+    pcg_times.resize(n_blocks);
+    valid_fracs.resize(n_blocks);
 }
 
 double mappraiser::GapFillInfo::get_mean_iterations() const {
-    double sum = std::accumulate(nbIterations.begin(), nbIterations.end(), 0.0);
-    return sum / static_cast<double>(nbIterations.size());
+    double sum = std::accumulate(nb_iterations.begin(), nb_iterations.end(), 0.0);
+    return sum / static_cast<double>(nb_iterations.size());
 }
 
 double mappraiser::GapFillInfo::get_mean_seconds() const {
-    double sum = std::accumulate(times.begin(), times.end(), 0.0);
-    return sum / static_cast<double>(times.size());
+    double sum = std::accumulate(block_times.begin(), block_times.end(), 0.0);
+    return sum / static_cast<double>(block_times.size());
 }
 
 void mappraiser::GapFillInfo::print_recap() const {
@@ -61,26 +50,29 @@ void mappraiser::GapFillInfo::print_recap() const {
     if (n_gaps == 0) {
         std::cout << "no local gaps (100% valid samples)" << std::endl;
     } else {
-        const auto minmax_iter    = std::minmax_element(nbIterations.begin(), nbIterations.end());
-        const auto minmax_seconds = std::minmax_element(times.begin(), times.end());
+        const auto minmax_iter    = std::minmax_element(nb_iterations.begin(), nb_iterations.end());
+        const auto minmax_seconds = std::minmax_element(block_times.begin(), block_times.end());
         std::cout << "blocks = " << n_blocks << std::endl
                   << "  iter/block = " << get_mean_iterations() << std::endl
                   << "         min = " << *minmax_iter.first << " (block "
-                  << std::distance(nbIterations.begin(), minmax_iter.first) << ")" << std::endl
+                  << std::distance(nb_iterations.begin(), minmax_iter.first) << ")" << std::endl
                   << "         max = " << *minmax_iter.second << " (block "
-                  << std::distance(nbIterations.begin(), minmax_iter.second) << ")" << std::endl
+                  << std::distance(nb_iterations.begin(), minmax_iter.second) << ")" << std::endl
                   << "  time/block = " << get_mean_seconds() << " s" << std::endl
                   << "         min = " << *minmax_seconds.first << " s (block "
-                  << std::distance(times.begin(), minmax_seconds.first) << ")" << std::endl
+                  << std::distance(block_times.begin(), minmax_seconds.first) << ")" << std::endl
                   << "         max = " << *minmax_seconds.second << " s (block "
-                  << std::distance(times.begin(), minmax_seconds.second) << ")" << std::endl;
+                  << std::distance(block_times.begin(), minmax_seconds.second) << ")" << std::endl;
     }
 }
 
 void mappraiser::GapFillInfo::print_curr_block() const {
-    std::cout << "[id " << _id << "] block = " << current_block << "/" << n_blocks
-              << "; time = " << times[current_block] << "; n_iter = " << nbIterations[current_block]
-              << "; valid fraction = " << validFracs[current_block] << std::endl;
+    std::cout << "[id " << _id << "] block = " << current_block << "/" << n_blocks << "; ";
+    std::cout << "size = " << current_size << "; ";
+    std::cout << "time = " << block_times[current_block] << " seconds; ";
+    std::cout << "iterations = " << nb_iterations[current_block];
+    std::cout << " (" << pcg_times[current_block] / nb_iterations[current_block] << " s / iter); ";
+    std::cout << "valid fraction = " << valid_fracs[current_block] << std::endl;
 }
 
 void mappraiser::psd_from_tt(int fftlen, int lambda, int psdlen, const double *tt, std::vector<double> &psd,
@@ -239,10 +231,6 @@ void mappraiser::remove_baseline(std::vector<double> &buf, std::vector<double> &
 void mappraiser::sim_noise_tod(int samples, int lambda, const double *tt, std::vector<double> &buf,
                                u_int64_t realization, u_int64_t detindx, u_int64_t obsindx, u_int64_t telescope,
                                double var_goal, bool verbose) {
-#ifdef DEBUG
-    double st = MPI_Wtime();
-#endif
-
     // Logical size of the fft
     // this could be modified to be a power of 2, for example
     int fftlen = samples;
@@ -311,20 +299,11 @@ void mappraiser::sim_noise_tod(int samples, int lambda, const double *tt, std::v
     // Free allocated memory
     fftw_free(pdata);
     fftw_destroy_plan(p);
-
-#ifdef DEBUG
-    double t = MPI_Wtime();
-    printf("sim_noise_tod (size=%d) in %lf seconds\n", samples, t - st);
-    fflush(stdout);
-#endif
 }
 
 void mappraiser::sim_constrained_noise_block(mappraiser::GapFillInfo &gfi, Tpltz *N_block, Tpltz *Nm1_block,
                                              double *noise, Gap *gaps, u_int64_t realization, u_int64_t detindx,
                                              u_int64_t obsindx, u_int64_t telescope) {
-    // start a timer
-    gfi.timer_start();
-
     // get the number of samples, the global first index and the bandwidth
     const int  samples = N_block->tpltzblocks[0].n;
     const auto id0     = static_cast<size_t>(N_block->tpltzblocks[0].idv);
@@ -338,7 +317,7 @@ void mappraiser::sim_constrained_noise_block(mappraiser::GapFillInfo &gfi, Tpltz
     std::vector<bool> valid(samples);
     int               n_good = mappraiser::find_valid_samples(gaps, id0, valid);
 
-    gfi.store_validFrac(std::ceil(100 * n_good / samples));
+    gfi.store_valid_frac(std::ceil(100 * n_good / samples));
 
     // remove baseline (moving average)
     std::vector<double> baseline(samples);
@@ -366,8 +345,10 @@ void mappraiser::sim_constrained_noise_block(mappraiser::GapFillInfo &gfi, Tpltz
     for (int i = 0; i < samples; ++i) { rhs[i] -= xi[i]; }
 
     // invert the system N x = (noise - xi)
-    int nb_iterations = apply_weights(Nm1_block, N_block, gaps, rhs.data(), ITER, false);
-    gfi.store_nbIterations(nb_iterations);
+    mappraiser::system_stopwatch stopwatch;
+    int                          nb_iterations = apply_weights(Nm1_block, N_block, gaps, rhs.data(), ITER, false);
+    gfi.store_pcg_time(stopwatch.elapsed_time<double, std::chrono::milliseconds>());
+    gfi.store_nb_iterations(nb_iterations);
 
     // compute the constrained realization
     std::vector<double> constrained(samples);
@@ -380,8 +361,7 @@ void mappraiser::sim_constrained_noise_block(mappraiser::GapFillInfo &gfi, Tpltz
         if (valid[i]) {
             constrained[i] += xi[i] + baseline[c];
             ++c;
-        } else
-            constrained[i] += xi[i]; // + (baseline[c] + baseline[c + 1]) / 2;
+        } else constrained[i] += xi[i]; // + (baseline[c] + baseline[c + 1]) / 2;
     }
 
     // TODO check quality of constrained realization against original vector?
@@ -389,10 +369,6 @@ void mappraiser::sim_constrained_noise_block(mappraiser::GapFillInfo &gfi, Tpltz
 
     // copy final result into noise vector
     std::copy(constrained.begin(), constrained.end(), noise);
-
-    // stop timer and store elapsed seconds for this block
-    gfi.timer_stop();
-    gfi.store_time();
 }
 
 void mappraiser::sim_constrained_noise(mappraiser::GapFillInfo &gfi, Tpltz *N, Tpltz *Nm1, double *noise, Gap *gaps,
@@ -417,8 +393,11 @@ void mappraiser::sim_constrained_noise(mappraiser::GapFillInfo &gfi, Tpltz *N, T
 
             // compute a constrained noise realization for this block
             gfi.set_current_block(i);
+            gfi.set_current_size(N_block.local_V_size);
+            mappraiser::system_stopwatch stopwatch;
             mappraiser::sim_constrained_noise_block(gfi, &N_block, &Nm1_block, noise_block, gaps, realization,
                                                     detindxs[i], obsindxs[i], telescopes[i]);
+            gfi.store_block_time(stopwatch.elapsed_time<double, std::chrono::milliseconds>());
 
             t_id += N->tpltzblocks[i].n;
 
