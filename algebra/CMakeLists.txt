@@ -1,8 +1,8 @@
 # ________________________________________
 # External dependencies for core modules
 
-option(DISABLE_MPI OFF)
-option(DISABLE_OPENMP OFF)
+option(DISABLE_MPI "Compile without MPI enabled" OFF)
+option(DISABLE_OPENMP "Compile without OpenMP enabled" ON)
 
 # Search for MPI and OpenMP if we want to use them
 if (NOT DISABLE_MPI)
@@ -10,7 +10,7 @@ if (NOT DISABLE_MPI)
 endif ()
 
 if (NOT DISABLE_OPENMP)
-    find_package(OpenMP REQUIRED)
+    find_package(OpenMP)
 endif ()
 
 # Search for FFTW (necessary for toeplitz module)
