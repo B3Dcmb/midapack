@@ -77,29 +77,46 @@ int get_projectors_indices(int *indices_nest, int *ordered_indices_ring, int siz
 
   memcpy(ordered_indices_ring, indices_ring, size_indices*sizeof(int));
 
-  ssort(ordered_indices_ring, size_indices, 0); 
-  // Argument flag=0 to use quicksort to sort the indices
-
   for (i=0; i<size_indices; i++) 
   {
-    for (j=0; j<size_indices; j++)
-    {
-      if (ordered_indices_ring[i] == indices_ring[j])
-      {
-        projector_ring2nest[i] = j;
-        projector_nest2ring[j] = i;
-        break ;
-        // The indices_nest are expected to be not have any redundancy
-      }
-    }
+    projector_nest2ring[i] = i;
   }
+
+  // ssort(ordered_indices_ring, size_indices, 0);
+  ssort_with_indices(ordered_indices_ring, projector_nest2ring, size_indices, 0);
+  // Argument flag=0 to use quicksort to sort the indices
+
+  // for (i=0; i<size_indices; i++) 
+  // {
+  //   for (j=0; j<size_indices; j++)
+  //   {
+  //     if (ordered_indices_ring[i] == indices_ring[j])
+  //     {
+  //       projector_ring2nest[i] = j;
+  //       projector_nest2ring[j] = i;
+  //       break ;
+  //       // The indices_nest are expected to be not have any redundancy
+  //     }
+  //   }
+  // }
+  for (i=0; i<size_indices; i++)
+    projector_ring2nest[projector_nest2ring[i]] = i;
 
   free(indices_ring);
   // free(ordered_indices_ring);
   return 0;
 }
 
-int project_values_into_different_scheme(void *values_in, int number_values, int *projector_in2out, void *values_out)
+int project_int_values_into_different_scheme(int *values_in, int number_values, int *projector_in2out, int *values_out)
+{
+  int i;
+  for (i=0; i<number_values; i++)
+    values_out[i] = values_in[projector_in2out[i]];
+  
+  return 0;
+}
+
+int project_values_into_different_scheme(double *values_in, int number_values, int *projector_in2out, double *values_out)
 {
   int i;
   for (i=0; i<number_values; i++)

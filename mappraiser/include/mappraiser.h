@@ -87,7 +87,7 @@ void free_precond(struct Precond **in_out_p);
 void get_pixshare_pond(Mat *A, double *pixpond);
 
 // PCG routine
-int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, PCG_var *PCG_variable, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl, int is_pixel_scheme_ring, int nside, Harmonic_superstruct *Harmonic_sup);
+int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, PCG_var *PCG_variable, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl, int is_pixel_scheme_ring, int nside, Harmonic_superstruct *Harmonic_sup, int lmax, char *c_ell_path, int number_correlations);
 
 // ECG routine
 #ifdef WITH_ECG

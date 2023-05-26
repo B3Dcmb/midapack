@@ -50,7 +50,7 @@ typedef struct {
     int last_pixel_number; // Last pixel of the first ring locally stored for S2HAT purposes
     // BEWARE : we assume the last_pixel_number to be INCLUDED in the last ring
 
-    long int *pixel_numbered_ring; // Pointer to the ordered pixel in RING scheme which the process will consider for S2HAT operations
+    int *pixel_numbered_ring; // Pointer to the ordered pixel in RING scheme which the process will consider for S2HAT operations
     // The pixels considered here will only be given for a set of rings in the Northern hemisphere + the equatorial ring
 
 
@@ -172,8 +172,11 @@ int convert_indices_ring2nest(int *indices_ring, int *indices_nest, long int num
 int get_projectors_indices(int *indices_nest, int *ordered_indices_ring, int size_indices, int nstokes, int nside, int *projector_ring2nest, int *projector_nest2ring);
 // Get projectors for ring2nest and nest2ring for maps on a specific proc
 
-int project_values_into_different_scheme(void *values_in, int number_values, int *projector_in2out, void *values_out);
+int project_values_into_different_scheme(double *values_in, int number_values, int *projector_in2out, double *values_out);
 // Use the projectors found in get_projectors_indices to project the maps in 1 scheme or the other
+
+int project_int_values_into_different_scheme(int *values_in, int number_values, int *projector_in2out, int *values_out);
+// Use the projectors found in get_projectors_indices to project int values in 1 scheme or the other
 
 void convert_full_map_nest2ring(double *map_nest, double *map_ring, int nside, int nstokes);
 void convert_full_map_ring2nest(double *map_ring, double *map_nest, int nside, int nstokes);

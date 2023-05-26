@@ -133,15 +133,17 @@ int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters *Global_param_s2h
 
     Those local parameters are used to improve the computation efficiency
     Full documentation here : https://apc.u-paris.fr/APC_CS/Recherche/Adamis/MIDAS09/software/s2hat/s2hat/docs/S2HATdocs.html */ 
-    long int *pixel_numbered_ring;
+    int *pixel_numbered_ring;
     s2hat_pixeltype pixelization_scheme = Global_param_s2hat->pixelization_scheme;
     s2hat_scandef scan_sky_structure_pixel = Global_param_s2hat->scan_sky_structure_pixel;
     int nlmax = Global_param_s2hat->nlmax;
     int nmmax = Global_param_s2hat->nmmax;
-    long int number_pixel_total = 12*((Global_param_s2hat->nside)*(Global_param_s2hat->nside)), first_pixel_number_ring, last_pixel_number_ring, number_pixels_local;
+    int number_pixel_total = 12*((Global_param_s2hat->nside)*(Global_param_s2hat->nside));
+    int first_pixel_number_ring, last_pixel_number_ring, number_pixels_local;
 
     int i, j, plms=0, nmvals, first_ring, last_ring, map_size;
     int first_pixel_south_hermisphere;
+    int correction_mid_ring = 0; // Correction to take into account the middle ring doesn't contribute twitce
 
     long int nplm;
     int *mvals;
@@ -170,9 +172,9 @@ int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters *Global_param_s2h
         last_pixel_number_ring = Global_param_s2hat->pixelization_scheme.fpix[last_ring-1] + Global_param_s2hat->pixelization_scheme.nph[last_ring-1]; 
         // Getting last pixel number of ring probed by local proc, in S2HAT convention
         number_pixels_local = last_pixel_number_ring - first_pixel_number_ring;
-        
+
         if (map_size){
-            pixel_numbered_ring = (long int *)malloc(map_size*nstokes * sizeof(long int));
+            pixel_numbered_ring = (int *)malloc(map_size*nstokes * sizeof(int));
 
             for(i=0; i<number_pixels_local; i++)
             {
@@ -185,12 +187,14 @@ int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters *Global_param_s2h
                 first_pixel_south_hermisphere += Global_param_s2hat->pixelization_scheme.nph[last_ring-1];
                 // If last_ring is equal to the nringsall, which includes the northern rings and the equatorial ring,
                 // Then the last ring corresponds to the equatorial ring, which has already been viewed, and we need to avoid redistributing its pixel numberings
+
+                correction_mid_ring = Global_param_s2hat->pixelization_scheme.nph[last_ring-1];
             }
 
-            for(i=first_pixel_south_hermisphere; i<number_pixels_local; i++)
+            for(i=0; i<number_pixels_local-correction_mid_ring; i++)
             {
                 for (j=0; j<nstokes; j++)
-                    pixel_numbered_ring[ i + j*map_size] = i + first_pixel_south_hermisphere + j*number_pixel_total;
+                    pixel_numbered_ring[ i + number_pixels_local + j*map_size] = i + first_pixel_south_hermisphere + j*number_pixel_total;
             }
         }
         Local_param_s2hat->pixel_numbered_ring = pixel_numbered_ring;

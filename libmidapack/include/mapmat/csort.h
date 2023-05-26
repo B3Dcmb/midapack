@@ -11,4 +11,8 @@ int omp_psort(int *indices, int count, int flag);
 
 int sorted(int *indices, int count);
 
+int ssort_with_indices(int *indices, int *index_of_indices, int count, int flag);
+
 int monotony(int *indices, int count);
+
+int monotony_v2(int *indices, int count);

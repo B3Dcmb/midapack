@@ -56,14 +56,14 @@ typedef struct {
   //--------local shaping---------------
   int		lcount;
   int		*lindices;		// local indices tab (monotony with global numbering); size = lcount
-#ifdef W_MPI
+// #ifdef W_MPI
   MPI_Comm	comm;                   // MPI communicator
   //--------com shaping-----------------
   int		*com_indices, com_count;// communicated indices tab, and size
   int		steps;			// number of steps in the communication scheme
   int		*nS, *nR;		// number of indices (to send and to receive); size = steps
   int		**R, **S;		// sending or receiving indices tab
-#endif
+// #endif
 }Mat;
 
 

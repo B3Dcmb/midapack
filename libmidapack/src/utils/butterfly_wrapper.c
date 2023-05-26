@@ -170,6 +170,14 @@ int prepare_butterfly_communication(int *indices_in, int count_in, int *indices_
     MPI_Comm_rank( worldcomm, &rank);
     MPI_Comm_size( worldcomm, &nprocs);
 
+    int check_monotony_in = monotony(indices_in, count_in);
+    int check_monotony_out = monotony(indices_out, count_out);
+
+    if (check_monotony_in || check_monotony_out){
+        printf("ERROR : In prepare_butterfly_communication indices_in or indices_out is not monotonous : \n 1 for non-monotonous, 0 for monotonous : indices_in %d indices_out %d\n", check_monotony_in, check_monotony_out);
+        return 1;
+    }
+
     Butterfly_struct *Butterfly_forward_obj = &(Butterfly_superstruct_obj->Butterfly_obj);
     Butterfly_struct_supplement *Butterfly_mirror_supp = &(Butterfly_superstruct_obj->Butterfly_mirror_supp);
     Butterfly_struct_supplement *Butterfly_unmirror_supp = &(Butterfly_superstruct_obj->Butterfly_unmirror_supp);
@@ -242,6 +250,14 @@ int perform_butterfly_communication(double *values_to_communicate, int *indices_
     /* #### Perform the butterfly communication ### 
         ATTENTION : WILL ASSUME ALL MAP PIXEL VALUES ARE EQUAL INDEPENDANT OF THE PROCESS WHICH WILL HOLD IT */ 
 
+    int check_monotony_in = monotony(indices_in, count_in);
+    int check_monotony_out = monotony(indices_out, count_out);
+
+    if (check_monotony_in || check_monotony_out){
+        printf("ERROR : In prepare_butterfly_communication indices_in or indices_out is not monotonous : \n 1 for non-monotonous, 0 for monotonous : indices_in %d indices_out %d \n", check_monotony_in, check_monotony_out);
+        return 1;
+    }
+    
     Butterfly_struct *Butterfly_obj = &(Butterfly_superstruct_obj->Butterfly_obj);
     Butterfly_struct_supplement *Butterfly_mirror_supp = &(Butterfly_superstruct_obj->Butterfly_mirror_supp);
     Butterfly_struct_supplement *Butterfly_unmirror_supp = &(Butterfly_superstruct_obj->Butterfly_unmirror_supp);
@@ -264,7 +280,6 @@ int perform_butterfly_communication(double *values_to_communicate, int *indices_
         values_received = (double *)malloc(Butterfly_mirror_supp->size_from_mirror*sizeof(double));
 
     mirror_butterfly(values_to_communicate, NULL, count_in, values_received, NULL, &(Butterfly_mirror_supp->size_from_mirror), MIRROR_DATA, worldcomm);
-
     if (rank < pow(2,number_steps)){
         if (Butterfly_mirror_supp->new_size_local)
             values_butterfly = (double *)malloc(Butterfly_mirror_supp->new_size_local*sizeof(double));
@@ -290,7 +305,6 @@ int perform_butterfly_communication(double *values_to_communicate, int *indices_
         com_val = (double *)calloc(Butterfly_obj->com_count,sizeof(double));
 
         m2m(values_butterfly, Butterfly_mirror_supp->ordered_indices, Butterfly_mirror_supp->new_size_local, com_val, Butterfly_obj->com_indices, Butterfly_obj->com_count);
-        
         switch(Butterfly_obj->classic_or_reshuffle_butterfly)
         {
             case 0: // Classic butterfly
@@ -303,18 +317,15 @@ int perform_butterfly_communication(double *values_to_communicate, int *indices_
         }
 
         if (Butterfly_unmirror_supp->new_size_local)
-            values_received_butterfly = (double *)malloc(Butterfly_unmirror_supp->new_size_local*sizeof(double));
+            values_received_butterfly = (double *)calloc(Butterfly_unmirror_supp->new_size_local,sizeof(double));
 
         m2m(values_butterfly, Butterfly_mirror_supp->ordered_indices, Butterfly_mirror_supp->new_size_local, values_received_butterfly, Butterfly_unmirror_supp->ordered_indices, Butterfly_unmirror_supp->new_size_local);        
         m2m(com_val, Butterfly_obj->com_indices, Butterfly_obj->com_count, values_received_butterfly, Butterfly_unmirror_supp->ordered_indices, Butterfly_unmirror_supp->new_size_local);
 
-
         m2m(values_received_butterfly, Butterfly_unmirror_supp->ordered_indices, Butterfly_unmirror_supp->new_size_local, values_out, indices_out, count_out);
 
-
         if (Butterfly_unmirror_supp->size_from_mirror)
-            values_to_unmirror = (double *)calloc(Butterfly_unmirror_supp->size_from_mirror,sizeof(int));
-
+            values_to_unmirror = (double *)calloc(Butterfly_unmirror_supp->size_from_mirror,sizeof(double));
         m2m(values_received_butterfly, Butterfly_unmirror_supp->ordered_indices, Butterfly_unmirror_supp->new_size_local, values_to_unmirror, Butterfly_unmirror_supp->indices_mirror, Butterfly_unmirror_supp->size_from_mirror);
 
         if (Butterfly_mirror_supp->new_size_local)
@@ -324,14 +335,10 @@ int perform_butterfly_communication(double *values_to_communicate, int *indices_
         free(com_val);
     }
 
-
     mirror_butterfly(values_to_unmirror, NULL, Butterfly_unmirror_supp->size_from_mirror, values_out, NULL, &(count_out), UNMIRROR_DATA, worldcomm);
-
     if (Butterfly_unmirror_supp->size_from_mirror){
         free(values_to_unmirror);
-        
     }
-
     return 0;
 }
 

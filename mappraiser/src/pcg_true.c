@@ -39,7 +39,7 @@ int compute_norm_v2(double *norm_to_compute, double *vector_left, double *vector
 int swap_pointers(PCG_var *PCG_variable, PCG_var *PCG_variable_2);
 
 /** Perform PCG routine **/
-int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, PCG_var *PCG_variable, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl, int is_pixel_scheme_ring, int nside, Harmonic_superstruct *Harmonic_sup)
+int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, PCG_var *PCG_variable, double *b, double *noise, double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl, int is_pixel_scheme_ring, int nside, Harmonic_superstruct *Harmonic_sup, int lmax, char *c_ell_path, int number_correlations)
 {
     int i, j, k; // some indexes
     int m, n;    // number of local time samples, number of local pixels
@@ -92,12 +92,12 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, PCG_var *PCG_vari
 
     // Wiener filter extension initialization ///////////////    
     if ( (PCG_variable->bool_apply_filter == 1) || (PCG_variable->domain_PCG_computation == 1)){ // Initialize both with WF or for harmonic transforms in general
-        if (rank == 0)
-        {
-            printf("### Initializing Wiener Filter extension for harmonic operations \n");
+        // if (rank == 0)
+        // {
+        //     printf("### Initializing Wiener Filter extension for harmonic operations \n");
 
-            // For later: get mask with trash_pix for spherical harmonic transforms !!!! --- TO DO LATER 
-        }
+        //     // For later: get mask with trash_pix for spherical harmonic transforms !!!! --- TO DO LATER 
+        // }
         // int root=0; // Choice to put root rank to 0
         // init_s2hat_parameters_superstruct(S2HAT_params->Files_WF_struct, PCG_variable->S2HAT_parameters, A->comm);
         // Initialization of S2HAT_parameters structure
@@ -106,7 +106,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, PCG_var *PCG_vari
 
         get_mask_from_indices(A, mask_binary, nside, 0);
 
-        init_harmonic_superstruct(A, Harmonic_sup, mask_binary);
+        init_harmonic_superstruct(A, Harmonic_sup, mask_binary, nside, lmax, c_ell_path, number_correlations);
         free(mask_binary);
         // Initialization of S2HAT_parameters structure
 
@@ -133,24 +133,32 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, PCG_var *PCG_vari
     Nm1Ah = Ah;
 
     // Create PCG_var struct for h, the descent direction
-    PCG_var *Descent_dir_var = (PCG_var *)malloc(1*sizeof(PCG_var)); // corresponds to g
-    initialize_PCG_var_struct(Descent_dir_var, h, PCG_variable->domain_PCG_computation, PCG_variable->bool_apply_filter);
+    // PCG_var *Descent_dir_var = (PCG_var *)malloc(1*sizeof(PCG_var)); // corresponds to g
+    PCG_var Descent_dir_var_; // corresponds to g
+    initialize_PCG_var_struct(&(Descent_dir_var_), h);
+    PCG_var *Descent_dir_var = &(Descent_dir_var_);
     // Define Descent_dir_var = h (in pixel space), will allocate alm only if relevant, ie if PCG_variable->bool_apply_filter==1 or PCG_variable->domain_PCG_computation==1
 
     // Create PCG_var struct for g, the residual
-    PCG_var *Residual_var = (PCG_var *)malloc(1*sizeof(PCG_var)); // corresponds to g
-    initialize_PCG_var_struct(Residual_var, g, PCG_variable->domain_PCG_computation, PCG_variable->bool_apply_filter);
+    // PCG_var *Residual_var = (PCG_var *)malloc(1*sizeof(PCG_var)); // corresponds to g
+    PCG_var Residual_var_; // corresponds to g
+    initialize_PCG_var_struct(&(Residual_var_), g);
+    PCG_var *Residual_var = &(Residual_var_);
     // Define Residual_var = g (in pixel space), will allocate alm only if relevant, ie if PCG_variable->bool_apply_filter==1 or PCG_variable->domain_PCG_computation==1
 
     // Create PCG_var struct for gp, the residual of previous iteration
-    PCG_var *Last_Iter_Res_var = (PCG_var *)malloc(1*sizeof(PCG_var)); // corresponds to Cg
-    initialize_PCG_var_struct(Last_Iter_Res_var, gp, PCG_variable->domain_PCG_computation, PCG_variable->bool_apply_filter);
+    // PCG_var *Last_Iter_Res_var = (PCG_var *)malloc(1*sizeof(PCG_var)); // corresponds to Cg
+    PCG_var Last_Iter_Res_var_; // corresponds to Cg
+    initialize_PCG_var_struct(&(Last_Iter_Res_var_), gp);
+    PCG_var *Last_Iter_Res_var = &(Last_Iter_Res_var_);
     // Define Last_Iter_Res_var = gp (in pixel space), will allocate alm only if relevant, ie if PCG_variable->bool_apply_filter==1 or PCG_variable->domain_PCG_computation==1
 
 
     // Create PCG_var struct for Cg, the preconditionned residual
-    PCG_var *PrecRes_var = (PCG_var *)malloc(1*sizeof(PCG_var)); // corresponds to Cg
-    initialize_PCG_var_struct(PrecRes_var, Cg, PCG_variable->domain_PCG_computation, PCG_variable->bool_apply_filter);
+    // PCG_var *PrecRes_var = (PCG_var *)malloc(1*sizeof(PCG_var)); // corresponds to Cg
+    PCG_var PrecRes_var_; // corresponds to Cg
+    initialize_PCG_var_struct(&(PrecRes_var_), Cg);
+    PCG_var *PrecRes_var = &(PrecRes_var_);
     // Define PrecRes_var = Cg (in pixel space), will allocate alm only if relevant, ie if PCG_variable->bool_apply_filter==1 or PCG_variable->domain_PCG_computation==1
 
     st = MPI_Wtime();

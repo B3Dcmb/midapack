@@ -8,6 +8,7 @@ add_library(mappraiser SHARED)
 
 target_sources(mappraiser PRIVATE
                "createToeplitz.c"
+               "domain_generalization.c"
                "iofiles.c"
                "mappraiser.c"
                "pcg_true.c"

@@ -66,6 +66,41 @@ void quick_sort(int *indices, int left, int right){
   }
 }
 
+void quick_sort_with_indices(int *indices, int *index_of_indices, int left, int right){
+  int pivot;
+  int tmp, key;
+  int tmp_indices;
+  int i,j;
+  if (left<right){
+    key=indices[left];
+    i=left+1;
+    j=right;
+    while(i<=j){
+      while((i<=right) && (indices[i]<=key))  i++;
+      while ((j>left) && (indices[j]>key))   j--;
+      if(i<j){
+        tmp=indices[i];
+        indices[i] = indices[j];
+        indices[j] = tmp;
+        tmp_indices = index_of_indices[i];
+        index_of_indices[i] = index_of_indices[j];
+        index_of_indices[j] = tmp_indices;
+        i++;
+        j--;
+      }
+    }
+    tmp=indices[left];
+    indices[left] = indices[j];
+    indices[j] = tmp;
+    tmp_indices = index_of_indices[left];
+    index_of_indices[left] = index_of_indices[j];
+    index_of_indices[j] = tmp_indices;
+    pivot = j;
+    quick_sort_with_indices(indices, index_of_indices, left, pivot-1);
+    quick_sort_with_indices(indices, index_of_indices, pivot+1, right);
+  }
+}
+
 /** Bubble sort :
     complexity n square
     @param indices array of integer
@@ -177,6 +212,38 @@ int ssort(int *indices, int count, int flag){
       return n;
     case 4 :
       shell_sort(indices, count);
+      break;
+  }
+  ptr_i = indices;
+  ptr_o = indices;
+  n=1;
+  for(i=0; i<count-1; i++){
+    ptr_i++;
+    if(*ptr_i != *ptr_o){
+      ptr_o++;
+      n++;
+      *ptr_o = *ptr_i;
+    }
+  }
+  return n;
+}
+
+/** Sort and merge redundant elements of a set of indices using a specified method.
+    The indices tab, initially an arbitrary set of integers, becomes a monotony set.
+    Available methods :
+    - quick sort while keeping track of the indices exchanged
+
+    @param indices tab (modified)
+    @param count number of indices
+    @param flag method
+    @return number of sorted elements
+    @ingroup matmap_group22*/
+int ssort_with_indices(int *indices, int *index_of_indices, int count, int flag){
+  int i, n;
+  int *ptr_i, *ptr_o;
+  switch(flag){
+    case 0 :
+      quick_sort_with_indices(indices, index_of_indices, 0, count-1);
       break;
   }
   ptr_i = indices;
@@ -381,6 +448,19 @@ int monotony(int *indices, int count){
   while(i<count-2){
     if(indices[i]>=indices[i+1]){
       return 1;
+    }
+    else{
+      i++;
+    }
+  }
+  return 0;
+}
+
+int monotony_v2(int *indices, int count){
+  int i=0;
+  while(i<count-2){
+    if(indices[i]>=indices[i+1]){
+      return -i - 1;
     }
     else{
       i++;

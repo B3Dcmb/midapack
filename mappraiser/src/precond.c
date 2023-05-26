@@ -1444,6 +1444,7 @@ void apply_precond(struct Precond *p, const Mat *A, const Tpltz *Nm1, Harmonic_s
     int i;
     double *new_local_variable_pix;
     s2hat_dcomplex *local_alm_in, *local_alm_out;
+    S2HAT_parameters *S2HAT_params;
 
     switch(p->precond) {
         case 0 :
@@ -1473,7 +1474,7 @@ void apply_precond(struct Precond *p, const Mat *A, const Tpltz *Nm1, Harmonic_s
             // out_PCG_var->does_local_alm_need_update = 1; // Change done on pixel domain, harmonic domain need update
             break;
         case 3 : // Preconditionner C^{-1} + Pdiag(N^-1)P
-            S2HAT_parameters *S2HAT_params = &(Harmonic_sup->S2HAT_params);
+            S2HAT_params = &(Harmonic_sup->S2HAT_params);
             MatVecProd(&(p->BJ_inv), init_PCG_var->local_map_pix, out_PCG_var->local_map_pix, 0);
             // Calculation on pixel domain of Pdiag(N)P
             
