@@ -36,20 +36,38 @@ int apply_alm2pix(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parame
 
     int nmaps = 1; // We only provide 1 input set of alm coefficient
     // int nstokes = 3; // We want all T, Q and U maps
-    int lda = nstokes; // We choose the HEALPIX convention with local_alm in the form (1:nstokes,0:nlmax,0:nmvals-1,1:nmaps)
+    // int lda = nstokes; // We choose the HEALPIX convention with local_alm in the form (1:nstokes,0:nlmax,0:nmvals-1,1:nmaps)
+    int lda = Global_param_s2hat->nlmax; // We choose the HEALPIX convention with local_alm in the form (1:nstokes,0:nlmax,0:nmvals-1,1:nmaps)
     int spin;
 
     switch(nstokes)
     {
         case 1: // Case only intensity
-        case 3: // Case with both intensity and polarization
-
-            s2hat_alm2map(Local_param_s2hat->plms, Global_param_s2hat->pixelization_scheme, Global_param_s2hat->scan_sky_structure_pixel, Global_param_s2hat->nlmax, Global_param_s2hat->nmmax, 
-                Local_param_s2hat->nmvals, Local_param_s2hat->mvals, nmaps, nstokes, 
-                Local_param_s2hat->first_ring, Local_param_s2hat->last_ring, Local_param_s2hat->map_size, local_map_pix, lda, 
-                local_alm, Local_param_s2hat->nplm, NULL, 
+            spin=0;
+            s2hat_alm2map_spin( Global_param_s2hat->pixelization_scheme, Global_param_s2hat->scan_sky_structure_pixel, spin, Global_param_s2hat->nlmax, Global_param_s2hat->nmmax,
+                Local_param_s2hat->nmvals, Local_param_s2hat->mvals, nmaps,
+                Local_param_s2hat->first_ring, Local_param_s2hat->last_ring, Local_param_s2hat->map_size, local_map_pix, lda, local_alm,
                 Local_param_s2hat->gangsize, Local_param_s2hat->gangrank, Local_param_s2hat->gangcomm);
-            // The NULL argument correspond to precomputed Legendre polynomials, only relevant if plms != 0
+            break;
+        case 3: // Case with both intensity and polarization
+            // s2hat_alm2map(Local_param_s2hat->plms, Global_param_s2hat->pixelization_scheme, Global_param_s2hat->scan_sky_structure_pixel, Global_param_s2hat->nlmax, Global_param_s2hat->nmmax, 
+            //     Local_param_s2hat->nmvals, Local_param_s2hat->mvals, nmaps, nstokes, 
+            //     Local_param_s2hat->first_ring, Local_param_s2hat->last_ring, Local_param_s2hat->map_size, local_map_pix, lda, 
+            //     local_alm, Local_param_s2hat->nplm, NULL, 
+            //     Local_param_s2hat->gangsize, Local_param_s2hat->gangrank, Local_param_s2hat->gangcomm);
+            // // The NULL argument correspond to precomputed Legendre polynomials, only relevant if plms != 0
+            spin=0;
+            s2hat_alm2map_spin( Global_param_s2hat->pixelization_scheme, Global_param_s2hat->scan_sky_structure_pixel, spin, Global_param_s2hat->nlmax, Global_param_s2hat->nmmax,
+                Local_param_s2hat->nmvals, Local_param_s2hat->mvals, nmaps,
+                Local_param_s2hat->first_ring, Local_param_s2hat->last_ring, Local_param_s2hat->map_size, local_map_pix, lda, local_alm,
+                Local_param_s2hat->gangsize, Local_param_s2hat->gangrank, Local_param_s2hat->gangcomm);
+            // Computing alm2map in the specific case where only Q,U are provided
+            spin=2;
+            s2hat_alm2map_spin( Global_param_s2hat->pixelization_scheme, Global_param_s2hat->scan_sky_structure_pixel, spin, Global_param_s2hat->nlmax, Global_param_s2hat->nmmax,
+                Local_param_s2hat->nmvals, Local_param_s2hat->mvals, nmaps,
+                Local_param_s2hat->first_ring, Local_param_s2hat->last_ring, Local_param_s2hat->map_size, local_map_pix+Local_param_s2hat->map_size, lda, local_alm+S2HAT_params->size_alm,
+                Local_param_s2hat->gangsize, Local_param_s2hat->gangrank, Local_param_s2hat->gangcomm);
+            // Computing alm2map in the specific case where only Q,U are provided
             break;
 
         case 2: // Case with only polarization
@@ -85,32 +103,63 @@ int apply_pix2alm(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parame
     int nstokes = S2HAT_params->nstokes; // Getting number of Stokes parameters
 
     int nmaps = 1; // We only provide 1 input set of alm coefficient
-    int lda = nstokes; // We choose the HEALPIX convention with local_alm in the form (1:nstokes,0:nlmax,0:nmvals-1,1:nmaps)
+    // int lda = nstokes; // We choose the HEALPIX convention with local_alm in the form (1:nstokes,0:nlmax,0:nmvals-1,1:nmaps)
+    int lda = Global_param_s2hat->nlmax; // We choose the S2HAT convention with local_alm in the form (0:nlmax,0:nmvals-1,1:nstokes,1:nmaps)
 
-    double *local_w8ring;
+    int nrings = Local_param_s2hat->last_ring-Local_param_s2hat->first_ring+1;
+    // double *local_w8ring;
+    double local_w8ring[nrings*nstokes];
     int i_ring;
 
     int spin;
 
-    if (Local_param_s2hat->gangrank != -1){
-      local_w8ring = (double *) malloc( nstokes*(Local_param_s2hat->last_ring-Local_param_s2hat->first_ring+1)*sizeof(double));
-      for( i_ring=0; i_ring< nstokes*(Local_param_s2hat->last_ring-Local_param_s2hat->first_ring+1); i_ring++)
+    // if (Local_param_s2hat->gangrank != -1){
+    //   local_w8ring = (double *) malloc( nstokes*(Local_param_s2hat->last_ring-Local_param_s2hat->first_ring+1)*sizeof(double));
+    //   for( i_ring=0; i_ring< nstokes*(Local_param_s2hat->last_ring-Local_param_s2hat->first_ring+1); i_ring++)
+    //           local_w8ring[i_ring]=1.;
+    // }
+      for( i_ring=0; i_ring< nstokes*nrings; i_ring++)
               local_w8ring[i_ring]=1.;
-    }
 
+    // int max_size_test = 50, number_of_nans = 0, index;
+    // if (Local_param_s2hat->gangrank == 0){
+    //     printf("%d ²²²²²² local_map_pix from pixel 0 to %d - %f -", Local_param_s2hat->gangrank, max_size_test, local_map_pix[0]);
+    //     for (index=0+Local_param_s2hat->map_size;index<max_size_test+Local_param_s2hat->map_size;index++){
+    //         printf("- %f -", local_map_pix[index]);
+    //         if (!(local_map_pix[index]==local_map_pix[index]))
+    //             number_of_nans++;
 
-
+    //         }
+    //     printf(" \n"); fflush(stdout);
+    //     printf("%d ²²²²²² number_of_nans %d \n", Local_param_s2hat->gangrank, number_of_nans); fflush(stdout);
+    // }
 
     switch(nstokes)
     {
         case 1: // Case only intensity
-        case 3: // Case with both intensity and polarization
-            s2hat_map2alm(Local_param_s2hat->plms, Global_param_s2hat->pixelization_scheme, Global_param_s2hat->scan_sky_structure_pixel, Global_param_s2hat->nlmax, Global_param_s2hat->nmmax, 
-                Local_param_s2hat->nmvals, Local_param_s2hat->mvals, nmaps, nstokes, 
-                Local_param_s2hat->first_ring, Local_param_s2hat->last_ring, local_w8ring, Local_param_s2hat->map_size, local_map_pix, lda, local_alm, 
-                Local_param_s2hat->nplm, NULL,
+            spin=0;            
+            s2hat_map2alm_spin( Global_param_s2hat->pixelization_scheme, Global_param_s2hat->scan_sky_structure_pixel, spin, Global_param_s2hat->nlmax, Global_param_s2hat->nmmax,
+                Local_param_s2hat->nmvals, Local_param_s2hat->mvals, nmaps, Local_param_s2hat->first_ring, Local_param_s2hat->last_ring,
+		        local_w8ring, Local_param_s2hat->map_size, local_map_pix, lda, local_alm,
                 Local_param_s2hat->gangsize, Local_param_s2hat->gangrank, Local_param_s2hat->gangcomm);
+            break;
+        case 3: // Case with both intensity and polarization
+            // s2hat_map2alm(Local_param_s2hat->plms, Global_param_s2hat->pixelization_scheme, Global_param_s2hat->scan_sky_structure_pixel, Global_param_s2hat->nlmax, Global_param_s2hat->nmmax, 
+            //     Local_param_s2hat->nmvals, Local_param_s2hat->mvals, nmaps, nstokes, 
+            //     Local_param_s2hat->first_ring, Local_param_s2hat->last_ring, local_w8ring, Local_param_s2hat->map_size, local_map_pix, lda, local_alm, 
+            //     Local_param_s2hat->nplm, NULL,
+            //     Local_param_s2hat->gangsize, Local_param_s2hat->gangrank, Local_param_s2hat->gangcomm);
             // The NULL argument correspond to precomputed Legendre polynomials, only relevant if plms != 0
+            spin=0;            
+            s2hat_map2alm_spin( Global_param_s2hat->pixelization_scheme, Global_param_s2hat->scan_sky_structure_pixel, spin, Global_param_s2hat->nlmax, Global_param_s2hat->nmmax,
+                Local_param_s2hat->nmvals, Local_param_s2hat->mvals, nmaps, Local_param_s2hat->first_ring, Local_param_s2hat->last_ring,
+		        local_w8ring, Local_param_s2hat->map_size, local_map_pix, lda, local_alm,
+                Local_param_s2hat->gangsize, Local_param_s2hat->gangrank, Local_param_s2hat->gangcomm);
+            spin=2;            
+            s2hat_map2alm_spin( Global_param_s2hat->pixelization_scheme, Global_param_s2hat->scan_sky_structure_pixel, spin, Global_param_s2hat->nlmax, Global_param_s2hat->nmmax,
+                Local_param_s2hat->nmvals, Local_param_s2hat->mvals, nmaps, Local_param_s2hat->first_ring, Local_param_s2hat->last_ring,
+		        local_w8ring, Local_param_s2hat->map_size, local_map_pix+Local_param_s2hat->map_size, lda, local_alm+S2HAT_params->size_alm,
+                Local_param_s2hat->gangsize, Local_param_s2hat->gangrank, Local_param_s2hat->gangcomm);
             break;
 
         case 2: // Case with only polarization
@@ -123,8 +172,8 @@ int apply_pix2alm(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parame
             break;
     }
 
-    if (Local_param_s2hat->gangrank != -1)
-      free(local_w8ring);
+    // if (Local_param_s2hat->gangrank != -1)
+    //   free(local_w8ring);
     return 0;
 }
 

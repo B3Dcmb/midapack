@@ -49,9 +49,9 @@ int init_harmonic_superstruct(Mat *A, Harmonic_superstruct *Harm_struct, int *ma
     MPI_Comm_size(worldcomm, &size);
 
     Files_path_WIENER_FILTER *Files_WF_struct = &(Harm_struct->S2HAT_params.Files_WF_struct);
-    printf("%d ~~~ Initializing struct_WF \n", rank); fflush(stdout);
+    // printf("%d ~~~ Initializing struct_WF \n", rank); fflush(stdout);
     init_files_struct_WF(Files_WF_struct, nside, lmax, c_ell_path, number_correlations);
-    printf("%d ~~~ Initializing superstruct S2HAT_params \n", rank); fflush(stdout);
+    // printf("%d ~~~ Initializing superstruct S2HAT_params \n", rank); fflush(stdout);
     init_s2hat_parameters_superstruct(Files_WF_struct, mask_binary, A->nnz, &(Harm_struct->S2HAT_params), worldcomm);
     // Initialize S2HAT structures
 
@@ -65,7 +65,7 @@ int init_harmonic_superstruct(Mat *A, Harmonic_superstruct *Harm_struct, int *ma
     int *projector_ring2nest = (int *)malloc(number_pixels_MAPPRAISER*sizeof(int));
     int *projector_nest2ring = (int *)malloc(number_pixels_MAPPRAISER*sizeof(int));
 
-    printf("%d ~~~ Projecting indices from nest2ring \n", rank); fflush(stdout);
+    // printf("%d ~~~ Projecting indices from nest2ring \n", rank); fflush(stdout);
     // get_projectors_indices(indices_local_MAPPRAISER_nest, ordered_indices_local_MAPPRAISER_ring, number_pixels_MAPPRAISER, nstokes, S2HAT_params->Global_param_s2hat.nside, projector_ring2nest, projector_nest2ring, rank);
     get_projectors_indices(indices_local_MAPPRAISER_nest, ordered_indices_local_MAPPRAISER_ring, number_pixels_MAPPRAISER, nstokes, S2HAT_params->Global_param_s2hat.nside, projector_ring2nest, projector_nest2ring);
     // As we have nest distribution with MAPPRAISER convention, convert the indices into ring distribution with S2HAT convention
@@ -76,9 +76,9 @@ int init_harmonic_superstruct(Mat *A, Harmonic_superstruct *Harm_struct, int *ma
     int *indices_local_S2HAT_ring = S2HAT_params->Local_param_s2hat.pixel_numbered_ring; // Indices local S2HAT in ring distribution
     int number_pixels_S2HAT = nstokes * S2HAT_params->Local_param_s2hat.map_size; // Local map size
 
-    printf("%d ~~~ Preparing butterfly communication part 1 !!! \n", rank); fflush(stdout);
+    // printf("%d ~~~ Preparing butterfly communication part 1 !!! \n", rank); fflush(stdout);
     prepare_butterfly_communication(ordered_indices_local_MAPPRAISER_ring, number_pixels_MAPPRAISER, indices_local_S2HAT_ring, number_pixels_S2HAT, flag_reshuffle_butterfly, &(Harm_struct->MAPPRAISER_to_S2HAT_butterfly), worldcomm);
-    printf("%d ~~~ Preparing butterfly communication part 2 !!! \n", rank); fflush(stdout);
+    // printf("%d ~~~ Preparing butterfly communication part 2 !!! \n", rank); fflush(stdout);
     prepare_butterfly_communication(indices_local_S2HAT_ring, number_pixels_S2HAT, ordered_indices_local_MAPPRAISER_ring, number_pixels_MAPPRAISER, flag_reshuffle_butterfly, &(Harm_struct->S2HAT_to_MAPPRAISER_butterfly), worldcomm);
 
     /* Attributing the Harmonic superstruc variables*/
@@ -88,7 +88,7 @@ int init_harmonic_superstruct(Mat *A, Harmonic_superstruct *Harm_struct, int *ma
     // Harmonic_superstruct->S2HAT_to_MAPPRAISER = ring2MAPP_butterfly;
     // Harmonic_superstruct->MAPPRAISER_to_S2HAT = MAPP2ring_butterfly;
     // Attributing the Butterfly structures to Harmonic superstructure
-    printf("%d ~~~ Done with initializing Harmonic struct !!! \n", rank); fflush(stdout);
+    // printf("%d ~~~ Done with initializing Harmonic struct !!! \n", rank); fflush(stdout);
     return 0;
 }
 
@@ -100,16 +100,16 @@ int init_harmonic_superstruct(Mat *A, Harmonic_superstruct *Harm_struct, int *ma
 //      The indices_nest are expected to be not have any redundancy */
 
 //   int i, j;
-//   printf("%d <<< Starting projecting indices_v2 !!! \n", rank); fflush(stdout);
+//   // printf("%d <<< Starting projecting indices_v2 !!! \n", rank); fflush(stdout);
 //   int *indices_ring = (int *)malloc(size_indices*sizeof(int));
 
-//   printf("%d <<< Converting nest2ring !!! \n", rank); fflush(stdout);
+//   // printf("%d <<< Converting nest2ring !!! \n", rank); fflush(stdout);
 //   convert_indices_nest2ring(indices_nest, indices_ring, size_indices, nstokes, nside);
 
-//   printf("%d <<< memcpy rings !!! \n", rank); fflush(stdout);
+//   // printf("%d <<< memcpy rings !!! \n", rank); fflush(stdout);
 //   memcpy(ordered_indices_ring, indices_ring, size_indices*sizeof(int));
 
-//   printf("%d <<< ssort !!! \n", rank); fflush(stdout);
+//   // printf("%d <<< ssort !!! \n", rank); fflush(stdout);
 // //   ssort(ordered_indices_ring, size_indices, 0); 
 //   for (i=0; i<size_indices; i++) 
 //   {
@@ -118,7 +118,7 @@ int init_harmonic_superstruct(Mat *A, Harmonic_superstruct *Harm_struct, int *ma
 //   ssort_with_indices(ordered_indices_ring, projector_nest2ring, size_indices, 0);
 //   // Argument flag=0 to use quicksort to sort the indices
 
-//   printf("%d <<< Finally for loops !!! \n", rank); fflush(stdout);
+//   // printf("%d <<< Finally for loops !!! \n", rank); fflush(stdout);
 // //   for (i=0; i<size_indices; i++) 
 // //   {
 // //     for (j=0; j<size_indices; j++)
@@ -139,7 +139,7 @@ int init_harmonic_superstruct(Mat *A, Harmonic_superstruct *Harm_struct, int *ma
 //     // projector_ring2nest[i] = index;
 //     projector_ring2nest[projector_nest2ring[i]] = i;
 //   }
-//   printf("%d <<< Done projecting indices_v2 !!! \n", rank); fflush(stdout);
+//   // printf("%d <<< Done projecting indices_v2 !!! \n", rank); fflush(stdout);
 //   free(indices_ring);
 //   // free(ordered_indices_ring);
 //   return 0;
@@ -196,6 +196,17 @@ int global_map_2_harmonic(double* local_pixel_map_MAPPRAISER, s2hat_dcomplex *lo
 
     check_monotony = monotony(local_pixel_indices_MAPPRAISER_ring, number_pixels_MAPPRAISER);
     printf("%d »»»»»» ........ Performing butterfly communication ! monotony_check %d number_pixels_S2HAT %d \n",rank, check_monotony, number_pixels_S2HAT); fflush(stdout);
+    int number_of_nan = 0;
+    for (index=0;index<A->lcount-(A->nnz)*(A->trash_pix);index++){
+        if (!(local_pixel_map_MAPPRAISER_ring[index] == local_pixel_map_MAPPRAISER_ring[index])){
+            number_of_nan++;
+            }
+        if (!(local_pixel_indices_MAPPRAISER_ring[index] == local_pixel_indices_MAPPRAISER_ring[index])){
+            number_of_nan++;
+            }
+    }
+    if (number_of_nan)
+        printf("%d «««««««« NUMBER OF NANS NON-ZERO FOR local_pixel_map_MAPPRAISER_ring before butterfly comm : %d \n", rank, number_of_nan); fflush(stdout);
     perform_butterfly_communication(local_pixel_map_MAPPRAISER_ring, local_pixel_indices_MAPPRAISER_ring, A->lcount-(A->nnz)*(A->trash_pix), local_pixel_map_S2HAT, Harmonic_sup->S2HAT_params.Local_param_s2hat.pixel_numbered_ring, number_pixels_S2HAT, &(Harmonic_sup->MAPPRAISER_to_S2HAT_butterfly), worldcomm);
     printf("%d »»»»»» ........ Butterfly communication performed !\n",rank); fflush(stdout);
 
@@ -210,21 +221,46 @@ int global_map_2_harmonic(double* local_pixel_map_MAPPRAISER, s2hat_dcomplex *lo
     if (Local_param_s2hat->gangrank >= 0){
         index = 0;
         check_monotony = monotony(Harmonic_sup->S2HAT_params.Local_param_s2hat.pixel_numbered_ring, number_pixels_S2HAT);
-        printf("%d »»»»»» Check obtained S2HAT map with size %d monotony_check %d : From pixel 0 to %d - %f %d -", rank, number_pixels_S2HAT, check_monotony, max_size_test, local_pixel_map_S2HAT[index], Harmonic_sup->S2HAT_params.Local_param_s2hat.pixel_numbered_ring[index]); fflush(stdout);
+        // printf("%d »»»»»» Check obtained S2HAT map with size %d monotony_check %d : From pixel 0 to %d - %f %d -", rank, number_pixels_S2HAT, check_monotony, max_size_test, local_pixel_map_S2HAT[index], Harmonic_sup->S2HAT_params.Local_param_s2hat.pixel_numbered_ring[index]); fflush(stdout);
         for (index=1;index<max_size_test;index++){
-            printf("- %f %d -", local_pixel_map_S2HAT[index], Harmonic_sup->S2HAT_params.Local_param_s2hat.pixel_numbered_ring[index]);
+            // printf("- %f %d -", local_pixel_map_S2HAT[index], Harmonic_sup->S2HAT_params.Local_param_s2hat.pixel_numbered_ring[index]);
         }
-        printf("\n"); fflush(stdout);
+        // printf("\n"); fflush(stdout);
     }
-
+    printf("%d »»»»»» TEST S2HAT 0 ! \n", rank); fflush(stdout);
+    for (index=0;index<number_pixels_S2HAT;index++){
+        if (!(local_pixel_map_S2HAT[index] == local_pixel_map_S2HAT[index])){
+            number_of_nan++;
+            }
+    }
+    printf("%d »»»»»» TEST S2HAT 1 ! \n", rank); fflush(stdout);
+    if (number_of_nan)
+        printf("%d «««««««« NUMBER OF NANS NON-ZERO FOR number_pixels_S2HAT before apply_pix2alm : %d \n", rank, number_of_nan); fflush(stdout);
+    
+    printf("%d »»»»»» TEST S2HAT 2 ! \n", rank); fflush(stdout);
     if (Local_param_s2hat->gangrank >= 0)
         apply_pix2alm(local_pixel_map_S2HAT, local_alm_s2hat, &(Harmonic_sup->S2HAT_params));
+
+    printf("%d »»»»»» TEST S2HAT 3 ! \n", rank); fflush(stdout);
+    for (index=0;index<Harmonic_sup->S2HAT_params.nstokes*Harmonic_sup->S2HAT_params.size_alm;index++){
+        if (!(local_alm_s2hat[index].re == local_alm_s2hat[index].re)){
+            number_of_nan++;
+            }
+        if (!(local_alm_s2hat[index].im == local_alm_s2hat[index].im)){
+            number_of_nan++;
+            }
+    }
+    printf("%d »»»»»» TEST S2HAT 4 ! \n", rank); fflush(stdout);
+    if (number_of_nan)
+        printf("%d «««««««« NUMBER OF NANS NON-ZERO within alms : %d \n", rank, number_of_nan); fflush(stdout);
     
+    printf("%d »»»»»» TEST S2HAT 5 ! \n", rank); fflush(stdout);
     if (number_pixels_S2HAT)
         free(local_pixel_map_S2HAT);
-
+    printf("%d »»»»»» Free step 0 ! \n", rank); fflush(stdout);
     free(local_pixel_indices_MAPPRAISER_ring);
     free(local_pixel_map_MAPPRAISER_ring);
+    printf("%d »»»»»» Done ! \n", rank); fflush(stdout);
     return 0;
 }
 

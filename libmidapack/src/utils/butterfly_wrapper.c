@@ -255,6 +255,7 @@ int perform_butterfly_communication(double *values_to_communicate, int *indices_
 
     if (check_monotony_in || check_monotony_out){
         printf("ERROR : In prepare_butterfly_communication indices_in or indices_out is not monotonous : \n 1 for non-monotonous, 0 for monotonous : indices_in %d indices_out %d \n", check_monotony_in, check_monotony_out);
+        fflush(stdout);
         return 1;
     }
     
@@ -290,7 +291,6 @@ int perform_butterfly_communication(double *values_to_communicate, int *indices_
         }
 
         m2m(values_to_communicate, indices_in, count_in, values_butterfly, Butterfly_mirror_supp->ordered_indices, Butterfly_mirror_supp->new_size_local);
-
         // Compute max communication buffer size
         nRmax = Butterfly_obj->nR[0];
         nSmax = Butterfly_obj->nS[0];
@@ -321,20 +321,17 @@ int perform_butterfly_communication(double *values_to_communicate, int *indices_
 
         m2m(values_butterfly, Butterfly_mirror_supp->ordered_indices, Butterfly_mirror_supp->new_size_local, values_received_butterfly, Butterfly_unmirror_supp->ordered_indices, Butterfly_unmirror_supp->new_size_local);        
         m2m(com_val, Butterfly_obj->com_indices, Butterfly_obj->com_count, values_received_butterfly, Butterfly_unmirror_supp->ordered_indices, Butterfly_unmirror_supp->new_size_local);
-
         m2m(values_received_butterfly, Butterfly_unmirror_supp->ordered_indices, Butterfly_unmirror_supp->new_size_local, values_out, indices_out, count_out);
 
         if (Butterfly_unmirror_supp->size_from_mirror)
             values_to_unmirror = (double *)calloc(Butterfly_unmirror_supp->size_from_mirror,sizeof(double));
         m2m(values_received_butterfly, Butterfly_unmirror_supp->ordered_indices, Butterfly_unmirror_supp->new_size_local, values_to_unmirror, Butterfly_unmirror_supp->indices_mirror, Butterfly_unmirror_supp->size_from_mirror);
-
         if (Butterfly_mirror_supp->new_size_local)
             free(values_butterfly);
         if (Butterfly_unmirror_supp->new_size_local)
             free(values_received_butterfly);
         free(com_val);
     }
-
     mirror_butterfly(values_to_unmirror, NULL, Butterfly_unmirror_supp->size_from_mirror, values_out, NULL, &(count_out), UNMIRROR_DATA, worldcomm);
     if (Butterfly_unmirror_supp->size_from_mirror){
         free(values_to_unmirror);

@@ -138,11 +138,21 @@ int main_firsts_tests_init(int argc, char** argv){
 
     max_size_test = 50;
     printf("%d ---- ***alms*** from pixel 0 to %d - %f %f -", rank, max_size_test, local_alm_s2hat[0].re, local_alm_s2hat[0].im);
-    for (index=0;index<max_size_test;index++){
+    int number_of_nan = 0;
+    for (index=0;index<S2HAT_params->nstokes*S2HAT_params->size_alm;index++){
         printf("- %f %f -", local_alm_s2hat[index].re, local_alm_s2hat[index].im);
-        }
-    printf(" \n");
-    fflush(stdout);
+        if (!(local_alm_s2hat[index].re == local_alm_s2hat[index].re)){
+            local_alm_s2hat[index].re = 0;
+            number_of_nan++;
+            }
+        if (!(local_alm_s2hat[index].im == local_alm_s2hat[index].im)){
+            local_alm_s2hat[index].im = 0;
+            number_of_nan++;
+            }
+    }
+    printf(" \n"); fflush(stdout);
+
+    printf("%d ----!!!! ***alms*** Number of nans %d \n", rank, number_of_nan); fflush(stdout);
     // double *local_map_pix = (double *)malloc(nstokes*S2HAT_params->Local_param_s2hat.map_size*sizeof(double));
     // apply_alm2pix(local_map_pix, local_alm_s2hat, S2HAT_params);
 
@@ -391,6 +401,7 @@ int main(int argc, char** argv){
 
     printf("%d --- map2harmonic !!! \n", rank); fflush(stdout);
     global_map_2_harmonic(local_map_MAPPRAISER, local_alm_s2hat, &Obj_pointing_matrix, &(Harmonic_struct));
+    printf("%d --- map2harmonic end !!! \n", rank); fflush(stdout);
 
     max_size_test = 50;
     printf("%d ---- ***alms*** from pixel 0 to %d - %f %f -", rank, max_size_test, local_alm_s2hat[0].re, local_alm_s2hat[0].im);
@@ -399,6 +410,21 @@ int main(int argc, char** argv){
         }
     printf(" \n");
     fflush(stdout);
+    
+    int number_of_nan = 0;
+    for (index=0;index<S2HAT_params->nstokes*S2HAT_params->size_alm;index++){
+        if (!(local_alm_s2hat[index].re == local_alm_s2hat[index].re)){
+            // local_alm_s2hat[index].re = 0;
+            number_of_nan++;
+            }
+        if (!(local_alm_s2hat[index].im == local_alm_s2hat[index].im)){
+            // local_alm_s2hat[index].im = 0;
+            number_of_nan++;
+            }
+    }
+    printf(" \n"); fflush(stdout);
+
+    printf("%d ----!!!! ***alms*** Number of nans %d \n", rank, number_of_nan); fflush(stdout);
     // double *local_map_pix = (double *)malloc(nstokes*S2HAT_params->Local_param_s2hat.map_size*sizeof(double));
     // apply_alm2pix(local_map_pix, local_alm_s2hat, S2HAT_params);
 
