@@ -71,7 +71,8 @@ int get_projectors_indices(int *indices_nest, int *ordered_indices_ring, int siz
      The indices_nest are expected to be not have any redundancy */
 
   int i, j;
-  int *indices_ring = (int *)malloc(size_indices*sizeof(int));
+  // int *indices_ring = (int *)malloc(size_indices*sizeof(int));
+  int indices_ring[size_indices];
 
   convert_indices_nest2ring(indices_nest, indices_ring, size_indices, nstokes, nside);
 
@@ -102,7 +103,7 @@ int get_projectors_indices(int *indices_nest, int *ordered_indices_ring, int siz
   for (i=0; i<size_indices; i++)
     projector_ring2nest[projector_nest2ring[i]] = i;
 
-  free(indices_ring);
+  // free(indices_ring);
   // free(ordered_indices_ring);
   return 0;
 }

@@ -37,7 +37,8 @@ int apply_alm2pix(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parame
     int nmaps = 1; // We only provide 1 input set of alm coefficient
     // int nstokes = 3; // We want all T, Q and U maps
     // int lda = nstokes; // We choose the HEALPIX convention with local_alm in the form (1:nstokes,0:nlmax,0:nmvals-1,1:nmaps)
-    int lda = Global_param_s2hat->nlmax; // We choose the HEALPIX convention with local_alm in the form (1:nstokes,0:nlmax,0:nmvals-1,1:nmaps)
+    // int lda = Global_param_s2hat->nlmax; // We choose the S2HAT convention with local_alm in the form (0:nlmax,0:nmvals-1,1:nstokes,1:nmaps)
+    int lda = S2HAT_params->lda;
     int spin;
 
     switch(nstokes)
@@ -104,7 +105,8 @@ int apply_pix2alm(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parame
 
     int nmaps = 1; // We only provide 1 input set of alm coefficient
     // int lda = nstokes; // We choose the HEALPIX convention with local_alm in the form (1:nstokes,0:nlmax,0:nmvals-1,1:nmaps)
-    int lda = Global_param_s2hat->nlmax; // We choose the S2HAT convention with local_alm in the form (0:nlmax,0:nmvals-1,1:nstokes,1:nmaps)
+    // int lda = Global_param_s2hat->nlmax; // We choose the S2HAT convention with local_alm in the form (0:nlmax,0:nmvals-1,1:nstokes,1:nmaps)
+    int lda = S2HAT_params->lda;
 
     int nrings = Local_param_s2hat->last_ring-Local_param_s2hat->first_ring+1;
     // double *local_w8ring;
@@ -178,7 +180,7 @@ int apply_pix2alm(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parame
 }
 
 
-int apply_inv_covariance_matrix_to_alm(s2hat_dcomplex *input_local_alm, s2hat_dcomplex *out_local_alm, double **inv_covariance_matrix, S2HAT_parameters *S2HAT_params){
+int apply_inv_covariance_matrix_to_alm(s2hat_dcomplex *input_local_alm, s2hat_dcomplex *out_local_alm, double **inv_covariance_matrix, int power_inv_cov, S2HAT_parameters *S2HAT_params){
     /* Apply inverse of covariance matrix to input_local_alm */
 
     S2HAT_GLOBAL_parameters Global_param_s2hat = S2HAT_params->Global_param_s2hat;
@@ -191,38 +193,58 @@ int apply_inv_covariance_matrix_to_alm(s2hat_dcomplex *input_local_alm, s2hat_dc
     int lmax = Global_param_s2hat.nlmax;
 
     if (Local_param_s2hat.gangrank != -1){
-
-    
-      nmvals = Local_param_s2hat.nmvals; // Total number of m values
-    // int *mvals = Local_param_s2hat->mvals; // Values of m the considered processor contain
+        nmvals = Local_param_s2hat.nmvals; // Total number of m values
+        // int *mvals = Local_param_s2hat->mvals; // Values of m the considered processor contain
 
         double res_real, res_imag;
 
-        if (Local_param_s2hat.gangrank != -1)
-        for(ell_value=0; ell_value < lmax+1; ell_value++){
-            for(m_value=0; m_value < nmvals; m_value++){
-                for (index_stokes=0; index_stokes<nstokes; index_stokes++){
-                    res_real = 0;
-                    res_imag = 0;
-                    for (line_index=0; line_index < nstokes; line_index++){
-                        // res_real += input_local_alm[line_index*(lmax+1)*nmvals + ell_value*nmvals + m_value].re * inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index];
-                        // res_imag += input_local_alm[line_index*(lmax+1)*nmvals + ell_value*nmvals + m_value].im * inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index];
-                        
-                        // res_real += input_local_alm[m_value*(lmax+1)*nstokes + ell_value*nstokes + line_index].re * inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index];
-                        // res_imag += input_local_alm[m_value*(lmax+1)*nstokes + ell_value*nstokes + line_index].im * inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index];
+        if(S2HAT_params->lda == Global_param_s2hat.nlmax){
+            // printf("~~~~ S2HAT convention !! %d \n", S2HAT_params->lda); fflush(stdout);
+            for(ell_value=0; ell_value < lmax+1; ell_value++){
+                for(m_value=0; m_value < nmvals; m_value++){
+                    for (index_stokes=0; index_stokes<nstokes; index_stokes++){
+                        res_real = 0;
+                        res_imag = 0;
+                        for (line_index=0; line_index < nstokes; line_index++){
 
-                        res_real += inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index] * input_local_alm[m_value*(lmax+1)*nstokes + ell_value*nstokes + line_index].re;
-                        res_imag += inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index] * input_local_alm[m_value*(lmax+1)*nstokes + ell_value*nstokes + line_index].im;
-                        // Maybe with [line_index*nstokes + index_stokes] ?
+                            res_real += inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index] * input_local_alm[line_index*nmvals*(lmax+1) + m_value*(lmax+1) + ell_value].re;
+                            res_imag += inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index] * input_local_alm[line_index*nmvals*(lmax+1) + m_value*(lmax+1) + ell_value].im;
+                        }
+
+                        out_local_alm[index_stokes*nmvals*(lmax+1) + m_value*(lmax+1) + ell_value].re = res_real;
+                        out_local_alm[index_stokes*nmvals*(lmax+1) + m_value*(lmax+1) + ell_value].im = res_imag;
                     }
-                    // input_local_alm[index_stokes*(lmax+1)*nmvals + ell_value*nmvals + m_value].re = res_real;
-                    // input_local_alm[index_stokes*(lmax+1)*nmvals + ell_value*nmvals + m_value].im = res_imag;
-                    out_local_alm[m_value*(lmax+1)*nstokes + ell_value*nstokes + index_stokes].re = res_real;
-                    out_local_alm[m_value*(lmax+1)*nstokes + ell_value*nstokes + index_stokes].im = res_imag;
                 }
-                // Verify it is not applied to part where a_lm not defined !!!
             }
         }
+        else if (S2HAT_params->lda == nstokes){
+            // printf("~~~~ HEALPIX convention !! %d \n", S2HAT_params->lda); fflush(stdout);
+            for(ell_value=0; ell_value < lmax+1; ell_value++){
+                for(m_value=0; m_value < nmvals; m_value++){
+                    for (index_stokes=0; index_stokes<nstokes; index_stokes++){
+                        res_real = 0;
+                        res_imag = 0;
+                        for (line_index=0; line_index < nstokes; line_index++){
+                            // res_real += input_local_alm[line_index*(lmax+1)*nmvals + ell_value*nmvals + m_value].re * inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index];
+                            // res_imag += input_local_alm[line_index*(lmax+1)*nmvals + ell_value*nmvals + m_value].im * inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index];
+                            
+                            // res_real += input_local_alm[m_value*(lmax+1)*nstokes + ell_value*nstokes + line_index].re * inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index];
+                            // res_imag += input_local_alm[m_value*(lmax+1)*nstokes + ell_value*nstokes + line_index].im * inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index];
+
+                            res_real += pow(inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index], power_inv_cov) * input_local_alm[m_value*(lmax+1)*nstokes + ell_value*nstokes + line_index].re;
+                            res_imag += pow(inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index], power_inv_cov) * input_local_alm[m_value*(lmax+1)*nstokes + ell_value*nstokes + line_index].im;
+                            // Maybe with [line_index*nstokes + index_stokes] ?
+                        }
+                        // input_local_alm[index_stokes*(lmax+1)*nmvals + ell_value*nmvals + m_value].re = res_real;
+                        // input_local_alm[index_stokes*(lmax+1)*nmvals + ell_value*nmvals + m_value].im = res_imag;
+                        out_local_alm[m_value*(lmax+1)*nstokes + ell_value*nstokes + index_stokes].re = res_real;
+                        out_local_alm[m_value*(lmax+1)*nstokes + ell_value*nstokes + index_stokes].im = res_imag;
+                    }
+                    // Verify it is not applied to part where a_lm not defined !!!
+                }
+            }
+        }
+        
     // long int index;
     // for(index=0; index<nstokes*(lmax+1)*m_value; index++){
     //     local_alm[index].re = out_local_alm[index].re;
@@ -263,7 +285,8 @@ int alm2cls(s2hat_dcomplex* local_alm, double *c_ell_array, int nspec, S2HAT_par
     int mapnum = 0;
     int ncomp = nstokes; // Number for alm components (T, E, B)
     
-    int lda = ncomp; // Healpix convention chosen
+    // int lda = ncomp; // Healpix convention chosen
+    int lda = S2HAT_params->lda;
 
     // int nspec = 6; // All 6 spectras TT, EE, BB, TE, TB, EB computed
 

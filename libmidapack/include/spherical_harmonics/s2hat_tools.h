@@ -81,6 +81,7 @@ typedef struct {
 
     int size_alm; // Size of the alm ararys : lmax*mmax
     int nstokes; // Number of Stokes parameters : either 1 for intensity only, 2 for polarization only, 3 for intensity and polarization
+    int lda; // Leading dimension array : convention for S2HAT calculations
     
     int *local_projector_values_ring2nest;
     int *local_projector_values_nest2ring;
@@ -137,8 +138,7 @@ int apply_alm2pix(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parame
 int apply_pix2alm(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parameters *S2HAT_params);
 /**/
 /* Apply inverse of covariance matrix to local_alm */
-int apply_inv_covariance_matrix_to_alm(s2hat_dcomplex *input_local_alm, s2hat_dcomplex *out_local_alm, double **inv_covariance_matrix, S2HAT_parameters *S2HAT_params);
-/**/
+int apply_inv_covariance_matrix_to_alm(s2hat_dcomplex *input_local_alm, s2hat_dcomplex *out_local_alm, double **inv_covariance_matrix, int power_inv_cov, S2HAT_parameters *S2HAT_params);/**/
 /* Transform alm to c_ell coefficients */
 int alm2cls(s2hat_dcomplex* local_alm, double *c_ell_array, int nspec, S2HAT_parameters *S2HAT_params);
 /**/
