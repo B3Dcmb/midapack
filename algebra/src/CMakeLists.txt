@@ -40,7 +40,7 @@ endif ()
 
 # OpenMP
 
-if (OpenMP_FOUND)
+if (OpenMP_C_FOUND)
     target_link_libraries(midapack PUBLIC OpenMP::OpenMP_C)
 endif ()
 
