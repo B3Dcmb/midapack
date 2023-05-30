@@ -8,7 +8,7 @@ cmake_minimum_required(VERSION 3.18)
 
 # Project name and a few useful settings
 project(midapack
-        VERSION 2.1
+        VERSION 2.0
         DESCRIPTION "Parallel software tools for high performance CMB data analysis"
         LANGUAGES C CXX)
 

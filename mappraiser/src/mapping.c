@@ -7,6 +7,10 @@
 
 #include "mappraiser/mapping.h"
 
+#ifndef NDEBUG
+#include <assert.h>
+#endif
+
 #include <stdbool.h>
 
 /**
@@ -119,6 +123,7 @@ void build_gap_struct(int64_t gif, Gap *gaps, Mat *A) {
 }
 
 bool gap_overlaps_with_block(Gap *gaps, int i_gap, Block *block) {
+    if (i_gap < 0 || i_gap > gaps->ngap - 1) return false;
     int64_t id0g = gaps->id0gap[i_gap];
     int64_t idv  = block->idv;
     int     lg   = gaps->lgap[i_gap];
@@ -127,29 +132,49 @@ bool gap_overlaps_with_block(Gap *gaps, int i_gap, Block *block) {
 }
 
 void compute_gaps_per_block(Gap *gaps, int nb_blocks, Block *blocks) {
-    int    i_gap = 0; // index to go through the gaps
-    Block *b;         // pointer to the current block
+    int    i_gap;       // index to go through the gaps
+    int    first, last; // indexes of first and last relevant gaps
+    Block *b;           // pointer to the current block
 
-    for (int i = 0; i < nb_blocks; ++i) {
-        // find the relevant gaps for this block
-        b = &(blocks[i]);
+    if (gaps->ngap > 0) {
+        i_gap = 0;
+        for (int i = 0; i < nb_blocks; ++i) {
+            b = &(blocks[i]);
 
-        // reset the information
-        b->first_gap = -1;
-        b->last_gap  = -1;
+            // find the first relevant gap
+            while (!gap_overlaps_with_block(gaps, i_gap, b)) {
+                ++i_gap;
+#ifndef NDEBUG
+                assert(i_gap < gaps->ngap);
+#endif
+            }
 
-        // find the first relevant gap
-        while (b->first_gap == -1) {
-            bool check = gap_overlaps_with_block(gaps, i_gap, b);
-            if (check) b->first_gap = i_gap;
-            else ++i_gap;
+            // store its index
+            first = i_gap;
+            // printf("first = %d\n", first);
+
+            if (first == -1) {
+                // no relevant gaps found for this block
+                last = -1;
+            } else {
+                // go through relevant gaps
+                while (gap_overlaps_with_block(gaps, i_gap, b)) { ++i_gap; }
+
+                // store the index of the last relevant gap
+                last = i_gap - 1;
+            }
+            // printf("last = %d\n", last);
+
+            // store the information for this block
+            b->first_gap = first;
+            b->last_gap  = last;
         }
-
-        // go through relevant gaps
-        while (gap_overlaps_with_block(gaps, i_gap, b)) { ++i_gap; }
-
-        // store the last one
-        b->last_gap = i_gap - 1;
+    } else {
+        // no local gaps: set everything to -1
+        for (int i = 0; i < nb_blocks; ++i) {
+            blocks[i].first_gap = -1;
+            blocks[i].last_gap  = -1;
+        }
     }
 }
 
