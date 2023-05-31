@@ -14,7 +14,7 @@ if (NOT DISABLE_OPENMP)
 endif ()
 
 # Search for FFTW (necessary for toeplitz module)
-find_package(FFTW REQUIRED)
+find_package(FFTW REQUIRED DOUBLE_LIB)
 
 # ________________________________________
 # Subdirectories

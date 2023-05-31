@@ -47,12 +47,7 @@ endif ()
 # FFTW (for toeplitz module)
 
 if (FFTW_FOUND)
-    #    target_compile_definitions(midapack PRIVATE HAVE_FFTW=1)
-    target_include_directories(midapack PRIVATE "${FFTW_INCLUDE_DIRS}")
-    target_link_libraries(midapack PUBLIC "${FFTW_LIBRARIES}")
-    #    if(FFTW_DOUBLE_THREADS_LIB_FOUND)
-    #        target_compile_definitions(midapack PRIVATE HAVE_FFTW_THREADS=1)
-    #    endif(FFTW_DOUBLE_THREADS_LIB_FOUND)
+    target_link_libraries(midapack PUBLIC FFTW::Double)
 endif (FFTW_FOUND)
 
 # ----------------------------------------------------------------------------------------#

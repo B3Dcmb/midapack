@@ -33,8 +33,11 @@
 #   LONGDOUBLE_OPENMP_LIB
 #
 
-#If environment variable FFTWDIR is specified, it has same effect as FFTW_ROOT
-if (NOT FFTW_ROOT AND ENV{FFTWDIR})
+# TODO (maybe): extend with ExternalProject download + build option
+# TODO: put on conda-forge
+
+
+if (NOT FFTW_ROOT AND DEFINED ENV{FFTWDIR})
     set(FFTW_ROOT $ENV{FFTWDIR})
 endif ()
 
@@ -83,6 +86,14 @@ if (FFTW_ROOT)
     )
 
     find_library(
+            FFTW_DOUBLE_MPI_LIB
+            NAMES "fftw3_mpi"
+            PATHS ${FFTW_ROOT}
+            PATH_SUFFIXES "lib" "lib64"
+            NO_DEFAULT_PATH
+    )
+
+    find_library(
             FFTW_FLOAT_LIB
             NAMES "fftw3f" libfftw3f-3
             PATHS ${FFTW_ROOT}
@@ -101,6 +112,14 @@ if (FFTW_ROOT)
     find_library(
             FFTW_FLOAT_OPENMP_LIB
             NAMES "fftw3f_omp"
+            PATHS ${FFTW_ROOT}
+            PATH_SUFFIXES "lib" "lib64"
+            NO_DEFAULT_PATH
+    )
+
+    find_library(
+            FFTW_FLOAT_MPI_LIB
+            NAMES "fftw3f_mpi"
             PATHS ${FFTW_ROOT}
             PATH_SUFFIXES "lib" "lib64"
             NO_DEFAULT_PATH
@@ -130,6 +149,14 @@ if (FFTW_ROOT)
             NO_DEFAULT_PATH
     )
 
+    find_library(
+            FFTW_LONGDOUBLE_MPI_LIB
+            NAMES "fftw3l_mpi"
+            PATHS ${FFTW_ROOT}
+            PATH_SUFFIXES "lib" "lib64"
+            NO_DEFAULT_PATH
+    )
+
     #find includes
     find_path(FFTW_INCLUDE_DIRS
             NAMES "fftw3.h"
@@ -140,64 +167,79 @@ if (FFTW_ROOT)
 
 else ()
 
-    set(SEARCH_DIRS ${PKG_FFTW_LIBDIR} ${PKG_FFTW_LIBRARY_DIRS} ${LIB_INSTALL_DIR})
-
     find_library(
             FFTW_DOUBLE_LIB
             NAMES "fftw3"
-            PATHS ${SEARCH_DIRS}
+            PATHS ${PKG_FFTW_LIBRARY_DIRS} ${LIB_INSTALL_DIR}
     )
 
     find_library(
             FFTW_DOUBLE_THREADS_LIB
             NAMES "fftw3_threads"
-            PATHS ${SEARCH_DIRS}
+            PATHS ${PKG_FFTW_LIBRARY_DIRS} ${LIB_INSTALL_DIR}
     )
 
     find_library(
             FFTW_DOUBLE_OPENMP_LIB
             NAMES "fftw3_omp"
-            PATHS ${SEARCH_DIRS}
+            PATHS ${PKG_FFTW_LIBRARY_DIRS} ${LIB_INSTALL_DIR}
+    )
+
+    find_library(
+            FFTW_DOUBLE_MPI_LIB
+            NAMES "fftw3_mpi"
+            PATHS ${PKG_FFTW_LIBRARY_DIRS} ${LIB_INSTALL_DIR}
     )
 
     find_library(
             FFTW_FLOAT_LIB
             NAMES "fftw3f"
-            PATHS ${SEARCH_DIRS}
+            PATHS ${PKG_FFTW_LIBRARY_DIRS} ${LIB_INSTALL_DIR}
     )
 
     find_library(
             FFTW_FLOAT_THREADS_LIB
             NAMES "fftw3f_threads"
-            PATHS ${SEARCH_DIRS}
+            PATHS ${PKG_FFTW_LIBRARY_DIRS} ${LIB_INSTALL_DIR}
     )
 
     find_library(
             FFTW_FLOAT_OPENMP_LIB
             NAMES "fftw3f_omp"
-            PATHS ${SEARCH_DIRS}
+            PATHS ${PKG_FFTW_LIBRARY_DIRS} ${LIB_INSTALL_DIR}
+    )
+
+    find_library(
+            FFTW_FLOAT_MPI_LIB
+            NAMES "fftw3f_mpi"
+            PATHS ${PKG_FFTW_LIBRARY_DIRS} ${LIB_INSTALL_DIR}
     )
 
     find_library(
             FFTW_LONGDOUBLE_LIB
             NAMES "fftw3l"
-            PATHS ${SEARCH_DIRS}
+            PATHS ${PKG_FFTW_LIBRARY_DIRS} ${LIB_INSTALL_DIR}
     )
 
     find_library(
             FFTW_LONGDOUBLE_THREADS_LIB
             NAMES "fftw3l_threads"
-            PATHS ${SEARCH_DIRS}
+            PATHS ${PKG_FFTW_LIBRARY_DIRS} ${LIB_INSTALL_DIR}
     )
 
     find_library(FFTW_LONGDOUBLE_OPENMP_LIB
             NAMES "fftw3l_omp"
-            PATHS ${SEARCH_DIRS}
+            PATHS ${PKG_FFTW_LIBRARY_DIRS} ${LIB_INSTALL_DIR}
+            )
+
+    find_library(FFTW_LONGDOUBLE_MPI_LIB
+            NAMES "fftw3l_mpi"
+            PATHS ${PKG_FFTW_LIBRARY_DIRS} ${LIB_INSTALL_DIR}
             )
 
     find_path(FFTW_INCLUDE_DIRS
             NAMES "fftw3.h"
-            PATHS ${SEARCH_DIRS}
+            PATHS ${PKG_FFTW_INCLUDE_DIRS} ${INCLUDE_INSTALL_DIR}
             )
 
 endif (FFTW_ROOT)
@@ -207,6 +249,11 @@ endif (FFTW_ROOT)
 if (FFTW_DOUBLE_LIB)
     set(FFTW_DOUBLE_LIB_FOUND TRUE)
     set(FFTW_LIBRARIES ${FFTW_LIBRARIES} ${FFTW_DOUBLE_LIB})
+    add_library(FFTW::Double INTERFACE IMPORTED)
+    set_target_properties(FFTW::Double
+            PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${FFTW_INCLUDE_DIRS}"
+            INTERFACE_LINK_LIBRARIES "${FFTW_DOUBLE_LIB}"
+            )
 else ()
     set(FFTW_DOUBLE_LIB_FOUND FALSE)
 endif ()
@@ -214,6 +261,11 @@ endif ()
 if (FFTW_FLOAT_LIB)
     set(FFTW_FLOAT_LIB_FOUND TRUE)
     set(FFTW_LIBRARIES ${FFTW_LIBRARIES} ${FFTW_FLOAT_LIB})
+    add_library(FFTW::Float INTERFACE IMPORTED)
+    set_target_properties(FFTW::Float
+            PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${FFTW_INCLUDE_DIRS}"
+            INTERFACE_LINK_LIBRARIES "${FFTW_FLOAT_LIB}"
+            )
 else ()
     set(FFTW_FLOAT_LIB_FOUND FALSE)
 endif ()
@@ -221,6 +273,11 @@ endif ()
 if (FFTW_LONGDOUBLE_LIB)
     set(FFTW_LONGDOUBLE_LIB_FOUND TRUE)
     set(FFTW_LIBRARIES ${FFTW_LIBRARIES} ${FFTW_LONGDOUBLE_LIB})
+    add_library(FFTW::LongDouble INTERFACE IMPORTED)
+    set_target_properties(FFTW::LongDouble
+            PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${FFTW_INCLUDE_DIRS}"
+            INTERFACE_LINK_LIBRARIES "${FFTW_LONGDOUBLE_LIB}"
+            )
 else ()
     set(FFTW_LONGDOUBLE_LIB_FOUND FALSE)
 endif ()
@@ -228,6 +285,11 @@ endif ()
 if (FFTW_DOUBLE_THREADS_LIB)
     set(FFTW_DOUBLE_THREADS_LIB_FOUND TRUE)
     set(FFTW_LIBRARIES ${FFTW_LIBRARIES} ${FFTW_DOUBLE_THREADS_LIB})
+    add_library(FFTW::DoubleThreads INTERFACE IMPORTED)
+    set_target_properties(FFTW::DoubleThreads
+            PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${FFTW_INCLUDE_DIRS}"
+            INTERFACE_LINK_LIBRARIES "${FFTW_DOUBLE_THREADS_LIB}"
+            )
 else ()
     set(FFTW_DOUBLE_THREADS_LIB_FOUND FALSE)
 endif ()
@@ -235,6 +297,11 @@ endif ()
 if (FFTW_FLOAT_THREADS_LIB)
     set(FFTW_FLOAT_THREADS_LIB_FOUND TRUE)
     set(FFTW_LIBRARIES ${FFTW_LIBRARIES} ${FFTW_FLOAT_THREADS_LIB})
+    add_library(FFTW::FloatThreads INTERFACE IMPORTED)
+    set_target_properties(FFTW::FloatThreads
+            PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${FFTW_INCLUDE_DIRS}"
+            INTERFACE_LINK_LIBRARIES "${FFTW_FLOAT_THREADS_LIB}"
+            )
 else ()
     set(FFTW_FLOAT_THREADS_LIB_FOUND FALSE)
 endif ()
@@ -242,6 +309,11 @@ endif ()
 if (FFTW_LONGDOUBLE_THREADS_LIB)
     set(FFTW_LONGDOUBLE_THREADS_LIB_FOUND TRUE)
     set(FFTW_LIBRARIES ${FFTW_LIBRARIES} ${FFTW_LONGDOUBLE_THREADS_LIB})
+    add_library(FFTW::LongDoubleThreads INTERFACE IMPORTED)
+    set_target_properties(FFTW::LongDoubleThreads
+            PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${FFTW_INCLUDE_DIRS}"
+            INTERFACE_LINK_LIBRARIES "${FFTW_LONGDOUBLE_THREADS_LIB}"
+            )
 else ()
     set(FFTW_LONGDOUBLE_THREADS_LIB_FOUND FALSE)
 endif ()
@@ -249,6 +321,11 @@ endif ()
 if (FFTW_DOUBLE_OPENMP_LIB)
     set(FFTW_DOUBLE_OPENMP_LIB_FOUND TRUE)
     set(FFTW_LIBRARIES ${FFTW_LIBRARIES} ${FFTW_DOUBLE_OPENMP_LIB})
+    add_library(FFTW::DoubleOpenMP INTERFACE IMPORTED)
+    set_target_properties(FFTW::DoubleOpenMP
+            PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${FFTW_INCLUDE_DIRS}"
+            INTERFACE_LINK_LIBRARIES "${FFTW_DOUBLE_OPENMP_LIB}"
+            )
 else ()
     set(FFTW_DOUBLE_OPENMP_LIB_FOUND FALSE)
 endif ()
@@ -256,6 +333,11 @@ endif ()
 if (FFTW_FLOAT_OPENMP_LIB)
     set(FFTW_FLOAT_OPENMP_LIB_FOUND TRUE)
     set(FFTW_LIBRARIES ${FFTW_LIBRARIES} ${FFTW_FLOAT_OPENMP_LIB})
+    add_library(FFTW::FloatOpenMP INTERFACE IMPORTED)
+    set_target_properties(FFTW::FloatOpenMP
+            PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${FFTW_INCLUDE_DIRS}"
+            INTERFACE_LINK_LIBRARIES "${FFTW_FLOAT_OPENMP_LIB}"
+            )
 else ()
     set(FFTW_FLOAT_OPENMP_LIB_FOUND FALSE)
 endif ()
@@ -263,8 +345,49 @@ endif ()
 if (FFTW_LONGDOUBLE_OPENMP_LIB)
     set(FFTW_LONGDOUBLE_OPENMP_LIB_FOUND TRUE)
     set(FFTW_LIBRARIES ${FFTW_LIBRARIES} ${FFTW_LONGDOUBLE_OPENMP_LIB})
+    add_library(FFTW::LongDoubleOpenMP INTERFACE IMPORTED)
+    set_target_properties(FFTW::LongDoubleOpenMP
+            PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${FFTW_INCLUDE_DIRS}"
+            INTERFACE_LINK_LIBRARIES "${FFTW_LONGDOUBLE_OPENMP_LIB}"
+            )
 else ()
     set(FFTW_LONGDOUBLE_OPENMP_LIB_FOUND FALSE)
+endif ()
+
+if (FFTW_DOUBLE_MPI_LIB)
+    set(FFTW_DOUBLE_MPI_LIB_FOUND TRUE)
+    set(FFTW_LIBRARIES ${FFTW_LIBRARIES} ${FFTW_DOUBLE_MPI_LIB})
+    add_library(FFTW::DoubleMPI INTERFACE IMPORTED)
+    set_target_properties(FFTW::DoubleMPI
+            PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${FFTW_INCLUDE_DIRS}"
+            INTERFACE_LINK_LIBRARIES "${FFTW_DOUBLE_MPI_LIB}"
+            )
+else ()
+    set(FFTW_DOUBLE_MPI_LIB_FOUND FALSE)
+endif ()
+
+if (FFTW_FLOAT_MPI_LIB)
+    set(FFTW_FLOAT_MPI_LIB_FOUND TRUE)
+    set(FFTW_LIBRARIES ${FFTW_LIBRARIES} ${FFTW_FLOAT_MPI_LIB})
+    add_library(FFTW::FloatMPI INTERFACE IMPORTED)
+    set_target_properties(FFTW::FloatMPI
+            PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${FFTW_INCLUDE_DIRS}"
+            INTERFACE_LINK_LIBRARIES "${FFTW_FLOAT_MPI_LIB}"
+            )
+else ()
+    set(FFTW_FLOAT_MPI_LIB_FOUND FALSE)
+endif ()
+
+if (FFTW_LONGDOUBLE_MPI_LIB)
+    set(FFTW_LONGDOUBLE_MPI_LIB_FOUND TRUE)
+    set(FFTW_LIBRARIES ${FFTW_LIBRARIES} ${FFTW_LONGDOUBLE_MPI_LIB})
+    add_library(FFTW::LongDoubleMPI INTERFACE IMPORTED)
+    set_target_properties(FFTW::LongDoubleMPI
+            PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${FFTW_INCLUDE_DIRS}"
+            INTERFACE_LINK_LIBRARIES "${FFTW_LONGDOUBLE_MPI_LIB}"
+            )
+else ()
+    set(FFTW_LONGDOUBLE_MPI_LIB_FOUND FALSE)
 endif ()
 
 #--------------------------------------- end components
@@ -290,4 +413,7 @@ mark_as_advanced(
         FFTW_FLOAT_OPENMP_LIB
         FFTW_DOUBLE_OPENMP_LIB
         FFTW_LONGDOUBLE_OPENMP_LIB
+        FFTW_FLOAT_MPI_LIB
+        FFTW_DOUBLE_MPI_LIB
+        FFTW_LONGDOUBLE_MPI_LIB
 )
