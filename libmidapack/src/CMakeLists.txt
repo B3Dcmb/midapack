@@ -52,25 +52,39 @@ endif ()
 
 # # Healpix/S2HAT
 
-# if (HEALPIX_FOUND)
-# set(HEADER_FILES ${HEALPIXROOT}"/include/chealpix.h")
-target_include_directories(midapack PRIVATE $ENV{HEALPIXROOT}/include)
-target_include_directories(midapack PRIVATE $ENV{S2HATROOT}/include)
-target_link_libraries(midapack PRIVATE $ENV{S2HATROOT}/lib/cori/intel/libs2hat_std.a)
-target_link_libraries(midapack PRIVATE $ENV{HEALPIXROOT}/lib/libchealpix.a)
-target_compile_definitions(midapack PRIVATE "-DHEALPIXDATA=${HEALPIXROOT}share/healpix/ -ls2hat_std")
-# endif ()
+# # if (HEALPIX_FOUND)
+# # set(HEADER_FILES ${HEALPIXROOT}"/include/chealpix.h")
+# target_include_directories(midapack PRIVATE $ENV{HEALPIXROOT}/include)
+# target_include_directories(midapack PRIVATE $ENV{S2HATROOT}/include)
+# target_link_libraries(midapack PRIVATE $ENV{S2HATROOT}/lib/cori/intel/libs2hat_std.a)
+# target_link_libraries(midapack PRIVATE $ENV{HEALPIXROOT}/lib/libchealpix.a)
+# target_compile_definitions(midapack PRIVATE "-DHEALPIXDATA=${HEALPIXROOT}share/healpix/ -ls2hat_std")
+# # endif ()
+
+if (HEALPIX_FOUND)
+    #target_compile_definitions(s2hat_std PRIVATE HAVE_HEALPIX=1)
+    target_include_directories(midapack PUBLIC "${HEALPIX_INCLUDES}")
+    target_link_libraries(midapack PUBLIC "${HEALPIX_LIBRARIES}")
+    target_compile_options(midapack PUBLIC "${HEALPIX_LFLAGS}")
+endif (HEALPIX_FOUND)
+
+if (S2HAT_FOUND)
+    target_include_directories(midapack PUBLIC "${S2HAT_INCLUDES}")
+    target_link_libraries(midapack PUBLIC "${S2HAT_LIBRARIES}")
+    target_compile_options(midapack PUBLIC "${S2HAT_LFLAGS}")
+endif (S2HAT_FOUND)
 
 
 # FFTW (for toeplitz module)
 
 if (FFTW_FOUND)
-    #target_compile_definitions(midapack PRIVATE HAVE_FFTW=1)
-    target_include_directories(midapack PRIVATE "${FFTW_INCLUDE_DIRS}")
-    target_link_libraries(midapack PUBLIC "${FFTW_LIBRARIES}")
-    #    if(FFTW_DOUBLE_THREADS_LIB_FOUND)
-    #        target_compile_definitions(midapack PRIVATE HAVE_FFTW_THREADS=1)
-    #    endif(FFTW_DOUBLE_THREADS_LIB_FOUND)
+    # #target_compile_definitions(midapack PRIVATE HAVE_FFTW=1)
+    # target_include_directories(midapack PRIVATE "${FFTW_INCLUDE_DIRS}")
+    # target_link_libraries(midapack PUBLIC "${FFTW_LIBRARIES}")
+    # #    if(FFTW_DOUBLE_THREADS_LIB_FOUND)
+    # #        target_compile_definitions(midapack PRIVATE HAVE_FFTW_THREADS=1)
+    # #    endif(FFTW_DOUBLE_THREADS_LIB_FOUND)
+    target_link_libraries(midapack PUBLIC FFTW::Double)
 endif (FFTW_FOUND)
 
 if (USE_MKL)
@@ -106,32 +120,32 @@ endif ()
 include(CheckCCompilerFlag)
 
 # macro that checks if flag if supported for C, if so add to midapack
-macro(add_c_flag_if_avail_midapack FLAG)
-    if (NOT "${FLAG}" STREQUAL "")
-        # create a variable for checking the flag if supported, e.g.:
-        # -fp-model=precise --> c_fp_model_precise
-        string(REGEX REPLACE "^-" "c_" FLAG_NAME "${FLAG}")
-        string(REPLACE "-" "_" FLAG_NAME "${FLAG_NAME}")
-        string(REPLACE " " "_" FLAG_NAME "${FLAG_NAME}")
-        string(REPLACE "=" "_" FLAG_NAME "${FLAG_NAME}")
+# macro(add_c_flag_if_avail_midapack FLAG)
+#     if (NOT "${FLAG}" STREQUAL "")
+#         # create a variable for checking the flag if supported, e.g.:
+#         # -fp-model=precise --> c_fp_model_precise
+#         string(REGEX REPLACE "^-" "c_" FLAG_NAME "${FLAG}")
+#         string(REPLACE "-" "_" FLAG_NAME "${FLAG_NAME}")
+#         string(REPLACE " " "_" FLAG_NAME "${FLAG_NAME}")
+#         string(REPLACE "=" "_" FLAG_NAME "${FLAG_NAME}")
 
-        check_c_compiler_flag("${FLAG}" ${FLAG_NAME})
+#         check_c_compiler_flag("${FLAG}" ${FLAG_NAME})
 
-        if (${FLAG_NAME})
-            target_compile_options(midapack PRIVATE $<$<COMPILE_LANGUAGE:C>:${FLAG}>)
-        endif ()
-    endif ()
-endmacro()
+#         if (${FLAG_NAME})
+#             target_compile_options(midapack PRIVATE $<$<COMPILE_LANGUAGE:C>:${FLAG}>)
+#         endif ()
+#     endif ()
+# endmacro()
 
-# macro that checks if list of flags are supported for C
-macro(add_flags_if_avail_midapack)
-    foreach (FLAG ${ARGN})
-        add_c_flag_if_avail_midapack("${FLAG}")
-    endforeach ()
-endmacro()
+# # macro that checks if list of flags are supported for C
+# macro(add_flags_if_avail_midapack)
+#     foreach (FLAG ${ARGN})
+#         add_c_flag_if_avail_midapack("${FLAG}")
+#     endforeach ()
+# endmacro()
 
-# standard flags for C and C++
-add_flags_if_avail_midapack("-W" "-Wall" "-Wextra" "-Wshadow")
+# # standard flags for C and C++
+# add_flags_if_avail_midapack("-W" "-Wall" "-Wextra" "-Wshadow")
 
 # ----------------------------------------------------------------------------------------#
 # install midapack library in CMAKE_INSTALL_PREFIX

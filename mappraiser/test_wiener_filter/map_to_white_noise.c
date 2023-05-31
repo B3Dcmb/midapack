@@ -10,10 +10,10 @@
 // #include <mpi.h>
 #include <unistd.h>
 // #include "s2hat.h"
-// #include <chealpix.h>
+#include <chealpix.h>
 
-// #include "mappraiser.h"
-#include "domain_generalization.h"
+#include "mappraiser.h"
+// #include "domain_generalization.h"
 
 int main_first_ver(int argc, char** argv){
 // int main(int argc, char** argv){

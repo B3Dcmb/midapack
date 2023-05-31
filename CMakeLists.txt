@@ -15,7 +15,7 @@ cmake_minimum_required(VERSION 3.14...3.25)
 project(midapack
         VERSION 2.1
         DESCRIPTION "Parallel software tools for high performance CMB data analysis"
-        LANGUAGES C)
+        LANGUAGES C Fortran)
 
 # Enforce language standards
 set(CMAKE_C_STANDARD 99)
@@ -53,31 +53,33 @@ endif("${isSystemDir}" STREQUAL "-1")
 # External packages
 # ----------------------------------------------------------------------------------------#
 
-option(DISABLE_MPI OFF)
-option(DISABLE_OPENMP ON)
-# option(DISABLE_HARMONICS OFF)
-option(USE_MKL "Use MKL as provider for BLAS/LAPACK libraries" ON)
+# option(DISABLE_MPI OFF)
+# option(DISABLE_OPENMP ON)
+# # option(DISABLE_HARMONICS OFF)
+# option(USE_MKL "Use MKL as provider for BLAS/LAPACK libraries" OFF)
 
-# Search for MPI and OpenMP if we want to use them
-if (NOT DISABLE_MPI)
-    find_package(MPI REQUIRED)
-endif ()
-
-if (NOT DISABLE_OPENMP)
-    find_package(OpenMP REQUIRED)
-endif ()
-
-# Search for FFTW (necessary for toeplitz module)
-find_package(FFTW REQUIRED)
-
-find_package(CFITSIO REQUIRED)
-
-# if (NOT DISABLE_HARMONICS)
-#     # search s2hat ...
+# # Search for MPI and OpenMP if we want to use them
+# if (NOT DISABLE_MPI)
+#     find_package(MPI REQUIRED)
 # endif ()
+
+# if (NOT DISABLE_OPENMP)
+#     find_package(OpenMP REQUIRED)
+# endif ()
+
+# # Search for FFTW (necessary for toeplitz module)
+# find_package(FFTW REQUIRED)
+
+# find_package(CFITSIO REQUIRED)
+
+# find_package(HEALPIX REQUIRED)
+
+# find_package(S2HAT REQUIRED)
+
 
 # ----------------------------------------------------------------------------------------#
 # Subdirectories
 # ----------------------------------------------------------------------------------------#
 
-add_subdirectory(libmidapack/src)
+add_subdirectory(libmidapack)
+add_subdirectory(mappraiser)

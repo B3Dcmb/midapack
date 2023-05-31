@@ -38,12 +38,17 @@ target_include_directories(mappraiser PRIVATE
 
 # MIDAPACK
 
-if (MIDAPACK_FOUND)
-    target_include_directories(mappraiser PRIVATE "${MIDAPACK_INCLUDES}")
-    target_link_libraries(mappraiser PUBLIC "${MIDAPACK_LIBRARIES}")
-else ()
-    message(FATAL_ERROR "Could not find midapack. Consider providing a hint (-D MIDAPACK_DIR <path>).")
-endif ()
+# if (MIDAPACK_FOUND)
+#     target_include_directories(mappraiser PRIVATE "${MIDAPACK_INCLUDES}")
+#     target_link_libraries(mappraiser PUBLIC "${MIDAPACK_LIBRARIES}")
+# else ()
+#     message(FATAL_ERROR "Could not find midapack. Consider providing a hint (-D MIDAPACK_DIR <path>).")
+# endif ()
+
+target_include_directories(mappraiser PRIVATE
+        "${CMAKE_SOURCE_DIR}/libmidapack/include"
+        )
+target_link_libraries(mappraiser PUBLIC midapack)
 
 # MPI
 
@@ -88,18 +93,32 @@ endif ()
 
 # if (HEALPIX_FOUND)
 # set(HEADER_FILES ${HEALPIXROOT}"/include/chealpix.h")
-target_include_directories(mappraiser PRIVATE $ENV{HEALPIXROOT}/include)
-target_include_directories(mappraiser PRIVATE $ENV{S2HATROOT}/include)
-target_link_libraries(mappraiser PRIVATE $ENV{S2HATROOT}/lib/cori/intel/libs2hat_std.a)
-target_link_libraries(mappraiser PRIVATE $ENV{HEALPIXROOT}/lib/libchealpix.a)
-target_compile_definitions(mappraiser PRIVATE "-DHEALPIXDATA=${HEALPIXROOT}share/healpix/ -ls2hat_std")
+# target_include_directories(mappraiser PRIVATE $ENV{HEALPIXROOT}/include)
+# target_include_directories(mappraiser PRIVATE $ENV{S2HATROOT}/include)
+# target_link_libraries(mappraiser PRIVATE $ENV{S2HATROOT}/lib/cori/intel/libs2hat_std.a)
+# target_link_libraries(mappraiser PRIVATE $ENV{HEALPIXROOT}/lib/libchealpix.a)
+# target_compile_definitions(mappraiser PRIVATE "-DHEALPIXDATA=${HEALPIXROOT}share/healpix/ -ls2hat_std")
+
+if (HEALPIX_FOUND)
+    #target_compile_definitions(s2hat_std PRIVATE HAVE_HEALPIX=1)
+    target_include_directories(mappraiser PUBLIC "${HEALPIX_INCLUDES}")
+    target_link_libraries(mappraiser PUBLIC "${HEALPIX_LIBRARIES}")
+    target_compile_options(mappraiser PUBLIC "${HEALPIX_LFLAGS}")
+endif (HEALPIX_FOUND)
+
+if (S2HAT_FOUND)
+    target_include_directories(mappraiser PUBLIC "${S2HAT_INCLUDES}")
+    target_link_libraries(mappraiser PUBLIC "${S2HAT_LIBRARIES}")
+    target_compile_options(mappraiser PUBLIC "${S2HAT_LFLAGS}")
+endif (S2HAT_FOUND)
+
 
 # ----------------------------------------------------------------------------------------#
 # compile options
 # ----------------------------------------------------------------------------------------#
 
 include(CheckCCompilerFlag)
-include(CheckCXXCompilerFlag)
+# include(CheckCXXCompilerFlag)
 
 # macros that check if flag if supported for C and C++, if so add to mappraiser_base compile options
 macro(add_c_flag_if_avail FLAG)
@@ -119,28 +138,28 @@ macro(add_c_flag_if_avail FLAG)
     endif ()
 endmacro()
 
-macro(add_cxx_flag_if_avail FLAG)
-    if (NOT "${FLAG}" STREQUAL "")
-        # create a variable for checking the flag if supported, e.g.:
-        #   -fp-model=precise --> cxx_fp_model_precise
-        string(REGEX REPLACE "^-" "cxx_" FLAG_NAME "${FLAG}")
-        string(REPLACE "-" "_" FLAG_NAME "${FLAG_NAME}")
-        string(REPLACE " " "_" FLAG_NAME "${FLAG_NAME}")
-        string(REPLACE "=" "_" FLAG_NAME "${FLAG_NAME}")
+# macro(add_cxx_flag_if_avail FLAG)
+#     if (NOT "${FLAG}" STREQUAL "")
+#         # create a variable for checking the flag if supported, e.g.:
+#         #   -fp-model=precise --> cxx_fp_model_precise
+#         string(REGEX REPLACE "^-" "cxx_" FLAG_NAME "${FLAG}")
+#         string(REPLACE "-" "_" FLAG_NAME "${FLAG_NAME}")
+#         string(REPLACE " " "_" FLAG_NAME "${FLAG_NAME}")
+#         string(REPLACE "=" "_" FLAG_NAME "${FLAG_NAME}")
 
-        # runs check to see flag is supported by compiler
-        check_cxx_compiler_flag("${FLAG}" ${FLAG_NAME})
-        if (${FLAG_NAME})
-            target_compile_options(mappraiser PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${FLAG}>)
-        endif ()
-    endif ()
-endmacro()
+#         # runs check to see flag is supported by compiler
+#         check_cxx_compiler_flag("${FLAG}" ${FLAG_NAME})
+#         if (${FLAG_NAME})
+#             target_compile_options(mappraiser PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${FLAG}>)
+#         endif ()
+#     endif ()
+# endmacro()
 
 # macro that checks if list of flags are supported for C and C++
 macro(add_flags_if_avail)
     foreach (FLAG ${ARGN})
         add_c_flag_if_avail("${FLAG}")
-        add_cxx_flag_if_avail("${FLAG}")
+        # add_cxx_flag_if_avail("${FLAG}")
     endforeach ()
 endmacro()
 
@@ -186,9 +205,9 @@ install(TARGETS mappraiser
 #DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 # install the headers
-install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/mappraiser/include/
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/mappraiser)
 
 # install the Python files
-install(DIRECTORY ${PROJECT_SOURCE_DIR}/python/
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/mappraiser/python/
         DESTINATION python)

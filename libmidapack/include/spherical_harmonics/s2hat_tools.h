@@ -9,7 +9,7 @@
 #include <mpi.h>
 #endif
 
-#include <chealpix.h>
+// #include <chealpix.h>
 #include "s2hat.h"
 // #include "midapack.h"
 

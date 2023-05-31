@@ -6,7 +6,7 @@
 #include <string.h>
 // #include <mkl.h>
 // #include "fitsio.h"
-// #include <chealpix.h>
+#include <chealpix.h>
 #include <fitsio.h>
 #include <unistd.h>
 // #include "s2hat.h"
