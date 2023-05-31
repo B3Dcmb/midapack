@@ -283,7 +283,8 @@ int global_harmonic_2_map(double* local_pixel_map_MAPPRAISER, s2hat_dcomplex *lo
     int number_pixels_S2HAT = nstokes * Harmonic_sup->S2HAT_params.Local_param_s2hat.map_size; // Local map size
     if (number_pixels_S2HAT)
         local_pixel_map_S2HAT = (double *)calloc(number_pixels_S2HAT,sizeof(double));
-
+    
+    printf("%d ««««« Applying alm2pix \n", rank); fflush(stdout);
     if (Local_param_s2hat->gangrank >= 0)
         apply_alm2pix(local_pixel_map_S2HAT, local_alm_s2hat, &(Harmonic_sup->S2HAT_params));
 
@@ -293,21 +294,28 @@ int global_harmonic_2_map(double* local_pixel_map_MAPPRAISER, s2hat_dcomplex *lo
     // double *local_pixel_map_MAPPRAISER_nest = (double *)calloc(true_size_local,sizeof(double));
 
     int *local_pixel_indices_MAPPRAISER_ring_tmp = (int *)malloc(number_pixels_MAPPRAISER*sizeof(int));
+    printf("%d ««««« Projecting indices nest2ring \n", rank); fflush(stdout);
     convert_indices_nest2ring(A->lindices + (A->nnz) * (A->trash_pix), local_pixel_indices_MAPPRAISER_ring_tmp, number_pixels_MAPPRAISER, nstokes, Harmonic_sup->S2HAT_params.Global_param_s2hat.nside);
     project_int_values_into_different_scheme(local_pixel_indices_MAPPRAISER_ring_tmp, number_pixels_MAPPRAISER, Harmonic_sup->S2HAT_params.local_projector_values_nest2ring, local_pixel_indices_MAPPRAISER_ring);
     free(local_pixel_indices_MAPPRAISER_ring_tmp);
     
+    printf("%d ««««« Performing butterfly communication \n", rank); fflush(stdout);
     perform_butterfly_communication(local_pixel_map_S2HAT, Harmonic_sup->S2HAT_params.Local_param_s2hat.pixel_numbered_ring, number_pixels_S2HAT, local_pixel_map_MAPPRAISER_ring, local_pixel_indices_MAPPRAISER_ring, number_pixels_MAPPRAISER, &(Harmonic_sup->S2HAT_to_MAPPRAISER_butterfly), worldcomm);
 
+    printf("%d ««««« End of butterfly communication \n", rank); fflush(stdout);
     project_values_into_different_scheme(local_pixel_map_MAPPRAISER_ring, number_pixels_MAPPRAISER, Harmonic_sup->S2HAT_params.local_projector_values_ring2nest, local_pixel_map_MAPPRAISER);
     // local_pixel_indices_MAPPRAISER_ring
     // m2m(local_pixel_map_MAPPRAISER_ring, , number_pixels_MAPPRAISER, local_pixel_map_MAPPRAISER, A->lindices + (A->nnz) * (A->trash_pix), number_pixels_MAPPRAISER);
 
+    printf("%d ««««« Free step 0 !\n", rank); fflush(stdout);
     if (number_pixels_S2HAT)
         free(local_pixel_map_S2HAT);
 
+    printf("%d ««««« Free step 1 !\n", rank); fflush(stdout);
     free(local_pixel_indices_MAPPRAISER_ring);
+    printf("%d ««««« Free step 2 !\n", rank); fflush(stdout);
     free(local_pixel_map_MAPPRAISER_ring);
+    printf("%d ««««« Done \n", rank); fflush(stdout);
     return 0;
 }
 

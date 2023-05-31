@@ -2248,7 +2248,7 @@ int main(int argc, char** argv){
     // int lmax = 3*nside-1 ;//1500;//025;
     // int lmax = 4;
     // int nstokes = 3;
-    char *path_CMB_map = "/global/cscratch1/sd/mag/xPure_data/Files_Launch/Map_band_limited_1024_0.fits";
+    char *path_CMB_map = "/global/homes/m/mag/midapack/libmidapack/src/spherical_harmonics/test_functions/Map_band_limited_1024_0.fits";
     // int *mask_binary;
     // double *CMB_map;
 

@@ -1481,7 +1481,7 @@ void apply_precond(struct Precond *p, const Mat *A, const Tpltz *Nm1, Harmonic_s
             local_alm_in = (s2hat_dcomplex *) malloc( S2HAT_params->nstokes * S2HAT_params->size_alm * sizeof(s2hat_dcomplex));
             local_alm_out = (s2hat_dcomplex *) malloc( S2HAT_params->nstokes * S2HAT_params->size_alm * sizeof(s2hat_dcomplex));
 
-            apply_inv_covariance_matrix_to_alm(local_alm_in, local_alm_out, p->inverse_covariance_matrix, S2HAT_params); 
+            apply_inv_covariance_matrix_to_alm(local_alm_in, local_alm_out, p->inverse_covariance_matrix, 1, S2HAT_params); 
             // Multiplication of C^{-1} with vector a_lm
 
             // The addition C^{-1}.init_PCG_var + Pdiag(N)P.init_PCG_var will be done in the next step

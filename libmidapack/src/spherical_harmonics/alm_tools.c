@@ -180,7 +180,7 @@ int apply_pix2alm(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parame
 }
 
 
-int apply_inv_covariance_matrix_to_alm(s2hat_dcomplex *input_local_alm, s2hat_dcomplex *out_local_alm, double **inv_covariance_matrix, int power_inv_cov, S2HAT_parameters *S2HAT_params){
+int apply_inv_covariance_matrix_to_alm(s2hat_dcomplex *input_local_alm, s2hat_dcomplex *out_local_alm, double **inv_covariance_matrix, double power_inv_cov, S2HAT_parameters *S2HAT_params){
     /* Apply inverse of covariance matrix to input_local_alm */
 
     S2HAT_GLOBAL_parameters Global_param_s2hat = S2HAT_params->Global_param_s2hat;
@@ -206,11 +206,9 @@ int apply_inv_covariance_matrix_to_alm(s2hat_dcomplex *input_local_alm, s2hat_dc
                         res_real = 0;
                         res_imag = 0;
                         for (line_index=0; line_index < nstokes; line_index++){
-
                             res_real += inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index] * input_local_alm[line_index*nmvals*(lmax+1) + m_value*(lmax+1) + ell_value].re;
                             res_imag += inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index] * input_local_alm[line_index*nmvals*(lmax+1) + m_value*(lmax+1) + ell_value].im;
                         }
-
                         out_local_alm[index_stokes*nmvals*(lmax+1) + m_value*(lmax+1) + ell_value].re = res_real;
                         out_local_alm[index_stokes*nmvals*(lmax+1) + m_value*(lmax+1) + ell_value].im = res_imag;
                     }

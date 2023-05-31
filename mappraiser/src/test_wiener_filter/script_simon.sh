@@ -19,3 +19,8 @@ cc test_wiener_filter/test_domain_generalization.c -Wall -L${HEALPIXROOT}/lib/ -
 
 srun -n 2 test_wiener_filter/test_domain_generalization
 # srun -n 1 test_wiener_filter/test_domain_generalization // Need at least 2 for butterfly !
+
+
+cc test_wiener_filter/map_to_white_noise.c -Wall -L${HEALPIXROOT}/lib/ -I${HEALPIXROOT}/include -DHEALPIXDATA=${HEALPIXROOT}share/healpix/ -I${S2HATROOT}/include -lcfitsio -L${S2HATROOT}/lib/cori/intel/ -ls2hat_std -I${PREFIX}/include/midapack -I${PREFIX}/include/mappraiser -L${PREFIX}/lib -lmidapack -lmappraiser  -o test_wiener_filter/map_to_white_noise
+
+srun -n 2 test_wiener_filter/map_to_white_noise

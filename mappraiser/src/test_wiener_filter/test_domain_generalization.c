@@ -410,7 +410,7 @@ int main(int argc, char** argv){
         }
     printf(" \n");
     fflush(stdout);
-    
+
     int number_of_nan = 0;
     for (index=0;index<S2HAT_params->nstokes*S2HAT_params->size_alm;index++){
         if (!(local_alm_s2hat[index].re == local_alm_s2hat[index].re)){

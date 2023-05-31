@@ -73,7 +73,7 @@ int get_covariance_matrix_NxN(char *c_ell_path, int number_correl, double **cova
     int correl_index, ell_value;
     double *c_ell_array;
 
-    if ((number_correl == 5) || (number_correl >= 6)){
+    if ((number_correl == 5) || (number_correl > 6)){
         printf("Error : number_correl is %d \n", number_correl);
         printf("\t \t The variable number_correl must be either 1: TT ; 2: EE, BB ; 3: EE, BB, BE  ; 4: TT, EE, BB and TE ; or 6: TT, EE, BB, TE, TB and EB \n");
         fflush(stdout);
