@@ -75,28 +75,32 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
     copy_gap_info(Nm1->nb_blocks_loc, Nm1->tpltzblocks, N->tpltzblocks);
 
     // DEBUG
-    int proc = 0;
-    while (proc < size) {
-        if (proc == rank) {
-            int bidx = 0;
-            printf("[proc %d] block %d (idv = %ld    n = %d)\n", proc, bidx, Nm1->tpltzblocks[bidx].idv,
-                   Nm1->tpltzblocks[bidx].n);
-            printf("first gap: id0 = %ld    lgap = %d    (gap n° %d)\n", Gaps->id0gap[Nm1->tpltzblocks[bidx].first_gap],
-                   Gaps->lgap[Nm1->tpltzblocks[bidx].first_gap], Nm1->tpltzblocks[bidx].first_gap);
-            printf("last gap: id0 = %ld    lgap = %d    (gap n° %d)\n", Gaps->id0gap[Nm1->tpltzblocks[bidx].last_gap],
-                   Gaps->lgap[Nm1->tpltzblocks[bidx].last_gap], Nm1->tpltzblocks[bidx].last_gap);
-            bidx = Nm1->nb_blocks_loc - 1;
-            printf("[proc %d] block %d (idv = %ld    n = %d)\n", proc, bidx, Nm1->tpltzblocks[bidx].idv,
-                   Nm1->tpltzblocks[bidx].n);
-            printf("first gap: id0 = %ld    lgap = %d    (gap n° %d)\n", Gaps->id0gap[Nm1->tpltzblocks[bidx].first_gap],
-                   Gaps->lgap[Nm1->tpltzblocks[bidx].first_gap], Nm1->tpltzblocks[bidx].first_gap);
-            printf("last gap: id0 = %ld    lgap = %d    (gap n° %d)\n", Gaps->id0gap[Nm1->tpltzblocks[bidx].last_gap],
-                   Gaps->lgap[Nm1->tpltzblocks[bidx].last_gap], Nm1->tpltzblocks[bidx].last_gap);
-        }
-        fflush(stdout);
-        MPI_Barrier(A->comm);
-        proc++;
-    }
+    // int proc = 0;
+    // while (proc < size) {
+    //     if (proc == rank) {
+    //         int bidx = 0;
+    //         printf("[proc %d] block %d (idv = %ld    n = %d)\n", proc, bidx, Nm1->tpltzblocks[bidx].idv,
+    //                Nm1->tpltzblocks[bidx].n);
+    //         printf("first gap: id0 = %ld    lgap = %d    (gap n° %d)\n",
+    //         Gaps->id0gap[Nm1->tpltzblocks[bidx].first_gap],
+    //                Gaps->lgap[Nm1->tpltzblocks[bidx].first_gap], Nm1->tpltzblocks[bidx].first_gap);
+    //         printf("last gap: id0 = %ld    lgap = %d    (gap n° %d)\n",
+    //         Gaps->id0gap[Nm1->tpltzblocks[bidx].last_gap],
+    //                Gaps->lgap[Nm1->tpltzblocks[bidx].last_gap], Nm1->tpltzblocks[bidx].last_gap);
+    //         bidx = Nm1->nb_blocks_loc - 1;
+    //         printf("[proc %d] block %d (idv = %ld    n = %d)\n", proc, bidx, Nm1->tpltzblocks[bidx].idv,
+    //                Nm1->tpltzblocks[bidx].n);
+    //         printf("first gap: id0 = %ld    lgap = %d    (gap n° %d)\n",
+    //         Gaps->id0gap[Nm1->tpltzblocks[bidx].first_gap],
+    //                Gaps->lgap[Nm1->tpltzblocks[bidx].first_gap], Nm1->tpltzblocks[bidx].first_gap);
+    //         printf("last gap: id0 = %ld    lgap = %d    (gap n° %d)\n",
+    //         Gaps->id0gap[Nm1->tpltzblocks[bidx].last_gap],
+    //                Gaps->lgap[Nm1->tpltzblocks[bidx].last_gap], Nm1->tpltzblocks[bidx].last_gap);
+    //     }
+    //     fflush(stdout);
+    //     MPI_Barrier(A->comm);
+    //     proc++;
+    // }
 
     // TODO signal = signal + noise?
 
@@ -110,7 +114,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
         case 1:
             // gap filling with constrained noise realization
             if (rank == 0) printf("[rank %d] gap_stgy = %d (gap filling)\n", rank, gap_stgy);
-            perform_gap_filling(A->comm, N, Nm1, noise, Gaps, realization, detindxs, obsindxs, telescopes, false);
+            perform_gap_filling(A->comm, N, Nm1, noise, Gaps, realization, detindxs, obsindxs, telescopes, true);
             strategy = BASIC;
             break;
         case 2:
@@ -121,7 +125,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
         case 3:
             // gap filling + nested PCG (ignoring gaps)
             if (rank == 0) printf("[rank %d] gap_stgy = %d (gap filling + nested PCG)\n", rank, gap_stgy);
-            perform_gap_filling(A->comm, N, Nm1, noise, Gaps, realization, detindxs, obsindxs, telescopes, false);
+            perform_gap_filling(A->comm, N, Nm1, noise, Gaps, realization, detindxs, obsindxs, telescopes, true);
             strategy = ITER_IGNORE;
             break;
         default:
@@ -133,7 +137,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
 
     MPI_Barrier(A->comm);
     if (rank == 0) {
-        printf("\n[rank %d] Start iterating\n", rank);
+        printf("\n[rank %d] Start main PCG iterations\n", rank);
         fflush(stdout);
     }
 
