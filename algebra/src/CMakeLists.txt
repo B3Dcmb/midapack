@@ -46,9 +46,9 @@ endif ()
 
 # FFTW (for toeplitz module)
 
-if (FFTW_FOUND)
+if (FFTW_DOUBLE_LIB_FOUND)
     target_link_libraries(midapack PUBLIC FFTW::Double)
-endif (FFTW_FOUND)
+endif ()
 
 # ----------------------------------------------------------------------------------------#
 # install midapack library in CMAKE_INSTALL_PREFIX
