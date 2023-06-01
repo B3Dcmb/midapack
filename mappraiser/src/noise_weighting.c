@@ -176,9 +176,9 @@ void reset_block_gaps(double *tod, Tpltz *tmat_block, Gap *gaps) {
 
     // loop over the gaps
     for (int i = b->first_gap; i <= b->last_gap; ++i) {
-#ifndef NDEBUG
         int64_t id0g = gaps->id0gap[i];
         int     lg   = gaps->lgap[i];
+#ifndef NDEBUG
         // assert that gap is relevant for the given data block
         assert(idv < id0g + lg && id0g < idv + n);
 #endif

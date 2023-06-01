@@ -5,19 +5,18 @@
 
 #ifdef __cplusplus
 
+#include <iostream>
 #include <vector>
 
 namespace mappraiser {
 
     class GapFillInfo {
     public:
-        GapFillInfo(int, int);
         GapFillInfo(int, int, int);
 
         double get_mean_iterations() const;
         double get_mean_seconds() const;
 
-        void print_recap() const;
         void print_curr_block() const;
 
         void set_current_block(int i) { current_block = i; }
@@ -28,8 +27,7 @@ namespace mappraiser {
         void store_pcg_time(double milliseconds) { pcg_times[current_block] = milliseconds * 0.001; }
         void store_valid_frac(double f) { valid_fracs[current_block] = f; }
 
-        const int n_gaps; // number of local timestream gaps
-    private:
+        int n_gaps;        // number of local timestream gaps
         int n_blocks;      // number of data blocks to treat
         int current_block; // current block index
         int current_size;  // size of current block
@@ -39,8 +37,35 @@ namespace mappraiser {
         std::vector<double> pcg_times;     // PCG time for each block
         std::vector<double> valid_fracs;   // proportion of valid samples in each block
 
-        // internal id for printing
-        int _id;
+        // id for printing
+        int id;
+    };
+
+    class GapFillRecap {
+    public:
+        GapFillRecap() = default;
+        explicit GapFillRecap(mappraiser::GapFillInfo const &info);
+
+        void send(MPI_Comm comm, int dest) const;
+
+        void receive(MPI_Comm comm, int src);
+
+    private:
+        void print(std::ostream &out) const;
+
+        int    n_blocks;
+        double mean_iterations;
+        int    min_iter;
+        int    min_iter_idx;
+        int    max_iter;
+        int    max_iter_idx;
+        double mean_time;
+        double min_time;
+        double min_time_idx;
+        double max_time;
+        double max_time_idx;
+
+        friend std::ostream &operator<<(std::ostream &out, GapFillRecap const &recap);
     };
 
     void psd_from_tt(int fftlen, int lambda, int psdlen, const double *tt, std::vector<double> &psd,
