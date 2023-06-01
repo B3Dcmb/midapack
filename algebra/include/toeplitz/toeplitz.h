@@ -98,9 +98,9 @@ defined structures.
 
 // Define this parameter to use fftw multithreading
 // This is not fully tested
-#ifndef fftw_MULTITHREADING
-#define fftw_MULTITHREADING
-#endif
+// #ifndef fftw_MULTITHREADING
+// #define fftw_MULTITHREADING
+// #endif
 
 /// Number of FFT's performed at the same time (default value).
 /** FFT's can be performed simultaneously using advanced fftw plans.
