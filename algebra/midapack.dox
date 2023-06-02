@@ -1,0 +1,100 @@
+/*
+**
+** MidaPack library version 1.0beta, May 2012
+** 
+** Copyright (c) 2010-2012 APC CNRS Université Paris Diderot
+** 
+** This program is free software; you can redistribute it and/or modify
+** it under the terms of the GNU General Public License as published by
+** the Free Software Foundation; either version 3 of the License, or
+** (at your option) any later version.
+** This program is distributed in the hope that it will be useful,
+** but WITHOUT ANY WARRANTY; without even the implied warranty of
+** MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+** GNU General Public License for more details.
+** 
+** You should have received a copy of the GNU General Public License
+** along with this program; if not, see http://www.gnu.org/licenses/gpl.html
+**
+** For more information about ANR MIDAS'09 project see
+** http://www.apc.univ-paris7.fr/APC_CS/Recherche/Adamis/MIDAS09/index.html
+*/
+
+/// \mainpage General introduction
+///
+/// The goal of the \b MIDAS project is to provide high performance, middle-layer software tools,
+/// which would aid CMB data analysis efforts of current and planned CMB experiments to capitalize 
+/// on the computational power of parallel (super)computers. The functionality provided by the library
+/// is supposed to fill in the gap in between available, low-level, high performance software packages
+/// such as Fast Fourier Transforms, dense and sparse linear algebra operations, etc, and the high-level
+/// data analysis pipelines, and thus to help the users to benefit from the former, while developing the
+/// latter in a more straightforward and transparent way. At the end of the project the library is supposed
+/// to provide functionality relevant to all main stages of the data analysis.
+///
+/// For more information about ANR MIDAS'09 project, and to find out how to contact us, see:
+///
+/// http://www.apc.univ-paris7.fr/APC_CS/Recherche/Adamis/MIDAS09/index.html
+/// 
+/// The first released installements of the library are 
+///
+/// - \subpage toeplitz
+/// - \subpage pointing
+///
+/// which are described in this document.
+///
+/// Check here \ref sect_ackno "our funding sources" and \ref page_license "licensing info".
+///
+/// \page sect_team MIDAPACK development team
+///
+/// \arg Pierre Cargemel (developer);
+/// \arg Fr&eacute;d&eacute;ric Dauvergne (developer);
+/// \arg Giulio Fabbian (validator); 
+/// \arg Laura Grigori (coordinator); 
+/// \arg Maude Le Jeune (senior developer);
+/// \arg Antoine Rogier (developer - till Aug 31, 2011);
+/// \arg Mikolaj Szydlarski (developer);
+/// \arg Radek Stompor (coordinator).
+///
+/// \page sect_ackno Acknowledgement
+/// This work has been supported in part by French National Research Agency (ANR)
+/// through its COSINUS program (project MIDAS no. ANR-09-COSI-009). 
+///
+/// \image html docs/fig/labelANR_sixteenth.jpg
+///
+/// High performance computing resources have been provided:
+/// - in France by CCRT, TGCC, and IDRIS supercomputing centers under the GENCI program through projects: 2011-066647 and 2012-066647;
+/// - in the US by the National Energy Research Scientific Computing Center, which is supported by the Office of Science of the U.S. Department of Energy under Contract No. DE-AC02-05CH11231.
+///
+/// \page page_license Licences
+///
+/// Copyright (c) 2010-2012 APC CNRS Université Paris Diderot. This program is free software; you can redistribute it and/or modify it under the terms of the GNU Lesser General Public License 
+/// as published by the Free Software Foundation; either version 3 of the License, or (at your option) any later version. This program is distributed in the hope that it will be useful, but 
+/// WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more details. You should have 
+/// received a copy of the GNU General Public License along with this program; if not, see http://www.gnu.org/licenses/lgpl.html
+///
+/// \page page_install Installation
+///
+/// Once you have downloaded Midapack_1.1.tgz, create a directory where you want to install it, for example midapackdir.
+/// Then extract it and move to midapackdir.
+/// - mkdir midapackdir  
+/// - tar -xvzf Midapack_1.1.tgz -C midapackdir
+/// - cd midapackdir 
+///
+/// Here are several files and directories. Please refer to files README, LICENSE and INSTALL,
+/// to see under which conditions your distribution of Midapack is licensed and how to install it.
+///
+/// Midapack requires few libraries : mpi, openmp, fftw3.
+/// Ensure these libraries are available on your system.
+/// To build the library, run the following commands :
+/// - ./configure  
+/// - make
+///
+/// The first command generate Makefiles.
+/// The second one compiles sources and build the library, libmidapack.a, in midapackdir/lib  
+///
+/// \page sect_bugreporting Bug tracking and reporting
+///
+/// To report bugs please use the following website:
+///
+/// http://code.google.com/p/cmb-da-library/
+///

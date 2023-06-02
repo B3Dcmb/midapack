@@ -6,6 +6,7 @@
 *.lo
 *.o
 *.obj
+*.os
 
 # Precompiled Headers
 *.gch
@@ -31,10 +32,16 @@
 *.out
 *.app
 
-#Python
+# Python
 *.pyc
 
-#Old directories to ignore
-test/mapmaking/test/*
-test/mapmat/*
-test/toeplitz/*
+# System files
+.DS_Store
+
+# VSCode stuff
+.vscode/*
+*.code-workspace
+# Directories to ignore
+
+mappraiser/src/test
+algebra/test
