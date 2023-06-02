@@ -241,6 +241,8 @@ class Mappraiser(Operator):
 
     downscale = Int(1, help="Scale down the noise by the sqrt of this number to artifically increase S/N ratio")
 
+    fill_noise_zero = Bool(False, help="Fill the noise vector with zeros just before calling Mappraiser")
+
     # Additional parameters for the C library
 
     # solver
@@ -1142,6 +1144,9 @@ class Mappraiser(Operator):
         else:
             self._mappraiser_invtt[:] = 1.0
             self._mappraiser_tt[:] = 1.0
+
+        if self.fill_noise_zero:
+            self._mappraiser_noise[:] = 0.0
 
         log_time_memory(
             data,
