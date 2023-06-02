@@ -17,7 +17,14 @@ Ensure these libraries are available on your system.
 To build the library and install it at a given location (prefix), execute the commands:
 
 ```
-cmake -S . -B build --install-prefix <path> -DBUILD_TESTS=ON
+cmake -S . -B build --install-prefix <path>
+cmake --build build
+cmake --install build
+```
+
+If you want to launch the tests, the commands could be :
+```
+cmake -S . -B build --install-prefix $PREFIX -DBUILD_TESTS=ON
 cmake --build build
 cmake --install build
 ```

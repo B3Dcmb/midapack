@@ -287,7 +287,8 @@ int main_firsts_tests_init(int argc, char** argv){
 // int main_multiplying_cov_matrix(int argc, char** argv){
 int main(int argc, char** argv){
 
-    char *path_CMB_map = "/global/cscratch1/sd/mag/xPure_data/Files_Launch/Map_band_limited_1024_0.fits";
+    // char *path_CMB_map = "/global/cscratch1/sd/mag/xPure_data/Files_Launch/Map_band_limited_1024_0.fits";
+    char *path_CMB_map = "/global/homes/m/mag/perl_midapack/midapack/mappraiser/test_wiener_filter/Map_band_limited_1024_0.fits";
     char *c_ell_path = "/global/homes/m/mag/midapack/test/spherical_harmonics/test_functions/c_ell_file_lmax_4.fits";
     int rank, nprocs;
     int i, ell_value;

@@ -19,12 +19,14 @@
 // #include "s2hat_tools.h"
 
 
-
 int get_inverse_matrix(int order_matrix, double* matrix_to_be_inverted){
+    /* Get inverse of matrix_to_be_inverted using LU decomposition */
+
     int errorHandler;
     int pivotArray[order_matrix];
 
     int lda = order_matrix;
+
     int lwork = order_matrix*order_matrix;
     double work[lwork];
 
@@ -32,10 +34,84 @@ int get_inverse_matrix(int order_matrix, double* matrix_to_be_inverted){
     // LU decomposition of matrix_to_be_inverted; give result in matrix_to_be_inverted
     // printf("LU decomposition with dgetrf : %d should be zero\n", errorHandler);
 
-    double result[order_matrix*order_matrix];
+    // double result[order_matrix*order_matrix];
     dgetri_(&order_matrix, matrix_to_be_inverted, &lda, pivotArray, work, &lwork, &errorHandler);
-    // Inversion of system matrix_to_be_inverted
-    // printf("Inversion of matrix with dgetri : %d should be zero\n", errorHandler);
+    return 0;
+}
+
+int get_cholesky_decomposition_inverted(int order_matrix, double *matrix_to_get_cholesky, char cholesky_part){
+    /* cholesky_part must be either 'L' of 'U' for the lower or upper part of the Cholesky decomposition */
+
+    int lda = order_matrix;
+    int info;
+
+    // LAPACKE_dppsv(order_matrix, cholesky_part, order_matrix, order_matrix, cholesky_factor, rhs, lda);
+    dpotrf_(&cholesky_part, &order_matrix, matrix_to_get_cholesky, &order_matrix, &info);
+    // Compute the Cholesky decomposition of cholesky_factor, where cholesky_factor is the upper triangular part of the symmetric matrix we want to get
+
+    dpotri_(&cholesky_part, &order_matrix, matrix_to_get_cholesky, &order_matrix, &info);
+    // Inverse the Cholesky factor
+
+    // The dpotrf and dpotri LAPACKe functions were only applied on the lower (or upper) triangular part of the matrix
+    // The matrix need to be symmetrized with the inverse
+    if (order_matrix > 1)
+    {
+        matrix_to_get_cholesky[order_matrix] = matrix_to_get_cholesky[1];
+        if (order_matrix > 2)
+        {
+            matrix_to_get_cholesky[6] = matrix_to_get_cholesky[2];
+            matrix_to_get_cholesky[7] = matrix_to_get_cholesky[5];
+        }
+    }
+    return 0;
+}
+
+int get_inverse_matrix_cholesky_decomposition(int order_matrix, double* matrix_to_be_inverted, double *cholesky_factor, char cholesky_part){
+    /* cholesky_part must be either 'L' of 'U' for the lower or upper part of the Cholesky decomposition */
+
+    // int errorHandler;
+    // int pivotArray[order_matrix];
+
+    int lda = order_matrix;
+
+    // int lwork = order_matrix*order_matrix;
+    // double work[lwork];
+
+    // dgetrf_(&order_matrix, &order_matrix, matrix_to_be_inverted, &lda, pivotArray, &errorHandler);
+    // // LU decomposition of matrix_to_be_inverted; give result in matrix_to_be_inverted
+    // // printf("LU decomposition with dgetrf : %d should be zero\n", errorHandler);
+
+    // double result[order_matrix*order_matrix];
+    // dgetri_(&order_matrix, matrix_to_be_inverted, &lda, pivotArray, work, &lwork, &errorHandler);
+    
+    double *rhs = (double *)malloc(order_matrix*order_matrix*sizeof(double));;
+    int i, j;
+    for (i=0; i<order_matrix; i++){
+        for (j=0; j<order_matrix; j++){
+            if (i!=j)
+                rhs[i*order_matrix + j] = 0;
+            else{
+                rhs[i*order_matrix + j] = 1;
+            }
+        }
+    }
+
+    int info;
+    // printf("<<<<< Getting Cholesky decomposition and inverting \n"); fflush(stdout);
+    dppsv_(&cholesky_part, &order_matrix, &order_matrix, cholesky_factor, rhs, &lda, &info);
+    // if (info != 0){
+    //     printf("<<<< Something wrong happened \n");
+    // }
+    // Compute the Cholesky decomposition of cholesky_factor, where cholesky_factor is the upper triangular part of the symmetric
+    // matrix we want to inverse, and rhs will contain the solution
+    
+    // printf("<<<<< Done, then memcpy \n"); fflush(stdout);
+    memcpy(matrix_to_be_inverted, rhs, order_matrix*order_matrix*sizeof(double));
+
+    // printf("<<<<< Freeing rhs \n"); fflush(stdout);
+    free(rhs);
+    // printf("<<<<< Done completely !! \n"); fflush(stdout);
+
     return 0;
 }
 
@@ -115,7 +191,7 @@ int get_inverse_covariance_matrix_NxN(S2HAT_parameters *S2HAT_params, double **i
     int nstokes = S2HAT_params->nstokes;
 
     double **covariance_matrix;
-    int ell_value, index_1;
+    int ell_value, ell_index;
     int lmax = Global_param_s2hat->nlmax;
 
     // covariance_matrix = calloc(lmax+1, sizeof(double *));
@@ -125,20 +201,29 @@ int get_inverse_covariance_matrix_NxN(S2HAT_parameters *S2HAT_params, double **i
 
     char *c_ell_path = Files_path_WF_struct->c_ell_path;
     int number_correlations = Files_path_WF_struct->number_correlations;
+    // printf("~~~~ Getting covariance matrix \n"); fflush(stdout);
     get_covariance_matrix_NxN(c_ell_path, number_correlations, inverse_covariance_matrix, S2HAT_params);
 
+    // double *cholesky_factor[nstokes*(nstokes+1)/2];
+    
+    // printf("~~~~ Getting inverse of covariance matrix \n"); fflush(stdout);
     for(ell_value=0; ell_value<lmax+1; ell_value++){
-        get_inverse_matrix(nstokes, inverse_covariance_matrix[ell_value]);
+        // get_inverse_matrix(nstokes, inverse_covariance_matrix[ell_value]);
+        // if (ell_value%20 == 0)
+        //     printf("~~~~ Getting Cholesky decomposition for step %d \n", ell_value); fflush(stdout);
+        // for(ell_index=0; ell_index<nstokes*(nstokes+1)/2; ell_index++){
+        //     cholesky_decomposition[ell_value][ell_index] = inverse_covariance_matrix[ell_value][ell_index + ell_index%nstokes];
+        // }
+        // if (ell_value%20 == 0)
+        //     printf("~~~~ Getting associated inverse decomposition for step %d \n", ell_value); fflush(stdout);
+        // memcpy(cholesky_decomposition[ell_value], inverse_covariance_matrix[ell_value], nstokes*nstokes*sizeof(double));
+        // get_inverse_matrix_cholesky_decomposition(nstokes, inverse_covariance_matrix[ell_value], cholesky_decomposition[ell_value], 'L');
+        get_cholesky_decomposition_inverted(nstokes, inverse_covariance_matrix[ell_value], 'L');
+        
+        // if (ell_value%20 == 0)
+        //     printf("~~~~ Done getting associated inverse decomposition for step %d \n", ell_value); fflush(stdout);
     }
-
-    // It's possible covariance_matrix will be returned as [3][3], which is not what we want
-    // To maybe modify/verify later
-
-    // for (index_1=0; index_1<lmax+1; index_1++){
-    //         free(covariance_matrix[index_1]);
-    // }
-    // free(covariance_matrix);
+    // printf("~~~~ Done ! \n"); fflush(stdout);
     return 0;
 }
-
 

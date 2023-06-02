@@ -1419,7 +1419,7 @@ void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat
         int lmax_WF = Harmonic_sup->S2HAT_params.Files_WF_struct.lmax_Wiener_Filter; // Convention by S2HAT
         int ell_value;
         // double **inverse_covariance_matrix;
-        p->inverse_covariance_matrix = calloc(lmax_WF, sizeof(double *));
+        p->inverse_covariance_matrix = (double *)calloc(lmax_WF, sizeof(double *));
         for(ell_value=0; ell_value<lmax_WF; ell_value++){
             p->inverse_covariance_matrix[ell_value] = calloc(A->nnz * A->nnz,sizeof(double)); 
             // (nstokes*nstokes) for each element of the covariance matrix either [TT], [EE, EB, BE, BB], or [TT, TE, TB, ET, EE, EB, BT, BE, BB]
@@ -1434,7 +1434,7 @@ void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat
     *out_p = p;
     *out_pixpond = p->pixpond;
     *out_n = p->n;
-    
+
     PCG_variable->local_map_pix = x;
 }
 
@@ -1481,7 +1481,7 @@ void apply_precond(struct Precond *p, const Mat *A, const Tpltz *Nm1, Harmonic_s
             local_alm_in = (s2hat_dcomplex *) malloc( S2HAT_params->nstokes * S2HAT_params->size_alm * sizeof(s2hat_dcomplex));
             local_alm_out = (s2hat_dcomplex *) malloc( S2HAT_params->nstokes * S2HAT_params->size_alm * sizeof(s2hat_dcomplex));
 
-            apply_inv_covariance_matrix_to_alm(local_alm_in, local_alm_out, p->inverse_covariance_matrix, 1, S2HAT_params); 
+            apply_inv_covariance_matrix_to_alm(local_alm_in, local_alm_out, p->inverse_covariance_matrix, S2HAT_params); 
             // Multiplication of C^{-1} with vector a_lm
 
             // The addition C^{-1}.init_PCG_var + Pdiag(N)P.init_PCG_var will be done in the next step

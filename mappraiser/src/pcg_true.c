@@ -64,7 +64,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, PCG_var *PCG_vari
     int TRUE_NORM = 1; // 0: No ; 1: Yes
 
     // Size of the alm tables if no harmonic transform or Wiener filtert is applied, for initialisation
-    int size_alm = 0;
+    // int size_alm = 0;
     // Changed if harmonic transforms used or Wiener filter applied
 
     FILE *fp;
@@ -114,7 +114,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, PCG_var *PCG_vari
         // The S2HAT_parameters structure has been initialized, definition of the varariable corresponding to the global S2HAT parameters which will be known by all mpi-tasks
 
         // Prepare to allocate non-empty alm
-        size_alm = Harmonic_sup->S2HAT_params.size_alm;
+        // size_alm = Harmonic_sup->S2HAT_params.size_alm;
     }
     // End of Wiener filter initialization
 
@@ -458,7 +458,7 @@ int apply_sys_matrix(Mat *A, Tpltz *Nm1, struct Precond *p, Harmonic_superstruct
 
         global_map_2_harmonic(input_variable->local_map_pix,local_alm_in, A, Harmonic_sup);
 
-        apply_inv_covariance_matrix_to_alm(local_alm_in, local_alm_out, p->inverse_covariance_matrix, 1, S2HAT_params);
+        apply_inv_covariance_matrix_to_alm(local_alm_in, local_alm_out, p->inverse_covariance_matrix, S2HAT_params);
         free(local_alm_in);
 
         // Do the addition of (C^{-1} + P^T N^{-1} P) in pixel or harmonic space
@@ -529,7 +529,7 @@ int swap_pointers(PCG_var *PCG_variable, PCG_var *PCG_variable_2)
 {
     // Swap tables of PCG_variable and PCG_variable_2
     double *var_exchange_pix;
-    s2hat_dcomplex *var_exchange_alm;
+    // s2hat_dcomplex *var_exchange_alm;
     
     // Initial code
     // gt = gp;

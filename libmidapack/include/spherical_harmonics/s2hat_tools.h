@@ -138,7 +138,7 @@ int apply_alm2pix(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parame
 int apply_pix2alm(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parameters *S2HAT_params);
 /**/
 /* Apply inverse of covariance matrix to local_alm */
-int apply_inv_covariance_matrix_to_alm(s2hat_dcomplex *input_local_alm, s2hat_dcomplex *out_local_alm, double **inv_covariance_matrix, double power_inv_cov, S2HAT_parameters *S2HAT_params);/**/
+int apply_inv_covariance_matrix_to_alm(s2hat_dcomplex *input_local_alm, s2hat_dcomplex *out_local_alm, double **inv_covariance_matrix, S2HAT_parameters *S2HAT_params);/**/
 /* Transform alm to c_ell coefficients */
 int alm2cls(s2hat_dcomplex* local_alm, double *c_ell_array, int nspec, S2HAT_parameters *S2HAT_params);
 /**/
@@ -149,6 +149,10 @@ int alm2cls(s2hat_dcomplex* local_alm, double *c_ell_array, int nspec, S2HAT_par
 /* General function to inverse matrix using LAPACK */
 int get_inverse_matrix(int order_matrix, double* matrix_to_be_inverted);
 /**/
+int get_cholesky_decomposition_inverted(int order_matrix, double *cholesky_factor, char cholesky_part);
+
+int get_inverse_matrix_cholesky_decomposition(int order_matrix, double* matrix_to_be_inverted, double *cholesky_factor, char cholesky_part);
+
 /* Read c_ell to generate covariance matrix which will be in the form : covariance_matrix_3x3[lmax][number_correlations] 
    with number_correlations being either 9 for [TT, TE, TB, ET, EE, EB, BT, BE, BB] (with TE=ET, TB=BT and BE=EB), 4 for 9 for [EE, EB, BE, BB] (with BE=EB) or 1 for [TT] */
 int get_covariance_matrix_NxN(char *c_ell_path, int number_correl, double **covariance_matrix_NxN, S2HAT_parameters *S2HAT_params);

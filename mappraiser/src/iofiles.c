@@ -103,7 +103,7 @@ static void util_fail_(const char *file, int line, const char *func,
 
 int ioReadfile(int block_size, int part_id, unsigned int *point_data, double *signal)
 {
-    int i;
+    // int i;
 
     char p_vectorFile[256];
     char *p_vectorFileNameBasis = "point_data_0_";
@@ -136,7 +136,7 @@ int ioReadfile(int block_size, int part_id, unsigned int *point_data, double *si
 
 int ioReadfile_pol(int jump, int loop, int block_size, int part_id, unsigned int *point_data, double *signal, double *pol_ang)
 {
-    int i;
+    // int i;
 
     char p_vectorFile[256];
     char *p_vectorFileNameBasis = "point_data_0_";
@@ -181,7 +181,7 @@ int ioReadfile_pol(int jump, int loop, int block_size, int part_id, unsigned int
 
 int ioReadTOAST_data(int jump, int loop, int block_size, int part_id, unsigned int *point_data, double *signal, double *wghts)
 {
-    int i;
+    // int i;
 
     char p_vectorFile[256];
     char *p_vectorFileNameBasis = "pixels_";
@@ -226,7 +226,7 @@ int ioReadTOAST_data(int jump, int loop, int block_size, int part_id, unsigned i
 
 int ioReadfilePure(int block_size, int part_id, unsigned int *point_data, double *signal)
 {
-    int i;
+    // int i;
 
     char p_vectorFile[256];
     char *p_vectorFileNameBasis = "point_data_0_";
@@ -272,7 +272,7 @@ int ioReadrandom(int block_size, int part_id, unsigned int *point_data, double *
 int ioReadTpltzfile(int lambda, double *Tblock)
 {
 
-    int i;
+    // int i;
 
     char N_vectorFile[256];
     char *N_vectorFileNameBasis = "inv_tt_x3";
@@ -315,7 +315,7 @@ int ioReadTpltzrandom(int lambda, double *Tblock)
 
 int ioWritebinfile(int mapsize, int mappart_id, int *lstid, double *map, double *cond, int *lhits)
 {
-    int i;
+    // int i;
 
     char lstid_vectorFile[256];
     char lhits_vectorFile[256];
@@ -358,7 +358,7 @@ int ioWritebinfile(int mapsize, int mappart_id, int *lstid, double *map, double 
 int ioReadbinfile(int mapsize, int mappart_id, int *lstid, double *map, double *cond, int *lhits)
 {
 
-    int i;
+    // int i;
 
     char lstid_vectorFile[256];
     char lhits_vectorFile[256];

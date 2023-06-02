@@ -29,3 +29,4 @@ ftn test_wiener_filter/map_to_white_noise.c -Wall  -L${HEALPIX_DIR}/lib -I${HEAL
 srun -n 2 test_wiener_filter/map_to_white_noise
 
 srun -n 2 test_wiener_filter/map_to_white_noise_0
+srun -n 1 test_wiener_filter/map_to_white_noise_0
