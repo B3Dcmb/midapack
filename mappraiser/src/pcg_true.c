@@ -123,6 +123,11 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
             strategy = ITER;
             break;
         case 3:
+            // perfect noise reconstruction + nested PCG (ignoring gaps)
+            if (rank == 0) printf("[rank %d] gap_stgy = %d (gap filling + nested PCG)\n", rank, gap_stgy);
+            strategy = ITER_IGNORE;
+            break;
+        case 4:
             // gap filling + nested PCG (ignoring gaps)
             if (rank == 0) printf("[rank %d] gap_stgy = %d (gap filling + nested PCG)\n", rank, gap_stgy);
             perform_gap_filling(A->comm, N, Nm1, noise, Gaps, realization, detindxs, obsindxs, telescopes, true);

@@ -264,7 +264,8 @@ class Mappraiser(Operator):
     # 0 -> perfect noise reconstruction (only possible on simulations)
     # 1 -> gap filling with a constrained noise realization
     # 2 -> "nested PCG" i.e. invert the noise covariance matrix with a PCG at each noise weighting operation
-    # 3 -> gap filling + nested PCG (to correct for non-Toeplitz character of the inverse noise covariance)
+    # 3 -> 0 + nested PCG (to correct for non-Toeplitz character of the inverse noise covariance)
+    # 4 -> 1 + nested PCG (to correct for non-Toeplitz character of the inverse noise covariance)
     gap_stgy = Int(0, help="Strategy for handling timestream gaps")
     realization = Int(0, help="Noise realization index (for gap-filling)")
 
