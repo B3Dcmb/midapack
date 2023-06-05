@@ -191,6 +191,40 @@ int compute_global_gap_count(MPI_Comm comm, Gap *gaps) {
     return gap_count;
 }
 
+void fill_gap_with_zero(double *tod, int n, int64_t idv, int64_t id0g, int lg) {
+#ifndef NDEBUG
+    // assert that gap is relevant for the given data block
+    assert(idv < id0g + lg && id0g < idv + n);
+#endif
+    // set intersection of tod and gap to zero
+    for (int64_t j = id0g; j < id0g + lg; ++j) {
+        if (idv <= j && j < n + idv) tod[j - idv] = 0;
+    }
+}
+
+/**
+ * Fill all timestream gaps of a vector with zeros. Warning! This routine assumes that relevant gaps have been
+ * determined for each data block (e.g. through a call to compute_gaps_per_block).
+ * @param tod pointer to the data vector
+ * @param tmat pointer to a Tpltz matrix containing information about the data blocks
+ * @param gaps pointer to the gaps structure
+ */
+void reset_relevant_gaps(double *tod, Tpltz *tmat, Gap *gaps) {
+    // loop over data blocks
+    Block  *b;
+    double *tod_block;
+    int     pos = 0;
+    for (int i = 0; i < tmat->nb_blocks_loc; ++i) {
+        b         = &(tmat->tpltzblocks[i]);
+        tod_block = (tod + pos);
+        // loop over the relevant gaps for this block
+        for (int j = b->first_gap; j <= b->last_gap; ++j) {
+            fill_gap_with_zero(tod_block, b->n, b->idv, gaps->id0gap[j], gaps->lgap[j]);
+        }
+        pos += b->n;
+    }
+}
+
 __attribute__((unused)) void print_gap_info(Gap *gaps) {
     printf("Local Gap structure\n");
     printf("  { ngap: %d\n", gaps->ngap);

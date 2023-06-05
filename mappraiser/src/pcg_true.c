@@ -74,6 +74,9 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
     compute_gaps_per_block(Gaps, Nm1->nb_blocks_loc, Nm1->tpltzblocks);
     copy_gap_info(Nm1->nb_blocks_loc, Nm1->tpltzblocks, N->tpltzblocks);
 
+    // set signal in all gaps to zero
+    reset_relevant_gaps(b, Nm1, Gaps);
+
     // DEBUG
     // int proc = 0;
     // while (proc < size) {

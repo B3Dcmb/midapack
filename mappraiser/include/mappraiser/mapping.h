@@ -17,6 +17,8 @@ void copy_gap_info(int nb_blocks, Block *src, Block *dest);
 
 int compute_global_gap_count(MPI_Comm comm, Gap *gaps);
 
+void reset_relevant_gaps(double *tod, Tpltz *tmat, Gap *gaps);
+
 __attribute__((unused)) void print_gap_info(Gap *gaps);
 
 #ifdef __cplusplus

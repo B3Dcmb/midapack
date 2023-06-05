@@ -99,8 +99,7 @@ int getlocalW(const Mat *A, Tpltz *Nm1, double *vpixBlock, int *lhits) {
 
             if (k + 1 < idv0 + Nm1->nb_blocks_loc) // if there is a next block, compute his next first indice
                 istartn = Nm1->tpltzblocks[k + 1].idv - Nm1->idp;
-            else
-                istartn = Nm1->local_V_size;
+            else istartn = Nm1->local_V_size;
             // istartn = 0;
 
             istart = max(0, Nm1->tpltzblocks[k].idv - Nm1->idp);
@@ -209,8 +208,7 @@ int getlocDiagN(Mat *A, Tpltz Nm1, double *vpixDiag) {
 
             if (k + 1 < idv0 + Nm1.nb_blocks_loc) // if there is a next block, compute his next first indice
                 istartn = Nm1.tpltzblocks[k + 1].idv - Nm1.idp;
-            else
-                istartn = 0;
+            else istartn = 0;
 
             istart = max(0, Nm1.tpltzblocks[k].idv - Nm1.idp);
 
@@ -605,12 +603,12 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b, 
 
             // Set the corresponding signal time stream sample to zero
             // (equivalent to a perfect noise reconstruction)
-            b[j]     = 0;
+            b[j] = 0;
 
             // Point all the preceding gap samples to trash pixel and set them
             // to zero in the TOD
             while (A->ll[j] != -1) {
-                b[A->ll[j]]     = 0;
+                b[A->ll[j]] = 0;
                 for (int k = 0; k < nnz; k++) {
                     A->indices[A->ll[j] * nnz + k] = k - nnz;
                     A->values[A->ll[j] * nnz + k]  = 0;

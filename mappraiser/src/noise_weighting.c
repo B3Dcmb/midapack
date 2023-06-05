@@ -7,6 +7,7 @@
  */
 
 #include "mappraiser/noise_weighting.h"
+#include "mappraiser/mapping.h"
 #include "mappraiser/solver_info.h"
 
 #ifndef NDEBUG
@@ -18,8 +19,6 @@
 #include <stdlib.h>
 
 __attribute__((unused)) void reset_tod_gaps(double *tod, Tpltz *N, Gap *Gaps);
-
-void reset_block_gaps(double *tod, Tpltz *tmat_block, Gap *gaps);
 
 void gappy_tpltz_mult(Tpltz *tmat_block, double *tod, Gap *gaps);
 
@@ -168,34 +167,13 @@ __attribute__((unused)) void reset_tod_gaps(double *tod, Tpltz *N, Gap *Gaps) {
 #endif
 }
 
-void reset_block_gaps(double *tod, Tpltz *tmat_block, Gap *gaps) {
-    // useful quantities
-    Block  *b   = &(tmat_block->tpltzblocks[0]);
-    int64_t idv = b->idv; // global row index of data block
-    int     n   = b->n;   // size of data block
-
-    // loop over the gaps
-    for (int i = b->first_gap; i <= b->last_gap; ++i) {
-        int64_t id0g = gaps->id0gap[i];
-        int     lg   = gaps->lgap[i];
-#ifndef NDEBUG
-        // assert that gap is relevant for the given data block
-        assert(idv < id0g + lg && id0g < idv + n);
-#endif
-        // set intersection of tod and gap to zero
-        for (int64_t j = id0g; j < id0g + lg; ++j) {
-            if (idv <= j && j < n + idv) tod[j - idv] = 0;
-        }
-    }
-}
-
 void gappy_tpltz_mult(Tpltz *tmat_block, double *tod, Gap *gaps) {
 #ifndef NDEBUG
     assert(tmat_block->nb_blocks_loc == 1);
 #endif
-    reset_block_gaps(tod, tmat_block, gaps);
+    reset_relevant_gaps(tod, tmat_block, gaps);
     stbmmProd(tmat_block, tod);
-    reset_block_gaps(tod, tmat_block, gaps);
+    reset_relevant_gaps(tod, tmat_block, gaps);
 }
 
 /**
@@ -245,7 +223,7 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
 
     // reset gaps of the rhs
     // if (!ignore_gaps) reset_tod_gaps(tod_block, N_block, Gaps);
-    if (!ignore_gaps) reset_block_gaps(tod_block, N_block, Gaps);
+    if (!ignore_gaps) reset_relevant_gaps(tod_block, N_block, Gaps);
 
     _r = malloc((sizeof *_r) * m);
     r  = malloc((sizeof *r) * m);

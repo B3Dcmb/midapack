@@ -2,11 +2,12 @@
 #define MAPPRAISER_APPLY_WEIGHTS_H
 
 #include <midapack.h>
-#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#include <stdbool.h>
 
 typedef enum weight_stgy_t {
     BASIC       = 0, // consider that there are no gaps, do not iterate
