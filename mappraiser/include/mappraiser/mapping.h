@@ -19,6 +19,8 @@ int compute_global_gap_count(MPI_Comm comm, Gap *gaps);
 
 void reset_relevant_gaps(double *tod, Tpltz *tmat, Gap *gaps);
 
+void condition_extra_pix_zero(Mat *A);
+
 __attribute__((unused)) void print_gap_info(Gap *gaps);
 
 #ifdef __cplusplus

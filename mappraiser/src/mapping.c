@@ -225,6 +225,19 @@ void reset_relevant_gaps(double *tod, Tpltz *tmat, Gap *gaps) {
     }
 }
 
+void condition_extra_pix_zero(Mat *A) {
+    // if no samples are pointed to "trash" pixel, there is nothing to do
+    if (!A->trash_pix) return;
+
+    // otherwise set the relevant pointing weights to zero
+    int nnz = A->nnz;
+    for (int i = 0; i < A->m; ++i) {
+        if (A->indices[i * nnz] == 0) {
+            for (int j = 0; j < nnz; ++j) { A->values[i * nnz + j] = 0; }
+        }
+    }
+}
+
 __attribute__((unused)) void print_gap_info(Gap *gaps) {
     printf("Local Gap structure\n");
     printf("  { ngap: %d\n", gaps->ngap);

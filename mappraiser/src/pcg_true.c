@@ -76,6 +76,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
 
     // set signal in all gaps to zero
     reset_relevant_gaps(b, Nm1, Gaps);
+    condition_extra_pix_zero(A);
 
     // DEBUG
     // int proc = 0;
