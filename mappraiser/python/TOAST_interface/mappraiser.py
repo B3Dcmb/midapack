@@ -369,14 +369,14 @@ class Mappraiser(Operator):
     @traitlets.validate("gap_stgy")
     def _check_gap_stgy(self, proposal):
         check = proposal["value"]
-        if check not in (0, 1, 2, 3):
+        if check not in (0, 1, 2, 3, 4):
             msg = "Invalid gap_stgy - accepted values are:\n"
             msg += "0 -> perfect noise reconstruction (use original simulated noise)\n"
             msg += "1 -> gap filling with a constrained noise realization\n"
             msg += "2 -> 'nested PCG' i.e. invert the noise covariance matrix with a PCG at each noise weighting " \
-                   "operation\n"
-            msg += "3 -> gap filling + nested PCG (to correct for non-Toeplitz character of the inverse noise " \
-                   "covariance)"
+                   "operation (completely ignore the gaps)\n"
+            msg += "3 -> perfect noise reconstruction + nested PCG\n"
+            msg += "4 -> gap filling + nested PCG"
             raise traitlets.TraitError(msg)
         return check
 
