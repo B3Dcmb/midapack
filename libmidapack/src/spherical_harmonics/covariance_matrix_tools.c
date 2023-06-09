@@ -66,57 +66,6 @@ int get_cholesky_decomposition_inverted(int order_matrix, double *matrix_to_get_
     return 0;
 }
 
-int get_inverse_matrix_cholesky_decomposition(int order_matrix, double* matrix_to_be_inverted, double *cholesky_factor, char cholesky_part){
-    /* cholesky_part must be either 'L' of 'U' for the lower or upper part of the Cholesky decomposition */
-
-    // int errorHandler;
-    // int pivotArray[order_matrix];
-
-    int lda = order_matrix;
-
-    // int lwork = order_matrix*order_matrix;
-    // double work[lwork];
-
-    // dgetrf_(&order_matrix, &order_matrix, matrix_to_be_inverted, &lda, pivotArray, &errorHandler);
-    // // LU decomposition of matrix_to_be_inverted; give result in matrix_to_be_inverted
-    // // printf("LU decomposition with dgetrf : %d should be zero\n", errorHandler);
-
-    // double result[order_matrix*order_matrix];
-    // dgetri_(&order_matrix, matrix_to_be_inverted, &lda, pivotArray, work, &lwork, &errorHandler);
-    
-    double *rhs = (double *)malloc(order_matrix*order_matrix*sizeof(double));;
-    int i, j;
-    for (i=0; i<order_matrix; i++){
-        for (j=0; j<order_matrix; j++){
-            if (i!=j)
-                rhs[i*order_matrix + j] = 0;
-            else{
-                rhs[i*order_matrix + j] = 1;
-            }
-        }
-    }
-
-    int info;
-    // printf("<<<<< Getting Cholesky decomposition and inverting \n"); fflush(stdout);
-    dppsv_(&cholesky_part, &order_matrix, &order_matrix, cholesky_factor, rhs, &lda, &info);
-    // if (info != 0){
-    //     printf("<<<< Something wrong happened \n");
-    // }
-    // Compute the Cholesky decomposition of cholesky_factor, where cholesky_factor is the upper triangular part of the symmetric
-    // matrix we want to inverse, and rhs will contain the solution
-    
-    // printf("<<<<< Done, then memcpy \n"); fflush(stdout);
-    memcpy(matrix_to_be_inverted, rhs, order_matrix*order_matrix*sizeof(double));
-
-    // printf("<<<<< Freeing rhs \n"); fflush(stdout);
-    free(rhs);
-    // printf("<<<<< Done completely !! \n"); fflush(stdout);
-
-    return 0;
-}
-
-
-
 
 int get_covariance_matrix_NxN(char *c_ell_path, int number_correl, double **covariance_matrix_NxN, S2HAT_parameters *S2HAT_params){
     /* Read c_ell file to construct covariance matrix

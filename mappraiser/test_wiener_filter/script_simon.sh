@@ -30,3 +30,5 @@ srun -n 2 test_wiener_filter/map_to_white_noise
 
 srun -n 2 test_wiener_filter/map_to_white_noise_0
 srun -n 1 test_wiener_filter/map_to_white_noise_0
+
+srun -n 1 test_wiener_filter/map_to_white_noise_clean

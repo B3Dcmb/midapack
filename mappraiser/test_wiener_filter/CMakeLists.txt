@@ -29,6 +29,10 @@ target_link_libraries(map_to_white_noise_clean PRIVATE "${S2HAT_LIBRARIES}")
 target_compile_options(map_to_white_noise_clean PRIVATE "${S2HAT_LFLAGS}")
 # endif (S2HAT_FOUND)
 
+
+target_include_directories(map_to_white_noise_clean PRIVATE "${CFITSIO_INCLUDES}")
+target_link_libraries(map_to_white_noise_clean PUBLIC "${CFITSIO_LIBRARIES}")
+
 # libraries
 target_link_libraries(map_to_white_noise_clean PRIVATE mappraiser midapack MPI::MPI_C)
 target_link_libraries(map_to_white_noise_clean PRIVATE MPI::MPI_Fortran)
