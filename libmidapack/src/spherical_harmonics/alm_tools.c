@@ -201,7 +201,7 @@ int apply_inv_covariance_matrix_to_alm(s2hat_dcomplex *input_local_alm, s2hat_dc
     int ell_value, m_value, index_stokes, line_index, nmvals;
     int nstokes = S2HAT_params->nstokes;
     // int nstokes = 3;
-    int lmax = Global_param_s2hat->nlmax +1;
+    int lmax = Global_param_s2hat->nlmax;// +1;
 
     int index, max_size_test=50;
     printf("%d --- Local_alm during apply inv cov matrix - %f %f -", Local_param_s2hat->gangrank, input_local_alm[0].re, input_local_alm[0].im);
@@ -227,22 +227,45 @@ int apply_inv_covariance_matrix_to_alm(s2hat_dcomplex *input_local_alm, s2hat_dc
                         res_real = 0;
                         res_imag = 0;
                         for (line_index=0; line_index < nstokes; line_index++){
+                            if (ell_value <2){
+                                printf("res_real %f res_imag %f - ell %d m_value %d index_stokes %d line_index :", res_real, res_imag, ell_value, m_value, index_stokes, line_index);
+                            }
                             res_real += inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index] * input_local_alm[line_index*nmvals*(lmax) + m_value*(lmax) + ell_value].re;
                             res_imag += inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index] * input_local_alm[line_index*nmvals*(lmax) + m_value*(lmax) + ell_value].im;
                         }
-                        if (!(res_real == res_real)){
+                        if ((!(res_real == res_real))&&(ell_value<5)){
+                            // printf("Re %f - ell %d m_value %d index_stokes %d :", res_real, ell_value, m_value, index_stokes);
                             number_of_nan_re ++;
-                            if (!(inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index-1] == inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index-1]))
-                                number_of_nan_inv_cov++;
-                            if (!(input_local_alm[(line_index-1)*nmvals*(lmax) + m_value*(lmax) + ell_value].re == input_local_alm[(line_index-1)*nmvals*(lmax) + m_value*(lmax) + ell_value].re))
-                                number_of_nan_alm++;
+                            for (line_index=0; line_index < nstokes; line_index++){
+                                if (!(inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index-1] == inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index-1])){
+                                    // printf("- nstokes_invcov %d -",line_index);
+                                    number_of_nan_inv_cov++;
+                                }
+                            }
+                            for (line_index=0; line_index < nstokes; line_index++){
+                                if (!(input_local_alm[line_index*nmvals*(lmax) + m_value*(lmax) + ell_value].re == input_local_alm[line_index*nmvals*(lmax) + m_value*(lmax) + ell_value].re)){
+                                    // printf("- nstokes_alm %d -",line_index);
+                                    number_of_nan_alm++;
+                                }
+                            }
+                            printf("\n");
                         }
-                        if (!(res_imag == res_imag)){
+                        if ((!(res_imag == res_imag))&&(ell_value<5)){
                             number_of_nan_im ++;
-                            if (!(inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index-1] == inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index-1]))
-                                number_of_nan_inv_cov++;
-                            if (!(input_local_alm[(line_index-1)*nmvals*(lmax) + m_value*(lmax) + ell_value].im == input_local_alm[(line_index-1)*nmvals*(lmax) + m_value*(lmax) + ell_value].im))
-                                number_of_nan_alm++;
+                            // printf("Im %f - ell %d m_value %d index_stokes %d :", res_imag, ell_value, m_value, index_stokes);
+                            for (line_index=0; line_index < nstokes; line_index++){
+                                if (!(inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index] == inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index])){
+                                    // printf("- nstokes_invcov %d -",line_index);
+                                    number_of_nan_inv_cov++;
+                                }
+                            }
+                            for (line_index=0; line_index < nstokes; line_index++){
+                                if (!(input_local_alm[line_index*nmvals*(lmax) + m_value*(lmax) + ell_value].im == input_local_alm[line_index*nmvals*(lmax) + m_value*(lmax) + ell_value].im)){
+                                    // printf("- nstokes_alm %d -",line_index);
+                                    number_of_nan_alm++;
+                                }
+                            }
+                            printf("\n");
                         }
                         
                         out_local_alm[index_stokes*nmvals*(lmax) + m_value*(lmax) + ell_value].re = res_real;
