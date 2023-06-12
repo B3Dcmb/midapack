@@ -937,11 +937,7 @@ int main(int argc, char** argv){
     //     printf("- %f %f -", local_alm_s2hat[index].re, local_alm_s2hat[index].im);
     // }
     // printf(" \n");
-    printf("TEST 9 -- lmax %d \n", lmax);
-    s2hat_dcomplex *local_alm_s2hat_inverted;
-    // if (S2HAT_params.Local_param_s2hat.gangrank >= 0)
-    // local_alm_s2hat_inverted = (s2hat_dcomplex *)malloc(S2HAT_params.nstokes*S2HAT_params.size_alm*sizeof(s2hat_dcomplex));
-    local_alm_s2hat_inverted = (s2hat_dcomplex *)malloc(3*S2HAT_params.size_alm*sizeof(s2hat_dcomplex));
+    
 
     printf("%d --- applying inverse of covariance matrix !!! \n", rank); fflush(stdout);
 
@@ -983,6 +979,11 @@ int main(int argc, char** argv){
     printf(" \n"); fflush(stdout);
     printf("%d ----!!!! ***local_alm_s2hat post inv cov*** size_alm %d ; Number of nans %d \n", rank, S2HAT_params.size_alm, number_of_nan); fflush(stdout);
 
+    printf("TEST 9 -- lmax %d \n", lmax);
+    s2hat_dcomplex *local_alm_s2hat_inverted;
+    // if (S2HAT_params.Local_param_s2hat.gangrank >= 0)
+    // local_alm_s2hat_inverted = (s2hat_dcomplex *)malloc(S2HAT_params.nstokes*S2HAT_params.size_alm*sizeof(s2hat_dcomplex));
+    local_alm_s2hat_inverted = (s2hat_dcomplex *)malloc(3*S2HAT_params.size_alm*sizeof(s2hat_dcomplex));
     apply_inv_covariance_matrix_to_alm(local_alm_s2hat, local_alm_s2hat_inverted, inverse_covariance_matrix, &S2HAT_params);
 
     // double *c_ell_array_output_2 = (double *)malloc(nstokes*lmax*sizeof(double));
@@ -1091,7 +1092,7 @@ int main(int argc, char** argv){
 
     printf("%d ----!!!! ***local_alm_s2hat_inverted*** size_alm %d ; Number of nans %d \n", rank, S2HAT_params.size_alm, number_of_nan); fflush(stdout);
     printf("%d ----!!!! ***local_map_output*** nstokes %d ; map_size %d \n", rank, nstokes, S2HAT_params.Local_param_s2hat.map_size); fflush(stdout);
-    double *local_map_output_test = (double *)malloc(3*49152*sizeof(double));
+    // double *local_map_output_test = (double *)malloc(3*49152*sizeof(double));
     printf("%d ----TEST 9b \n", rank); fflush(stdout);
     double *local_map_output = (double *)malloc(nstokes*S2HAT_params.Local_param_s2hat.map_size*sizeof(double));
     printf("TEST 10 -- lmax %d \n", lmax);
