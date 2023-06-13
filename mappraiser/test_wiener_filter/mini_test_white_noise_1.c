@@ -131,7 +131,7 @@ int main(int argc, char** argv){
     s2hat_dcomplex *local_alm_s2hat;
     // if (S2HAT_params.Local_param_s2hat.gangrank >= 0)
     // local_alm_s2hat = (s2hat_dcomplex *)malloc(nstokes*S2HAT_params.size_alm*sizeof(s2hat_dcomplex));
-    local_alm_s2hat = (s2hat_dcomplex *)malloc(3*S2HAT_params.size_alm*sizeof(s2hat_dcomplex));
+    local_alm_s2hat = (s2hat_dcomplex *)calloc(3*S2HAT_params.size_alm,sizeof(s2hat_dcomplex));
 
     S2HAT_GLOBAL_parameters *Global_param_s2hat = &(S2HAT_params.Global_param_s2hat);
     S2HAT_LOCAL_parameters *Local_param_s2hat = &(S2HAT_params.Local_param_s2hat);
@@ -419,10 +419,23 @@ int main(int argc, char** argv){
     }
     printf(" \n"); fflush(stdout);
 
+    int nmvals = Local_param_s2hat->nmvals, index_stokes, m_value;
     printf("%d ----!!!! ***local_alm_s2hat pre inv cov*** size_alm %d ; Number of nans %d \n", rank, S2HAT_params.size_alm, number_of_nan); fflush(stdout);
+    printf("%d ----!!!! Values nans : ", rank); fflush(stdout);
+    ell_value = 1; m_value = 0; index_stokes = 1; 
+    printf("- ell %d m_ %d stokes %d alm.re %f alm.im %f -", ell_value, m_value, nstokes, local_alm_s2hat[nstokes*nmvals*(lmax+1) + m_value*(lmax+1) + ell_value].re, local_alm_s2hat[nstokes*nmvals*(lmax+1) + m_value*(lmax+1) + ell_value].im);
+    ell_value = 1; m_value = 1; index_stokes = 0; 
+    printf("- ell %d m_ %d stokes %d alm.re %f alm.im %f -", ell_value, m_value, nstokes, local_alm_s2hat[nstokes*nmvals*(lmax+1) + m_value*(lmax+1) + ell_value].re, local_alm_s2hat[nstokes*nmvals*(lmax+1) + m_value*(lmax+1) + ell_value].im);
+    ell_value = 1; m_value = 1; index_stokes = 1; 
+    printf("- ell %d m_ %d stokes %d alm.re %f alm.im %f -", ell_value, m_value, nstokes, local_alm_s2hat[nstokes*nmvals*(lmax+1) + m_value*(lmax+1) + ell_value].re, local_alm_s2hat[nstokes*nmvals*(lmax+1) + m_value*(lmax+1) + ell_value].im);
+    ell_value = 1; m_value = 1; index_stokes = 2; 
+    printf("- ell %d m_ %d stokes %d alm.re %f alm.im %f -", ell_value, m_value, nstokes, local_alm_s2hat[nstokes*nmvals*(lmax+1) + m_value*(lmax+1) + ell_value].re, local_alm_s2hat[nstokes*nmvals*(lmax+1) + m_value*(lmax+1) + ell_value].im);
+    ell_value = 1; m_value = 3; index_stokes = 2; 
+    printf("- ell %d m_ %d stokes %d alm.re %f alm.im %f -", ell_value, m_value, nstokes, local_alm_s2hat[nstokes*nmvals*(lmax+1) + m_value*(lmax+1) + ell_value].re, local_alm_s2hat[nstokes*nmvals*(lmax+1) + m_value*(lmax+1) + ell_value].im);
 
-    
-    
+
+    printf("\n");
+
     number_of_nan = 0;
     printf("%d ----!!!! ***inverse_covariance_matrix*** lmax %d number_of_nan reset to %d  \n", rank, lmax, number_of_nan); fflush(stdout);
     for (ell_value=0;ell_value<lmax;ell_value++){
@@ -444,6 +457,11 @@ int main(int argc, char** argv){
     // printf(" \n"); fflush(stdout);
     printf("%d ----!!!! ***local_alm_s2hat post inv cov*** size_alm %d ; Number of nans %d \n", rank, S2HAT_params.size_alm, number_of_nan); fflush(stdout);
 
+    // printf("%d ----!!!! ***local_alm_s2hattest*** size_alm %d : \n", rank, S2HAT_params.size_alm); fflush(stdout);
+    // for (ell_value=0; ell_value<2; ell_value++){
+    //     for(m_value=0; m_value<2*ell_value+1)
+    // }
+    // input_local_alm[line_index*nmvals*(lmax+1) + m_value*(lmax+1) + ell_value].re
     apply_inv_covariance_matrix_to_alm(local_alm_s2hat, local_alm_s2hat_inverted, inverse_covariance_matrix, &S2HAT_params);
 
     number_of_nan = 0;
