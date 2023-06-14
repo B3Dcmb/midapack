@@ -477,7 +477,8 @@ int main(int argc, char** argv){
 
     printf("%d --- getting cells of covariance matrix !!! \n", rank); fflush(stdout);
     double *c_ell_array = (double *)calloc(number_correlations*(lmax),sizeof(double));
-    read_fits_cells(lmax, number_correlations, c_ell_array, c_ell_path, 1); // Reading cell_fits_file
+    int not_block_diagonal = 0; // We want block diagonal c_ells
+    read_fits_cells(lmax, number_correlations, c_ell_array, c_ell_path, 1, not_block_diagonal); // Reading cell_fits_file
 
     int correl_index = 0;
     int max_size_ells_to_probe = 5;
@@ -524,7 +525,7 @@ int main(int argc, char** argv){
     
 
     printf("--- Getting covariance matrix \n"); fflush(stdout);
-    get_covariance_matrix_NxN(c_ell_path, number_correlations, covariance_matrix_NxN, &S2HAT_params);
+    get_covariance_matrix_block_diagonal(c_ell_path, number_correlations, covariance_matrix_NxN, &S2HAT_params);
     printf("--- Covariance matrix obtained ! \n"); fflush(stdout);
     
     int index, index_2, ell_index;
@@ -823,7 +824,7 @@ int main_clean_ver_0(int argc, char** argv){
     for(ell_value=0; ell_value<lmax; ell_value++){
         covariance_matrix[ell_value] = calloc(nstokes*nstokes,sizeof(double));
     }
-    get_covariance_matrix_NxN(c_ell_path, number_correlations, covariance_matrix, &S2HAT_params);
+    get_covariance_matrix_block_diagonal(c_ell_path, number_correlations, covariance_matrix, &S2HAT_params);
     double **inverse_covariance_matrix;
     inverse_covariance_matrix = calloc(lmax, sizeof(double *));
     for(ell_value=0; ell_value<lmax; ell_value++){

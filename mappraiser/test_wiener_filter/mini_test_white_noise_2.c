@@ -135,7 +135,7 @@ int main_clean_ver_nside_64_polar(int argc, char** argv){
     for(ell_value=0; ell_value<lmax; ell_value++){
         covariance_matrix[ell_value] = calloc(nstokes*nstokes,sizeof(double));
     }
-    get_covariance_matrix_NxN(c_ell_path, number_correlations, covariance_matrix, &S2HAT_params);
+    get_covariance_matrix_block_diagonal(c_ell_path, number_correlations, covariance_matrix, &S2HAT_params);
 
     double **inverse_covariance_matrix;
     inverse_covariance_matrix = calloc(lmax, sizeof(double *));

@@ -169,7 +169,7 @@ int main(int argc, char** argv){
         inverse_covariance_matrix[ell_value] = calloc(nstokes*nstokes,sizeof(double));
     }
     printf("%d --- getting inverse of covariance matrix !!! \n", rank); fflush(stdout);
-    get_inverse_covariance_matrix_NxN(&S2HAT_params, inverse_covariance_matrix);
+    get_inverse_covariance_matrix_diagonal(&S2HAT_params, inverse_covariance_matrix);
 
     // Getting unit
     // for (ell_value=0;ell_value<lmax;ell_value++){

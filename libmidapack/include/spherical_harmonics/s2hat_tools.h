@@ -124,7 +124,7 @@ void read_fits_mask(int nside, double *mask, char *path_mask_file, int col);
 void read_TQU_maps( int nside, double *map, char *infile, int nstokes);
 /**/
 /* Obtain c_ell array from c_ell path */
-void read_fits_cells(int lmax, int number_correl, double *c_ell_array, char *path_list_file, int col);
+void read_fits_cells(int lmax, int number_correl, double *c_ell_array, char *path_list_file, int col, int not_block_diagonal);
 /**/
 
 
@@ -155,10 +155,10 @@ int get_inverse_matrix_cholesky_decomposition(int order_matrix, double* matrix_t
 
 /* Read c_ell to generate covariance matrix which will be in the form : covariance_matrix_3x3[lmax][number_correlations] 
    with number_correlations being either 9 for [TT, TE, TB, ET, EE, EB, BT, BE, BB] (with TE=ET, TB=BT and BE=EB), 4 for 9 for [EE, EB, BE, BB] (with BE=EB) or 1 for [TT] */
-int get_covariance_matrix_NxN(char *c_ell_path, int number_correl, double **covariance_matrix_NxN, S2HAT_parameters *S2HAT_params);
+int get_covariance_matrix_block_diagonal(char *c_ell_path, int number_correl, double **covariance_matrix_NxN, S2HAT_parameters *S2HAT_params);
 /**/
 /* Function to obtain inverse of covariance matrix in harmonic domain, from given c_ells */
-int get_inverse_covariance_matrix_NxN(S2HAT_parameters *S2HAT_params, double **inverse_covariance_matrix);
+int get_inverse_covariance_matrix_diagonal(S2HAT_parameters *S2HAT_params, double **inverse_covariance_matrix);
 /**/
 
 

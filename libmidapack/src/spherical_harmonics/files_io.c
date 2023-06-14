@@ -118,7 +118,7 @@ void read_TQU_maps( int nside, double *map, char *infile, int nstokes)
 
 
 
-void read_fits_cells(int lmax, int number_correl, double *c_ell_array, char *path_list_file, int col)
+void read_fits_cells(int lmax, int number_correl, double *c_ell_array, char *path_list_file, int col, int not_block_diagonal)
 /* Obtain c_ell array from c_ell path */
 {
   int status = 0, hdutyp, anynul;
@@ -131,6 +131,9 @@ void read_fits_cells(int lmax, int number_correl, double *c_ell_array, char *pat
 
   size_c_ell = lmax * number_correl; // The size of c_ell array correspond to ell_max * the number of auto-correl and crosscorrelations included [TT, TE, TB, etc.]
 
+  if(not_block_diagonal){
+    size_c_ell *= size_c_ell;
+  }
 
   ffopen( &fptr, path_list_file, 0, &status);
   if( status) {
