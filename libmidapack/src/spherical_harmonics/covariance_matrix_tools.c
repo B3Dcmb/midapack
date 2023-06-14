@@ -53,6 +53,7 @@ int get_cholesky_decomposition_inverted(int order_matrix, double *matrix_to_get_
 
     int lda = order_matrix;
     int info;
+    int i,j;
 
     // LAPACKE_dppsv(order_matrix, cholesky_part, order_matrix, order_matrix, cholesky_factor, rhs, lda);
     dpotrf_(&cholesky_part, &order_matrix, matrix_to_get_cholesky, &order_matrix, &info);
@@ -213,14 +214,14 @@ int get_covariance_matrix_full(char *covariance_matrix_path, double **covariance
                 covariance_matrix_NxN[ell_value_1*(lmax+1) + ell_value_2][correl_index*nstokes + correl_index] = covariance_matrix_1d[ ((lmax+1)*correl_index + ell_value_1)*(lmax+1)*nstokes + (lmax+1)*correl_index + ell_value_2]; // Diagonal part : TT (0), EE (4), BB (8)
 
             if (nstokes>1){
-                covariance_matrix_NxN[ell_value*(lmax+1) + ell_value_2][1] = covariance_matrix_1d[ ((lmax+1)*0 + ell_value_1)*(lmax+1)*nstokes + (lmax+1)*1 + ell_value_2]; // Cross-correlation TE (if case with intensity+polarization) or EB (if only polarization) (up-right block)
-                covariance_matrix_NxN[ell_value*(lmax+1) + ell_value_2][nstokes] = covariance_matrix_1d[ ((lmax+1)*1 + ell_value_1)*(lmax+1)*nstokes + (lmax+1)*0 + ell_value_2]; // Cross-correlation TE (if case with intensity+polarization) or EB (if only polarization) (middle-left block)
+                covariance_matrix_NxN[ell_value_1*(lmax+1) + ell_value_2][1] = covariance_matrix_1d[ ((lmax+1)*0 + ell_value_1)*(lmax+1)*nstokes + (lmax+1)*1 + ell_value_2]; // Cross-correlation TE (if case with intensity+polarization) or EB (if only polarization) (up-right block)
+                covariance_matrix_NxN[ell_value_1*(lmax+1) + ell_value_2][nstokes] = covariance_matrix_1d[ ((lmax+1)*1 + ell_value_1)*(lmax+1)*nstokes + (lmax+1)*0 + ell_value_2]; // Cross-correlation TE (if case with intensity+polarization) or EB (if only polarization) (middle-left block)
                 if(number_correl == 6){
-                    covariance_matrix_NxN[ell_value*(lmax+1) + ell_value_2][2] = covariance_matrix_1d[ ((lmax+1)*0 + ell_value_1)*(lmax+1)*nstokes + (lmax+1)*2 + ell_value_2]; // Cross-correlation TB (up-right block)
-                    covariance_matrix_NxN[ell_value*(lmax+1) + ell_value_2][6] = covariance_matrix_1d[ ((lmax+1)*2 + ell_value_1)*(lmax+1)*nstokes + (lmax+1)*0 + ell_value_2]; // Cross-correlation TB (bottom-left block)
+                    covariance_matrix_NxN[ell_value_1*(lmax+1) + ell_value_2][2] = covariance_matrix_1d[ ((lmax+1)*0 + ell_value_1)*(lmax+1)*nstokes + (lmax+1)*2 + ell_value_2]; // Cross-correlation TB (up-right block)
+                    covariance_matrix_NxN[ell_value_1*(lmax+1) + ell_value_2][6] = covariance_matrix_1d[ ((lmax+1)*2 + ell_value_1)*(lmax+1)*nstokes + (lmax+1)*0 + ell_value_2]; // Cross-correlation TB (bottom-left block)
                     
-                    covariance_matrix_NxN[ell_value*(lmax+1) + ell_value_2][5] = covariance_matrix_1d[ ((lmax+1)*1 + ell_value_1)*(lmax+1)*nstokes + (lmax+1)*2 + ell_value_2 ]; // Cross-correlation EB (bottom-middle block)
-                    covariance_matrix_NxN[ell_value*(lmax+1) + ell_value_2][7] = covariance_matrix_1d[ ((lmax+1)*2 + ell_value_1)*(lmax+1)*nstokes + (lmax+1)*1 + ell_value_2 ]; // Cross-correlation EB (middle-right block)
+                    covariance_matrix_NxN[ell_value_1*(lmax+1) + ell_value_2][5] = covariance_matrix_1d[ ((lmax+1)*1 + ell_value_1)*(lmax+1)*nstokes + (lmax+1)*2 + ell_value_2 ]; // Cross-correlation EB (bottom-middle block)
+                    covariance_matrix_NxN[ell_value_1*(lmax+1) + ell_value_2][7] = covariance_matrix_1d[ ((lmax+1)*2 + ell_value_1)*(lmax+1)*nstokes + (lmax+1)*1 + ell_value_2 ]; // Cross-correlation EB (middle-right block)
                 }
             }
         }
@@ -321,14 +322,14 @@ int get_inverse_covariance_matrix_full(S2HAT_parameters *S2HAT_params, double **
                 inverse_covariance_matrix[ell_value_1*(lmax+1) + ell_value_2][correl_index*nstokes + correl_index] = covariance_matrix_1d[ ((lmax+1)*correl_index + ell_value_1)*(lmax+1)*nstokes + (lmax+1)*correl_index + ell_value_2]; // Diagonal part : TT (0), EE (4), BB (8)
 
             if (nstokes>1){
-                inverse_covariance_matrix[ell_value*(lmax+1) + ell_value_2][1] = covariance_matrix_1d[ ((lmax+1)*0 + ell_value_1)*(lmax+1)*nstokes + (lmax+1)*1 + ell_value_2]; // Cross-correlation TE (if case with intensity+polarization) or EB (if only polarization) (up-right block)
-                inverse_covariance_matrix[ell_value*(lmax+1) + ell_value_2][nstokes] = covariance_matrix_1d[ ((lmax+1)*1 + ell_value_1)*(lmax+1)*nstokes + (lmax+1)*0 + ell_value_2]; // Cross-correlation TE (if case with intensity+polarization) or EB (if only polarization) (middle-left block)
+                inverse_covariance_matrix[ell_value_1*(lmax+1) + ell_value_2][1] = covariance_matrix_1d[ ((lmax+1)*0 + ell_value_1)*(lmax+1)*nstokes + (lmax+1)*1 + ell_value_2]; // Cross-correlation TE (if case with intensity+polarization) or EB (if only polarization) (up-right block)
+                inverse_covariance_matrix[ell_value_1*(lmax+1) + ell_value_2][nstokes] = covariance_matrix_1d[ ((lmax+1)*1 + ell_value_1)*(lmax+1)*nstokes + (lmax+1)*0 + ell_value_2]; // Cross-correlation TE (if case with intensity+polarization) or EB (if only polarization) (middle-left block)
                 if(number_correl == 6){
-                    inverse_covariance_matrix[ell_value*(lmax+1) + ell_value_2][2] = covariance_matrix_1d[ ((lmax+1)*0 + ell_value_1)*(lmax+1)*nstokes + (lmax+1)*2 + ell_value_2]; // Cross-correlation TB (up-right block)
-                    inverse_covariance_matrix[ell_value*(lmax+1) + ell_value_2][6] = covariance_matrix_1d[ ((lmax+1)*2 + ell_value_1)*(lmax+1)*nstokes + (lmax+1)*0 + ell_value_2]; // Cross-correlation TB (bottom-left block)
+                    inverse_covariance_matrix[ell_value_1*(lmax+1) + ell_value_2][2] = covariance_matrix_1d[ ((lmax+1)*0 + ell_value_1)*(lmax+1)*nstokes + (lmax+1)*2 + ell_value_2]; // Cross-correlation TB (up-right block)
+                    inverse_covariance_matrix[ell_value_1*(lmax+1) + ell_value_2][6] = covariance_matrix_1d[ ((lmax+1)*2 + ell_value_1)*(lmax+1)*nstokes + (lmax+1)*0 + ell_value_2]; // Cross-correlation TB (bottom-left block)
 
-                    inverse_covariance_matrix[ell_value*(lmax+1) + ell_value_2][5] = covariance_matrix_1d[ ((lmax+1)*1 + ell_value_1)*(lmax+1)*nstokes + (lmax+1)*2 + ell_value_2 ]; // Cross-correlation EB (bottom-middle block)
-                    inverse_covariance_matrix[ell_value*(lmax+1) + ell_value_2][7] = covariance_matrix_1d[ ((lmax+1)*2 + ell_value_1)*(lmax+1)*nstokes + (lmax+1)*1 + ell_value_2 ]; // Cross-correlation EB (middle-right block)
+                    inverse_covariance_matrix[ell_value_1*(lmax+1) + ell_value_2][5] = covariance_matrix_1d[ ((lmax+1)*1 + ell_value_1)*(lmax+1)*nstokes + (lmax+1)*2 + ell_value_2 ]; // Cross-correlation EB (bottom-middle block)
+                    inverse_covariance_matrix[ell_value_1*(lmax+1) + ell_value_2][7] = covariance_matrix_1d[ ((lmax+1)*2 + ell_value_1)*(lmax+1)*nstokes + (lmax+1)*1 + ell_value_2 ]; // Cross-correlation EB (middle-right block)
                 }
             }
         }
