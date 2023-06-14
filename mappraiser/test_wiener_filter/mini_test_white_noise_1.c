@@ -54,19 +54,19 @@ int main(int argc, char** argv){
     // char *path_CMB_map = "/global/homes/m/mag/midapack/mappraiser/src/test_wiener_filter/Map_test_band_limited.fits";
     // char *path_CMB_map = "/global/homes/m/mag/perl_midapack/midapack/mappraiser/test_wiener_filter/Map_test_band_limited_woTTTE.fits";
     // char *path_CMB_map = "/global/homes/m/mag/perl_midapack/midapack/mappraiser/test_wiener_filter/Map_test_band_limited_woTTTE_128.fits";
-    // char *path_CMB_map = "/global/homes/m/mag/perl_midapack/midapack/mappraiser/test_wiener_filter/Map_test_band_limited_128.fits";
+    char *path_CMB_map = "/global/homes/m/mag/perl_midapack/midapack/mappraiser/test_wiener_filter/Map_test_band_limited_128.fits";
     // char *path_CMB_map = "/global/homes/m/mag/perl_midapack/midapack/mappraiser/test_wiener_filter/Map_test_band_limited_woTE_128.fits";
     // char *path_CMB_map = "/global/homes/m/mag/perl_midapack/midapack/mappraiser/test_wiener_filter/Map_test_band_limited_onlyBB_128.fits";
-    char *path_CMB_map = "/global/homes/m/mag/perl_midapack/midapack/mappraiser/test_wiener_filter/Map_test_band_limited_onlyEEBB_128.fits";
+    // char *path_CMB_map = "/global/homes/m/mag/perl_midapack/midapack/mappraiser/test_wiener_filter/Map_test_band_limited_onlyEEBB_128.fits";
     // char *path_CMB_map = "/global/homes/m/mag/perl_midapack/midapack/mappraiser/test_wiener_filter/Map_band_limited_1024_0.fits";
     // char *c_ell_path = "/global/homes/m/mag/midapack/mappraiser/src/test_wiener_filter/cls_limited_1024.fits";
     // char *c_ell_path = "/global/homes/m/mag/midapack/mappraiser/src/test_wiener_filter/cls_limited_1024_woTE.fits";
     // char *c_ell_path = "/global/homes/m/mag/midapack/mappraiser/src/test_wiener_filter/cls_limited_1024_woTTTE.fits";
     // char *c_ell_path = "/global/homes/m/mag/midapack/mappraiser/src/test_wiener_filter/cls_limited_1024_woTTTE_v2.fits";
-    // char *c_ell_path = "/global/homes/m/mag/midapack/mappraiser/src/test_wiener_filter/cls_limited_128.fits";
+    char *c_ell_path = "/global/homes/m/mag/midapack/mappraiser/src/test_wiener_filter/cls_limited_128.fits";
     // char *c_ell_path = "/global/homes/m/mag/midapack/mappraiser/src/test_wiener_filter/cls_limited_128_woTE.fits";
     // char *c_ell_path = "/global/homes/m/mag/midapack/mappraiser/src/test_wiener_filter/cls_limited_128_only_BB.fits";
-    char *c_ell_path = "/global/homes/m/mag/midapack/mappraiser/src/test_wiener_filter/cls_limited_128_only_EEBB.fits";
+    // char *c_ell_path = "/global/homes/m/mag/midapack/mappraiser/src/test_wiener_filter/cls_limited_128_only_EEBB.fits";
     int rank, size;
 
     MPI_Init( &argc, &argv);
@@ -194,7 +194,7 @@ int main(int argc, char** argv){
     get_covariance_matrix_NxN(c_ell_path, number_correlations, covariance_matrix, &S2HAT_params);
 
     double **inverse_covariance_matrix;
-    inverse_covariance_matrix = calloc(lmax, sizeof(double *));
+    inverse_covariance_matrix = malloc(lmax*sizeof(double *));
     for(ell_value=0; ell_value<lmax; ell_value++){
         inverse_covariance_matrix[ell_value] = calloc(nstokes*nstokes,sizeof(double));
     }
@@ -248,7 +248,7 @@ int main(int argc, char** argv){
         // }
         for (index=0; index < order_matrix; index++){
             for (index_2=0; index_2<order_matrix; index_2++){
-                inverse_covariance_matrix[ell_value][index*order_matrix + index_2] *= normalization_factor;
+                inverse_covariance_matrix[ell_value][index*order_matrix + index_2] *= 1/normalization_factor;
             }
         }
         // if (ell_value<size_ell_max){
@@ -354,32 +354,36 @@ int main(int argc, char** argv){
         // }
         // }
     }
-    // free(transpose_test);
+    // // free(transpose_test);
 
-    // Changing the value of inv_cov_matrix to match exactly the Cholesky value
-
-    for(ell_value=0; ell_value<lmax; ell_value++){
-        // if ((ell_value == 76)||(ell_value == 88)||(ell_value == 112)){
-        //     printf("Value pre-Cholesky nstokes %d ell %d --- inv_cov_matrix %f \n", nstokes, ell_value,inverse_covariance_matrix[ell_value][0]);
-        //     printf("Rest : [%f, %f] [%f, %f] \n", inverse_covariance_matrix[ell_value][0], inverse_covariance_matrix[ell_value][1], inverse_covariance_matrix[ell_value][2], inverse_covariance_matrix[ell_value][3]);
-        // }
-        // dpotrf_(&cholesky_part, &nstokes, inverse_covariance_matrix[ell_value], &nstokes, &info);
-        // inverse_covariance_matrix[ell_value][0] = 1/sqrt(covariance_matrix[ell_value][0]); //*(2*ell_value + 1));
-        // inverse_covariance_matrix[ell_value][1] = 0;
-        // inverse_covariance_matrix[ell_value][2] = 0;
-        // inverse_covariance_matrix[ell_value][3] = 1/sqrt(covariance_matrix[ell_value][3]); //*(2*ell_value + 1));
-        inverse_covariance_matrix[ell_value][0] = 0; //1/sqrt(covariance_matrix[ell_value][0])/sqrt(normalization_factor); //*(2*ell_value + 1));
-        inverse_covariance_matrix[ell_value][1] = 0;
-        inverse_covariance_matrix[ell_value][2] = 0;
-        inverse_covariance_matrix[ell_value][3] = 0; //1/sqrt(covariance_matrix[ell_value][3])/sqrt(normalization_factor); //*(2*ell_value + 1));
-        inverse_covariance_matrix[ell_value][4] = 1/sqrt(covariance_matrix[ell_value][4])/sqrt(normalization_factor); //*(2*ell_value + 1));
-        inverse_covariance_matrix[ell_value][8] = 1/sqrt(covariance_matrix[ell_value][8])/sqrt(normalization_factor); //*(2*ell_value + 1));
+    // // Changing the value of inv_cov_matrix to match exactly the Cholesky value
+    // normalization_factor = 1;
+    // for(ell_value=1; ell_value<lmax; ell_value++){
+    //     // if ((ell_value == 76)||(ell_value == 88)||(ell_value == 112)){
+    //     //     printf("Value pre-Cholesky nstokes %d ell %d --- inv_cov_matrix %f \n", nstokes, ell_value,inverse_covariance_matrix[ell_value][0]);
+    //     //     printf("Rest : [%f, %f] [%f, %f] \n", inverse_covariance_matrix[ell_value][0], inverse_covariance_matrix[ell_value][1], inverse_covariance_matrix[ell_value][2], inverse_covariance_matrix[ell_value][3]);
+    //     // }
+    //     // dpotrf_(&cholesky_part, &nstokes, inverse_covariance_matrix[ell_value], &nstokes, &info);
+    //     // inverse_covariance_matrix[ell_value][0] = 1/sqrt(covariance_matrix[ell_value][0]); //*(2*ell_value + 1));
+    //     // inverse_covariance_matrix[ell_value][1] = 0;
+    //     // inverse_covariance_matrix[ell_value][2] = 0;
+    //     // inverse_covariance_matrix[ell_value][3] = 1/sqrt(covariance_matrix[ell_value][3]); //*(2*ell_value + 1));
+    //     inverse_covariance_matrix[ell_value][0] = 0; //1/sqrt(covariance_matrix[ell_value][0])/sqrt(normalization_factor); //*(2*ell_value + 1));
+    //     inverse_covariance_matrix[ell_value][1] = 0;
+    //     inverse_covariance_matrix[ell_value][2] = 0;
+    //     inverse_covariance_matrix[ell_value][3] = 0; //1/sqrt(covariance_matrix[ell_value][3])/sqrt(normalization_factor); //*(2*ell_value + 1));
+    //     inverse_covariance_matrix[ell_value][4] = 1/sqrt(covariance_matrix[ell_value][4])/sqrt(normalization_factor); //*(2*ell_value + 1));
+    //     inverse_covariance_matrix[ell_value][8] = 1/sqrt(covariance_matrix[ell_value][8])/sqrt(normalization_factor); //*(2*ell_value + 1));
+    //     if ((covariance_matrix[ell_value][4] <= 0)||(covariance_matrix[ell_value][8]<=0)){
+    //         printf("NEGATIVE ELEMENT IN COV_MATRIX %d - %f %f !!!", ell_value, covariance_matrix[ell_value][4], covariance_matrix[ell_value][8]);
+    //     }
         
-        // if (nstokes == 3){
-        //     inverse_covariance_matrix[ell_value][6] = 0;
-        //     inverse_covariance_matrix[ell_value][7] = 0;
-        // }
-    }
+    //     // if (nstokes == 3){
+    //     //     inverse_covariance_matrix[ell_value][6] = 0;
+    //     //     inverse_covariance_matrix[ell_value][7] = 0;
+    //     // }
+    // }
+    // printf("\n");
 
     max_size_test = 50;
     
@@ -561,7 +565,7 @@ int main(int argc, char** argv){
     // //     printf("- %f %f -", local_alm_s2hat_inverted[index].re, local_alm_s2hat_inverted[index].im);
     // // }
     // // printf(" \n");
-    
+
     printf("%d --- harmonic2map !!! --- %d %d \n", rank, nstokes, S2HAT_params.Local_param_s2hat.map_size); fflush(stdout);
     // local_map_MAPPRAISER_output = (double *)malloc(Obj_pointing_matrix.lcount*sizeof(double));
     // free(CMB_map_ring);
@@ -645,7 +649,8 @@ int main(int argc, char** argv){
             // sprintf(filename_save, "/pscratch/sd/m/mag/WF_work/map_files_test_WF/mapfile_filtered_newver_vtuned_1b_%d.fits", i);
             // sprintf(filename_save, "/pscratch/sd/m/mag/WF_work/map_files_test_WF/mapfile_filtered_newver_vtuned_woTE_1d_%d.fits", i);
             // sprintf(filename_save, "/pscratch/sd/m/mag/WF_work/map_files_test_WF/mapfile_filtered_newver_vtuned_only_BB_1a_%d.fits", i);
-            sprintf(filename_save, "/pscratch/sd/m/mag/WF_work/map_files_test_WF/mapfile_filtered_newver_vtuned_only_EEBB_1a_%d.fits", i);
+            // sprintf(filename_save, "/pscratch/sd/m/mag/WF_work/map_files_test_WF/mapfile_filtered_newver_vtuned_only_EEBB_1e_%d.fits", i);
+            sprintf(filename_save, "/pscratch/sd/m/mag/WF_work/map_files_test_WF/mapfile_filtered_newver_vtuned_2B_%d.fits", i);
             printf("--- %d -- Saving Stokes components maps \n", i); fflush(stdout);
             for(j=0; j<npix; j++)
                 full_sky_map_1_Stokes[j] = full_sky_map_2[j + i*npix];
