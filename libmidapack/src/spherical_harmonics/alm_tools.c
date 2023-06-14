@@ -191,7 +191,7 @@ int apply_pix2alm(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parame
 }
 
 
-int apply_inv_covariance_matrix_to_alm(s2hat_dcomplex *input_local_alm, s2hat_dcomplex *out_local_alm, double **inv_covariance_matrix, S2HAT_parameters *S2HAT_params){
+int apply_inv_block_diag_covariance_matrix_to_alm(s2hat_dcomplex *input_local_alm, s2hat_dcomplex *out_local_alm, double **inv_covariance_matrix, S2HAT_parameters *S2HAT_params){
     /* Apply inverse of covariance matrix to input_local_alm */
 
     S2HAT_GLOBAL_parameters *Global_param_s2hat = &(S2HAT_params->Global_param_s2hat);
@@ -359,6 +359,135 @@ int apply_inv_covariance_matrix_to_alm(s2hat_dcomplex *input_local_alm, s2hat_dc
         // printf(" --- number_of_nan inv cov : %d \n", number_of_nan);
     }
     printf(" --- number_of_nan of inv cov post inv cov : %d \n", number_of_nan);
+    // long int index;
+    // for(index=0; index<nstokes*(lmax)*m_value; index++){
+    //     local_alm[index].re = out_local_alm[index].re;
+    //     local_alm[index].im = out_local_alm[index].im;
+    // }
+    // free(out_local_alm);
+    }
+    return 0;
+}
+
+
+int apply_inv_full_covariance_matrix_to_alm(s2hat_dcomplex *input_local_alm, s2hat_dcomplex *out_local_alm, double **inv_covariance_matrix, S2HAT_parameters *S2HAT_params)
+{
+    /* Apply inverse of covariance matrix to input_local_alm */
+
+    S2HAT_GLOBAL_parameters *Global_param_s2hat = &(S2HAT_params->Global_param_s2hat);
+    S2HAT_LOCAL_parameters *Local_param_s2hat = &(S2HAT_params->Local_param_s2hat);
+
+
+    int ell_value_1, ell_value_2, m_value, index_stokes, line_index, nmvals;
+    int nstokes = S2HAT_params->nstokes;
+    // int nstokes = 3;
+    int lmax = Global_param_s2hat->nlmax;// +1;
+
+    int index, max_size_test=50;
+    printf("%d --- Local_alm during apply inv cov matrix - %f %f -", Local_param_s2hat->gangrank, input_local_alm[0].re, input_local_alm[0].im);
+    for (index=1;index<max_size_test;index++){
+        printf("- %f %f -", input_local_alm[index].re, input_local_alm[index].im);
+    }
+    printf(" \n");
+
+    int number_of_nan = 0, number_of_nan_re = 0, number_of_nan_im = 0;
+    int number_of_nan_inv_cov = 0;
+    int number_of_nan_alm = 0;
+    if (Local_param_s2hat->gangrank != -1){
+        nmvals = Local_param_s2hat->nmvals; // Total number of m values
+        // int *mvals = Local_param_s2hat->mvals; // Values of m the considered processor contain
+
+        double res_real, res_imag;
+        if(S2HAT_params->lda == Global_param_s2hat->nlmax){
+            printf("~~~~ S2HAT convention !! lda %d lmax %d nmvals %d nmax %d \n", S2HAT_params->lda, lmax, nmvals, Global_param_s2hat->nmmax); fflush(stdout);
+            for(ell_value_1=0; ell_value_1<lmax; ell_value_1++){
+                for(m_value=0; m_value < min(2*(ell_value_1+1)+1, Global_param_s2hat->nmmax); m_value++){
+                    for (index_stokes=0; index_stokes<nstokes; index_stokes++){
+                        res_real = 0;
+                        res_imag = 0;
+                        for (line_index=0; line_index < nstokes; line_index++){
+                            for(ell_value_2=0; ell_value_2<lmax; ell_value_2++){
+                                res_real += inv_covariance_matrix[ell_value_1*(lmax+1) + ell_value_2][index_stokes*nstokes + line_index] * input_local_alm[line_index*nmvals*(lmax+1) + m_value*(lmax+1) + ell_value_2].re;
+                                res_imag += inv_covariance_matrix[ell_value_1*(lmax+1) + ell_value_2][index_stokes*nstokes + line_index] * input_local_alm[line_index*nmvals*(lmax+1) + m_value*(lmax+1) + ell_value_2].im;
+                            }
+                            out_local_alm[index_stokes*nmvals*(lmax+1) + m_value*(lmax+1) + ell_value_1].re = res_real;
+                            out_local_alm[index_stokes*nmvals*(lmax+1) + m_value*(lmax+1) + ell_value_1].im = res_imag;
+                        }
+                    }
+                }
+            }
+        }
+        else{ /// NOT TESTED BELOW !!!
+            printf("~~~~ HEALPIX convention !! %d \n", S2HAT_params->lda); fflush(stdout);
+            for(ell_value_1=0; ell_value_1 < lmax-1; ell_value_1++){
+                for(m_value=0; m_value < nmvals; m_value++){
+                    for (index_stokes=0; index_stokes<nstokes; index_stokes++){
+                        res_real = 0;
+                        res_imag = 0;
+                        for (line_index=0; line_index < nstokes; line_index++){
+                            for(ell_value_2=0; ell_value_2<lmax; ell_value_2++){
+                            res_real += inv_covariance_matrix[ell_value_1*(lmax+1) + ell_value_2][index_stokes*nstokes + line_index] * input_local_alm[m_value*(lmax+1)*nstokes + ell_value_2*nstokes + line_index].re;
+                            res_imag += inv_covariance_matrix[ell_value_1*(lmax+1) + ell_value_2][index_stokes*nstokes + line_index] * input_local_alm[m_value*(lmax+1)*nstokes + ell_value_2*nstokes + line_index].im;
+                            // Maybe with [line_index*nstokes + index_stokes] ?
+                            }
+                        }
+                        // input_local_alm[index_stokes*(lmax)*nmvals + ell_value*nmvals + m_value].re = res_real;
+                        // input_local_alm[index_stokes*(lmax)*nmvals + ell_value*nmvals + m_value].im = res_imag;
+                        out_local_alm[m_value*(lmax+1)*nstokes + ell_value_1*nstokes + index_stokes].re = res_real;
+                        out_local_alm[m_value*(lmax+1)*nstokes + ell_value_1*nstokes + index_stokes].im = res_imag;
+                    }
+                    // Verify it is not applied to part where a_lm not defined !!!
+                }
+            }
+        }
+    // printf("----!!!! Calculation Number of nans *** size_alm %d ; Number of nans re %d ; Number of nans im %d ; Number of nans inv_cov %d ; Number of nans alms %d \n", S2HAT_params->size_alm, number_of_nan_im, number_of_nan_inv_cov, number_of_nan_alm); fflush(stdout);
+    // printf("%d --- Local_alm just after apply inv cov matrix - %f %f -", Local_param_s2hat->gangrank, input_local_alm[0].re, input_local_alm[0].im);
+    // for (index=1;index<max_size_test;index++){
+    //     printf("- %f %f -", input_local_alm[index].re, input_local_alm[index].im);
+    // }
+    // printf(" \n");
+    // number_of_nan = 0;
+    // for (index=0;index<S2HAT_params->nstokes*S2HAT_params->size_alm;index++){
+    //     if (!(input_local_alm[index].re == input_local_alm[index].re)){
+    //         // local_alm_s2hat[index].re = 0;
+    //         number_of_nan++;
+    //         }
+    //     if (!(input_local_alm[index].im == input_local_alm[index].im)){
+    //         // local_alm_s2hat[index].im = 0;
+    //         number_of_nan++;
+    //         }
+    // }
+    // printf(" \n"); fflush(stdout);
+    // printf("----!!!! ***input_local_alm post inv cov*** size_alm %d ; Number of nans %d \n", S2HAT_params->size_alm, number_of_nan); fflush(stdout);
+    // number_of_nan = 0;
+    // for (index=0;index<S2HAT_params->nstokes*S2HAT_params->size_alm;index++){
+    //     if (!(out_local_alm[index].re == out_local_alm[index].re)){
+    //         // local_alm_s2hat[index].re = 0;
+    //         number_of_nan++;
+    //         }
+    //     if (!(out_local_alm[index].im == out_local_alm[index].im)){
+    //         // local_alm_s2hat[index].im = 0;
+    //         number_of_nan++;
+    //         }
+    // }
+    // printf(" \n"); fflush(stdout);
+    // printf("----!!!! ***out_local_alm post inv cov*** size_alm %d ; Number of nans %d \n", S2HAT_params->size_alm, number_of_nan); fflush(stdout);
+    // int ell_value, index_2;
+    // number_of_nan = 0;
+    // for (ell_value=0;ell_value<lmax;ell_value++){
+        
+    //     // printf("\n #### ell= %d \n", ell_value);
+    //     for (index=0; index < nstokes; index++){
+    //         for (index_2=0; index_2<nstokes; index_2++){
+    //             if (!(inv_covariance_matrix[ell_value][index*nstokes+index_2] == inv_covariance_matrix[ell_value][index*nstokes+index_2])){
+    //                 // printf(" --- NAN HERE : ell %d index %d index_2 %d value  EE %f BB %.10f -- ", ell_value, index, index_2, covariance_matrix[ell_value][0], covariance_matrix[ell_value][3]);
+    //                 number_of_nan++; 
+    //             }
+    //         }
+    //     }
+    //     // printf(" --- number_of_nan inv cov : %d \n", number_of_nan);
+    // }
+    // printf(" --- number_of_nan of inv cov post inv cov : %d \n", number_of_nan);
     // long int index;
     // for(index=0; index<nstokes*(lmax)*m_value; index++){
     //     local_alm[index].re = out_local_alm[index].re;

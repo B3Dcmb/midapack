@@ -414,7 +414,8 @@ int main(int argc, char** argv){
     //     for(m_value=0; m_value<2*ell_value+1)
     // }
     // input_local_alm[line_index*nmvals*(lmax+1) + m_value*(lmax+1) + ell_value].re
-    apply_inv_covariance_matrix_to_alm(local_alm_s2hat, local_alm_s2hat_inverted, inverse_covariance_matrix, &S2HAT_params);
+    // apply_inv_block_diag_covariance_matrix_to_alm(local_alm_s2hat, local_alm_s2hat_inverted, inverse_covariance_matrix, &S2HAT_params);
+    apply_inv_full_covariance_matrix_to_alm(local_alm_s2hat, local_alm_s2hat_inverted, inverse_covariance_matrix, &S2HAT_params);
 
     number_of_nan = 0;
     for (index=0;index<S2HAT_params.nstokes*S2HAT_params.size_alm;index++){

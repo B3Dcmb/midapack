@@ -458,7 +458,7 @@ int apply_sys_matrix(Mat *A, Tpltz *Nm1, struct Precond *p, Harmonic_superstruct
 
         global_map_2_harmonic(input_variable->local_map_pix,local_alm_in, A, Harmonic_sup);
 
-        apply_inv_covariance_matrix_to_alm(local_alm_in, local_alm_out, p->inverse_covariance_matrix, S2HAT_params);
+        apply_inv_block_diag_covariance_matrix_to_alm(local_alm_in, local_alm_out, p->inverse_covariance_matrix, S2HAT_params);
         free(local_alm_in);
 
         // Do the addition of (C^{-1} + P^T N^{-1} P) in pixel or harmonic space
