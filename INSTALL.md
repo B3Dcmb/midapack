@@ -29,6 +29,7 @@ cmake --build build
 cmake --install build
 ```
 
+
 The shared library will then be found at `prefix/lib/libmidapack.so` and the headers in `prefix/include/midapack`.
 
 It is possible to disable MPI (respectively OpenMP) by passing the option `-D DISABLE_MPI=ON` (

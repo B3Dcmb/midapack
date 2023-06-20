@@ -97,10 +97,10 @@ typedef struct {
 
 /* Get global s2hat structures which must be distributed to all processors 
    -- As it is only used when called by init_s2hat_global_parameters, should be deleted from headers in later release */
-int get_main_s2hat_global_parameters(int nside, int *maskfile_binary, s2hat_pixeltype *pixelization_scheme, s2hat_scandef *scan_sky_structure_pixel, s2hat_pixparameters *pixpar);
+int get_main_s2hat_global_parameters(int nside, double *mask, s2hat_pixeltype *pixelization_scheme, s2hat_scandef *scan_sky_structure_pixel, s2hat_pixparameters *pixpar);
 /**/
 /* Create wrapper structure s2hat of local parameters of s2hat, which will differ for all processors */
-int init_s2hat_global_parameters(Files_path_WIENER_FILTER *Files_WF_struct, int *mask_binary, int lmax, S2HAT_GLOBAL_parameters *Global_param_s2hat);
+int init_s2hat_global_parameters(Files_path_WIENER_FILTER *Files_WF_struct, double *mask, int lmax, S2HAT_GLOBAL_parameters *Global_param_s2hat);
 /**/
 /* Initialize MPI parameters of local parameters wrapper structure of s2hat, which will differ for all processors */
 int init_MPI_struct_s2hat_local_parameters(S2HAT_LOCAL_parameters *Local_param_s2hat, int number_ranks_s2hat, MPI_Comm initcomm);
@@ -109,7 +109,7 @@ int init_MPI_struct_s2hat_local_parameters(S2HAT_LOCAL_parameters *Local_param_s
 int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters *Global_param_s2hat, int nstokes, S2HAT_LOCAL_parameters *Local_param_s2hat);
 /**/
 /* Initaization of superctrure S2HAT_parameters */
-int init_s2hat_parameters_superstruct(Files_path_WIENER_FILTER *Files_WF_struct, int *mask_binary, int nstokes, S2HAT_parameters *S2HAT_params, MPI_Comm world_comm);
+int init_s2hat_parameters_superstruct(Files_path_WIENER_FILTER *Files_WF_struct, double *mask, int nstokes, S2HAT_parameters *S2HAT_params, MPI_Comm world_comm);
 /**/
 
 /* Content of files_io.c */
@@ -157,7 +157,7 @@ int get_inverse_matrix_cholesky_decomposition(int order_matrix, double* matrix_t
 
 /* Read c_ell to generate a block diagonal covariance matrix which will be in the form : covariance_matrix_3x3[lmax][number_correlations] 
    with number_correlations being either 9 for [TT, TE, TB, ET, EE, EB, BT, BE, BB] (with TE=ET, TB=BT and BE=EB), 4 for 9 for [EE, EB, BE, BB] (with BE=EB) or 1 for [TT] */
-int get_covariance_matrix_block_diagonal(char *c_ell_path, int number_correl, double **covariance_matrix_NxN, S2HAT_parameters *S2HAT_params);
+int get_covariance_matrix_block_diagonal(double *c_ell_array, int number_correl, double **covariance_matrix_NxN, S2HAT_parameters *S2HAT_params);
 /**/
 /* Read c_ell to generate the full covariance matrix which will be in the form : covariance_matrix_3x3[lmax][number_correlations] 
    with number_correlations being either 9 for [TT, TE, TB, ET, EE, EB, BT, BE, BB] (with TE=ET, TB=BT and BE=EB), 4 for 9 for [EE, EB, BE, BB] (with BE=EB) or 1 for [TT] */

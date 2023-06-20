@@ -1,0 +1,3 @@
+[submodule "Power-Spectrum-Sampling"]
+	path = Power-Spectrum-Sampling
+	url = https://github.com/Magwos/Power-spectrum-Inference

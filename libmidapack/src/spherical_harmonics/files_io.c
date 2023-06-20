@@ -91,6 +91,61 @@ void read_fits_mask(int nside, double *mask, char *path_mask_file, int col)
   free( tmp);
 }
 
+void read_fits_mask_int(int nside, int *mask, char *path_mask_file, int col)
+/* Function from Xpure, to obtain array from mask path
+    MAYBE TO CHANGE (maybe simplify) */
+{
+  int status = 0, hdutyp, anynul;
+  long pixel_index, ipix, npix;
+  char ordering[80];
+  char comment[81];
+  fitsfile *fptr;
+  double *tmp;
+  char errbuf[31];
+
+  npix = nside*nside*(long)12;
+
+  ffopen( &fptr, path_mask_file, 0, &status);
+  if( status) {
+    fits_get_errstatus( status, errbuf); 
+    printf("\nFITS ERROR : %s\n", errbuf);
+    exit(-1);
+  }
+
+  fits_movabs_hdu( fptr, 2, &hdutyp, &status);
+
+  fits_read_key( fptr, TSTRING, "ORDERING", ordering, comment, &status);
+  if( status) {
+    fits_get_errstatus( status, errbuf); 
+    printf("\nFITS ERROR : %s (ORDERING) : assumed RING\n", errbuf);
+    sprintf( ordering, "RING");
+    status=0;
+  }
+
+  tmp = (double *) malloc( npix*sizeof(double));
+
+  fits_read_col_dbl( fptr, col, 1, 1, npix, DBL_MAX, tmp, &anynul, &status);
+  if( status) {
+    fits_get_errstatus( status, errbuf); 
+    printf( "\nFITS ERROR: %s\n", errbuf);
+  }
+  ffclos(fptr, &status);  
+  /* revert if NESTED */
+  if( !strcmp( ordering, "NESTED")) {
+    printf( "NEST -> RING\n");
+    for( pixel_index=0; pixel_index<npix; pixel_index++) {
+      nest2ring( nside, pixel_index, &ipix);
+      mask[ipix] = (int)tmp[pixel_index];
+    }
+    // 1 is for the number of Stokes parameters, assumed to be 1 when reading the mask
+
+  } else {
+    for( pixel_index=0; pixel_index<npix; pixel_index++) mask[pixel_index] = (int)tmp[pixel_index];
+  }
+
+  free( tmp);
+}
+
 void read_TQU_maps( int nside, double *map, char *infile, int nstokes)
 {
   long nele = 12*(long)nside*(long)nside;

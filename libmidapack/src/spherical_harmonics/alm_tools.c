@@ -278,7 +278,6 @@ int apply_inv_block_diag_covariance_matrix_to_alm(s2hat_dcomplex *input_local_al
                         out_local_alm[index_stokes*nmvals*(lmax+1) + m_value*(lmax+1) + ell_value].im = res_imag;
                         if ((ell_value >= 65)&&(m_value >128))
                             printf("True end -- ell_value %d m_value %d stokes %d \n", ell_value, m_value, index_stokes); fflush(stdout);
-                        
                     }
                 }
             }

@@ -1419,13 +1419,13 @@ void build_precond(struct Precond **out_p, double **out_pixpond, int *out_n, Mat
         int lmax_WF = Harmonic_sup->S2HAT_params.Files_WF_struct.lmax_Wiener_Filter; // Convention by S2HAT
         int ell_value;
         // double **inverse_covariance_matrix;
-        p->inverse_covariance_matrix = (double *)calloc(lmax_WF, sizeof(double *));
+        p->inverse_covariance_matrix = (double **)calloc(lmax_WF, sizeof(double *));
         for(ell_value=0; ell_value<lmax_WF; ell_value++){
             p->inverse_covariance_matrix[ell_value] = calloc(A->nnz * A->nnz,sizeof(double)); 
             // (nstokes*nstokes) for each element of the covariance matrix either [TT], [EE, EB, BE, BB], or [TT, TE, TB, ET, EE, EB, BT, BE, BB]
         }
         
-        get_inverse_covariance_matrix_NxN(&(Harmonic_sup->S2HAT_params), p->inverse_covariance_matrix);
+        get_inverse_covariance_matrix_diagonal(&(Harmonic_sup->S2HAT_params), p->inverse_covariance_matrix);
         /* The covariance matrix will be inverted separately for each of its ell_value,
             In particular for each ell_value a N*N matrix [TT], [EE, EB, BE, BB], or [TT, TE, TB, ET, EE, EB, BT, BE, BB] will be inverted
         */

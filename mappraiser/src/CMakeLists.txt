@@ -13,6 +13,7 @@ target_sources(mappraiser PRIVATE
                "mappraiser.c"
                "pcg_true.c"
                "precond.c"
+               "wiener_filter.c"
                )
 
 if (ECG)

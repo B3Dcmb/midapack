@@ -98,7 +98,7 @@ int get_cholesky_decomposition_inverted(int order_matrix, double *matrix_to_get_
 /// @param number_correl number of correlation to get : 1, 2, 3, 4, 6
 /// @param covariance_matrix_block_diagonal covariance matrix to return, a double** in the form [ell_value][nstokes*nstokes]
 /// @param S2HAT_params structure for S2HAT parameters
-int get_covariance_matrix_block_diagonal(char *c_ell_path, int number_correl, double **covariance_matrix_block_diagonal, S2HAT_parameters *S2HAT_params){
+int get_covariance_matrix_block_diagonal(double *c_ell_array, int number_correl, double **covariance_matrix_block_diagonal, S2HAT_parameters *S2HAT_params){
     /* Read c_ell file to construct a block diagonal covariance matrix
 
     Number_correl is expected to be :
@@ -127,18 +127,13 @@ int get_covariance_matrix_block_diagonal(char *c_ell_path, int number_correl, do
     S2HAT_GLOBAL_parameters *Global_param_s2hat = &(S2HAT_params->Global_param_s2hat);
     int lmax = Global_param_s2hat->nlmax;
     int correl_index, ell_value;
-    double *c_ell_array;
+
 
     if ((number_correl == 5) || (number_correl > 6)){
         printf("Error : number_correl is %d \n", number_correl);
         printf("\t \t The variable number_correl must be either 1: TT ; 2: EE, BB ; 3: EE, BB, BE  ; 4: TT, EE, BB and TE ; or 6: TT, EE, BB, TE, TB and EB \n");
         fflush(stdout);
     }
-
-    c_ell_array = calloc(number_correl*(lmax+1),sizeof(double));
-    int not_block_diagonal = 0; // We want diagonal part
-    read_fits_cells(lmax+1, number_correl, c_ell_array, c_ell_path, 1, not_block_diagonal); // Reading cell_fits_file
-
 
     for (ell_value=0; ell_value<lmax+1; ell_value++){
         for (correl_index=0; correl_index<nstokes; correl_index++){
@@ -158,7 +153,7 @@ int get_covariance_matrix_block_diagonal(char *c_ell_path, int number_correl, do
         }
     }
 
-    free(c_ell_array);
+    // free(c_ell_array);
     return 0;
 }
 
@@ -251,7 +246,13 @@ int get_inverse_covariance_matrix_diagonal(S2HAT_parameters *S2HAT_params, doubl
     char *c_ell_path = Files_path_WF_struct->c_ell_path;
     int number_correlations = Files_path_WF_struct->number_correlations;
     // printf("~~~~ Getting covariance matrix \n"); fflush(stdout);
-    get_covariance_matrix_block_diagonal(c_ell_path, number_correlations, inverse_covariance_matrix, S2HAT_params);
+
+    double *c_ell_array;
+    c_ell_array = calloc(number_correlations*(lmax+1)*number_correlations*(lmax+1),sizeof(double));
+    int not_block_diagonal = 0; // We want diagonal part
+    read_fits_cells(lmax+1, number_correlations, c_ell_array, c_ell_path, 1, not_block_diagonal); // Reading cell_fits_file
+    get_covariance_matrix_block_diagonal(c_ell_array, number_correlations, inverse_covariance_matrix, S2HAT_params);
+    free(c_ell_array);
 
     // double *cholesky_factor[nstokes*(nstokes+1)/2];
     
