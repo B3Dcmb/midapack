@@ -44,6 +44,10 @@ def encode_comm(comm):
     return MPI_Comm.from_address(comm_ptr)
 
 
+############################################################
+# MLmap routine
+############################################################
+
 _mappraiser.MLmap.restype = None
 _mappraiser.MLmap.argtypes = [
     MPI_Comm,  # comm
@@ -64,6 +68,7 @@ _mappraiser.MLmap.argtypes = [
     npc.ndpointer(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"),  # data_size_proc
     ct.c_int,  # nb_blocks_loc
     npc.ndpointer(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"),  # local_blocks_sizes
+    ct.c_double,  # sample_rate
     npc.ndpointer(dtype=np.uint64, ndim=1, flags="C_CONTIGUOUS"),  # detindxs
     npc.ndpointer(dtype=np.uint64, ndim=1, flags="C_CONTIGUOUS"),  # obsindxs
     npc.ndpointer(dtype=np.uint64, ndim=1, flags="C_CONTIGUOUS"),  # telescopes
@@ -143,6 +148,7 @@ def MLmap(
         data_size_proc,
         nb_blocks_loc,
         local_blocks_sizes,
+        params["fsample"],
         detindxs,
         obsindxs,
         telescopes,
@@ -158,6 +164,10 @@ def MLmap(
 
     return
 
+
+############################################################
+# gap filling routine
+############################################################
 
 _mappraiser.gap_filling.restype = None
 _mappraiser.gap_filling.argtypes = [
@@ -175,6 +185,7 @@ _mappraiser.gap_filling.argtypes = [
     npc.ndpointer(dtype=np.uint64, ndim=1, flags="C_CONTIGUOUS"),  # detindxs
     npc.ndpointer(dtype=np.uint64, ndim=1, flags="C_CONTIGUOUS"),  # obsindxs
     npc.ndpointer(dtype=np.uint64, ndim=1, flags="C_CONTIGUOUS"),  # telescopes
+    ct.c_double,  # sample_rate
 ]
 
 
@@ -206,13 +217,96 @@ def gap_filling(
         nnz,
         tt,
         inv_tt,
-        params['Lambda'],
+        params["Lambda"],
         signal,
         pixels,
-        params['realization'],
+        params["realization"],
         detindxs,
         obsindxs,
         telescopes,
+        params["fsample"],
+    )
+
+    return
+
+
+############################################################
+# PSD routine
+############################################################
+
+_mappraiser.psd_from_tt.restype = None
+_mappraiser.psd_from_tt.argtypes = [
+    ct.c_int,  # fftlen
+    ct.c_int,  # lambda
+    ct.c_int,  # psdlen
+    npc.ndpointer(dtype=np.double, ndim=1, flags="C_CONTIGUOUS"),  # tt
+    npc.ndpointer(dtype=np.double, ndim=1, flags="C_CONTIGUOUS"),  # psd
+]
+
+
+def psd_from_tt(
+        fftlen,
+        Lambda,
+        psdlen,
+        tt,
+        psd,
+):
+    # if not available:
+    #     raise RuntimeError("No libmappraiser available, cannot call psd_from_tt")
+
+    _mappraiser.psd_from_tt(
+        fftlen,
+        Lambda,
+        psdlen,
+        tt,
+        psd,
+    )
+
+    return
+
+
+############################################################
+# Timestream generation routine
+############################################################
+
+_mappraiser.sim_noise_tod.restype = None
+_mappraiser.sim_noise_tod.argtypes = [
+    ct.c_int,  # samples
+    ct.c_int,  # lambda
+    npc.ndpointer(dtype=np.double, ndim=1, flags="C_CONTIGUOUS"),  # tt
+    npc.ndpointer(dtype=np.double, ndim=1, flags="C_CONTIGUOUS"),  # buf
+    ct.c_uint64,  # realization
+    ct.c_uint64,  # detindx
+    ct.c_uint64,  # obsindx
+    ct.c_uint64,  # telescope
+    ct.c_double,  # sample_rate
+]
+
+
+def sim_noise_tod(
+        samples,
+        Lambda,
+        tt,
+        buf,
+        realization,
+        detindx,
+        obsindx,
+        telescope,
+        sample_rate,
+):
+    # if not available:
+    #     raise RuntimeError("No libmappraiser available, cannot call psd_from_tt")
+
+    _mappraiser.sim_noise_tod(
+        samples,
+        Lambda,
+        tt,
+        buf,
+        realization,
+        detindx,
+        obsindx,
+        telescope,
+        sample_rate,
     )
 
     return

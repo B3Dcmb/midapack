@@ -118,11 +118,7 @@ void mappraiser::GapFillInfo::print_curr_block() const {
 // ____________________________________________________________
 // Routines
 
-void mappraiser::psd_from_tt(int fftlen, int lambda, int psdlen, const double *tt, std::vector<double> &psd,
-                             double rate) {
-    // Normalization
-    double norm = rate * static_cast<double>(psdlen - 1);
-
+void psd_from_tt(int fftlen, int lambda, int psdlen, const double *tt, double *psd) {
     // FFTW variables
     double       *circ_t;
     fftw_complex *cplx_psd;
@@ -144,7 +140,7 @@ void mappraiser::psd_from_tt(int fftlen, int lambda, int psdlen, const double *t
     fftw_execute(p);
 
     // Compute the PSD values
-    for (int i = 0; i < psdlen; ++i) { psd[i] = norm * std::abs(std::complex<double>(cplx_psd[i][0], cplx_psd[i][1])); }
+    for (int i = 0; i < psdlen; ++i) { psd[i] = std::abs(std::complex<double>(cplx_psd[i][0], cplx_psd[i][1])); }
 
     // Zero out DC value
     psd[0] = 0;
@@ -153,67 +149,6 @@ void mappraiser::psd_from_tt(int fftlen, int lambda, int psdlen, const double *t
     fftw_free(circ_t);
     fftw_free(cplx_psd);
     fftw_destroy_plan(p);
-}
-
-double mappraiser::compute_mean(int samples, double *buf, bool subtract = false) {
-    // Compute the DC level
-    double DC = 0;
-
-    for (int i = 0; i < samples; ++i) { DC += buf[i]; }
-    DC /= static_cast<double>(samples);
-
-    // Remove it if needed
-    if (subtract) {
-        for (int i = 0; i < samples; ++i) { buf[i] -= DC; }
-    }
-    return DC;
-}
-
-double mappraiser::compute_mean_good(int samples, double *buf, const bool *valid, bool subtract = false) {
-    // Compute the DC level
-    double DC   = 0;
-    int    good = 0;
-
-    for (int i = 0; i < samples; ++i) {
-        if (valid[i]) {
-            DC += buf[i];
-            ++good;
-        }
-    }
-
-    DC /= static_cast<double>(good);
-
-    // Remove it if needed
-    if (subtract) {
-        for (int i = 0; i < samples; ++i) {
-            if (valid[i]) buf[i] -= DC;
-        }
-    }
-    return DC;
-}
-
-double mappraiser::compute_variance(int samples, double mean, const double *buf) {
-    double var = 0;
-
-    for (int i = 0; i < samples; ++i) { var += (buf[i] - mean) * (buf[i] - mean); }
-
-    var /= static_cast<double>(samples - 1);
-    return var;
-}
-
-double mappraiser::compute_variance_good(int samples, double mean, const double *buf, const bool *valid) {
-    double var  = 0;
-    int    good = 0;
-
-    for (int i = 0; i < samples; ++i) {
-        if (valid[i]) {
-            var += (buf[i] - mean) * (buf[i] - mean);
-            ++good;
-        }
-    }
-
-    var /= static_cast<double>(good - 1);
-    return var;
 }
 
 int mappraiser::find_valid_samples(Gap *gaps, size_t id0, std::vector<bool> &valid) {
@@ -238,9 +173,11 @@ int mappraiser::find_valid_samples(Gap *gaps, size_t id0, std::vector<bool> &val
 }
 
 void mappraiser::remove_baseline(std::vector<double> &buf, std::vector<double> &baseline,
-                                 const std::vector<bool> &valid, bool rm = true) {
-    const int w       = 200; // size of window
-    size_t    c       = 0;
+                                 const std::vector<bool> &valid, double sample_rate, bool rm = true) {
+    // size of window for computing the moving average
+    // take w = sample rate means we average over a time window
+    // of about 1 second (typical knee frequency for atmospheric noise)
+    const int w       = std::ceil(sample_rate);
     long      samples = static_cast<long>(buf.size());
 
     for (long i = 0; i < samples; ++i) {
@@ -254,118 +191,150 @@ void mappraiser::remove_baseline(std::vector<double> &buf, std::vector<double> &
                     ++count;
                 }
             }
-            baseline[c] = avg / static_cast<double>(count);
-            ++c;
+            baseline[i] = avg / static_cast<double>(count);
         }
     }
 
-    // remove the baseline
+    // remove the baseline in valid intervals
     if (rm) {
-        c = 0;
         for (long i = 0; i < samples; ++i) {
-            if (valid[i]) {
-                buf[i] -= baseline[c];
-                ++c;
+            if (valid[i]) { buf[i] -= baseline[i]; }
+        }
+    }
+
+    // fill baseline gaps with affine function
+    int lgap = 0;
+
+    for (long i = 0; i < samples; ++i) {
+        if (!valid[i]) {
+            ++lgap;
+        } else {
+            if (lgap > 0) {
+                // we just went through a gap
+                if (i == samples - 1) {
+                    // the last sample is in a gap
+                    double last_valid = buf[samples - 1 - lgap - 1];
+                    for (int j = 0; j < lgap; ++j) { baseline[(samples - 1 - lgap) + j] = last_valid; }
+                } else {
+                    // standard case
+                    double last_valid = baseline[i - lgap - 1];
+                    for (int j = 0; j < lgap; ++j) {
+                        baseline[(i - lgap) + j] =
+                                last_valid + (baseline[i] - last_valid) * (j + 1) / static_cast<double>(lgap + 1);
+                    }
+                }
             }
+            // we are considering a valid sample: reset lgap
+            lgap = 0;
         }
     }
 }
 
 // template<typename T>
 // void printVector(const std::vector<T> &vec) {
-//     for (const auto &element: vec) { std::cout << element << " "; }
+//     for (const auto &element: vec) { std::cout << element << ", "; }
 //     std::cout << std::endl;
 // }
 //
 // template<typename T>
-// void printVector(const std::vector<T> &vec, size_t n_to_print) {
-//     if (n_to_print > vec.size()) n_to_print = vec.size();
-//     for (size_t i = 0; i < n_to_print; ++i) { std::cout << vec[i] << " "; }
+// void printVector(const std::vector<T> &vec, size_t n_to_print, size_t offset = 0) {
+//     if (offset + n_to_print > vec.size()) {
+//         offset     = 0;
+//         n_to_print = vec.size();
+//     }
+//     for (size_t i = offset; i < offset + n_to_print; ++i) { std::cout << vec[i] << ", "; }
 //     std::cout << std::endl;
 // }
 //
 // template<typename T>
 // void printCArray(const T *array, size_t size) {
-//     for (size_t i = 0; i < size; ++i) { std::cout << array[i] << " "; }
+//     for (size_t i = 0; i < size; ++i) { std::cout << array[i] << ", "; }
 //     std::cout << std::endl;
 // }
 
-void mappraiser::sim_noise_tod(int samples, int lambda, const double *tt, std::vector<double> &buf,
-                               u_int64_t realization, u_int64_t detindx, u_int64_t obsindx, u_int64_t telescope,
-                               double var_goal, bool verbose) {
+void sim_noise_tod(int samples, int lambda, const double *tt, double *buf, u_int64_t realization, u_int64_t detindx,
+                   u_int64_t obsindx, u_int64_t telescope, double sample_rate) {
     // Logical size of the fft
-    // this could be modified to be a power of 2, for example
-    int fftlen = samples;
+    int fftlen = 2;
+    while (fftlen <= samples) fftlen *= 2;
 
-    double   *pdata;
-    fftw_plan p;
+    int npsd = (fftlen / 2) + 1;
+
+    // Normalization
+    double norm = sample_rate * static_cast<double>(npsd - 1);
+
+    // FFTW variables
+    double       *tdata;
+    fftw_complex *fdata;
+    fftw_plan     p;
 
     // Allocate the input/output buffer
-    pdata = fftw_alloc_real(fftlen);
+    tdata = fftw_alloc_real(fftlen);
+    fdata = fftw_alloc_complex(npsd);
 
-    // Create a plan for in-place half-complex -> real (HC2R) transform
-    p = fftw_plan_r2r_1d(fftlen, pdata, pdata, FFTW_HC2R, FFTW_ESTIMATE);
+    // Create the FFTW plan
+    p = fftw_plan_dft_c2r_1d(fftlen, fdata, tdata, FFTW_ESTIMATE);
 
-    // Generate Re/Im gaussian randoms in a half-complex array
-    // (see https://fftw.org/fftw3_doc/The-Halfcomplex_002dformat-DFT.html)
+    // Generate Re/Im gaussian randoms in a complex array
     u_int64_t key1     = realization * 4294967296 + telescope * 65536;
     u_int64_t key2     = obsindx * 4294967296 + detindx;
     u_int64_t counter1 = static_cast<u_int64_t>(lambda) * 4294967296;
     u_int64_t counter2 = 0; // incremented in loop during generation
-    mappraiser::rng_dist_normal(samples, key1, key2, counter1, counter2, pdata);
 
-    // Compute PSD values from the auto-correlation function
-    int                 psdlen = (fftlen / 2) + 1;
-    std::vector<double> psd(psdlen);
+    std::vector<double> rngdata(fftlen);
+    mappraiser::rng_dist_normal(fftlen, key1, key2, counter1, counter2, rngdata.data());
 
-    mappraiser::psd_from_tt(fftlen, lambda, psdlen, tt, psd);
+    // DC and Nyquist frequency are purely real
+    fdata[0][0]        = rngdata[0];
+    fdata[0][1]        = 0.0;
+    fdata[npsd - 1][0] = rngdata[npsd - 1];
+    fdata[npsd - 1][1] = 0.0;
 
-    // Multiply by the PSD
-    pdata[0] *= std::sqrt(psd[0]);
-
+    // Repack the other values
     for (int i = 1; i < (fftlen / 2); ++i) {
-        double psdval = std::sqrt(psd[i]);
-        pdata[i] *= psdval;
-        pdata[fftlen - i] *= psdval;
+        fdata[i][0] = rngdata[i];
+        fdata[i][1] = rngdata[fftlen - i];
     }
-    pdata[fftlen / 2] *= std::sqrt(psd[psdlen - 1]);
+
+    // Compute PSD values (interpolated at the correct frequencies) from the autocorrelation function
+    auto *psd = static_cast<double *>(std::malloc(sizeof(double) * npsd));
+    psd_from_tt(fftlen, lambda, npsd, tt, psd);
+
+    // Multiply our random data by the PSD values
+    for (int i = 0; i < npsd; ++i) {
+        double scale = std::sqrt(psd[i] * norm);
+        fdata[i][0] *= scale;
+        fdata[i][1] *= scale;
+    }
 
     // Execute the FFT plan
     fftw_execute(p);
 
     // Backward FFT: 1/N factor not included by FFTW
-    for (int i = 0; i < fftlen; ++i) { pdata[i] /= fftlen; }
+    for (int i = 0; i < fftlen; ++i) { tdata[i] /= fftlen; }
 
     // Copy as many samples as we need into our noise vector
-    std::copy(pdata, (pdata + samples), buf.begin());
+    int offset = (fftlen - samples) / 2;
+    std::copy((tdata + offset), (tdata + offset + samples), buf);
 
-    // Zero out DC level
-    double DC_subtracted = mappraiser::compute_mean(samples, buf.data(), true);
+    // Subtract the DC level
+    double DC = 0;
 
-    if (verbose) std::cout << "  subtracted DC level = " << DC_subtracted << std::endl;
+    for (int i = 0; i < samples; ++i) { DC += buf[i]; }
+    DC /= static_cast<double>(samples);
 
-    // Normalize according to desired variance for the TOD
-    // In theory this should not be necessary
-    if (var_goal >= 0.0) {
-        double var     = mappraiser::compute_variance(samples, 0.0, buf.data());
-        double rescale = std::sqrt(var_goal / var);
-
-        if (verbose)
-            std::cout << "  measured sigma = " << std::sqrt(var) << std::endl
-                      << "   (goal:" << std::sqrt(var_goal) << ")" << std::endl
-                      << "  rescale factor = " << rescale << std::endl;
-
-        for (int i = 0; i < samples; ++i) buf[i] *= rescale;
-    }
+    for (int i = 0; i < samples; ++i) { buf[i] -= DC; }
 
     // Free allocated memory
-    fftw_free(pdata);
+    fftw_free(fdata);
+    fftw_free(tdata);
     fftw_destroy_plan(p);
+    std::free(psd);
 }
 
 void mappraiser::sim_constrained_noise_block(mappraiser::GapFillInfo &gfi, Tpltz *N_block, Tpltz *Nm1_block,
                                              double *noise, Gap *gaps, u_int64_t realization, u_int64_t detindx,
-                                             u_int64_t obsindx, u_int64_t telescope) {
+                                             u_int64_t obsindx, u_int64_t telescope, double sample_rate) {
     // get the number of samples, the global first index and the bandwidth
     const int  samples = N_block->tpltzblocks[0].n;
     const auto id0     = static_cast<size_t>(N_block->tpltzblocks[0].idv);
@@ -383,25 +352,12 @@ void mappraiser::sim_constrained_noise_block(mappraiser::GapFillInfo &gfi, Tpltz
 
     // remove baseline (moving average)
     std::vector<double> baseline(samples);
-    mappraiser::remove_baseline(rhs, baseline, valid, true);
-
-    /*
-        // compute the mean (from valid samples)
-        double mean = mappraiser::compute_mean_good ( samples, rhs, valid, false );
-
-        // compute the variance (from valid samples)
-        double var = mappraiser::compute_variance_good ( samples, mean, rhs, valid );
-
-        if (verbose) {
-            std::cout << "  mean (valid)  = " << mean << std::endl
-                      << "  std deviation = " << std::sqrt ( var ) << std::endl;
-        }
-    */
+    mappraiser::remove_baseline(rhs, baseline, valid, sample_rate, true);
 
     // generate random noise realization "xi" with correlations
     std::vector<double> xi(samples);
-    mappraiser::sim_noise_tod(samples, lambda, N_block->tpltzblocks[0].T_block, xi, realization, detindx, obsindx,
-                              telescope, -1.0, false);
+    sim_noise_tod(samples, lambda, N_block->tpltzblocks[0].T_block, xi.data(), realization, detindx, obsindx, telescope,
+                  sample_rate);
 
     // rhs = noise - xi
     for (int i = 0; i < samples; ++i) { rhs[i] -= xi[i]; }
@@ -430,17 +386,31 @@ void mappraiser::sim_constrained_noise_block(mappraiser::GapFillInfo &gfi, Tpltz
     std::copy(rhs.begin(), rhs.end(), constrained.begin());
     stbmmProd(N_block, constrained.data());
 
-    int c = 0; // to go through baseline vector
-
     for (int i = 0; i < samples; ++i) {
         if (valid[i]) {
-            constrained[i] += xi[i] + baseline[c];
-            ++c;
-        } else constrained[i] += xi[i]; // + (baseline[c] + baseline[c + 1]) / 2;
+            // add the baseline back
+            constrained[i] += xi[i] + baseline[i];
+        } else {
+            constrained[i] += xi[i];
+            // constrained[i] += xi[i] + baseline[i];
+        }
     }
 
     // TODO check quality of constrained realization against original vector?
-    // ...
+    // compute max(|constrained - noise|²)
+    double max_err = -1.0;
+    for (int i = 0; i < samples; ++i) {
+        if (valid[i]) {
+            double err = (constrained[i] - noise[i]) * (constrained[i] - noise[i]);
+            if (err > max_err) { max_err = err; }
+        }
+    }
+
+    double ratio = max_err / N_block->tpltzblocks[0].T_block[0];
+
+    if (ratio > 1e-6)
+        std::cout << "max sq err / sigma² = " << max_err << " / " << N_block->tpltzblocks[0].T_block[0] << " = "
+                  << ratio << std::endl;
 
     // copy final result into noise vector
     std::copy(constrained.begin(), constrained.end(), noise);
@@ -448,7 +418,7 @@ void mappraiser::sim_constrained_noise_block(mappraiser::GapFillInfo &gfi, Tpltz
 
 void mappraiser::sim_constrained_noise(mappraiser::GapFillInfo &gfi, Tpltz *N, Tpltz *Nm1, double *noise, Gap *gaps,
                                        u_int64_t realization, const u_int64_t *detindxs, const u_int64_t *obsindxs,
-                                       const u_int64_t *telescopes) {
+                                       const u_int64_t *telescopes, double sample_rate) {
     if (gfi.n_gaps == 0) {
         // nothing to do
         return;
@@ -471,7 +441,7 @@ void mappraiser::sim_constrained_noise(mappraiser::GapFillInfo &gfi, Tpltz *N, T
             gfi.set_current_size(N_block.local_V_size);
             mappraiser::system_stopwatch stopwatch;
             mappraiser::sim_constrained_noise_block(gfi, &N_block, &Nm1_block, noise_block, gaps, realization,
-                                                    detindxs[i], obsindxs[i], telescopes[i]);
+                                                    detindxs[i], obsindxs[i], telescopes[i], sample_rate);
             gfi.store_block_time(stopwatch.elapsed_time<double, std::chrono::milliseconds>());
 
             t_id += N->tpltzblocks[i].n;
@@ -485,7 +455,7 @@ void mappraiser::sim_constrained_noise(mappraiser::GapFillInfo &gfi, Tpltz *N, T
 
 void perform_gap_filling(MPI_Comm comm, Tpltz *N, Tpltz *Nm1, double *noise, Gap *gaps, u_int64_t realization,
                          const u_int64_t *detindxs, const u_int64_t *obsindxs, const u_int64_t *telescopes,
-                         bool verbose) {
+                         double sample_rate, bool verbose) {
     int rank, size;
     MPI_Comm_rank(comm, &rank);
     MPI_Comm_size(comm, &size);
@@ -495,7 +465,8 @@ void perform_gap_filling(MPI_Comm comm, Tpltz *N, Tpltz *Nm1, double *noise, Gap
     double st = MPI_Wtime();
 
     mappraiser::GapFillInfo gfi(N->nb_blocks_loc, gaps->ngap, rank);
-    mappraiser::sim_constrained_noise(gfi, N, Nm1, noise, gaps, realization, detindxs, obsindxs, telescopes);
+    mappraiser::sim_constrained_noise(gfi, N, Nm1, noise, gaps, realization, detindxs, obsindxs, telescopes,
+                                      sample_rate);
 
     MPI_Barrier(comm);
     double t = MPI_Wtime();
@@ -527,7 +498,9 @@ void perform_gap_filling(MPI_Comm comm, Tpltz *N, Tpltz *Nm1, double *noise, Gap
 
 void gap_filling(MPI_Comm comm, const int *data_size_proc, int nb_blocks_loc, int *local_blocks_sizes, int nnz,
                  double *tt, double *inv_tt, int lambda, double *noise, int *indices, u_int64_t realization,
-                 const u_int64_t *detindxs, const u_int64_t *obsindxs, const u_int64_t *telescopes) {
+                 const u_int64_t *detindxs, const u_int64_t *obsindxs, const u_int64_t *telescopes,
+                 double sample_rate) {
+    //____________________________________________________________
     // MPI information
 
     int rank, size;
@@ -539,6 +512,7 @@ void gap_filling(MPI_Comm comm, const int *data_size_proc, int nb_blocks_loc, in
         fflush(stdout);
     }
 
+    //____________________________________________________________
     // Data distribution
 
     int64_t M             = 0;
@@ -560,13 +534,14 @@ void gap_filling(MPI_Comm comm, const int *data_size_proc, int nb_blocks_loc, in
         fflush(stdout);
     }
 
+    //____________________________________________________________
     // Pointing matrix initialization
 
     Mat A;
     Gap G;
 
     // fake pointing weights
-    auto *weights = (double *) (calloc(m, sizeof(double)));
+    auto *weights = (double *) (calloc(m * nnz, sizeof(double)));
 
     A.trash_pix = 0;
     MatInit(&A, m, nnz, indices, weights, 6, comm);
@@ -577,16 +552,17 @@ void gap_filling(MPI_Comm comm, const int *data_size_proc, int nb_blocks_loc, in
 
     build_gap_struct(gif, &G, &A);
 
+    free(A.id_last_pix);
+    free(A.ll);
+
     if (rank == 0) {
         printf("Pixel-to-time-domain mapping -> detected %d timestream gaps \n", G.ngap);
         fflush(stdout);
     }
 
-    MatFree(&A);
-    A.indices = nullptr;
-    A.values  = nullptr;
-
+    //____________________________________________________________
     // Build Toeplitz matrices
+
     MPI_Barrier(comm);
 
     Block *tpltzblocks_N;
@@ -610,11 +586,26 @@ void gap_filling(MPI_Comm comm, const int *data_size_proc, int nb_blocks_loc, in
 
     defineTpltz_avg(&Nm1, M, 1, 1, tpltzblocks_Nm1, nb_blocks_loc, nb_blocks_tot, gif, m, flag_stgy, comm);
 
+    //____________________________________________________________
+    // Gap filling
+
+    MPI_Barrier(comm);
+
+    compute_gaps_per_block(&G, Nm1.nb_blocks_loc, Nm1.tpltzblocks);
+    copy_gap_info(Nm1.nb_blocks_loc, Nm1.tpltzblocks, N.tpltzblocks);
+
+    // set signal in all gaps to zero
+    // reset_relevant_gaps(signal, &Nm1, &G);
+    // here we only have noise
+
+    // set pointing weights to zero for gaps
+    condition_extra_pix_zero(&A);
+
     // call routine to generate constrained realization
     MPI_Barrier(comm);
     double start = MPI_Wtime();
 
-    perform_gap_filling(comm, &N, &Nm1, noise, &G, realization, detindxs, obsindxs, telescopes, true);
+    perform_gap_filling(comm, &N, &Nm1, noise, &G, realization, detindxs, obsindxs, telescopes, sample_rate, true);
 
     MPI_Barrier(comm);
     double end = MPI_Wtime();
@@ -623,6 +614,12 @@ void gap_filling(MPI_Comm comm, const int *data_size_proc, int nb_blocks_loc, in
         printf("Performed gap-filling in %lf seconds\n\n", end - start);
         fflush(stdout);
     }
+
+    //____________________________________________________________
+
+    MatFree(&A);
+    A.indices = nullptr;
+    A.values  = nullptr;
 
     free(tpltzblocks_N);
     free(tpltzblocks_Nm1);

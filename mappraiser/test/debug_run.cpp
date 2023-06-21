@@ -81,6 +81,7 @@ int main(int argc, char *argv[]) {
     const int       lambda            = 8192;
     const int       gap_stgy          = 1;
     const u_int64_t realization       = 0;
+    const double    sample_rate       = 200;
 
     // bool to fill noise vector with zeros
     // (--> noiseless run but solver will still iterate)
@@ -203,10 +204,16 @@ int main(int argc, char *argv[]) {
 
     MPI_Barrier(MPI_COMM_WORLD);
 
-    MLmap(MPI_COMM_WORLD, outpath, ref, solver, precond, Z_2lvl, pointing_commflag, tol, maxiter, enlFac, ortho_alg,
-          bs_red, nside, gap_stgy, realization, data_size_proc.data(), nb_blocks_loc, local_blocks_sizes.data(),
-          detindxs.data(), obsindxs.data(), telescopes.data(), Nnz, pix.data(), pixweights.data(), signal.data(),
-          noise.data(), lambda, inv_tt.data(), tt.data());
+    /*
+        MLmap(MPI_COMM_WORLD, outpath, ref, solver, precond, Z_2lvl, pointing_commflag, tol, maxiter, enlFac, ortho_alg,
+              bs_red, nside, gap_stgy, realization, data_size_proc.data(), nb_blocks_loc, local_blocks_sizes.data(),
+              sample_rate, detindxs.data(), obsindxs.data(), telescopes.data(), Nnz, pix.data(), pixweights.data(),
+              signal.data(), noise.data(), lambda, inv_tt.data(), tt.data());
+    */
+
+    gap_filling(MPI_COMM_WORLD, data_size_proc.data(), nb_blocks_loc, local_blocks_sizes.data(), Nnz, tt.data(),
+                inv_tt.data(), lambda, noise.data(), pix.data(), realization, detindxs.data(), obsindxs.data(),
+                telescopes.data(), sample_rate);
 
     MPI_Finalize();
     return 0;

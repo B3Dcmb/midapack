@@ -2,6 +2,7 @@ import os
 import re
 
 import numpy as np
+import toast.ops
 import traitlets
 from astropy import units as u
 
@@ -117,7 +118,7 @@ class Mappraiser(Operator):
 
     API = Int(0, help="Internal interface version for this operator")
 
-    params = Dict(dict(), help="Parameters to pass to mappraiser")
+    params = Dict(default_value={}, help="Parameters to pass to mappraiser")
 
     paramfile = Unicode(
         None, allow_none=True, help="Read mappraiser parameters from this file"

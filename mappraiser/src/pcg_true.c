@@ -22,7 +22,7 @@
 int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double *x, double *b, double *noise,
                  double *cond, int *lhits, double tol, int K, int precond, int Z_2lvl, Gap *Gaps, int64_t gif,
                  int gap_stgy, u_int64_t realization, const u_int64_t *detindxs, const u_int64_t *obsindxs,
-                 const u_int64_t *telescopes) {
+                 const u_int64_t *telescopes, double sample_rate) {
     int    i, j, k; // some indexes
     int    m, n;    // number of local time samples, number of local pixels
     int    rank, size;
@@ -119,7 +119,8 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
         case 1:
             // gap filling with constrained noise realization
             if (rank == 0) printf("[rank %d] gap_stgy = %d (gap filling)\n", rank, gap_stgy);
-            perform_gap_filling(A->comm, N, Nm1, b, Gaps, realization, detindxs, obsindxs, telescopes, true);
+            perform_gap_filling(A->comm, N, Nm1, b, Gaps, realization, detindxs, obsindxs, telescopes, sample_rate,
+                                true);
             strategy = BASIC;
             break;
         case 2:
@@ -136,7 +137,8 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
         case 4:
             // gap filling + nested PCG (ignoring gaps)
             if (rank == 0) printf("[rank %d] gap_stgy = %d (gap filling + nested PCG)\n", rank, gap_stgy);
-            perform_gap_filling(A->comm, N, Nm1, b, Gaps, realization, detindxs, obsindxs, telescopes, true);
+            perform_gap_filling(A->comm, N, Nm1, b, Gaps, realization, detindxs, obsindxs, telescopes, sample_rate,
+                                true);
             strategy = ITER_IGNORE;
             break;
         default:
