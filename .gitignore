@@ -35,13 +35,16 @@
 # Python
 *.pyc
 
+#Cmake build
+build
+
 # System files
 .DS_Store
 
 # VSCode stuff
 .vscode/*
 *.code-workspace
-# Directories to ignore
 
+# Directories to ignore
 mappraiser/src/test
 algebra/test

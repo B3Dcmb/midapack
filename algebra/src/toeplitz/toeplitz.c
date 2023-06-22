@@ -338,9 +338,9 @@ int tpltz_init(int n, int lambda, int *nfft, int *blocksize,
     int fftw_flag = flag_stgy.flag_fftw; // FFTW_FLAG;
 
     // initialize fftw for omp threads
-#ifdef fftw_MULTITHREADING
-    fftw_init_omp_threads(n_thread);
-#endif
+    #ifdef fftw_MULTITHREADING
+        fftw_init_omp_threads(n_thread);
+    #endif
 
     // initialize fftw array and plan for T (and make it circulant first)
     // t1=MPI_Wtime();
@@ -368,7 +368,7 @@ int tpltz_init(int n, int lambda, int *nfft, int *blocksize,
 
 
 //=========================================================================
-
+#ifdef fftw_MULTITHREADING
 /// Initialize omp threads for fftw plans.
 /** @ingroup group21
     Initialize omp threads for fftw plans. The number of threads used for ffts
@@ -391,6 +391,7 @@ int fftw_init_omp_threads(int fftw_n_thread) {
 
     return 0;
 }
+#endif
 
 
 //=========================================================================

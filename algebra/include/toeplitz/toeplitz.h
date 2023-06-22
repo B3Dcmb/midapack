@@ -317,7 +317,9 @@ int define_blocksize(int n, int lambda, int bs_flag, int fixed_bs);
 
 int define_nfft(int n_thread, int flag_nfft, int fixed_nfft);
 
+#ifdef fftw_MULTITHREADING
 int fftw_init_omp_threads(int fftw_n_thread);
+#endif
 
 int rhs_init_fftw(const int *nfft, int fft_size, fftw_complex **V_fft,
                   double **V_rfft, fftw_plan *plan_f, fftw_plan *plan_b,
