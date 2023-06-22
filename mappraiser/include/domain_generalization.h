@@ -45,7 +45,7 @@ struct Harmonic_superstruct{
 int initialize_PCG_var_struct(PCG_var *PCG_variable, double *local_map_pix);
 
 /* Initialize harmonic superstructure */
-int init_harmonic_superstruct(Mat *A, Harmonic_superstruct *Harm_struct, int *mask_binary, int nside, int lmax, char *c_ell_path, int number_correlations);
+int init_harmonic_superstruct(Mat *A, Harmonic_superstruct *Harm_struct, double *mask_binary, int nside, int lmax, char *c_ell_path, int number_correlations);
 
 /* Transforms local map pixels into local alm in harmonic domain and vice-versa*/
 int global_map_2_harmonic(double* local_pixel_map_MAPPRAISER, s2hat_dcomplex *local_alm_s2hat, Mat *A, Harmonic_superstruct *Harmonic_sup);

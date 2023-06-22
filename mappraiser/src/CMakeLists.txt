@@ -108,9 +108,9 @@ if (HEALPIX_FOUND)
 endif (HEALPIX_FOUND)
 
 if (S2HAT_FOUND)
-    target_include_directories(mappraiser PUBLIC "${S2HAT_INCLUDES}")
-    target_link_libraries(mappraiser PUBLIC "${S2HAT_LIBRARIES}")
-    target_compile_options(mappraiser PUBLIC "${S2HAT_LFLAGS}")
+    target_include_directories(mappraiser PRIVATE "${S2HAT_INCLUDES}")
+    target_link_libraries(mappraiser PRIVATE "${S2HAT_LIBRARIES}")
+    target_compile_options(mappraiser PRIVATE "${S2HAT_LFLAGS}")
 endif (S2HAT_FOUND)
 
 

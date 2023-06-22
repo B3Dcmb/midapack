@@ -18,8 +18,7 @@
 #
 # The following variables will be checked by the function
 #   FFTW_USE_STATIC_LIBS        ... if true, only static libraries are found, otherwise both static and shared.
-#   FFTW_ROOT                   ... if set, the libraries are exclusively searched
-#                                   under this path
+#   FFTW_ROOT                   ... if set, the libraries are exclusively searched under this path
 #
 # This package supports the following components:
 #   FLOAT_LIB

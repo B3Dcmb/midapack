@@ -69,9 +69,9 @@ if (HEALPIX_FOUND)
 endif (HEALPIX_FOUND)
 
 if (S2HAT_FOUND)
-    target_include_directories(midapack PUBLIC "${S2HAT_INCLUDES}")
-    target_link_libraries(midapack PUBLIC "${S2HAT_LIBRARIES}")
-    target_compile_options(midapack PUBLIC "${S2HAT_LFLAGS}")
+    target_include_directories(midapack PRIVATE "${S2HAT_INCLUDES}")
+    target_link_libraries(midapack PRIVATE "${S2HAT_LIBRARIES}")
+    target_compile_options(midapack PRIVATE "${S2HAT_LFLAGS}")
 endif (S2HAT_FOUND)
 
 
@@ -86,6 +86,10 @@ if (FFTW_FOUND)
     # #    endif(FFTW_DOUBLE_THREADS_LIB_FOUND)
     target_link_libraries(midapack PUBLIC FFTW::Double)
 endif (FFTW_FOUND)
+
+# if (FFTW_DOUBLE_LIB_FOUND)
+#     target_link_libraries(midapack PUBLIC FFTW::Double)
+# endif ()
 
 if (USE_MKL)
     find_package(MKL REQUIRED)
