@@ -165,5 +165,5 @@ install(TARGETS midapack
         #DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 # install the headers
-install(DIRECTORY ${PROJECT_SOURCE_DIR}/libmidapack/include/
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/algebra/include/
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/midapack)

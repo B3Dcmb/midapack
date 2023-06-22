@@ -37,7 +37,7 @@
 
 # Directories to ignore
 mappraiser/src/test/*
-libmidapack/test/*
+algebra/test/*
 
 # System files
 .DS_Store
@@ -52,5 +52,4 @@ mappraiser/build/*
 cmake-build-debug
 
 # Test Wiener_filter
-/global/homes/m/mag/midapack/libmidapack/src/spherical_harmonics/test_functions/Map_band_limited_1024_0.fits
 mappraiser/test_wiener_filter/map_files

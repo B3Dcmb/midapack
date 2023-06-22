@@ -47,7 +47,7 @@ target_include_directories(mappraiser PRIVATE
 # endif ()
 
 target_include_directories(mappraiser PRIVATE
-        "${CMAKE_SOURCE_DIR}/libmidapack/include"
+        "${CMAKE_SOURCE_DIR}/algebra/include"
         )
 target_link_libraries(mappraiser PUBLIC midapack)
 

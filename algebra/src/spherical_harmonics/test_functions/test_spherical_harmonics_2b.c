@@ -1767,7 +1767,7 @@ int main_alm_pix_tools_v1(int argc, char** argv){
 //     // char *path_mask = "/global/cscratch1/sd/mag/Masks_files/SO_wH.fits";
 //     char *path_mask = "/global/cscratch1/sd/mag/Masks_files/No_Mask.fits";
 //     // char *c_ell_path = "/global/homes/m/mag/midapack/test/spherical_harmonics/test_functions/c_ell_file_lmax_4.fits"; //// TO PUT !!!!
-//     char *c_ell_path = "/global/homes/m/mag/midapack/libmidapack/src/spherical_harmonics/test_functions/c_ell_file_lmax_4.fits"; //// TO PUT !!!!
+//     char *c_ell_path = "/global/homes/m/mag/midapack/algebra/src/spherical_harmonics/test_functions/c_ell_file_lmax_4.fits"; //// TO PUT !!!!
 //     int *mask_binary;
 
 //     int f_sky, npix;
@@ -2237,7 +2237,7 @@ int main(int argc, char** argv){
 
     char *path_mask = "/global/cscratch1/sd/mag/Masks_files/No_Mask.fits";
     // char *c_ell_path = "/global/homes/m/mag/midapack/test/spherical_harmonics/test_functions/c_ell_file_lmax_4.fits"; //// TO PUT !!!!
-    char *c_ell_path = "/global/homes/m/mag/midapack/libmidapack/src/spherical_harmonics/test_functions/c_ell_file_lmax_4.fits"; //// TO PUT !!!!
+    char *c_ell_path = "/global/homes/m/mag/midapack/algebra/src/spherical_harmonics/test_functions/c_ell_file_lmax_4.fits"; //// TO PUT !!!!
     int *mask_binary;
 
     int f_sky, npix;
@@ -2248,7 +2248,7 @@ int main(int argc, char** argv){
     // int lmax = 3*nside-1 ;//1500;//025;
     // int lmax = 4;
     // int nstokes = 3;
-    char *path_CMB_map = "/global/homes/m/mag/midapack/libmidapack/src/spherical_harmonics/test_functions/Map_band_limited_1024_0.fits";
+    char *path_CMB_map = "/global/homes/m/mag/midapack/algebra/src/spherical_harmonics/test_functions/Map_band_limited_1024_0.fits";
     // int *mask_binary;
     // double *CMB_map;
 
@@ -2521,7 +2521,7 @@ int main(int argc, char** argv){
 
 //     char *path_mask = "/global/cscratch1/sd/mag/Masks_files/No_Mask.fits";
 //     // char *c_ell_path = "/global/homes/m/mag/midapack/test/spherical_harmonics/test_functions/c_ell_file_lmax_4.fits"; //// TO PUT !!!!
-//     char *c_ell_path = "/global/homes/m/mag/midapack/libmidapack/src/spherical_harmonics/test_functions/c_ell_file_lmax_4.fits"; //// TO PUT !!!!
+//     char *c_ell_path = "/global/homes/m/mag/midapack/algebra/src/spherical_harmonics/test_functions/c_ell_file_lmax_4.fits"; //// TO PUT !!!!
 //     int *mask_binary;
 
 //     int f_sky, npix;
@@ -2809,7 +2809,7 @@ int main(int argc, char** argv){
 
 //     char *path_mask = "/global/cscratch1/sd/mag/Masks_files/No_Mask.fits";
 //     // char *c_ell_path = "/global/homes/m/mag/midapack/test/spherical_harmonics/test_functions/c_ell_file_lmax_4.fits"; //// TO PUT !!!!
-//     char *c_ell_path = "/global/homes/m/mag/midapack/libmidapack/src/spherical_harmonics/test_functions/c_ell_file_lmax_4.fits"; //// TO PUT !!!!
+//     char *c_ell_path = "/global/homes/m/mag/midapack/algebra/src/spherical_harmonics/test_functions/c_ell_file_lmax_4.fits"; //// TO PUT !!!!
 //     int *mask_binary;
 
 //     int f_sky, npix;
@@ -3028,7 +3028,7 @@ int main(int argc, char** argv){
 
 //     char *path_mask = "/global/cscratch1/sd/mag/Masks_files/No_Mask.fits";
 //     // char *c_ell_path = "/global/homes/m/mag/midapack/test/spherical_harmonics/test_functions/c_ell_file_lmax_4.fits"; //// TO PUT !!!!
-//     char *c_ell_path = "/global/homes/m/mag/midapack/libmidapack/src/spherical_harmonics/test_functions/c_ell_file_lmax_4.fits"; //// TO PUT !!!!
+//     char *c_ell_path = "/global/homes/m/mag/midapack/algebra/src/spherical_harmonics/test_functions/c_ell_file_lmax_4.fits"; //// TO PUT !!!!
 //     int *mask_binary;
 
 //     int f_sky, npix;

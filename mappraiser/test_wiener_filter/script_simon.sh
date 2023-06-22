@@ -1,5 +1,5 @@
 midapack_WF_env_alpha
-# export DIR=/global/homes/m/mag/midapack/libmidapack
+# export DIR=/global/homes/m/mag/midapack/algebra
 
 
 # cc test_spherical_harmonics_2.c -Wall -I${PREFIX}/include/midapack -L${PREFIX}/lib -lmidapack -I${S2HAT_DIR}/include -lcfitsio -L${S2HAT_DIR}/lib/cori/intel/ -ls2hat_std  -o test_functions/test_spherical_harmonics_2

@@ -8,7 +8,7 @@ target_sources(cut_sky_test_white_noise_diag PRIVATE "cut_sky_test_white_noise_d
 target_include_directories(cut_sky_test_white_noise_diag PRIVATE
         "../include"
         # "../include/mappraiser"
-        "${CMAKE_SOURCE_DIR}/libmidapack/include"
+        "${CMAKE_SOURCE_DIR}/algebra/include"
         )
 
 add_compile_options(${MPI_Fortran_COMPILE_FLAGS})
