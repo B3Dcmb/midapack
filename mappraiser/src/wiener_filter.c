@@ -15,10 +15,132 @@
 
 #include "mappraiser.h"
 
-
 void apply_Wiener_filter_pixel(int nside, int lmax, int nstokes, double *CMB_map_ring, double *CMB_map_output, double *c_ells, int number_correlations, double *mask_binary, MPI_Comm worldcomm){
     /* Apply Wiener filter in pixel space to CMB map */
 
+    printf("############################################################ START !!! ############################################################ \n");
+    // char *path_CMB_map = "/global/homes/m/mag/midapack/mappraiser/src/test_wiener_filter/Map_test_band_limited.fits";
+    // char *path_CMB_map = "/global/homes/m/mag/perl_midapack/midapack/mappraiser/test_wiener_filter/Map_test_band_limited_woTTTE.fits";
+    // char *path_CMB_map = "/global/homes/m/mag/perl_midapack/midapack/mappraiser/test_wiener_filter/Map_test_band_limited_woTTTE_128.fits";
+    char *path_CMB_map = "/global/homes/m/mag/perl_midapack/midapack/mappraiser/test_wiener_filter/Map_test_band_limited_128.fits";
+    // char *path_CMB_map = "/global/homes/m/mag/perl_midapack/midapack/mappraiser/test_wiener_filter/Map_test_band_limited_128.fits";
+    // char *path_CMB_map = "/global/homes/m/mag/perl_midapack/midapack/mappraiser/test_wiener_filter/Map_test_band_limited_128_SO.fits";
+    // char *path_CMB_map = "/global/homes/m/mag/perl_midapack/midapack/mappraiser/test_wiener_filter/Map_test_band_limited_128_cut_latS.fits";
+    // char *path_CMB_map = "/global/homes/m/mag/perl_midapack/midapack/mappraiser/test_wiener_filter/Map_test_band_limited_128_cut_equator.fits";
+    // char *path_CMB_map = "/global/homes/m/mag/perl_midapack/midapack/mappraiser/test_wiener_filter/Map_test_band_limited_128_pt_src.fits";
+    
+
+    // char *path_CMB_map = "/global/homes/m/mag/perl_midapack/midapack/mappraiser/test_wiener_filter/Map_test_band_limited_woTE_128.fits";
+    // char *path_CMB_map = "/global/homes/m/mag/perl_midapack/midapack/mappraiser/test_wiener_filter/Map_test_band_limited_onlyBB_128.fits";
+    // char *path_CMB_map = "/global/homes/m/mag/perl_midapack/midapack/mappraiser/test_wiener_filter/Map_test_band_limited_onlyEEBB_128.fits";
+    // char *path_CMB_map = "/global/homes/m/mag/perl_midapack/midapack/mappraiser/test_wiener_filter/Map_band_limited_1024_0.fits";
+    // char *c_ell_path = "/global/homes/m/mag/midapack/mappraiser/src/test_wiener_filter/cls_limited_1024.fits";
+    // char *c_ell_path = "/global/homes/m/mag/midapack/mappraiser/src/test_wiener_filter/cls_limited_1024_woTE.fits";
+    // char *c_ell_path = "/global/homes/m/mag/midapack/mappraiser/src/test_wiener_filter/cls_limited_1024_woTTTE.fits";
+    // char *c_ell_path = "/global/homes/m/mag/midapack/mappraiser/src/test_wiener_filter/cls_limited_1024_woTTTE_v2.fits";
+    char *c_ell_path = "/global/homes/m/mag/midapack/mappraiser/src/test_wiener_filter/cls_limited_128.fits";
+    // char *c_ell_path = "/global/homes/m/mag/midapack/mappraiser/src/test_wiener_filter/cls_limited_128_woTE.fits";
+    // char *c_ell_path = "/global/homes/m/mag/midapack/mappraiser/src/test_wiener_filter/cls_limited_128_only_BB.fits";
+    // char *c_ell_path = "/global/homes/m/mag/midapack/mappraiser/src/test_wiener_filter/cls_limited_128_only_EEBB.fits";
+    // char *path_mask = "/pscratch/sd/m/mag/Masks_files/mask_SO_64.fits";
+    // char *path_mask = "/pscratch/sd/m/mag/Masks_files/mask_cut_latS_64.fits";
+    // char *path_mask = "/pscratch/sd/m/mag/Masks_files/mask_cut_equator_64.fits";
+    char *path_mask = "/pscratch/sd/m/mag/Masks_files/mask_cut_pt_src_64.fits";
+
+    int rank, size;
+
+    // MPI_Init();
+    MPI_Comm_rank( worldcomm, &rank);
+    MPI_Comm_size( worldcomm, &size);
+
+    int i, j, ell_value;
+
+    // int nside = 512;
+    // int nside_2 = 64;
+    // int lmax_2 = 2*nside_2;
+    int npix = 12*nside*nside;
+    
+    double *mask_binary_=NULL;
+    // double *mask_binary= (double *)malloc(npix*sizeof(double));
+    // read_fits_mask(nside, mask_binary, path_mask, 1);
+    
+    int nstokes_2 = 3; // T, Q, U
+    int number_correlations_2 = 4; // TT, EE, BB, TE
+    // int nstokes = 2; //Q, U
+    // int number_correlations = 2; // EE, BB
+
+
+    
+    int index, index_2;
+    int order_matrix = nstokes;
+
+    // double *CMB_map_ring_2 = (double *) malloc( 3*npix*sizeof(double));
+    // read_TQU_maps(nside_2, CMB_map_ring_2, path_CMB_map, 3);
+
+
+    int max_size_pixels = 40;
+    // printf("%d --- Reading first elems of map \n", rank);
+    // for (i=0; i<max_size_pixels; i++)
+    //     printf("- %f %f %f -", CMB_map_ring_2[i], CMB_map_ring_2[i+npix], CMB_map_ring_2[i+2*npix]);
+    // printf("\n");
+
+    printf("%d --- Initializing S2HAT_param \n", rank); fflush(stdout);
+    S2HAT_parameters S2HAT_params;
+    init_files_struct_WF(&(S2HAT_params.Files_WF_struct), nside, lmax, c_ell_path, number_correlations_2);
+    
+    
+    
+    init_s2hat_parameters_superstruct(&(S2HAT_params.Files_WF_struct), mask_binary_, nstokes_2, &S2HAT_params, worldcomm);
+    printf("%d --- End of initializing S2HAT_param \n", rank); fflush(stdout);
+
+    double *local_map_pix = (double *)malloc(nstokes*S2HAT_params.Local_param_s2hat.map_size*sizeof(double));
+    printf("%d --- Distributing S2HAT_param \n", rank); fflush(stdout);
+    
+    double *CMB_map_ring_2 = (double *)malloc(nstokes*npix*sizeof(double));
+    memcpy(CMB_map_ring_2, CMB_map_ring, nstokes*npix*sizeof(double));
+    distribute_full_sky_map_into_local_maps_S2HAT(CMB_map_ring_2, local_map_pix, &S2HAT_params);
+    // free(CMB_map_ring_2);
+    printf("%d --- End of distributing S2HAT_param \n", rank); fflush(stdout);
+    
+
+    s2hat_dcomplex *local_alm_s2hat;
+
+    local_alm_s2hat = (s2hat_dcomplex *)calloc(3*S2HAT_params.size_alm,sizeof(s2hat_dcomplex));
+
+    S2HAT_GLOBAL_parameters *Global_param_s2hat = &(S2HAT_params.Global_param_s2hat);
+    S2HAT_LOCAL_parameters *Local_param_s2hat = &(S2HAT_params.Local_param_s2hat);
+
+    printf("%d --- map2harmonic --- size_alm %d !!! \n", rank, S2HAT_params.size_alm); fflush(stdout);
+    apply_pix2alm(local_map_pix, local_alm_s2hat, &S2HAT_params);
+    printf("%d --- end of harmonic2map ! \n", rank); fflush(stdout);
+
+
+    printf("%d ----!!!! ***local_map_output*** nstokes %d ; map_size %d \n", rank, nstokes, S2HAT_params.Local_param_s2hat.map_size); fflush(stdout);
+    double *local_map_output = (double *)calloc(nstokes*S2HAT_params.Local_param_s2hat.map_size,sizeof(double));
+
+
+    printf("%d --- harmonic2map !!! --- %d %d \n", rank, nstokes, S2HAT_params.Local_param_s2hat.map_size); fflush(stdout);
+    apply_alm2pix(local_map_output, local_alm_s2hat, &S2HAT_params);
+
+
+    memcpy(CMB_map_output, local_map_output, nstokes*npix*sizeof(double));
+    // memcpy(CMB_map_output, CMB_map_ring, nstokes*npix*sizeof(double));
+
+    printf("%d --- Free steps 0 ! \n", rank); fflush(stdout);
+    // free(local_map_pix);
+    printf("%d --- Free steps 1 ! \n", rank); fflush(stdout);
+    free(local_map_output);
+
+    printf("%d --- Done !!! \n", rank); fflush(stdout);
+}
+
+
+void apply_Wiener_filter_pixel_test(int nside, int lmax, int nstokes, double *CMB_map_ring, double *CMB_map_output, double *c_ells, int number_correlations, double *mask_binary, MPI_Comm worldcomm){
+    /* Apply Wiener filter in pixel space to CMB map */
+
+    char *path_CMB_map = "/global/homes/m/mag/perl_midapack/midapack/mappraiser/test_wiener_filter/Map_test_band_limited_128.fits";
+
+    
     printf("############################################################ START !!! ############################################################ \n"); fflush(stdout);
     int rank, size;
 
@@ -27,8 +149,47 @@ void apply_Wiener_filter_pixel(int nside, int lmax, int nstokes, double *CMB_map
     MPI_Comm_rank(worldcomm, &rank);
     MPI_Comm_size(worldcomm, &size);
 
-    memcpy(CMB_map_output, CMB_map_ring, nstokes*npix*sizeof(double));
+    // memcpy(CMB_map_output, CMB_map_ring, nstokes*npix*sizeof(double));
 
+    printf("%d --- Initializing S2HAT_param -- nside %d lmax %d nstokes %d \n", rank, nside, lmax, nstokes); fflush(stdout);
+    char *c_ell_path = "/global/homes/m/mag/midapack/mappraiser/src/test_wiener_filter/cls_limited_128.fits";
+    S2HAT_parameters S2HAT_params;
+    init_files_struct_WF(&(S2HAT_params.Files_WF_struct), nside, lmax, c_ell_path, number_correlations);
+
+    double *mask_binary_ = NULL;
+    init_s2hat_parameters_superstruct(&(S2HAT_params.Files_WF_struct), mask_binary_, nstokes, &S2HAT_params, worldcomm);
+
+    double *local_map_pix = (double *)malloc(nstokes*S2HAT_params.Local_param_s2hat.map_size*sizeof(double));
+
+    double *CMB_map_ring_2 = (double *)malloc(nstokes*npix*sizeof(double));
+    read_TQU_maps(nside, CMB_map_ring_2, path_CMB_map, 3);
+    // printf("%d --- Test map_size %d npix %d \n", rank, S2HAT_params.Local_param_s2hat.map_size, npix);
+    // distribute_full_sky_map_into_local_maps_S2HAT(CMB_map_ring, local_map_pix, &S2HAT_params);
+    distribute_full_sky_map_into_local_maps_S2HAT(CMB_map_ring_2, local_map_pix, &S2HAT_params);
+    free(CMB_map_ring_2);
+    // memcpy(CMB_map_output, local_map_pix, nstokes*npix*sizeof(double));
+
+    s2hat_dcomplex *local_alm_s2hat = (s2hat_dcomplex *)calloc(nstokes*S2HAT_params.size_alm,sizeof(s2hat_dcomplex));
+
+    printf("%d --- map2harmonic --- size_alm %d !!! \n", rank, S2HAT_params.size_alm); fflush(stdout);
+    apply_pix2alm(local_map_pix, local_alm_s2hat, &S2HAT_params);
+    printf("%d --- map2harmonic-end --- size_alm %d !!! \n", rank, S2HAT_params.size_alm); fflush(stdout);
+
+
+    printf("%d ----!!!! ***local_map_output*** nstokes %d ; map_size %d \n", rank, nstokes, S2HAT_params.Local_param_s2hat.map_size); fflush(stdout);
+    double *local_map_output = (double *)malloc(nstokes*S2HAT_params.Local_param_s2hat.map_size*sizeof(double));
+
+
+    printf("%d --- harmonic2map !!! --- %d %d \n", rank, nstokes, S2HAT_params.Local_param_s2hat.map_size); fflush(stdout);
+    apply_alm2pix(local_map_output, local_alm_s2hat, &S2HAT_params);
+    printf("%d --- end of harmonic2map ! \n", rank); fflush(stdout);
+
+    memcpy(CMB_map_output, local_map_output, nstokes*npix*sizeof(double));
+
+    printf("%d --- Free steps 0 ! \n", rank); fflush(stdout);
+    free(local_map_pix);
+    printf("%d --- Free steps 1 ! \n", rank); fflush(stdout);
+    free(local_map_output);
 
     printf("%d --- Done !!! \n", rank); fflush(stdout);
 }
