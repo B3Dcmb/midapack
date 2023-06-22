@@ -49,6 +49,7 @@ libmidapack/test/*
 # build products
 build/*
 mappraiser/build/*
+cmake-build-debug
 
 # Test Wiener_filter
 /global/homes/m/mag/midapack/libmidapack/src/spherical_harmonics/test_functions/Map_band_limited_1024_0.fits

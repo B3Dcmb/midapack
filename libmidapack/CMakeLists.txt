@@ -13,7 +13,7 @@ if (NOT DISABLE_MPI)
 endif ()
 
 if (NOT DISABLE_OPENMP)
-    find_package(OpenMP REQUIRED)
+    find_package(OpenMP)
 endif ()
 
 # Search for FFTW (necessary for toeplitz module)

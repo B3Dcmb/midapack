@@ -77,7 +77,7 @@ endif (S2HAT_FOUND)
 
 # FFTW (for toeplitz module)
 
-if (FFTW_FOUND)
+if (FFTW_DOUBLE_LIB_FOUND)
     # #target_compile_definitions(midapack PRIVATE HAVE_FFTW=1)
     # target_include_directories(midapack PRIVATE "${FFTW_INCLUDE_DIRS}")
     # target_link_libraries(midapack PUBLIC "${FFTW_LIBRARIES}")
@@ -85,7 +85,7 @@ if (FFTW_FOUND)
     # #        target_compile_definitions(midapack PRIVATE HAVE_FFTW_THREADS=1)
     # #    endif(FFTW_DOUBLE_THREADS_LIB_FOUND)
     target_link_libraries(midapack PUBLIC FFTW::Double)
-endif (FFTW_FOUND)
+endif (FFTW_DOUBLE_LIB_FOUND)
 
 # if (FFTW_DOUBLE_LIB_FOUND)
 #     target_link_libraries(midapack PUBLIC FFTW::Double)
@@ -105,6 +105,8 @@ else ()
     # We need a BLAS/LAPACK implementation other than MKL
     find_package(BLAS)
     find_package(LAPACK REQUIRED)
+    target_include_directories(midapack PRIVATE "${LAPACK_INCLUDES}")
+    target_link_libraries(midapack PRIVATE "${LAPACK_LIBRARIES}")
 endif ()
 
 # CFITSIO

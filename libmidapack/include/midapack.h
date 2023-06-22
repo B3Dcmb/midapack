@@ -31,6 +31,9 @@
 #ifndef MIDAPACK_H
 #define MIDAPACK_H
 
+#define min(x,y) (x<y ? x : y) /* Minimum of two arguments */
+#define max(x,y) (x>y ? x : y) /* Maximum of two arguments */
+
 // #include <fftw3.h>
 // #include <mpi.h>
 

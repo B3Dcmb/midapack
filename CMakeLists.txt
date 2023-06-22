@@ -28,6 +28,15 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 # All code should be built with PIC.
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+# Specific set of compilation flag if Apple Silicon Proc
+option(BUILD_x86_64 "Build with x86_64, with Rosetta on Apple Silicon M1" OFF)
+
+if (BUILD_x86_64)
+    set(CMAKE_APPLE_SILICON_PROCESSOR x86_64)
+    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} -Dx86_64")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Dx86_64")
+endif ()
+
 # ----- RPATH -----
 
 # use, i.e. don't skip the full RPATH for the build tree
