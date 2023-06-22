@@ -90,7 +90,7 @@ endif("${isSystemDir}" STREQUAL "-1")
 # Subdirectories
 # ----------------------------------------------------------------------------------------#
 
-add_subdirectory(libmidapack)
+add_subdirectory(algebra)
 add_subdirectory(mappraiser)
 
 

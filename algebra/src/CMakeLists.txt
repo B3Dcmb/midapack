@@ -28,7 +28,7 @@ target_include_directories(midapack PUBLIC
                            )
 
 #target_include_directories(midapack PUBLIC
-#                           $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/libmidapack/include>
+#                           $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/algebra/include>
 #                           $<INSTALL_INTERFACE:include/midapack>
 #                           )
 
