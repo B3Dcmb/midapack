@@ -66,11 +66,11 @@ int apply_alm2pix(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parame
             //     local_alm, Local_param_s2hat->nplm, NULL, 
             //     Local_param_s2hat->gangsize, Local_param_s2hat->gangrank, Local_param_s2hat->gangcomm);
 
-            // spin=0;
-            // s2hat_alm2map_spin( Global_param_s2hat->pixelization_scheme, Global_param_s2hat->scan_sky_structure_pixel, spin, Global_param_s2hat->nlmax, Global_param_s2hat->nmmax,
-            //     Local_param_s2hat->nmvals, Local_param_s2hat->mvals, nmaps,
-            //     Local_param_s2hat->first_ring, Local_param_s2hat->last_ring, Local_param_s2hat->map_size, local_map_pix, lda, local_alm,
-            //     Local_param_s2hat->gangsize, Local_param_s2hat->gangrank, Local_param_s2hat->gangcomm);
+            spin=0;
+            s2hat_alm2map_spin( Global_param_s2hat->pixelization_scheme, Global_param_s2hat->scan_sky_structure_pixel, spin, Global_param_s2hat->nlmax, Global_param_s2hat->nmmax,
+                Local_param_s2hat->nmvals, Local_param_s2hat->mvals, nmaps,
+                Local_param_s2hat->first_ring, Local_param_s2hat->last_ring, Local_param_s2hat->map_size, local_map_pix, lda, local_alm,
+                Local_param_s2hat->gangsize, Local_param_s2hat->gangrank, Local_param_s2hat->gangcomm);
             // Computing alm2map in the specific case where only Q,U are provided
             // printf("<<<< Test 41b -- \n"); fflush(stdout);
             spin=2;
@@ -169,21 +169,29 @@ int apply_pix2alm(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parame
             printf("~~~~ Starting map2alm case 2 \n"); fflush(stdout);
             spin=0;            
             printf("~~~~ Starting map2alm 1/2 -- spin %d \n", spin); fflush(stdout);
-            double *local_map_pix_T = (double *)calloc(3*Local_param_s2hat->map_size,sizeof(double));
-            memcpy(local_map_pix_T, local_map_pix, Local_param_s2hat->map_size*sizeof(double));
-            double *local_map_pix_QU = (double *)calloc(3*Local_param_s2hat->map_size,sizeof(double));
-            memcpy(local_map_pix_QU, local_map_pix+Local_param_s2hat->map_size, 2*Local_param_s2hat->map_size*sizeof(double));
+            // double *local_map_pix_T = (double *)calloc(3*Local_param_s2hat->map_size,sizeof(double));
+            // memcpy(local_map_pix_T, local_map_pix, Local_param_s2hat->map_size*sizeof(double));
+            // double *local_map_pix_QU = (double *)calloc(3*Local_param_s2hat->map_size,sizeof(double));
+            // memcpy(local_map_pix_QU, local_map_pix+Local_param_s2hat->map_size, 2*Local_param_s2hat->map_size*sizeof(double));
             
+            // s2hat_map2alm_spin( Global_param_s2hat->pixelization_scheme, Global_param_s2hat->scan_sky_structure_pixel, spin, Global_param_s2hat->nlmax, Global_param_s2hat->nmmax,
+            //     Local_param_s2hat->nmvals, Local_param_s2hat->mvals, nmaps, Local_param_s2hat->first_ring, Local_param_s2hat->last_ring,
+		    //     local_w8ring, Local_param_s2hat->map_size, local_map_pix_T, lda, local_alm,
+            //     Local_param_s2hat->gangsize, Local_param_s2hat->gangrank, Local_param_s2hat->gangcomm);
+            // free(local_map_pix_T);
             s2hat_map2alm_spin( Global_param_s2hat->pixelization_scheme, Global_param_s2hat->scan_sky_structure_pixel, spin, Global_param_s2hat->nlmax, Global_param_s2hat->nmmax,
                 Local_param_s2hat->nmvals, Local_param_s2hat->mvals, nmaps, Local_param_s2hat->first_ring, Local_param_s2hat->last_ring,
-		        local_w8ring, Local_param_s2hat->map_size, local_map_pix_T, lda, local_alm,
+		        local_w8ring, Local_param_s2hat->map_size, local_map_pix, lda, local_alm,
                 Local_param_s2hat->gangsize, Local_param_s2hat->gangrank, Local_param_s2hat->gangcomm);
-            // free(local_map_pix_T);
             spin=2;            
             printf("~~~~ Starting map2alm 2/2 -- spin %d \n", spin); fflush(stdout);
+            // s2hat_map2alm_spin( Global_param_s2hat->pixelization_scheme, Global_param_s2hat->scan_sky_structure_pixel, spin, Global_param_s2hat->nlmax, Global_param_s2hat->nmmax,
+            //     Local_param_s2hat->nmvals, Local_param_s2hat->mvals, nmaps, Local_param_s2hat->first_ring, Local_param_s2hat->last_ring,
+		    //     local_w8ring, Local_param_s2hat->map_size, local_map_pix_QU, lda, local_alm+S2HAT_params->size_alm,
+            //     Local_param_s2hat->gangsize, Local_param_s2hat->gangrank, Local_param_s2hat->gangcomm);
             s2hat_map2alm_spin( Global_param_s2hat->pixelization_scheme, Global_param_s2hat->scan_sky_structure_pixel, spin, Global_param_s2hat->nlmax, Global_param_s2hat->nmmax,
                 Local_param_s2hat->nmvals, Local_param_s2hat->mvals, nmaps, Local_param_s2hat->first_ring, Local_param_s2hat->last_ring,
-		        local_w8ring, Local_param_s2hat->map_size, local_map_pix_QU, lda, local_alm+S2HAT_params->size_alm,
+		        local_w8ring, Local_param_s2hat->map_size, local_map_pix+Local_param_s2hat->map_size, lda, local_alm+S2HAT_params->size_alm,
                 Local_param_s2hat->gangsize, Local_param_s2hat->gangrank, Local_param_s2hat->gangcomm);
             printf("~~~~ Finishing map2alm 2/2 -- spin %d \n", spin); fflush(stdout);
             // free(local_map_pix_T);
