@@ -1,6 +1,11 @@
 # Executable for running mappraiser without TOAST workflow
-
+# include(CTest)
 add_executable(test_WF test_WF.c)
+# add_test(test_WF_check test_WF)
+
+# find_program( MEMORYCHECK_COMMAND valgrind )
+# set( MEMORYCHECK_COMMAND_OPTIONS "--trace-children=yes --leak-check=full" )
+# set( MEMORYCHECK_SUPPRESSIONS_FILE "${PROJECT_SOURCE_DIR}/valgrind_suppress.txt" )
 
 set_property(TARGET test_WF PROPERTY LINKER_LANGUAGE Fortran)
 

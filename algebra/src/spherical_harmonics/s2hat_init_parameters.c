@@ -77,8 +77,10 @@ int init_s2hat_global_parameters(Files_path_WIENER_FILTER *Files_WF_struct, doub
     Global_param_s2hat->pixpar = pixpar;
     
     Global_param_s2hat->nside = nside;
-    Global_param_s2hat->nlmax = lmax-1; // S2HAT will generate alms between 0 and nlmax included, so we have to give lamx decreased by 1 to get the lmax requested
-    Global_param_s2hat->nmmax = lmax-1;
+    // Global_param_s2hat->nlmax = lmax-1; // S2HAT will generate alms between 0 and nlmax included, so we have to give lamx decreased by 1 to get the lmax requested
+    // Global_param_s2hat->nmmax = lmax-1;
+    Global_param_s2hat->nlmax = lmax; // S2HAT will generate alms between 0 and nlmax included, so we have to give lamx decreased by 1 to get the lmax requested
+    Global_param_s2hat->nmmax = lmax;
 
     return 0;
 }

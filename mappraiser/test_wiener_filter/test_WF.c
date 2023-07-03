@@ -1422,7 +1422,9 @@ int main(int argc, char** argv){
     // char *path_CMB_map = "/global/cscratch1/sd/mag/xPure_data/Files_Launch/Map_band_limited_1_degree.fits";
     // char *path_CMB_map = "/global/cscratch1/sd/mag/xPure_data/Files_Launch/Map_band_limited_1_degree_bis.fits";
     // char *path_CMB_map = "/global/cscratch1/sd/mag/xPure_data/Files_Launch/Map_band_limited_1024_0.fits";
-    char *path_CMB_map = "/Users/mag/Documents/PHD1Y/Space_Work/Inference_Sampling/map_files/Map_band_limited_1024_0.fits";
+    // char *path_CMB_map = "/Users/mag/Documents/PHD1Y/Space_Work/Inference_Sampling/map_files/Map_band_limited_1024_0.fits";
+    char *path_CMB_map = "/global/homes/m/mag/perl_midapack/midapack/mappraiser/test_wiener_filter/Map_band_limited_1024_0.fits";
+
     // int *mask_binary;
     double *CMB_map;
 
@@ -1433,7 +1435,7 @@ int main(int argc, char** argv){
     int nside = 512;
     // int lmax = 1535;
     // int lmax = 1024;
-    int lmax = 2*nside+2; //+10; //3*nside-1 ;//1500;//025;
+    int lmax = 2*nside; //+10; //3*nside-1 ;//1500;//025;
     // int nstokes = 3;
     npix = 12*nside*nside;
 
@@ -1720,7 +1722,7 @@ int main(int argc, char** argv){
     double *full_sky_map_2;
     full_sky_map_2 = (double *) malloc(nstokes*npix*sizeof(double));
     gather_map(local_map_pix, full_sky_map_2, nstokes, &S2HAT_params);
-
+    // memcpy(full_sky_map_2, local_map_pix, nstokes*npix*sizeof(double));
     // char filename_save[80];
     // if (Local_param_s2hat->gangrank == 0)
     // {

@@ -111,7 +111,8 @@ void free_s2hat_LOCAL_parameters_struct(S2HAT_LOCAL_parameters *Local_param_s2ha
     if (Local_param_s2hat->nmvals > 0){
         free(Local_param_s2hat->mvals);
     }
-    free(Local_param_s2hat->pixel_numbered_ring);    
+    if (Local_param_s2hat->map_size)
+        free(Local_param_s2hat->pixel_numbered_ring);
     // free(Local_param_s2hat);
 }
 
