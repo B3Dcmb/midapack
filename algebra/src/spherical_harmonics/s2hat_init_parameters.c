@@ -256,7 +256,8 @@ int init_s2hat_parameters_superstruct(Files_path_WIENER_FILTER *Files_WF_struct,
     S2HAT_params->Files_WF_struct = *Files_WF_struct;
     // Initialization of final superstructure S2HAT_params
 
-    S2HAT_params->size_alm = (Global_param_s2hat->nlmax+1)*Global_param_s2hat->nmmax;
+    // S2HAT_params->size_alm = (Global_param_s2hat->nlmax+1)*Global_param_s2hat->nmmax;
+    S2HAT_params->size_alm = (Global_param_s2hat->nlmax+1)*Local_param_s2hat->nmvals;
     S2HAT_params->nstokes = nstokes;
     S2HAT_params->lda = Global_param_s2hat->nlmax; // Can also be nstokes for HEALPIX convention, but everything coded with S2HAT convention (especially alm2pix and pix2alm operations)
     return 0;
