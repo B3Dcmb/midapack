@@ -152,11 +152,11 @@ void psd_from_tt(int fftlen, int lambda, int psdlen, const double *tt, double *p
 }
 
 int mappraiser::find_valid_samples(Gap *gaps, size_t id0, std::vector<bool> &valid) {
-    int    i_gap   = -1;
-    int    n_good  = 0;
-    size_t samples = valid.size();
+    int  i_gap   = -1;
+    int  n_good  = 0;
+    auto samples = static_cast<int>(valid.size());
 
-    for (size_t i = 0; i < samples; ++i) {
+    for (int i = 0; i < samples; ++i) {
         // find closest gap before (or at) current sample
         while (i_gap + 1 < gaps->ngap && gaps->id0gap[i_gap + 1] <= static_cast<long>(id0 + i)) { ++i_gap; }
 
@@ -177,15 +177,15 @@ void mappraiser::remove_baseline(std::vector<double> &buf, std::vector<double> &
     // size of window for computing the moving average
     // take w = sample rate means we average over a time window
     // of about 1 second (typical knee frequency for atmospheric noise)
-    const int w       = std::ceil(sample_rate);
-    long      samples = static_cast<long>(buf.size());
+    const auto w       = static_cast<int>(std::ceil(sample_rate));
+    const auto samples = static_cast<int>(buf.size());
 
-    for (long i = 0; i < samples; ++i) {
+    for (int i = 0; i < samples; ++i) {
         double avg   = 0;
         uint   count = 0;
         if (valid[i]) {
             // compute the moving average
-            for (long j = -w; j < w + 1; ++j) {
+            for (int j = -w; j < w + 1; ++j) {
                 if (-1 < j + i && j + i < samples && valid[j + i]) {
                     avg += buf[j + i];
                     ++count;
@@ -197,7 +197,7 @@ void mappraiser::remove_baseline(std::vector<double> &buf, std::vector<double> &
 
     // remove the baseline in valid intervals
     if (rm) {
-        for (long i = 0; i < samples; ++i) {
+        for (int i = 0; i < samples; ++i) {
             if (valid[i]) { buf[i] -= baseline[i]; }
         }
     }
@@ -205,7 +205,7 @@ void mappraiser::remove_baseline(std::vector<double> &buf, std::vector<double> &
     // fill baseline gaps with affine function
     int lgap = 0;
 
-    for (long i = 0; i < samples; ++i) {
+    for (int i = 0; i < samples; ++i) {
         if (!valid[i]) {
             ++lgap;
         } else {
