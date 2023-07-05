@@ -71,7 +71,7 @@ namespace mappraiser {
     int find_valid_samples(Gap *gaps, size_t id0, std::vector<bool> &valid);
 
     void remove_baseline(std::vector<double> &buf, std::vector<double> &baseline, const std::vector<bool> &valid,
-                         double sample_rate, bool rm);
+                         int bandwidth, bool rm);
 
     void sim_constrained_noise_block(GapFillInfo &gfi, Tpltz *N_block, Tpltz *Nm1_block, double *noise, Gap *gaps,
                                      u_int64_t realization, u_int64_t detindx, u_int64_t obsindx, u_int64_t telescope,

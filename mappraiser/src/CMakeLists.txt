@@ -59,6 +59,12 @@ if (MPI_FOUND)
     target_link_libraries(mappraiser PUBLIC MPI::MPI_C MPI::MPI_CXX)
 endif ()
 
+# OpenMP
+
+if (OpenMP_CXX_FOUND)
+    target_link_libraries(mappraiser PUBLIC OpenMP::OpenMP_CXX)
+endif ()
+
 # CFITSIO
 
 if (CFITSIO_FOUND)

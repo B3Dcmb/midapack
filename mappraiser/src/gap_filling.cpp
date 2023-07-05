@@ -173,26 +173,42 @@ int mappraiser::find_valid_samples(Gap *gaps, size_t id0, std::vector<bool> &val
 }
 
 void mappraiser::remove_baseline(std::vector<double> &buf, std::vector<double> &baseline,
-                                 const std::vector<bool> &valid, double sample_rate, bool rm = true) {
+                                 const std::vector<bool> &valid, int bandwidth, bool rm = true) {
     // size of window for computing the moving average
-    // take w = sample rate means we average over a time window
-    // of about 1 second (typical knee frequency for atmospheric noise)
-    const auto w       = static_cast<int>(std::ceil(sample_rate));
-    const auto samples = static_cast<int>(buf.size());
+    int  w0      = bandwidth;
+    auto samples = static_cast<int>(buf.size());
 
+#pragma omp parallel for default(none) shared(w0, samples, bandwidth, buf, baseline, valid) schedule(static)
     for (int i = 0; i < samples; ++i) {
         double avg   = 0;
-        uint   count = 0;
-        if (valid[i]) {
-            // compute the moving average
-            for (int j = -w; j < w + 1; ++j) {
+        int    count = 0;
+
+        // compute the moving average of valid samples over [i-w0, i+w0]
+        for (int j = -w0; j < w0 + 1; ++j) {
+            if (-1 < j + i && j + i < samples && valid[j + i]) {
+                avg += buf[j + i];
+                ++count;
+            }
+        }
+
+        // handle case where we don't have enough valid samples to average over
+        if (count < bandwidth / 10) {
+            int w1 = w0 / 10;
+            for (int j = -w1; j < -w0; ++j) {
                 if (-1 < j + i && j + i < samples && valid[j + i]) {
                     avg += buf[j + i];
                     ++count;
                 }
             }
-            baseline[i] = avg / static_cast<double>(count);
+            for (int j = w0 + 1; j < w1; ++j) {
+                if (-1 < j + i && j + i < samples && valid[j + i]) {
+                    avg += buf[j + i];
+                    ++count;
+                }
+            }
         }
+
+        baseline[i] = avg / static_cast<double>(count);
     }
 
     // remove the baseline in valid intervals
@@ -202,6 +218,7 @@ void mappraiser::remove_baseline(std::vector<double> &buf, std::vector<double> &
         }
     }
 
+    /*
     // fill baseline gaps with affine function
     int lgap = 0;
 
@@ -228,6 +245,7 @@ void mappraiser::remove_baseline(std::vector<double> &buf, std::vector<double> &
             lgap = 0;
         }
     }
+    */
 }
 
 // template<typename T>
@@ -352,7 +370,7 @@ void mappraiser::sim_constrained_noise_block(mappraiser::GapFillInfo &gfi, Tpltz
 
     // remove baseline (moving average)
     std::vector<double> baseline(samples);
-    mappraiser::remove_baseline(rhs, baseline, valid, sample_rate, true);
+    mappraiser::remove_baseline(rhs, baseline, valid, lambda, true);
 
     // generate random noise realization "xi" with correlations
     std::vector<double> xi(samples);
@@ -391,8 +409,8 @@ void mappraiser::sim_constrained_noise_block(mappraiser::GapFillInfo &gfi, Tpltz
             // add the baseline back
             constrained[i] += xi[i] + baseline[i];
         } else {
-            constrained[i] += xi[i];
-            // constrained[i] += xi[i] + baseline[i];
+            // constrained[i] += xi[i];
+            constrained[i] += xi[i] + baseline[i];
         }
     }
 
