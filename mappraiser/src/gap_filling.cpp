@@ -151,32 +151,29 @@ void psd_from_tt(int fftlen, int lambda, int psdlen, const double *tt, double *p
     fftw_destroy_plan(p);
 }
 
-int mappraiser::find_valid_samples(Gap *gaps, size_t id0, std::vector<bool> &valid) {
-    int  i_gap   = -1;
-    int  n_good  = 0;
-    auto samples = static_cast<int>(valid.size());
+int mappraiser::find_valid_samples(Gap *gaps, size_t id0, std::vector<uint8_t> &valid) {
+    int i_gap  = -1;
+    int n_good = 0;
 
-    for (int i = 0; i < samples; ++i) {
+    for (size_t i = 0; i < valid.size(); ++i) {
         // find closest gap before (or at) current sample
         while (i_gap + 1 < gaps->ngap && gaps->id0gap[i_gap + 1] <= static_cast<long>(id0 + i)) { ++i_gap; }
 
         if (i_gap == -1)
             // the sample is valid because all gaps are strictly after
-            valid[i] = true;
+            valid[i] = 1;
         else
             // the sample is valid if the gap is too short
-            valid[i] = gaps->id0gap[i_gap] + gaps->lgap[i_gap] <= static_cast<long>(id0 + i);
+            valid[i] = (gaps->id0gap[i_gap] + gaps->lgap[i_gap] <= static_cast<long>(id0 + i)) ? 1 : 0;
 
         if (valid[i]) ++n_good;
     }
     return n_good;
 }
 
-void mappraiser::remove_baseline(std::vector<double> &buf, std::vector<double> &baseline,
-                                 const std::vector<bool> &valid, int bandwidth, bool rm = true) {
+void remove_baseline(int samples, double *buf, double *baseline, const uint8_t *valid, int bandwidth, bool rm) {
     // size of window for computing the moving average
-    int  w0      = bandwidth;
-    auto samples = static_cast<int>(buf.size());
+    int w0 = bandwidth;
 
 #pragma omp parallel for default(none) shared(w0, samples, bandwidth, buf, baseline, valid) schedule(static)
     for (int i = 0; i < samples; ++i) {
@@ -363,14 +360,14 @@ void mappraiser::sim_constrained_noise_block(mappraiser::GapFillInfo &gfi, Tpltz
     std::copy(noise, (noise + samples), rhs.begin());
 
     // locate the valid samples
-    std::vector<bool> valid(samples);
-    int               n_good = mappraiser::find_valid_samples(gaps, id0, valid);
+    std::vector<uint8_t> valid(samples);
+    int                  n_good = mappraiser::find_valid_samples(gaps, id0, valid);
 
     gfi.store_valid_frac(std::ceil(100 * n_good / samples));
 
     // remove baseline (moving average)
     std::vector<double> baseline(samples);
-    mappraiser::remove_baseline(rhs, baseline, valid, lambda, true);
+    remove_baseline(samples, rhs.data(), baseline.data(), valid.data(), lambda, true);
 
     // generate random noise realization "xi" with correlations
     std::vector<double> xi(samples);

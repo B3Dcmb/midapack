@@ -68,10 +68,7 @@ namespace mappraiser {
         friend std::ostream &operator<<(std::ostream &out, GapFillRecap const &recap);
     };
 
-    int find_valid_samples(Gap *gaps, size_t id0, std::vector<bool> &valid);
-
-    void remove_baseline(std::vector<double> &buf, std::vector<double> &baseline, const std::vector<bool> &valid,
-                         int bandwidth, bool rm);
+    int find_valid_samples(Gap *gaps, size_t id0, std::vector<uint8_t> &valid);
 
     void sim_constrained_noise_block(GapFillInfo &gfi, Tpltz *N_block, Tpltz *Nm1_block, double *noise, Gap *gaps,
                                      u_int64_t realization, u_int64_t detindx, u_int64_t obsindx, u_int64_t telescope,
@@ -91,6 +88,8 @@ extern "C" {
 #include <stdbool.h>
 
 void psd_from_tt(int fftlen, int lambda, int psdlen, const double *tt, double *psd);
+
+void remove_baseline(int samples, double *buf, double *baseline, const uint8_t *valid, int bandwidth, bool rm);
 
 void sim_noise_tod(int samples, int lambda, const double *tt, double *buf, u_int64_t realization, u_int64_t detindx,
                    u_int64_t obsindx, u_int64_t telescope, double sample_rate);

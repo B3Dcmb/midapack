@@ -310,3 +310,38 @@ def sim_noise_tod(
     )
 
     return
+
+
+############################################################
+# Baseline computation routine
+############################################################
+
+_mappraiser.remove_baseline.restype = None
+_mappraiser.remove_baseline.argtypes = [
+    ct.c_int,  # samples
+    npc.ndpointer(dtype=np.double, ndim=1, flags="C_CONTIGUOUS"),  # buf
+    npc.ndpointer(dtype=np.double, ndim=1, flags="C_CONTIGUOUS"),  # baseline
+    npc.ndpointer(dtype=np.uint8, ndim=1, flags="C_CONTIGUOUS"),  # valid
+    ct.c_int,  # lambda
+    ct.c_bool,  # rm
+]
+
+
+def remove_baseline(
+        samples,
+        buf,
+        baseline,
+        valid,
+        Lambda,
+        rm,
+):
+    _mappraiser.remove_baseline(
+        samples,
+        buf,
+        baseline,
+        valid,
+        Lambda,
+        rm,
+    )
+
+    return
