@@ -44,7 +44,7 @@ int apply_alm2pix(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parame
     switch(nstokes)
     {
         case 1: // Case only intensity
-            printf("<<<< Test 39 -- \n"); fflush(stdout);
+            // printf("<<<< Test 39 -- \n"); fflush(stdout);
             spin=0;
             s2hat_alm2map_spin( Global_param_s2hat->pixelization_scheme, Global_param_s2hat->scan_sky_structure_pixel, spin, Global_param_s2hat->nlmax, Global_param_s2hat->nmmax,
                 Local_param_s2hat->nmvals, Local_param_s2hat->mvals, nmaps,
@@ -52,7 +52,7 @@ int apply_alm2pix(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parame
                 Local_param_s2hat->gangsize, Local_param_s2hat->gangrank, Local_param_s2hat->gangcomm);
             break;
         case 3: // Case with both intensity and polarization
-            printf("<<<< Test 41 -- lmax %d map_size %d lda %d \n", Global_param_s2hat->nlmax, Local_param_s2hat->map_size, lda); fflush(stdout);
+            // printf("<<<< Test 41 -- lmax %d map_size %d lda %d \n", Global_param_s2hat->nlmax, Local_param_s2hat->map_size, lda); fflush(stdout);
             // s2hat_alm2map(Local_param_s2hat->plms, Global_param_s2hat->pixelization_scheme, Global_param_s2hat->scan_sky_structure_pixel, Global_param_s2hat->nlmax, Global_param_s2hat->nmmax, 
             //     Local_param_s2hat->nmvals, Local_param_s2hat->mvals, nmaps, nstokes, 
             //     Local_param_s2hat->first_ring, Local_param_s2hat->last_ring, Local_param_s2hat->map_size, local_map_pix, lda, 
@@ -84,14 +84,14 @@ int apply_alm2pix(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parame
             break;
 
         case 2: // Case with only polarization
-            printf("<<<< Test 40 -- \n"); fflush(stdout);
+            // printf("<<<< Test 40 -- \n"); fflush(stdout);
             spin=nstokes;
             s2hat_alm2map_spin( Global_param_s2hat->pixelization_scheme, Global_param_s2hat->scan_sky_structure_pixel, spin, Global_param_s2hat->nlmax, Global_param_s2hat->nmmax,
                 Local_param_s2hat->nmvals, Local_param_s2hat->mvals, nmaps,
                 Local_param_s2hat->first_ring, Local_param_s2hat->last_ring, Local_param_s2hat->map_size, local_map_pix, lda, local_alm,
                 Local_param_s2hat->gangsize, Local_param_s2hat->gangrank, Local_param_s2hat->gangcomm);
             // Computing alm2map in the specific case where only Q,U are provided
-            printf("<<<< Test 42 -- \n"); fflush(stdout);
+            // printf("<<<< Test 42 -- \n"); fflush(stdout);
             break;
     }
     return 0;
@@ -126,7 +126,7 @@ int apply_pix2alm(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parame
     // double *local_w8ring = (double *)malloc(nrings*nstokes*sizeof(double));
     double local_w8ring[nrings*nstokes];
     int i_ring;
-    printf("~~~~ Intermediate step \n"); fflush(stdout);
+    // printf("~~~~ Intermediate step \n"); fflush(stdout);
     int spin=0;
 
     // if (Local_param_s2hat->gangrank != -1){
@@ -149,11 +149,11 @@ int apply_pix2alm(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parame
     //     printf(" \n"); fflush(stdout);
     //     printf("%d ²²²²²² number_of_nans %d \n", Local_param_s2hat->gangrank, number_of_nans); fflush(stdout);
     // }
-    printf("~~~~ Starting map2alm -- nstokes %d \n", nstokes); fflush(stdout);
+    // printf("~~~~ Starting map2alm -- nstokes %d \n", nstokes); fflush(stdout);
     switch(nstokes)
     {
         case 1: // Case only intensity
-            printf("~~~~ Starting map2alm case 1 \n"); fflush(stdout);
+            // printf("~~~~ Starting map2alm case 1 \n"); fflush(stdout);
             spin=0;            
             s2hat_map2alm_spin( Global_param_s2hat->pixelization_scheme, Global_param_s2hat->scan_sky_structure_pixel, spin, Global_param_s2hat->nlmax, Global_param_s2hat->nmmax,
                 Local_param_s2hat->nmvals, Local_param_s2hat->mvals, nmaps, Local_param_s2hat->first_ring, Local_param_s2hat->last_ring,
@@ -173,7 +173,7 @@ int apply_pix2alm(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parame
             //     Local_param_s2hat->gangsize, Local_param_s2hat->gangrank, Local_param_s2hat->gangcomm);
             // The NULL argument correspond to precomputed Legendre polynomials, only relevant if plms != 0
             
-            printf("~~~~ Starting map2alm case 2 \n"); fflush(stdout);
+            // printf("~~~~ Starting map2alm case 2 \n"); fflush(stdout);
             
             
             // double *local_map_pix_T = (double *)calloc(3*Local_param_s2hat->map_size,sizeof(double));
@@ -183,7 +183,7 @@ int apply_pix2alm(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parame
             
             // s2hat_dcomplex *local_alm_copy = (s2hat_dcomplex *) calloc( ((2*Global_param_s2hat->nlmax*Global_param_s2hat->nmmax)),sizeof(s2hat_dcomplex));
             spin=0;
-            printf("~~~~ Starting map2alm 1/2 -- spin %d \n", spin); fflush(stdout);
+            // printf("~~~~ Starting map2alm 1/2 -- spin %d \n", spin); fflush(stdout);
             // s2hat_map2alm_spin( Global_param_s2hat->pixelization_scheme, Global_param_s2hat->scan_sky_structure_pixel, spin, Global_param_s2hat->nlmax, Global_param_s2hat->nmmax,
             //     Local_param_s2hat->nmvals, Local_param_s2hat->mvals, nmaps, Local_param_s2hat->first_ring, Local_param_s2hat->last_ring,
 		    //     local_w8ring, Local_param_s2hat->map_size, local_map_pix_T, lda, local_alm,
@@ -200,7 +200,7 @@ int apply_pix2alm(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parame
 		    //     local_w8ring, Local_param_s2hat->map_size, local_map_pix, lda, local_alm_T,
             //     Local_param_s2hat->gangsize, Local_param_s2hat->gangrank, Local_param_s2hat->gangcomm);
             spin=2;
-            printf("~~~~ Starting map2alm 2/2 -- spin %d \n", spin); fflush(stdout);
+            // printf("~~~~ Starting map2alm 2/2 -- spin %d \n", spin); fflush(stdout);
             // s2hat_map2alm_spin( Global_param_s2hat->pixelization_scheme, Global_param_s2hat->scan_sky_structure_pixel, spin, Global_param_s2hat->nlmax, Global_param_s2hat->nmmax,
             //     Local_param_s2hat->nmvals, Local_param_s2hat->mvals, nmaps, Local_param_s2hat->first_ring, Local_param_s2hat->last_ring,
 		    //     local_w8ring, Local_param_s2hat->map_size, local_map_pix_QU, lda, local_alm+S2HAT_params->size_alm,
@@ -215,7 +215,7 @@ int apply_pix2alm(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parame
             //     Local_param_s2hat->gangsize, Local_param_s2hat->gangrank, Local_param_s2hat->gangcomm);
             // memcpy(local_alm, local_alm_T, S2HAT_params->size_alm*sizeof(s2hat_dcomplex));
             // memcpy(local_alm+S2HAT_params->size_alm, local_alm_P, 2*S2HAT_params->size_alm*sizeof(s2hat_dcomplex));
-            printf("~~~~ Finishing map2alm 2/2 -- spin %d \n", spin); fflush(stdout);
+            // printf("~~~~ Finishing map2alm 2/2 -- spin %d \n", spin); fflush(stdout);
             // free(local_map_pix_QU);
             // free(local_alm_T);
             // free(local_alm_P);s
@@ -237,7 +237,7 @@ int apply_pix2alm(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parame
             break;
 
         case 2: // Case with only polarization
-            printf("~~~~ Starting map2alm case 3 \n"); fflush(stdout);
+            // printf("~~~~ Starting map2alm case 3 \n"); fflush(stdout);
             spin=nstokes;            
             s2hat_map2alm_spin( Global_param_s2hat->pixelization_scheme, Global_param_s2hat->scan_sky_structure_pixel, spin, Global_param_s2hat->nlmax, Global_param_s2hat->nmmax,
                 Local_param_s2hat->nmvals, Local_param_s2hat->mvals, nmaps, Local_param_s2hat->first_ring, Local_param_s2hat->last_ring,
@@ -246,7 +246,7 @@ int apply_pix2alm(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parame
             // Computing alm2map in the specific case where only Q,U are provided
             break;
     }
-    printf("~~~~ Finish map2alm \n"); fflush(stdout);
+    // printf("~~~~ Finish map2alm \n"); fflush(stdout);
     // free(local_w8ring);
     return 0;
 }
@@ -261,15 +261,7 @@ int apply_inv_block_diag_covariance_matrix_to_alm(s2hat_dcomplex *input_local_al
 
     int ell_value, m_value, index_stokes, line_index, nmvals;
     int nstokes = S2HAT_params->nstokes;
-    // int nstokes = 3;
     int lmax = Global_param_s2hat->nlmax;// +1;
-
-    // int index, max_size_test=50;
-    // printf("%d --- Local_alm during apply inv cov matrix - %f %f -", Local_param_s2hat->gangrank, input_local_alm[0].re, input_local_alm[0].im);
-    // for (index=1;index<max_size_test;index++){
-    //     printf("- %f %f -", input_local_alm[index].re, input_local_alm[index].im);
-    // }
-    // printf(" \n");
 
     int number_of_nan = 0, number_of_nan_re = 0, number_of_nan_im = 0;
     int number_of_nan_inv_cov = 0;
@@ -281,7 +273,7 @@ int apply_inv_block_diag_covariance_matrix_to_alm(s2hat_dcomplex *input_local_al
         double res_real, res_imag;
 
         if(S2HAT_params->lda == Global_param_s2hat->nlmax){
-            printf("~~~~ S2HAT convention !! lda %d lmax %d nmvals %d nmax %d \n", S2HAT_params->lda, lmax, nmvals, Global_param_s2hat->nmmax); fflush(stdout);
+            // printf("~~~~ S2HAT convention !! lda %d lmax %d nmvals %d nmax %d \n", S2HAT_params->lda, lmax, nmvals, Global_param_s2hat->nmmax); fflush(stdout);
             for(ell_value=0; ell_value < lmax+1; ell_value++){
                 for(m_value=0; m_value < nmvals; m_value++){
                 // for(m_value=0; m_value < min(2*(ell_value+1)+1, Global_param_s2hat->nmmax); m_value++){
@@ -289,40 +281,19 @@ int apply_inv_block_diag_covariance_matrix_to_alm(s2hat_dcomplex *input_local_al
                         res_real = 0;
                         res_imag = 0;
                         for (line_index=0; line_index<nstokes; line_index++){
-                            // if (ell_value <2){
-                            //     printf("res_real %f res_imag %f - ell %d m_value %d index_stokes %d line_index :", res_real, res_imag, ell_value, m_value, index_stokes, line_index);
-                            // }
                             res_real += inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index] * input_local_alm[(line_index*nmvals + m_value)*(lmax+1) + ell_value].re;
                             res_imag += inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index] * input_local_alm[(line_index*nmvals + m_value)*(lmax+1) + ell_value].im;
-                            if ((index_stokes*nstokes + line_index == 0) || (index_stokes*nstokes + line_index == 4) || (index_stokes*nstokes + line_index == 8)){
-                                if (inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index] != 1)
-                                    printf("WARNING != 1 --- %d !!!!!", ell_value);
-                            }
-                            else{
-                                if (inv_covariance_matrix[ell_value][index_stokes*nstokes + line_index] != 0)
-                                    printf("WARNING != 0 --- %d !!!!!", ell_value);
-
-                            }
                         }
-                        if (res_real != input_local_alm[(index_stokes*nmvals + m_value)*(lmax+1) + ell_value].re)
-                            printf("2ND WARNING RE != 0 --- %d !!!!!", ell_value);
-                        if (res_imag != input_local_alm[(index_stokes*nmvals + m_value)*(lmax+1) + ell_value].im)
-                            printf("2ND WARNING IM != 0 --- %d !!!!!", ell_value);
-
                         out_local_alm[(index_stokes*nmvals + m_value)*(lmax+1) + ell_value].re = res_real;
                         out_local_alm[(index_stokes*nmvals + m_value)*(lmax+1) + ell_value].im = res_imag;
-                        if (out_local_alm[(index_stokes*nmvals + m_value)*(lmax+1) + ell_value].re != input_local_alm[(index_stokes*nmvals + m_value)*(lmax+1) + ell_value].re)
-                            printf("3RD WARNING RE != 0 --- %d !!!!!", ell_value);
-                        if (out_local_alm[(index_stokes*nmvals + m_value)*(lmax+1) + ell_value].im != input_local_alm[(index_stokes*nmvals + m_value)*(lmax+1) + ell_value].im)
-                            printf("3RD WARNING IM != 0 --- %d !!!!!", ell_value);
-                        fflush(stdout);
+
                     }
                 }
             }
         }
         else{
             printf("~~~~ HEALPIX convention !! %d \n", S2HAT_params->lda); fflush(stdout);
-            for(ell_value=0; ell_value < lmax-1; ell_value++){
+            for(ell_value=0; ell_value < lmax+1; ell_value++){
                 for(m_value=0; m_value < nmvals; m_value++){
                     for (index_stokes=0; index_stokes<nstokes; index_stokes++){
                         res_real = 0;
@@ -347,86 +318,7 @@ int apply_inv_block_diag_covariance_matrix_to_alm(s2hat_dcomplex *input_local_al
                 }
             }
         }
-    int count=0, index=0;
-    for (index=0;index<3*S2HAT_params->size_alm;index++){
-        if (fabs(input_local_alm[index].re - out_local_alm[index].re) != 0){
-            count++;
-            // printf("- re %d -", index);
-        }
-        if (fabs(input_local_alm[index].im - out_local_alm[index].im) != 0){
-            count++;
-            // printf("- im %d -", index);
-        }
     }
-    printf("\n");
-    printf("0st Count alms : %d / %d \n", count, nstokes*S2HAT_params->size_alm); fflush(stdout);
-    count = 0;
-    int count_2 = 0;
-    for(ell_value=0; ell_value < lmax+1; ell_value++){
-        for(m_value=0; m_value < nmvals; m_value++){
-                for (index_stokes=0; index_stokes<nstokes; index_stokes++){
-                    count_2 ++;
-                    if (fabs(input_local_alm[(index_stokes*nmvals + m_value)*(lmax+1) + ell_value].re - out_local_alm[(index_stokes*nmvals + m_value)*(lmax+1) + ell_value].re) != 0){
-                        count++;
-                        // printf("- re %d -", index);
-                    }
-                    if (fabs(input_local_alm[(index_stokes*nmvals + m_value)*(lmax+1) + ell_value].im - out_local_alm[(index_stokes*nmvals + m_value)*(lmax+1) + ell_value].im) != 0){
-                        count++;
-                        // printf("- im %d -", index);
-                    }
-                }
-        }
-    }
-    printf("\n");
-    printf("0st-b Count alms : %d / %d ---- number tot %d \n", count, nstokes*S2HAT_params->size_alm, count_2); fflush(stdout);
-
-    // printf("----!!!! Calculation Number of nans *** size_alm %d ; Number of nans re %d ; Number of nans im %d ; Number of nans inv_cov %d ; Number of nans alms %d \n", S2HAT_params->size_alm, number_of_nan_im, number_of_nan_inv_cov, number_of_nan_alm); fflush(stdout);
-    // printf("%d --- Local_alm just after apply inv cov matrix - %f %f -", Local_param_s2hat->gangrank, input_local_alm[0].re, input_local_alm[0].im);
-    // for (index=1;index<max_size_test;index++){
-    //     printf("- %f %f -", input_local_alm[index].re, input_local_alm[index].im);
-    // }
-    // printf(" \n");
-    // number_of_nan = 0;
-    // for (index=0;index<S2HAT_params->nstokes*S2HAT_params->size_alm;index++){
-    //     if (!(input_local_alm[index].re == input_local_alm[index].re)){
-    //         // local_alm_s2hat[index].re = 0;
-    //         number_of_nan++;
-    //         }
-    //     if (!(input_local_alm[index].im == input_local_alm[index].im)){
-    //         // local_alm_s2hat[index].im = 0;
-    //         number_of_nan++;
-    //         }
-    // }
-    // printf(" \n"); fflush(stdout);
-    // printf("----!!!! ***input_local_alm post inv cov*** size_alm %d ; Number of nans %d \n", S2HAT_params->size_alm, number_of_nan); fflush(stdout);
-    // number_of_nan = 0;
-    // for (index=0;index<S2HAT_params->nstokes*S2HAT_params->size_alm;index++){
-    //     if (!(out_local_alm[index].re == out_local_alm[index].re)){
-    //         // local_alm_s2hat[index].re = 0;
-    //         number_of_nan++;
-    //         }
-    //     if (!(out_local_alm[index].im == out_local_alm[index].im)){
-    //         // local_alm_s2hat[index].im = 0;
-    //         number_of_nan++;
-    //         }
-    // }
-    // printf(" \n"); fflush(stdout);
-    // printf("----!!!! ***out_local_alm post inv cov*** size_alm %d ; Number of nans %d \n", S2HAT_params->size_alm, number_of_nan); fflush(stdout);
-    // int ell_value, index_2;
-    // number_of_nan = 0;
-    // for (ell_value=0;ell_value<lmax;ell_value++){
-        
-    //     // printf("\n #### ell= %d \n", ell_value);
-    //     for (index=0; index < nstokes; index++){
-    //         for (index_2=0; index_2<nstokes; index_2++){
-    //             if (!(inv_covariance_matrix[ell_value][index*nstokes+index_2] == inv_covariance_matrix[ell_value][index*nstokes+index_2])){
-    //                 // printf(" --- NAN HERE : ell %d index %d index_2 %d value  EE %f BB %.10f -- ", ell_value, index, index_2, covariance_matrix[ell_value][0], covariance_matrix[ell_value][3]);
-    //                 number_of_nan++; 
-    //             }
-    //         }
-    //     }
-    }
-    printf(" --- number_of_nan of inv cov post inv cov : %d \n", number_of_nan);
     return 0;
 }
 

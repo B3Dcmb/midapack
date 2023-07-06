@@ -97,6 +97,8 @@ add_subdirectory(mappraiser)
 option(BUILD_Sampling "Build the Power-Spectrum-Sampling as well" ON)
 
 if (BUILD_Sampling)
-    install(DIRECTORY ${PROJECT_SOURCE_DIR}/Power-Spectrum-Sampling/src/mappraiser_wrapper_WF
+    # install(DIRECTORY ${PROJECT_SOURCE_DIR}/Power-Spectrum-Sampling/src/mappraiser_wrapper_WF
+    # DESTINATION python)
+    install(DIRECTORY ${PROJECT_SOURCE_DIR}/Power-Spectrum-Sampling/src/
     DESTINATION python)
 endif ()

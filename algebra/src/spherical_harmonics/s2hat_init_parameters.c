@@ -104,8 +104,8 @@ int init_MPI_struct_s2hat_local_parameters(S2HAT_LOCAL_parameters *Local_param_s
     MPI_Comm s2hat_comm;
 
     if (number_ranks_s2hat < initsize){
-        if (initrank==0)
-            printf("--- Creating MPI subset because %d total MPI processes vs %d processes needed by S2HAT \n", initsize, number_ranks_s2hat);
+        // if (initrank==0)
+            // printf("--- Creating MPI subset because %d total MPI processes vs %d processes needed by S2HAT \n", initsize, number_ranks_s2hat);
 
         mpi_create_subset(number_ranks_s2hat, initcomm, &s2hat_comm);
         s2hat_rank = -1;
@@ -118,8 +118,8 @@ int init_MPI_struct_s2hat_local_parameters(S2HAT_LOCAL_parameters *Local_param_s
         }
     }
     else{
-        if (initrank==0)
-            printf("--- Using MPI default structure because %d total MPI processes sufficient for %d processes needed by S2HAT \n", initsize, number_ranks_s2hat);
+        // if (initrank==0)
+            // printf("--- Using MPI default structure because %d total MPI processes sufficient for %d processes needed by S2HAT \n", initsize, number_ranks_s2hat);
         s2hat_rank = initrank;
         s2hat_size = initsize;
         s2hat_comm = initcomm;
@@ -241,7 +241,7 @@ int init_s2hat_parameters_superstruct(Files_path_WIENER_FILTER *Files_WF_struct,
 
     // S2HAT_LOCAL_parameters *Local_param_s2hat = (S2HAT_LOCAL_parameters *) malloc( 1 * sizeof(S2HAT_LOCAL_parameters));
     // init_MPI_struct_s2hat_local_parameters(Local_param_s2hat, Global_param_s2hat->scan_sky_structure_pixel.nringsobs, world_comm);
-    init_MPI_struct_s2hat_local_parameters(&(S2HAT_params->Local_param_s2hat), Global_param_s2hat->scan_sky_structure_pixel.nringsobs, world_comm); 
+    init_MPI_struct_s2hat_local_parameters(&(S2HAT_params->Local_param_s2hat), Global_param_s2hat->scan_sky_structure_pixel.nringsobs-1, world_comm); 
     
     S2HAT_LOCAL_parameters *Local_param_s2hat = &(S2HAT_params->Local_param_s2hat);
     if (Local_param_s2hat->gangrank >= 0){
