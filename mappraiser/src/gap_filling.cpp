@@ -88,8 +88,8 @@ std::ostream &mappraiser::operator<<(std::ostream &out, const mappraiser::GapFil
 // ____________________________________________________________
 // GapFillInfo
 
-mappraiser::GapFillInfo::GapFillInfo(int blocks, int gaps, int id)
-    : n_gaps(gaps), n_blocks(blocks), current_block(0), current_size(0), id(id) {
+mappraiser::GapFillInfo::GapFillInfo(int blocks, int gaps, int rank)
+    : n_gaps(gaps), n_blocks(blocks), current_block(0), current_size(0), id(rank) {
     nb_iterations.resize(n_blocks);
     block_times.resize(n_blocks);
     pcg_times.resize(n_blocks);
