@@ -36,6 +36,7 @@
 #include "Random123/boxmuller.hpp"
 #include "Random123/threefry.h"
 #include "Random123/uniform.hpp"
+#include <vector>
 
 #include "mappraiser/rng.h"
 
@@ -112,8 +113,8 @@ void mappraiser::rng_dist_uniform_11(size_t n, uint64_t key1, uint64_t key2, uin
 void mappraiser::rng_dist_normal(size_t n, uint64_t key1, uint64_t key2, uint64_t counter1, uint64_t counter2,
                                  double *data) {
     // First compute 64bit random integers
-    auto *tmp = new mappraiser::uint64_2[n];
-    mappraiser::rng_dist_uint64_2(n, key1, key2, counter1, counter2, tmp);
+    auto tmp = std::vector<uint64_2>(n);
+    mappraiser::rng_dist_uint64_2(n, key1, key2, counter1, counter2, tmp.data());
 
     // Now convert pairs of uniform randoms with Box-Muller transformation
     r123::double2 pair;
@@ -121,7 +122,4 @@ void mappraiser::rng_dist_normal(size_t n, uint64_t key1, uint64_t key2, uint64_
         pair    = r123::boxmuller(tmp[i].x, tmp[i].y);
         data[i] = pair.x;
     }
-
-    // Free allocated memory
-    delete[] tmp;
 }

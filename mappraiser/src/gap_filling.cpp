@@ -140,6 +140,7 @@ void psd_from_tt(int fftlen, int lambda, int psdlen, const double *tt, double *p
     fftw_execute(p);
 
     // Compute the PSD values
+#pragma omp parallel for default(none) shared(psdlen, psd, cplx_psd) schedule(static)
     for (int i = 0; i < psdlen; ++i) { psd[i] = std::abs(std::complex<double>(cplx_psd[i][0], cplx_psd[i][1])); }
 
     // Zero out DC value
@@ -181,6 +182,7 @@ void remove_baseline(int samples, double *buf, double *baseline, const uint8_t *
         int    count = 0;
 
         // compute the moving average of valid samples over [i-w0, i+w0]
+#pragma omp simd
         for (int j = -w0; j < w0 + 1; ++j) {
             if (-1 < j + i && j + i < samples && valid[j + i]) {
                 avg += buf[j + i];
@@ -210,6 +212,7 @@ void remove_baseline(int samples, double *buf, double *baseline, const uint8_t *
 
     // remove the baseline in valid intervals
     if (rm) {
+#pragma omp parallel for default(none) shared(samples, baseline, buf, valid) schedule(static)
         for (int i = 0; i < samples; ++i) {
             if (valid[i]) { buf[i] -= baseline[i]; }
         }
@@ -306,17 +309,19 @@ void sim_noise_tod(int samples, int lambda, const double *tt, double *buf, u_int
     fdata[npsd - 1][1] = 0.0;
 
     // Repack the other values
+#pragma omp parallel for default(none) shared(fftlen, fdata, rngdata) schedule(static)
     for (int i = 1; i < (fftlen / 2); ++i) {
         fdata[i][0] = rngdata[i];
         fdata[i][1] = rngdata[fftlen - i];
     }
 
     // Compute PSD values (interpolated at the correct frequencies) from the autocorrelation function
-    auto *psd = static_cast<double *>(std::malloc(sizeof(double) * npsd));
-    psd_from_tt(fftlen, lambda, npsd, tt, psd);
+    std::vector<double> psd(npsd);
+    psd_from_tt(fftlen, lambda, npsd, tt, psd.data());
 
     // Multiply our random data by the PSD values
-    for (int i = 0; i < npsd; ++i) {
+#pragma omp parallel for default(none) shared(psd, norm, fdata) schedule(static)
+    for (size_t i = 0; i < psd.size(); ++i) {
         double scale = std::sqrt(psd[i] * norm);
         fdata[i][0] *= scale;
         fdata[i][1] *= scale;
@@ -326,6 +331,7 @@ void sim_noise_tod(int samples, int lambda, const double *tt, double *buf, u_int
     fftw_execute(p);
 
     // Backward FFT: 1/N factor not included by FFTW
+#pragma omp parallel for default(none) shared(fftlen, tdata) schedule(static)
     for (int i = 0; i < fftlen; ++i) { tdata[i] /= fftlen; }
 
     // Copy as many samples as we need into our noise vector
@@ -333,18 +339,19 @@ void sim_noise_tod(int samples, int lambda, const double *tt, double *buf, u_int
     std::copy((tdata + offset), (tdata + offset + samples), buf);
 
     // Subtract the DC level
-    double DC = 0;
-
+    double DC = 0.0;
+#pragma omp parallel for default(none) shared(samples, buf) schedule(static) reduction(+ : DC)
     for (int i = 0; i < samples; ++i) { DC += buf[i]; }
+
     DC /= static_cast<double>(samples);
 
+#pragma omp parallel for default(none) shared(samples, DC, buf) schedule(static)
     for (int i = 0; i < samples; ++i) { buf[i] -= DC; }
 
     // Free allocated memory
     fftw_free(fdata);
     fftw_free(tdata);
     fftw_destroy_plan(p);
-    std::free(psd);
 }
 
 void mappraiser::sim_constrained_noise_block(mappraiser::GapFillInfo &gfi, Tpltz *N_block, Tpltz *Nm1_block,
@@ -375,6 +382,7 @@ void mappraiser::sim_constrained_noise_block(mappraiser::GapFillInfo &gfi, Tpltz
                   sample_rate);
 
     // rhs = noise - xi
+#pragma omp parallel for default(none) shared(samples, rhs, xi) schedule(static)
     for (int i = 0; i < samples; ++i) { rhs[i] -= xi[i]; }
 
     // invert the system N x = (noise - xi)
@@ -401,13 +409,14 @@ void mappraiser::sim_constrained_noise_block(mappraiser::GapFillInfo &gfi, Tpltz
     std::copy(rhs.begin(), rhs.end(), constrained.begin());
     stbmmProd(N_block, constrained.data());
 
+#pragma omp parallel for default(none) shared(samples, valid, baseline, xi, constrained) schedule(static)
     for (int i = 0; i < samples; ++i) {
         if (valid[i]) {
             // add the baseline back
             constrained[i] += xi[i] + baseline[i];
         } else {
-            // constrained[i] += xi[i];
-            constrained[i] += xi[i] + baseline[i];
+            constrained[i] += xi[i];
+            // constrained[i] += xi[i] + baseline[i];
         }
     }
 
