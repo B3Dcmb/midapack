@@ -12,6 +12,7 @@
 #endif
 
 #include <stdbool.h>
+#include <stdlib.h>
 
 /**
  * @brief Build the pixel-to-time-domain mapping, i.e.

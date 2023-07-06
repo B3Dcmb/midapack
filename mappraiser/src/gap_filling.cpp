@@ -270,8 +270,8 @@ void remove_baseline(int samples, double *buf, double *baseline, const uint8_t *
 //     std::cout << std::endl;
 // }
 
-void sim_noise_tod(int samples, int lambda, const double *tt, double *buf, u_int64_t realization, u_int64_t detindx,
-                   u_int64_t obsindx, u_int64_t telescope, double sample_rate) {
+void sim_noise_tod(int samples, int lambda, const double *tt, double *buf, uint64_t realization, uint64_t detindx,
+                   uint64_t obsindx, uint64_t telescope, double sample_rate) {
     // Logical size of the fft
     int fftlen = 2;
     while (fftlen <= samples) fftlen *= 2;
@@ -294,10 +294,10 @@ void sim_noise_tod(int samples, int lambda, const double *tt, double *buf, u_int
     p = fftw_plan_dft_c2r_1d(fftlen, fdata, tdata, FFTW_ESTIMATE);
 
     // Generate Re/Im gaussian randoms in a complex array
-    u_int64_t key1     = realization * 4294967296 + telescope * 65536;
-    u_int64_t key2     = obsindx * 4294967296 + detindx;
-    u_int64_t counter1 = static_cast<u_int64_t>(lambda) * 4294967296;
-    u_int64_t counter2 = 0; // incremented in loop during generation
+    uint64_t key1     = realization * 4294967296 + telescope * 65536;
+    uint64_t key2     = obsindx * 4294967296 + detindx;
+    uint64_t counter1 = static_cast<uint64_t>(lambda) * 4294967296;
+    uint64_t counter2 = 0; // incremented in loop during generation
 
     std::vector<double> rngdata(fftlen);
     mappraiser::rng_dist_normal(fftlen, key1, key2, counter1, counter2, rngdata.data());
@@ -355,8 +355,8 @@ void sim_noise_tod(int samples, int lambda, const double *tt, double *buf, u_int
 }
 
 void mappraiser::sim_constrained_noise_block(mappraiser::GapFillInfo &gfi, Tpltz *N_block, Tpltz *Nm1_block,
-                                             double *noise, Gap *gaps, u_int64_t realization, u_int64_t detindx,
-                                             u_int64_t obsindx, u_int64_t telescope, double sample_rate) {
+                                             double *noise, Gap *gaps, uint64_t realization, uint64_t detindx,
+                                             uint64_t obsindx, uint64_t telescope, double sample_rate) {
     // get the number of samples, the global first index and the bandwidth
     const int  samples = N_block->tpltzblocks[0].n;
     const auto id0     = static_cast<size_t>(N_block->tpltzblocks[0].idv);
@@ -441,8 +441,8 @@ void mappraiser::sim_constrained_noise_block(mappraiser::GapFillInfo &gfi, Tpltz
 }
 
 void mappraiser::sim_constrained_noise(mappraiser::GapFillInfo &gfi, Tpltz *N, Tpltz *Nm1, double *noise, Gap *gaps,
-                                       u_int64_t realization, const u_int64_t *detindxs, const u_int64_t *obsindxs,
-                                       const u_int64_t *telescopes, double sample_rate) {
+                                       uint64_t realization, const uint64_t *detindxs, const uint64_t *obsindxs,
+                                       const uint64_t *telescopes, double sample_rate) {
     if (gfi.n_gaps == 0) {
         // nothing to do
         return;
@@ -477,8 +477,8 @@ void mappraiser::sim_constrained_noise(mappraiser::GapFillInfo &gfi, Tpltz *N, T
     }
 }
 
-void perform_gap_filling(MPI_Comm comm, Tpltz *N, Tpltz *Nm1, double *noise, Gap *gaps, u_int64_t realization,
-                         const u_int64_t *detindxs, const u_int64_t *obsindxs, const u_int64_t *telescopes,
+void perform_gap_filling(MPI_Comm comm, Tpltz *N, Tpltz *Nm1, double *noise, Gap *gaps, uint64_t realization,
+                         const uint64_t *detindxs, const uint64_t *obsindxs, const uint64_t *telescopes,
                          double sample_rate, bool verbose) {
     int rank, size;
     MPI_Comm_rank(comm, &rank);
@@ -521,9 +521,8 @@ void perform_gap_filling(MPI_Comm comm, Tpltz *N, Tpltz *Nm1, double *noise, Gap
 }
 
 void gap_filling(MPI_Comm comm, const int *data_size_proc, int nb_blocks_loc, int *local_blocks_sizes, int nnz,
-                 double *tt, double *inv_tt, int lambda, double *noise, int *indices, u_int64_t realization,
-                 const u_int64_t *detindxs, const u_int64_t *obsindxs, const u_int64_t *telescopes,
-                 double sample_rate) {
+                 double *tt, double *inv_tt, int lambda, double *noise, int *indices, uint64_t realization,
+                 const uint64_t *detindxs, const uint64_t *obsindxs, const uint64_t *telescopes, double sample_rate) {
     //____________________________________________________________
     // MPI information
 

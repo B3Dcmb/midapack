@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstring>
 #include <iostream>
 #include <linux/limits.h>
 #include <mappraiser.h>
@@ -67,21 +68,21 @@ int main(int argc, char *argv[]) {
 
     // Run parameters
 
-    const int       solver            = 0;
-    const int       precond           = 0;
-    const int       Z_2lvl            = 0;
-    const int       pointing_commflag = 6;
-    const double    tol               = 1e-6;
-    const int       maxiter           = 3000;
-    const int       enlFac            = 1;
-    const int       ortho_alg         = 1;
-    const int       bs_red            = 0;
-    const int       nside             = 512;
-    const int       Nnz               = 3;
-    const int       lambda            = 8192;
-    const int       gap_stgy          = 1;
-    const u_int64_t realization       = 0;
-    const double    sample_rate       = 200;
+    const int      solver            = 0;
+    const int      precond           = 0;
+    const int      Z_2lvl            = 0;
+    const int      pointing_commflag = 6;
+    const double   tol               = 1e-6;
+    const int      maxiter           = 3000;
+    const int      enlFac            = 1;
+    const int      ortho_alg         = 1;
+    const int      bs_red            = 0;
+    const int      nside             = 512;
+    const int      Nnz               = 3;
+    const int      lambda            = 8192;
+    const int      gap_stgy          = 1;
+    const uint64_t realization       = 0;
+    const double   sample_rate       = 200;
 
     // bool to fill noise vector with zeros
     // (--> noiseless run but solver will still iterate)
@@ -171,7 +172,7 @@ int main(int argc, char *argv[]) {
 
     // detindxs
 
-    std::vector<u_int64_t> detindxs(nb_blocks_loc);
+    std::vector<uint64_t> detindxs(nb_blocks_loc);
     fname = data_path + "/detindxs_" + std::to_string(rank) + ".bin";
     fillArrayFromFile(fname.c_str(), detindxs.data(), detindxs.size(), sizeof(detindxs[0]));
 
@@ -180,7 +181,7 @@ int main(int argc, char *argv[]) {
 
     // obsindxs
 
-    std::vector<u_int64_t> obsindxs(nb_blocks_loc);
+    std::vector<uint64_t> obsindxs(nb_blocks_loc);
     fname = data_path + "/obsindxs_" + std::to_string(rank) + ".bin";
     fillArrayFromFile(fname.c_str(), obsindxs.data(), obsindxs.size(), sizeof(obsindxs[0]));
 
@@ -189,7 +190,7 @@ int main(int argc, char *argv[]) {
 
     // telescopes
 
-    std::vector<u_int64_t> telescopes(nb_blocks_loc);
+    std::vector<uint64_t> telescopes(nb_blocks_loc);
     fname = data_path + "/telescopes_" + std::to_string(rank) + ".bin";
     fillArrayFromFile(fname.c_str(), telescopes.data(), telescopes.size(), sizeof(telescopes[0]));
 

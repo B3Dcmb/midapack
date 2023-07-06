@@ -68,9 +68,7 @@ defined structures.
 **
 */
 
-
 #include "toeplitz.h"
-
 
 // r1.1 - Frederic Dauvergne (APC)
 // This is some routines to set the flag strategy parameters
