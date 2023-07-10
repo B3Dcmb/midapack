@@ -6,6 +6,7 @@
  */
 
 #include "mappraiser/gap_filling.h"
+#include "mappraiser/RunningSum.h"
 #include "mappraiser/create_toeplitz.h"
 #include "mappraiser/mapping.h"
 #include "mappraiser/noise_weighting.h"
@@ -172,20 +173,31 @@ int mappraiser::find_valid_samples(Gap *gaps, size_t id0, std::vector<uint8_t> &
     return n_good;
 }
 
-void remove_baseline(int samples, double *buf, double *baseline, const uint8_t *valid, int bandwidth, bool rm) {
-    // size of window for computing the moving average
-    int w0 = bandwidth;
+void flagged_running_average(int samples, const double *buf, double *baseline, const uint8_t *valid, int bandwidth) {
+    RunningSum<double, uint8_t> sum(bandwidth);
+    for (int i = 0; i < samples; ++i) {
+        sum.process_index(samples, i, buf, valid);
+        baseline[i] = sum.baseline_value();
+    }
+}
 
-#pragma omp parallel for default(none) shared(w0, samples, bandwidth, buf, baseline, valid) schedule(static)
+__attribute__((unused)) void running_average(int samples, const double *buf, double *baseline, const uint8_t *valid,
+                                             int bandwidth) {
+    // half size of window
+    int w0 = bandwidth / 2;
+
+#pragma omp parallel for default(shared) schedule(static)
     for (int i = 0; i < samples; ++i) {
         double avg   = 0;
         int    count = 0;
+        int    start = i - w0;
+        int    end   = i + w0 - 1;
 
-        // compute the moving average of valid samples over [i-w0, i+w0]
+        // compute the moving average of (valid) samples over [i-w0, i+w0]
 #pragma omp simd
-        for (int j = -w0; j < w0 + 1; ++j) {
-            if (-1 < j + i && j + i < samples && valid[j + i]) {
-                avg += buf[j + i];
+        for (int j = start; j < end + 1; ++j) {
+            if (0 <= j && j < samples && valid[j]) {
+                avg += buf[j];
                 ++count;
             }
         }
@@ -199,7 +211,7 @@ void remove_baseline(int samples, double *buf, double *baseline, const uint8_t *
                     ++count;
                 }
             }
-            for (int j = w0 + 1; j < w1; ++j) {
+            for (int j = w0; j < w1; ++j) {
                 if (-1 < j + i && j + i < samples && valid[j + i]) {
                     avg += buf[j + i];
                     ++count;
@@ -209,6 +221,11 @@ void remove_baseline(int samples, double *buf, double *baseline, const uint8_t *
 
         baseline[i] = avg / static_cast<double>(count);
     }
+}
+
+void remove_baseline(int samples, double *buf, double *baseline, const uint8_t *valid, int bandwidth, bool rm) {
+    // compute the baseline
+    flagged_running_average(samples, buf, baseline, valid, bandwidth);
 
     // remove the baseline in valid intervals
     if (rm) {
@@ -217,35 +234,6 @@ void remove_baseline(int samples, double *buf, double *baseline, const uint8_t *
             if (valid[i]) { buf[i] -= baseline[i]; }
         }
     }
-
-    /*
-    // fill baseline gaps with affine function
-    int lgap = 0;
-
-    for (int i = 0; i < samples; ++i) {
-        if (!valid[i]) {
-            ++lgap;
-        } else {
-            if (lgap > 0) {
-                // we just went through a gap
-                if (i == samples - 1) {
-                    // the last sample is in a gap
-                    double last_valid = buf[samples - 1 - lgap - 1];
-                    for (int j = 0; j < lgap; ++j) { baseline[(samples - 1 - lgap) + j] = last_valid; }
-                } else {
-                    // standard case
-                    double last_valid = baseline[i - lgap - 1];
-                    for (int j = 0; j < lgap; ++j) {
-                        baseline[(i - lgap) + j] =
-                                last_valid + (baseline[i] - last_valid) * (j + 1) / static_cast<double>(lgap + 1);
-                    }
-                }
-            }
-            // we are considering a valid sample: reset lgap
-            lgap = 0;
-        }
-    }
-    */
 }
 
 // template<typename T>
@@ -373,8 +361,13 @@ void mappraiser::sim_constrained_noise_block(mappraiser::GapFillInfo &gfi, Tpltz
     gfi.store_valid_frac(std::ceil(100 * n_good / samples));
 
     // remove baseline (moving average)
-    std::vector<double> baseline(samples);
+    mappraiser::system_stopwatch baseline_watch;
+    std::vector<double>          baseline(samples);
     remove_baseline(samples, rhs.data(), baseline.data(), valid.data(), lambda, true);
+    if (gfi.id == 0) {
+        std::cout << "Baseline time (samples: " << samples << ", lambda: " << lambda << ") -> "
+                  << baseline_watch.elapsed_time<double, std::chrono::milliseconds>() * 0.001 << " s" << std::endl;
+    }
 
     // generate random noise realization "xi" with correlations
     std::vector<double> xi(samples);

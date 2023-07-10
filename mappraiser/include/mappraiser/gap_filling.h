@@ -85,9 +85,12 @@ namespace mappraiser {
 extern "C" {
 #endif
 
-#include <stdbool.h>
-
 void psd_from_tt(int fftlen, int lambda, int psdlen, const double *tt, double *psd);
+
+__attribute__((unused)) void running_average(int samples, const double *buf, double *baseline, const uint8_t *valid,
+                                             int bandwidth);
+
+void flagged_running_average(int samples, const double *buf, double *baseline, const uint8_t *valid, int bandwidth);
 
 void remove_baseline(int samples, double *buf, double *baseline, const uint8_t *valid, int bandwidth, bool rm);
 
