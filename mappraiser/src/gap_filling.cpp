@@ -361,13 +361,13 @@ void mappraiser::sim_constrained_noise_block(mappraiser::GapFillInfo &gfi, Tpltz
     gfi.store_valid_frac(std::ceil(100 * n_good / samples));
 
     // remove baseline (moving average)
-    mappraiser::system_stopwatch baseline_watch;
-    std::vector<double>          baseline(samples);
+    // mappraiser::system_stopwatch baseline_watch;
+    std::vector<double> baseline(samples);
     remove_baseline(samples, rhs.data(), baseline.data(), valid.data(), lambda, true);
-    if (gfi.id == 0) {
-        std::cout << "Baseline time (samples: " << samples << ", lambda: " << lambda << ") -> "
-                  << baseline_watch.elapsed_time<double, std::chrono::milliseconds>() * 0.001 << " s" << std::endl;
-    }
+    // if (gfi.id == 0) {
+    //     std::cout << "Baseline time (samples: " << samples << ", lambda: " << lambda << ") -> "
+    //               << baseline_watch.elapsed_time<double, std::chrono::milliseconds>() * 0.001 << " s" << std::endl;
+    // }
 
     // generate random noise realization "xi" with correlations
     std::vector<double> xi(samples);
