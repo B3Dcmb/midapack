@@ -24,7 +24,7 @@ int get_main_s2hat_global_parameters(int nside, double *mask, s2hat_pixeltype *p
     // int *mask_binary;
     int f_sky=0;
     long npix = nside*nside*12;
-
+    // printf("~~ Test 0 -- nside %d npix %d \n", nside, npix); fflush(stdout);
     int pixchoice = PIXCHOICE_HEALPIX;   /* Choice  of convention to use for the pixelization scheme, here HEALPIX is chosen, 
     see https://apc.u-paris.fr/APC_CS/Recherche/Adamis/MIDAS09/software/s2hat/s2hat/docs/Cmanual/CparsAndStruct.html for more details*/
 
@@ -42,16 +42,20 @@ int get_main_s2hat_global_parameters(int nside, double *mask, s2hat_pixeltype *p
     else {
         int index;
         for (index=0;index<npix;index++){
+            // if (index>16870)
+            //     printf("- %d %f -", index, mask[index]); fflush(stdout);
             if (mask[index] > 0)
                 mask_binary[index] = 1;
+
         }
         f_sky = npix;
     }
-
+    // printf("~~ Test 1 \n"); fflush(stdout);
     set_pixelization(pixchoice, *pixpar, pixelization_scheme);   /* Set C pixelization structure */
+    // printf("~~ Test 2 \n"); fflush(stdout);
     mask2scan(mask_binary, *pixelization_scheme, scan_sky_structure_pixel); /* Set scan pixelization : s2hat structure containing all the info about sky coverage needed by the transforms */
     /* Scan pixelization will be used to avoid doing unecessary calculations */
-        
+    // printf("~~ Test 3 \n"); fflush(stdout);
     // printf( "F_sky = %f%%\n", (double)f_sky/(double)npix*100.); fflush(stdout);
     free(mask_binary); // Problem ?
     return 0;
@@ -231,18 +235,19 @@ int init_s2hat_parameters_superstruct(Files_path_WIENER_FILTER *Files_WF_struct,
     // S2HAT_GLOBAL_parameters Global_param_s2hat;
     // S2HAT_GLOBAL_parameters *Global_param_s2hat = (S2HAT_GLOBAL_parameters *) malloc( 1 * sizeof(S2HAT_GLOBAL_parameters));
     // init_s2hat_global_parameters(*Files_WF_struct, mask_binary, Files_WF_struct->lmax_Wiener_Filter, Global_param_s2hat);
-
+    // printf("## Test 0 \n"); fflush(stdout);
     init_s2hat_global_parameters(Files_WF_struct, mask_binary, Files_WF_struct->lmax_Wiener_Filter, &(S2HAT_params->Global_param_s2hat));
     // Initialization of Global_param_s2hat structure, for sky pixelization scheme and lmax_WF choice
     S2HAT_GLOBAL_parameters *Global_param_s2hat = &(S2HAT_params->Global_param_s2hat);
 
     int rank;
     MPI_Comm_rank( world_comm, &rank);
-
+    // printf("## Test 1 \n"); fflush(stdout);
     // S2HAT_LOCAL_parameters *Local_param_s2hat = (S2HAT_LOCAL_parameters *) malloc( 1 * sizeof(S2HAT_LOCAL_parameters));
     // init_MPI_struct_s2hat_local_parameters(Local_param_s2hat, Global_param_s2hat->scan_sky_structure_pixel.nringsobs, world_comm);
-    init_MPI_struct_s2hat_local_parameters(&(S2HAT_params->Local_param_s2hat), Global_param_s2hat->scan_sky_structure_pixel.nringsobs-1, world_comm); 
-    
+    int number_ring_obs = max(Global_param_s2hat->scan_sky_structure_pixel.nringsobs-1, 1);
+    init_MPI_struct_s2hat_local_parameters(&(S2HAT_params->Local_param_s2hat), number_ring_obs, world_comm); 
+    // printf("## Test 2 \n"); fflush(stdout);
     S2HAT_LOCAL_parameters *Local_param_s2hat = &(S2HAT_params->Local_param_s2hat);
     if (Local_param_s2hat->gangrank >= 0){
         init_s2hat_local_parameters_struct(Global_param_s2hat, nstokes, Local_param_s2hat);

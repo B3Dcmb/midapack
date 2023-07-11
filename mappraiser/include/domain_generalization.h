@@ -55,3 +55,6 @@ int get_mask_from_indices(Mat *A, int *mask_binary, int nside, int root);
 
 int free_harmonic_superstruct(Harmonic_superstruct *Harmonic_sup, int rank);
 // int free_PCG_var(PCG_var *PCG_var_obj);
+
+void apply_Wiener_filter_pixel(int nside, int lmax, int nstokes, double *CMB_map, double *CMB_map_output, double *c_ells, int number_correlations, double *mask_binary, MPI_Comm worldcomm);
+void apply_red_matrix_x_alm(int nside, int lmax, int nstokes, double *CMB_map, double *CMB_map_output, double **red_matrix, double *mask_binary, MPI_Comm worldcomm);
