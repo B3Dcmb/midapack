@@ -16,6 +16,7 @@
 #ifndef MAPMAT_BUTTERFLY_H
 #define MAPMAT_BUTTERFLY_H
 
+#ifdef W_MPI
 #include <mpi.h>
 
 int butterfly_init(int *indices, int count, int **R, int *nR, int **S, int *nS,
@@ -35,5 +36,6 @@ int butterfly_blocking_2instr_reduce(int **R, int *nR, int nRmax, int **S,
 double butterfly_reduce_b(int **R, int *nR, int nRmax, int **S, int *nS,
                           int nSmax, double *val, int b, int steps,
                           MPI_Comm comm);
+#endif
 
 #endif // MAPMAT_BUTTERFLY_H

@@ -21,7 +21,10 @@
 #include "cindex.h"
 #include "csort.h"
 #include "ring.h"
+
+#ifdef W_MPI
 #include <mpi.h>
+#endif
 
 #ifdef __cplusplus
 extern "C" {
