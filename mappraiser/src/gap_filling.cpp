@@ -645,3 +645,88 @@ void gap_filling(MPI_Comm comm, const int *data_size_proc, int nb_blocks_loc, in
     free(G.id0gap);
     free(G.lgap);
 }
+
+void sim_constrained_block(int samples, int lambda, int w0, double *tt, double *inv_tt, double *noise, int *pix,
+                           uint64_t realization, uint64_t detindx, uint64_t obsindx, uint64_t telescope,
+                           double sample_rate) {
+    // Initialize MPI
+    MPI_Init(nullptr, nullptr);
+
+    int rank, size;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+    if (rank == 0)
+        std::cout << "running test function `sim_constrained_block` with " << size << " processes" << std::endl;
+
+    const int     nb_blocks_loc = 1;
+    const int     nb_blocks_tot = 1;
+    const int64_t gif           = 0;
+    const int     nnz           = 1;
+
+    const int local_blocks_sizes[nb_blocks_loc] = {samples};
+
+    //____________________________________________________________
+    // Pointing matrix initialization
+
+    Mat A;
+    Gap G;
+
+    A.trash_pix = 0;
+    MatSetIndices(&A, samples, nnz, pix);
+    MatLocalShape(&A, 3);
+
+    // Build pixel-to-time-domain mapping
+
+    G.ngap = build_pixel_to_time_domain_mapping(&A);
+
+    build_gap_struct(gif, &G, &A);
+
+    free(A.id_last_pix);
+    free(A.ll);
+
+    //____________________________________________________________
+    // Build Toeplitz matrices
+
+    Block tpltzblocks_N[nb_blocks_loc];
+    Block tpltzblocks_Nm1[nb_blocks_loc];
+    Tpltz N;
+    Tpltz Nm1;
+
+    // flags for Toeplitz product strategy
+    Flag flag_stgy;
+    flag_stgy_init_auto(&flag_stgy);
+    flag_stgy.flag_skip_build_gappy_blocks = 1;
+
+    // Block definition
+    defineBlocks_avg(tpltzblocks_N, tt, nb_blocks_loc, (void *) local_blocks_sizes, lambda, gif);
+    defineBlocks_avg(tpltzblocks_Nm1, inv_tt, nb_blocks_loc, (void *) local_blocks_sizes, lambda, gif);
+
+    // Matrix definition
+    defineTpltz_avg(&N, samples, 1, 1, tpltzblocks_N, nb_blocks_loc, nb_blocks_tot, gif, samples, flag_stgy,
+                    MPI_COMM_WORLD);
+
+    defineTpltz_avg(&Nm1, samples, 1, 1, tpltzblocks_Nm1, nb_blocks_loc, nb_blocks_tot, gif, samples, flag_stgy,
+                    MPI_COMM_WORLD);
+
+    //____________________________________________________________
+    // Gap filling
+
+    compute_gaps_per_block(&G, Nm1.nb_blocks_loc, Nm1.tpltzblocks);
+    copy_gap_info(Nm1.nb_blocks_loc, Nm1.tpltzblocks, N.tpltzblocks);
+
+    mappraiser::GapFillInfo gfi(1, G.ngap, 0);
+    mappraiser::sim_constrained_noise_block(gfi, &N, &Nm1, noise, &G, w0, realization, detindx, obsindx, telescope,
+                                            sample_rate);
+
+    //____________________________________________________________
+
+    // MatFree(&A);
+    // A.indices = nullptr;
+    // A.values  = nullptr;
+
+    free(G.id0gap);
+    free(G.lgap);
+
+    MPI_Finalize();
+}
