@@ -173,8 +173,8 @@ int mappraiser::find_valid_samples(Gap *gaps, size_t id0, std::vector<uint8_t> &
     return n_good;
 }
 
-void flagged_running_average(int samples, const double *buf, double *baseline, const uint8_t *valid, int bandwidth) {
-    RunningSum<double, uint8_t> sum(bandwidth);
+void flagged_running_average(int samples, const double *buf, double *baseline, const uint8_t *valid, int w0) {
+    RunningSum<double, uint8_t> sum(w0);
     for (int i = 0; i < samples; ++i) {
         sum.process_index(samples, i, buf, valid);
         baseline[i] = sum.baseline_value();
@@ -223,9 +223,9 @@ __attribute__((unused)) void running_average(int samples, const double *buf, dou
     }
 }
 
-void remove_baseline(int samples, double *buf, double *baseline, const uint8_t *valid, int bandwidth, bool rm) {
+void remove_baseline(int samples, double *buf, double *baseline, const uint8_t *valid, int w0, bool rm) {
     // compute the baseline
-    flagged_running_average(samples, buf, baseline, valid, bandwidth);
+    flagged_running_average(samples, buf, baseline, valid, w0);
 
     // remove the baseline in valid intervals
     if (rm) {
@@ -236,27 +236,29 @@ void remove_baseline(int samples, double *buf, double *baseline, const uint8_t *
     }
 }
 
-// template<typename T>
-// void printVector(const std::vector<T> &vec) {
-//     for (const auto &element: vec) { std::cout << element << ", "; }
-//     std::cout << std::endl;
-// }
-//
-// template<typename T>
-// void printVector(const std::vector<T> &vec, size_t n_to_print, size_t offset = 0) {
-//     if (offset + n_to_print > vec.size()) {
-//         offset     = 0;
-//         n_to_print = vec.size();
-//     }
-//     for (size_t i = offset; i < offset + n_to_print; ++i) { std::cout << vec[i] << ", "; }
-//     std::cout << std::endl;
-// }
-//
-// template<typename T>
-// void printCArray(const T *array, size_t size) {
-//     for (size_t i = 0; i < size; ++i) { std::cout << array[i] << ", "; }
-//     std::cout << std::endl;
-// }
+/*
+ * template<typename T>
+ * void printVector(const std::vector<T> &vec) {
+ *     for (const auto &element: vec) { std::cout << +element << ", "; }
+ *     std::cout << std::endl;
+ * }
+ *
+ * template<typename T>
+ * void printVector(const std::vector<T> &vec, size_t n_to_print, size_t offset = 0) {
+ *     if (offset + n_to_print > vec.size()) {
+ *         offset     = 0;
+ *         n_to_print = vec.size();
+ *     }
+ *     for (size_t i = offset; i < offset + n_to_print; ++i) { std::cout << +vec[i] << ", "; }
+ *     std::cout << std::endl;
+ * }
+ *
+ * template<typename T>
+ * void printCArray(const T *array, size_t size) {
+ *     for (size_t i = 0; i < size; ++i) { std::cout << +array[i] << ", "; }
+ *     std::cout << std::endl;
+ * }
+ */
 
 void sim_noise_tod(int samples, int lambda, const double *tt, double *buf, uint64_t realization, uint64_t detindx,
                    uint64_t obsindx, uint64_t telescope, double sample_rate) {
@@ -343,7 +345,7 @@ void sim_noise_tod(int samples, int lambda, const double *tt, double *buf, uint6
 }
 
 void mappraiser::sim_constrained_noise_block(mappraiser::GapFillInfo &gfi, Tpltz *N_block, Tpltz *Nm1_block,
-                                             double *noise, Gap *gaps, uint64_t realization, uint64_t detindx,
+                                             double *noise, Gap *gaps, int w0, uint64_t realization, uint64_t detindx,
                                              uint64_t obsindx, uint64_t telescope, double sample_rate) {
     // get the number of samples, the global first index and the bandwidth
     const int  samples = N_block->tpltzblocks[0].n;
@@ -363,7 +365,8 @@ void mappraiser::sim_constrained_noise_block(mappraiser::GapFillInfo &gfi, Tpltz
     // remove baseline (moving average)
     // mappraiser::system_stopwatch baseline_watch;
     std::vector<double> baseline(samples);
-    remove_baseline(samples, rhs.data(), baseline.data(), valid.data(), lambda, true);
+    if (w0 < 0) w0 = lambda / 2;
+    remove_baseline(samples, rhs.data(), baseline.data(), valid.data(), w0, true);
     // if (gfi.id == 0) {
     //     std::cout << "Baseline time (samples: " << samples << ", lambda: " << lambda << ") -> "
     //               << baseline_watch.elapsed_time<double, std::chrono::milliseconds>() * 0.001 << " s" << std::endl;
@@ -457,7 +460,7 @@ void mappraiser::sim_constrained_noise(mappraiser::GapFillInfo &gfi, Tpltz *N, T
             gfi.set_current_block(i);
             gfi.set_current_size(N_block.local_V_size);
             mappraiser::system_stopwatch stopwatch;
-            mappraiser::sim_constrained_noise_block(gfi, &N_block, &Nm1_block, noise_block, gaps, realization,
+            mappraiser::sim_constrained_noise_block(gfi, &N_block, &Nm1_block, noise_block, gaps, -1, realization,
                                                     detindxs[i], obsindxs[i], telescopes[i], sample_rate);
             gfi.store_block_time(stopwatch.elapsed_time<double, std::chrono::milliseconds>());
 

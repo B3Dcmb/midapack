@@ -7,7 +7,7 @@
 template<typename ValueType = double, typename ValidType = bool>
 class RunningSum {
 public:
-    explicit RunningSum(int window);
+    explicit RunningSum(int w0);
 
     void process_index(int nval, int idx, const ValueType *values, const ValidType *valid);
 
@@ -26,8 +26,8 @@ private:
 };
 
 template<typename ValueType, typename ValidType>
-RunningSum<ValueType, ValidType>::RunningSum(int window)
-    : m_acc(0), m_count(0), m_w0(window / 2), m_first_elem(1), m_last_elem(0) {}
+RunningSum<ValueType, ValidType>::RunningSum(int w0)
+    : m_acc(0), m_count(0), m_w0(w0), m_first_elem(1), m_last_elem(0) {}
 
 template<typename ValueType, typename ValidType>
 void RunningSum<ValueType, ValidType>::process_index(int nval, int idx, const ValueType *values,

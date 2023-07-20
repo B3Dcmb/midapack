@@ -71,8 +71,8 @@ namespace mappraiser {
     int find_valid_samples(Gap *gaps, size_t id0, std::vector<uint8_t> &valid);
 
     void sim_constrained_noise_block(GapFillInfo &gfi, Tpltz *N_block, Tpltz *Nm1_block, double *noise, Gap *gaps,
-                                     uint64_t realization, uint64_t detindx, uint64_t obsindx, uint64_t telescope,
-                                     double sample_rate);
+                                     int w0, uint64_t realization, uint64_t detindx, uint64_t obsindx,
+                                     uint64_t telescope, double sample_rate);
 
     void sim_constrained_noise(GapFillInfo &gfi, Tpltz *N, Tpltz *Nm1, double *noise, Gap *gaps, uint64_t realization,
                                const uint64_t *detindxs, const uint64_t *obsindxs, const uint64_t *telescopes,
