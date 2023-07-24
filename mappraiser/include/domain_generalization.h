@@ -45,7 +45,7 @@ struct Harmonic_superstruct{
 int initialize_PCG_var_struct(PCG_var *PCG_variable, double *local_map_pix);
 
 /* Initialize harmonic superstructure */
-int init_harmonic_superstruct(Mat *A, Harmonic_superstruct *Harm_struct, double *mask_binary, int nside, int lmax, char *c_ell_path, int number_correlations);
+int init_harmonic_superstruct(Mat *A, Harmonic_superstruct *Harm_struct, double *mask_binary, int nside, int lmax, char *c_ell_path, int number_correlations, int iter_alm, float error_alm);
 
 /* Transforms local map pixels into local alm in harmonic domain and vice-versa*/
 int global_map_2_harmonic(double* local_pixel_map_MAPPRAISER, s2hat_dcomplex *local_alm_s2hat, Mat *A, Harmonic_superstruct *Harmonic_sup);
@@ -56,5 +56,6 @@ int get_mask_from_indices(Mat *A, int *mask_binary, int nside, int root);
 int free_harmonic_superstruct(Harmonic_superstruct *Harmonic_sup, int rank);
 // int free_PCG_var(PCG_var *PCG_var_obj);
 
-void apply_Wiener_filter_pixel(int nside, int lmax, int nstokes, double *CMB_map, double *CMB_map_output, double *c_ells, int number_correlations, double *mask_binary, MPI_Comm worldcomm);
-void apply_red_matrix_x_alm(int nside, int lmax, int nstokes, double *CMB_map, double *CMB_map_output, double **red_matrix, double *mask_binary, MPI_Comm worldcomm);
+void apply_Wiener_filter_pixel(int nside, int lmax, int nstokes, double *CMB_map, double *CMB_map_output, double *c_ells, int number_correlations, int iter_alm, float error_alm, double *mask_binary, MPI_Comm worldcomm);
+void apply_red_matrix_x_alm(int nside, int lmax, int nstokes, double *CMB_map, double *CMB_map_output, double *red_matrix, int iter_alm, float error_alm, double *mask_binary, MPI_Comm worldcomm);
+void test_cls(int nside, int lmax, int nstokes, double *CMB_map, double *CMB_map_output, double *c_ell_output, double *red_matrix, int iter_alm, float error_alm, double *mask_binary, MPI_Comm worldcomm);

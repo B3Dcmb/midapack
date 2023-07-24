@@ -33,7 +33,7 @@ int initialize_PCG_var_struct(PCG_var *PCG_variable, double *local_map_pix)
 }
 
 
-int init_harmonic_superstruct(Mat *A, Harmonic_superstruct *Harm_struct, double *mask_binary, int nside, int lmax, char *c_ell_path, int number_correlations)
+int init_harmonic_superstruct(Mat *A, Harmonic_superstruct *Harm_struct, double *mask_binary, int nside, int lmax, char *c_ell_path, int number_correlations, int iter_alm, float error_alm)
 {
     /* Initalize all structures necessary for harmonic structures : S2HAT_params for S2HAT operations, and the 
        Relies on the fact that nstokes == A->nnz
@@ -52,7 +52,7 @@ int init_harmonic_superstruct(Mat *A, Harmonic_superstruct *Harm_struct, double 
     // printf("%d ~~~ Initializing struct_WF \n", rank); fflush(stdout);
     init_files_struct_WF(Files_WF_struct, nside, lmax, c_ell_path, number_correlations);
     // printf("%d ~~~ Initializing superstruct S2HAT_params \n", rank); fflush(stdout);
-    init_s2hat_parameters_superstruct(Files_WF_struct, mask_binary, A->nnz, &(Harm_struct->S2HAT_params), worldcomm);
+    init_s2hat_parameters_superstruct(Files_WF_struct, mask_binary, A->nnz, iter_alm, error_alm, &(Harm_struct->S2HAT_params), worldcomm);
     // Initialize S2HAT structures
 
     S2HAT_parameters *S2HAT_params = &(Harm_struct->S2HAT_params);

@@ -15,7 +15,8 @@
 
 
 
-int get_main_s2hat_global_parameters(int nside, double *mask, s2hat_pixeltype *pixelization_scheme, s2hat_scandef *scan_sky_structure_pixel, s2hat_pixparameters *pixpar){
+int get_main_s2hat_global_parameters(int nside, double *mask, s2hat_pixeltype *pixelization_scheme, s2hat_scandef *scan_sky_structure_pixel, s2hat_pixparameters *pixpar)
+{
     /* Get s2hat structure which must be distributed by all processors
     All processors must have those same s2hat structure 
     Full documentation here : https://apc.u-paris.fr/APC_CS/Recherche/Adamis/MIDAS09/software/s2hat/s2hat/docs/S2HATdocs.html */ 
@@ -27,6 +28,8 @@ int get_main_s2hat_global_parameters(int nside, double *mask, s2hat_pixeltype *p
     // printf("~~ Test 0 -- nside %d npix %d \n", nside, npix); fflush(stdout);
     int pixchoice = PIXCHOICE_HEALPIX;   /* Choice  of convention to use for the pixelization scheme, here HEALPIX is chosen, 
     see https://apc.u-paris.fr/APC_CS/Recherche/Adamis/MIDAS09/software/s2hat/s2hat/docs/Cmanual/CparsAndStruct.html for more details*/
+    // int pixchoice = SPIN_CONV_SIGN;   /* Choice  of convention to use for the pixelization scheme, here HEALPIX is chosen, 
+    // see https://apc.u-paris.fr/APC_CS/Recherche/Adamis/MIDAS09/software/s2hat/s2hat/docs/Cmanual/CparsAndStruct.html for more details*/
 
     pixpar->par1 = nside; /* NSIDE if HEALPIX convention is used for the transforms, 
     see https://apc.u-paris.fr/APC_CS/Recherche/Adamis/MIDAS09/software/s2hat/s2hat/docs/Cmanual/CsetPixelization.html */
@@ -158,7 +161,8 @@ int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters *Global_param_s2h
     int first_pixel_south_hermisphere;
     int correction_mid_ring = 0; // Correction to take into account the middle ring doesn't contribute twitce
 
-    long int nplm;
+    // long int nplm;
+    long long nplm;
     int *mvals;
     
     if (Local_param_s2hat->gangrank != -1){
@@ -230,7 +234,7 @@ int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters *Global_param_s2h
 }
 
 
-int init_s2hat_parameters_superstruct(Files_path_WIENER_FILTER *Files_WF_struct, double *mask_binary, int nstokes, S2HAT_parameters *S2HAT_params, MPI_Comm world_comm)
+int init_s2hat_parameters_superstruct(Files_path_WIENER_FILTER *Files_WF_struct, double *mask_binary, int nstokes, int iter_alm, float error_alm, S2HAT_parameters *S2HAT_params, MPI_Comm world_comm)
 {   // Initalize both S2HAT_GLOBAL_parameters and S2HAT_LOCAL_parameters for superstructure of S2HAT
     // S2HAT_GLOBAL_parameters Global_param_s2hat;
     // S2HAT_GLOBAL_parameters *Global_param_s2hat = (S2HAT_GLOBAL_parameters *) malloc( 1 * sizeof(S2HAT_GLOBAL_parameters));
@@ -265,5 +269,17 @@ int init_s2hat_parameters_superstruct(Files_path_WIENER_FILTER *Files_WF_struct,
     S2HAT_params->size_alm = (Global_param_s2hat->nlmax+1)*Local_param_s2hat->nmvals;
     S2HAT_params->nstokes = nstokes;
     S2HAT_params->lda = Global_param_s2hat->nlmax; // Can also be nstokes for HEALPIX convention, but everything coded with S2HAT convention (especially alm2pix and pix2alm operations)
+
+    // Iteration parameters
+    int niter_max = 1000;
+    double epsilon = 1.0e-10;
+    if (iter_alm > -1)
+        niter_max = iter_alm;
+    if (epsilon > 0)
+        epsilon = error_alm;
+    
+    S2HAT_params->iter_alm = niter_max;
+    S2HAT_params->error_alm = epsilon;
+    
     return 0;
 }

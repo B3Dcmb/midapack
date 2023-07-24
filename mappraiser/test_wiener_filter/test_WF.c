@@ -84,7 +84,9 @@ int main_alm_pix_tools_v0(int argc, char** argv){
     
     // printf("^^^^^^^ %d ----- RANK for MPI_subgroup before init S2HAT_param \n", gangrank); fflush(stdout);
     // init_s2hat_parameters_superstruct(Files_path_WF_struct, mask_binary, nstokes, S2HAT_params, gangcomm);
-    init_s2hat_parameters_superstruct(&(S2HAT_params.Files_WF_struct), mask_binary, nstokes, &S2HAT_params, worldcomm);
+    int niter_max = 1000;
+    double epsilon = 1.0e-10;
+    init_s2hat_parameters_superstruct(&(S2HAT_params.Files_WF_struct), mask_binary, nstokes, niter_max, epsilon, &S2HAT_params, worldcomm);
 
     S2HAT_params.lda = nstokes;
     S2HAT_GLOBAL_parameters *Global_param_s2hat = &(S2HAT_params.Global_param_s2hat);
@@ -485,8 +487,11 @@ int main_alm_pix_tools_v1(int argc, char** argv){
      // = malloc(1*sizeof(S2HAT_parameters));
     // printf("^^^^^^^ %d ----- RANK for MPI_subgroup before init S2HAT_param \n", gangrank); fflush(stdout);
     
-    init_s2hat_parameters_superstruct(&(S2HAT_params.Files_WF_struct), mask_binary, nstokes, &S2HAT_params, gangcomm);
-    
+
+    int niter_max = 1000;
+    double epsilon = 1.0e-10;
+    init_s2hat_parameters_superstruct(&(S2HAT_params.Files_WF_struct), mask_binary, nstokes, niter_max, epsilon, &S2HAT_params, gangcomm);
+
 
     printf("--- Test2 init %d %d \n", (S2HAT_params.Files_WF_struct).lmax_Wiener_Filter, lmax);
     // printf("--- Test3 init %d \n", S2HAT_params.Global_param_s2hat->nlmax); fflush(stdout);
@@ -981,8 +986,10 @@ int main_alm_pix_tools_v2(int argc, char** argv){
     
      // = malloc(1*sizeof(S2HAT_parameters));
     // printf("^^^^^^^ %d ----- RANK for MPI_subgroup before init S2HAT_param \n", gangrank); fflush(stdout);
-    
-    init_s2hat_parameters_superstruct(&(S2HAT_params.Files_WF_struct), mask_binary, nstokes, &S2HAT_params, gangcomm);
+
+    int niter_max = 1000;
+    double epsilon = 1.0e-10;
+    init_s2hat_parameters_superstruct(&(S2HAT_params.Files_WF_struct), mask_binary, nstokes, niter_max, epsilon, &S2HAT_params, gangcomm);
     
 
     // printf("--- Test2 init %d %d \n", Files_path_WF_struct.lmax_Wiener_Filter, lmax);
@@ -1484,8 +1491,11 @@ int main(int argc, char** argv){
     
      // = malloc(1*sizeof(S2HAT_parameters));
     // printf("^^^^^^^ %d ----- RANK for MPI_subgroup before init S2HAT_param \n", gangrank); fflush(stdout);
-    
-    init_s2hat_parameters_superstruct(&(S2HAT_params.Files_WF_struct), mask_binary, nstokes, &S2HAT_params, gangcomm);
+
+    int niter_max = 1000;
+    double epsilon = 1.0e-10;
+    init_s2hat_parameters_superstruct(&(S2HAT_params.Files_WF_struct), mask_binary, nstokes, niter_max, epsilon, &S2HAT_params, gangcomm);
+
     
 
     // printf("--- Test2 init %d %d \n", Files_path_WF_struct.lmax_Wiener_Filter, lmax);

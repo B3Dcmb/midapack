@@ -83,6 +83,10 @@ typedef struct {
     int nstokes; // Number of Stokes parameters : either 1 for intensity only, 2 for polarization only, 3 for intensity and polarization
     int lda; // Leading dimension array : convention for S2HAT calculations
     
+    // Parameters for alm iteration
+    int iter_alm; // Number max of iterations for the PCG (1000 was given in the example)
+    float error_alm; // Precision for the alm PCG (10**(-10) in the example)
+
     int *local_projector_values_ring2nest;
     int *local_projector_values_nest2ring;
     // Projector for local values of map : allows to project the values from one (pixel) distribution to another
@@ -109,7 +113,7 @@ int init_MPI_struct_s2hat_local_parameters(S2HAT_LOCAL_parameters *Local_param_s
 int init_s2hat_local_parameters_struct(S2HAT_GLOBAL_parameters *Global_param_s2hat, int nstokes, S2HAT_LOCAL_parameters *Local_param_s2hat);
 /**/
 /* Initaization of superctrure S2HAT_parameters */
-int init_s2hat_parameters_superstruct(Files_path_WIENER_FILTER *Files_WF_struct, double *mask, int nstokes, S2HAT_parameters *S2HAT_params, MPI_Comm world_comm);
+int init_s2hat_parameters_superstruct(Files_path_WIENER_FILTER *Files_WF_struct, double *mask, int nstokes, int iter_alm, float error_alm, S2HAT_parameters *S2HAT_params, MPI_Comm world_comm);
 /**/
 
 /* Content of files_io.c */
@@ -137,6 +141,9 @@ int apply_alm2pix(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parame
 /* Transform local pixel map into local alm coefficients */
 int apply_pix2alm(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parameters *S2HAT_params);
 /**/
+/* Transform local pixel map into local alm coefficients with iterations */
+int apply_pix2alm_iter(double *local_map_pix, s2hat_dcomplex *local_alm, S2HAT_parameters *S2HAT_params);
+
 /* Apply block diagonal inverse of covariance matrix to local_alm */
 int apply_inv_block_diag_covariance_matrix_to_alm(s2hat_dcomplex *input_local_alm, s2hat_dcomplex *out_local_alm, double **inv_covariance_matrix, S2HAT_parameters *S2HAT_params);/**/
 /* Apply full inverse of covariance matrix to local_alm */

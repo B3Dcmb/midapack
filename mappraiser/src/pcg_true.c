@@ -106,7 +106,9 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, PCG_var *PCG_vari
 
         get_mask_from_indices(A, mask_binary, nside, 0);
 
-        init_harmonic_superstruct(A, Harmonic_sup, mask_binary, nside, lmax, c_ell_path, number_correlations);
+        int iter_alm = -1;
+        float error_alm = 0;
+        init_harmonic_superstruct(A, Harmonic_sup, mask_binary, nside, lmax, c_ell_path, iter_alm, error_alm, number_correlations);
         free(mask_binary);
         // Initialization of S2HAT_parameters structure
 
