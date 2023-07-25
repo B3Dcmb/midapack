@@ -85,9 +85,9 @@ namespace mappraiser {
 extern "C" {
 #endif
 
-void sim_constrained_block(int samples, int lambda, int w0, double *tt, double *inv_tt, double *noise, int *pix,
-                           uint64_t realization, uint64_t detindx, uint64_t obsindx, uint64_t telescope,
-                           double sample_rate);
+void sim_constrained_block(bool init, bool finalize, int samples, int lambda, int w0, double *tt, double *inv_tt,
+                           double *noise, int *pix, uint64_t realization, uint64_t detindx, uint64_t obsindx,
+                           uint64_t telescope, double sample_rate);
 
 void psd_from_tt(int fftlen, int lambda, int psdlen, const double *tt, double *psd);
 

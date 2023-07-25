@@ -353,6 +353,8 @@ def remove_baseline(
 
 _mappraiser.sim_constrained_block.restype = None
 _mappraiser.sim_constrained_block.argtypes = [
+    ct.c_bool,
+    ct.c_bool,
     ct.c_int,  # samples
     ct.c_int,  # lambda
     ct.c_int,  # w0
@@ -369,6 +371,8 @@ _mappraiser.sim_constrained_block.argtypes = [
 
 
 def sim_constrained_block(
+        init,
+        finalize,
         samples,
         Lambda,
         w0,
@@ -383,6 +387,8 @@ def sim_constrained_block(
         sample_rate,
 ):
     _mappraiser.sim_constrained_block(
+        init,
+        finalize,
         samples,
         Lambda,
         w0,

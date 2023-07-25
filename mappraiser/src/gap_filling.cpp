@@ -646,11 +646,11 @@ void gap_filling(MPI_Comm comm, const int *data_size_proc, int nb_blocks_loc, in
     free(G.lgap);
 }
 
-void sim_constrained_block(int samples, int lambda, int w0, double *tt, double *inv_tt, double *noise, int *pix,
-                           uint64_t realization, uint64_t detindx, uint64_t obsindx, uint64_t telescope,
-                           double sample_rate) {
+void sim_constrained_block(bool init, bool finalize, int samples, int lambda, int w0, double *tt, double *inv_tt,
+                           double *noise, int *pix, uint64_t realization, uint64_t detindx, uint64_t obsindx,
+                           uint64_t telescope, double sample_rate) {
     // Initialize MPI
-    MPI_Init(nullptr, nullptr);
+    if (init) MPI_Init(nullptr, nullptr);
 
     int rank, size;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -728,5 +728,5 @@ void sim_constrained_block(int samples, int lambda, int w0, double *tt, double *
     free(G.id0gap);
     free(G.lgap);
 
-    MPI_Finalize();
+    if (finalize) MPI_Finalize();
 }
