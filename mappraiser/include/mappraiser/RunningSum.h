@@ -59,8 +59,9 @@ void RunningSum<ValueType, ValidType>::process_index(int nval, int idx, const Va
     // check if we have enough samples
     while (m_count < nbr_samples_ref * m_threshold_low) {
         // less than acceptable threshold
-        std::cout << "idx " << idx << " ratio " << static_cast<double>(m_count) / static_cast<double>(nbr_samples_ref)
-                  << " < " << m_threshold_low << ", increasing window size" << std::endl;
+
+        // std::cout << "idx " << idx << " ratio " << static_cast<double>(m_count) / static_cast<double>
+        // (nbr_samples_ref) << " < " << m_threshold_low << ", increasing window size" << std::endl;
 
         // increase window by 10 percent the original size
         m_w += 0.1 * m_w0;
@@ -72,7 +73,7 @@ void RunningSum<ValueType, ValidType>::process_index(int nval, int idx, const Va
 
     while (m_w > m_w0) {
         if (m_count > nbr_samples_ref * 2 * m_threshold_low) {
-            std::cout << "idx " << idx << " above 2*thresh, decreasing window size" << std::endl;
+            // std::cout << "idx " << idx << " above 2*thresh, decreasing window size" << std::endl;
             // try to go back to smaller window
             m_w -= 0.1 * m_w0;
             internal_process_index(nval, idx, values, valid);
