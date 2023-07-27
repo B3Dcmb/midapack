@@ -656,9 +656,6 @@ void sim_constrained_block(bool init, bool finalize, int samples, int lambda, in
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    if (rank == 0)
-        std::cout << "running test function `sim_constrained_block` with " << size << " processes" << std::endl;
-
     const int     nb_blocks_loc = 1;
     const int     nb_blocks_tot = 1;
     const int64_t gif           = 0;
