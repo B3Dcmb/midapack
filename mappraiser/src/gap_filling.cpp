@@ -433,7 +433,11 @@ void mappraiser::sim_constrained_noise_block(mappraiser::GapFillInfo &gfi, Tpltz
                   << ratio << std::endl;
 
     // copy final result into noise vector
-    std::copy(constrained.begin(), constrained.end(), noise);
+    // std::copy(constrained.begin(), constrained.end(), noise);
+    // don't modify the valid samples
+    for (int i = 0; i < samples; ++i) {
+        if (!valid[i]) { noise[i] = constrained[i]; }
+    }
 }
 
 void mappraiser::sim_constrained_noise(mappraiser::GapFillInfo &gfi, Tpltz *N, Tpltz *Nm1, double *noise, Gap *gaps,
