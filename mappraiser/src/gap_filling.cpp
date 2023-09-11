@@ -231,7 +231,8 @@ void remove_baseline(int samples, double *buf, double *baseline, const uint8_t *
     if (rm) {
 #pragma omp parallel for default(none) shared(samples, baseline, buf, valid) schedule(static)
         for (int i = 0; i < samples; ++i) {
-            if (valid[i]) { buf[i] -= baseline[i]; }
+            // if (valid[i]) { buf[i] -= baseline[i]; }
+            buf[i] -= baseline[i];
         }
     }
 }
