@@ -106,9 +106,6 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
     //     proc++;
     // }
 
-    // recombine signal and noise
-    for (i = 0; i < m; ++i) { b[i] += noise[i]; }
-
     WeightStgy strategy;
     switch (gap_stgy) {
         case 0:
@@ -119,7 +116,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
         case 1:
             // gap filling with constrained noise realization
             if (rank == 0) printf("[rank %d] gap_stgy = %d (gap filling)\n", rank, gap_stgy);
-            perform_gap_filling(A->comm, N, Nm1, b, Gaps, realization, detindxs, obsindxs, telescopes, sample_rate,
+            perform_gap_filling(A->comm, N, Nm1, noise, Gaps, realization, detindxs, obsindxs, telescopes, sample_rate,
                                 true);
             strategy = BASIC;
             break;
@@ -137,7 +134,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
         case 4:
             // gap filling + nested PCG (ignoring gaps)
             if (rank == 0) printf("[rank %d] gap_stgy = %d (gap filling + nested PCG)\n", rank, gap_stgy);
-            perform_gap_filling(A->comm, N, Nm1, b, Gaps, realization, detindxs, obsindxs, telescopes, sample_rate,
+            perform_gap_filling(A->comm, N, Nm1, noise, Gaps, realization, detindxs, obsindxs, telescopes, sample_rate,
                                 true);
             strategy = ITER_IGNORE;
             break;
@@ -147,6 +144,9 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
             strategy = BASIC;
     }
     fflush(stdout);
+
+    // recombine signal and noise
+    for (i = 0; i < m; ++i) { b[i] += noise[i]; }
 
     MPI_Barrier(A->comm);
     if (rank == 0) {
