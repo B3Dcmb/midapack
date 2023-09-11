@@ -6,6 +6,8 @@
 
 find_package(MPI REQUIRED)
 
+find_package(OpenMP)
+
 find_package(CFITSIO REQUIRED)
 
 option(ECG "Build mappraiser with ECG solver" OFF)

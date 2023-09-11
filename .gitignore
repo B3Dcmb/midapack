@@ -41,7 +41,7 @@
 # VSCode stuff
 .vscode/*
 *.code-workspace
-# Directories to ignore
 
+# Directories to ignore
 mappraiser/src/test
 algebra/test

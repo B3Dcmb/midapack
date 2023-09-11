@@ -75,20 +75,16 @@ defined structures.
 #define TOEPLITZ_H
 
 #ifdef W_MPI
-
 #include <mpi.h>
-
 #endif
 
 #include <fftw3.h>
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+#include <stdint.h>
 
 //=========================================================================
 // Fixed parameters
@@ -193,16 +189,18 @@ typedef struct tpltz_gap_t {
 } Gap;
 
 typedef struct tpltz_mat_t {
-    int64_t  nrow; // n total
-    int      m_cw; // V column number in the linear row-wise order (vect row-wise order)
-    int      m_rw; // V column number in the uniform row-wise order (matrix row-wise order)
-    Block   *tpltzblocks;
-    int      nb_blocks_loc;
-    int      nb_blocks_tot;
-    int64_t  idp;
-    int      local_V_size;
-    Flag     flag_stgy;
+    int64_t nrow; // n total
+    int     m_cw; // V column number in the linear row-wise order (vect row-wise order)
+    int     m_rw; // V column number in the uniform row-wise order (matrix row-wise order)
+    Block  *tpltzblocks;
+    int     nb_blocks_loc;
+    int     nb_blocks_tot;
+    int64_t idp;
+    int     local_V_size;
+    Flag    flag_stgy;
+#ifdef W_MPI
     MPI_Comm comm;
+#endif
 } Tpltz;
 
 //=========================================================================
@@ -308,7 +306,7 @@ int define_blocksize(int n, int lambda, int bs_flag, int fixed_bs);
 
 int define_nfft(int n_thread, int flag_nfft, int fixed_nfft);
 
-int fftw_init_omp_threads(int fftw_n_thread);
+// int fftw_init_omp_threads(int fftw_n_thread);
 
 int rhs_init_fftw(const int *nfft, int fft_size, fftw_complex **V_fft, double **V_rfft, fftw_plan *plan_f,
                   fftw_plan *plan_b, int fftw_flag);

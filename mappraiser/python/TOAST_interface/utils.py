@@ -283,12 +283,28 @@ def restore_in_turns(
     return
 
 
+def apo_window(lambd: int, kind="chebwin") -> np.ndarray:
+    if kind == "gaussian":
+        q_apo = 3  # Apodization factor: cut happens at q_apo * sigma in the Gaussian window
+        window = scipy.signal.get_window(
+            ("general_gaussian", 1, 1 / q_apo * lambd), 2 * lambd
+        )
+    elif kind == "chebwin":
+        # https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.windows.chebwin.html#scipy.signal.windows.chebwin
+        at = 150
+        window = scipy.signal.get_window(("chebwin", at), 2 * lambd)
+    else:
+        raise RuntimeError(f"Apodisation window '{kind}' is not supported.")
+
+    return np.fft.ifftshift(window)[:lambd]
+
+
 def compute_autocorrelations(
         nobs,
         ndet,
         mappraiser_noise,
         local_block_sizes,
-        Lambda,
+        lambd,
         fsamp,
         buffer_inv_tt,
         buffer_tt,
@@ -305,14 +321,14 @@ def compute_autocorrelations(
             blocksize = local_block_sizes[idet * nobs + iobs]
             nsetod = mappraiser_noise[offset: offset + blocksize]
             slc = slice(
-                (idet * nobs + iobs) * Lambda,
-                (idet * nobs + iobs) * Lambda + Lambda,
+                (idet * nobs + iobs) * lambd,
+                (idet * nobs + iobs) * lambd + lambd,
                 1,
             )
-            buffer_inv_tt[slc], buffer_tt[slc] = noise_autocorrelation(
+            buffer_inv_tt[slc], _ = noise_autocorrelation(
                 nsetod,
                 blocksize,
-                Lambda,
+                lambd,
                 fsamp,
                 idet,
                 invtt_dtype,
@@ -321,6 +337,7 @@ def compute_autocorrelations(
                 save_psd=(save_psd and (idet == 0) and (iobs == 0)),
                 save_dir=save_dir,
             )
+            buffer_tt[slc] = compute_autocorr(1 / compute_psd_eff(buffer_inv_tt[slc], blocksize), lambd)
             offset += blocksize
     return
 
@@ -344,7 +361,7 @@ def inverselogpsd_model(f, a, alpha, fknee, fmin):
 def noise_autocorrelation(
         nsetod,
         nn,
-        Lambda,
+        lambd,
         fsamp,
         idet,
         invtt_dtype,
@@ -407,27 +424,14 @@ def noise_autocorrelation(
 
     # Define apodization window
     # Only allow max lambda = nn//2
-    if Lambda > nn // 2:
+    if lambd > nn // 2:
         raise RuntimeError("Bandwidth cannot be larger than timestream.")
 
-    if apod_window_type == "gaussian":
-        q_apo = 3  # Apodization factor: cut happens at q_apo * sigma in the Gaussian window
-        window = scipy.signal.get_window(
-            ("general_gaussian", 1, 1 / q_apo * Lambda), 2 * Lambda
-        )
-    elif apod_window_type == "chebwin":
-        # https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.windows.chebwin.html#scipy.signal.windows.chebwin
-        at = 150
-        window = scipy.signal.get_window(("chebwin", at), 2 * Lambda)
-    else:
-        raise RuntimeError(f"Apodisation window '{apod_window_type}' is not supported.")
-
-    window = np.fft.ifftshift(window)
-    window = window[:Lambda]
+    window = apo_window(lambd, kind=apod_window_type)
 
     # Apply window
-    inv_tt_w = np.multiply(window, inv_tt[:Lambda], dtype=invtt_dtype)
-    tt_w = np.multiply(window, tt[:Lambda], dtype=invtt_dtype)
+    inv_tt_w = np.multiply(window, inv_tt[:lambd], dtype=invtt_dtype)
+    tt_w = np.multiply(window, tt[:lambd], dtype=invtt_dtype)
 
     # Keep the same norm
     #
@@ -459,17 +463,49 @@ def noise_autocorrelation(
         # save effective PSDs
         ipsd_eff = compute_psd_eff(inv_tt_w, nn)
         psd_eff = compute_psd_eff(tt_w, nn)
-        np.save(os.path.join(save_dir, "ipsd_eff" + str(Lambda) + ".npy"), ipsd_eff)
-        np.save(os.path.join(save_dir, "psd_eff" + str(Lambda) + ".npy"), psd_eff)
+        np.save(os.path.join(save_dir, "ipsd_eff" + str(lambd) + ".npy"), ipsd_eff)
+        np.save(os.path.join(save_dir, "psd_eff" + str(lambd) + ".npy"), psd_eff)
 
     return inv_tt_w, tt_w
 
 
-def compute_psd_eff(t, n):
-    # Compute "effective" PSD from truncated autocorrelation function
-    lag = t.size
-    circ_t = np.pad(t, (0, n - lag), "constant")
+def compute_psd_eff(tt, m) -> np.ndarray:
+    """
+    Computes the power spectral density from a given autocorrelation function.
+
+    :param tt: Input autocorrelation
+    :param m: FFT size
+
+    :return: The PSD (size = m // 2 + 1 beacuse we are using np.fft.rfft)
+    """
+    # Form the cylic autocorrelation
+    lag = len(tt)
+    circ_t = np.pad(tt, (0, m - lag), "constant")
     if lag > 1:
-        circ_t[-lag + 1:] = np.flip(t[1:], 0)
-    psd_eff = np.abs(np.fft.fft(circ_t, n=n))
-    return psd_eff[: n // 2]
+        circ_t[-lag + 1:] = np.flip(tt[1:], 0)
+
+    # FFT
+    psd = np.fft.rfft(circ_t, n=m)
+
+    return np.real(psd)
+
+
+def compute_autocorr(psd, lambd: int, apo=True) -> np.ndarray:
+    """
+    Computes the autocorrelation function from a given power spectral density.
+
+    :param psd: Input PSD
+    :param lambd: Assumed noise correlation length
+    :param apo: if True, apodize the autocorrelation function
+
+    :return: The autocorrelation function apodised and cut after `lambd` terms
+    """
+
+    # Compute the inverse FFT
+    autocorr = np.fft.irfft(psd)[:lambd]
+
+    # Apodisation
+    if apo:
+        return np.multiply(apo_window(lambd), autocorr)
+    else:
+        return autocorr

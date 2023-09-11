@@ -69,8 +69,10 @@ defined structures.
 **
 */
 
-
 #include "toeplitz.h"
+
+#include <math.h>
+#include <stdlib.h>
 
 // r1.1 - Frederic Dauvergne (APC)
 // This is the reshaping routines to build the optimal data structure when

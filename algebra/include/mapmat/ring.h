@@ -15,6 +15,7 @@
 #ifndef MAPMAT_RING_H
 #define MAPMAT_RING_H
 
+#ifdef W_MPI
 #include <mpi.h>
 
 int ring_init(int *indices, int count, int **R, int *nR, int **S, int *nS,
@@ -35,5 +36,6 @@ int ring_noempty_reduce(int **R, int *nR, int nneR, int **S, int *nS, int nneS,
 
 int alltoallv_reduce(int **R, int *nR, int nRtot, int **S, int *nS, int nStot,
                      double *val, double *res_val, int steps, MPI_Comm comm);
+#endif
 
 #endif // MAPMAT_RING_H

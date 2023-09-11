@@ -68,17 +68,14 @@ namespace mappraiser {
         friend std::ostream &operator<<(std::ostream &out, GapFillRecap const &recap);
     };
 
-    int find_valid_samples(Gap *gaps, size_t id0, std::vector<bool> &valid);
-
-    void remove_baseline(std::vector<double> &buf, std::vector<double> &baseline, const std::vector<bool> &valid,
-                         double sample_rate, bool rm);
+    int find_valid_samples(Gap *gaps, size_t id0, std::vector<uint8_t> &valid);
 
     void sim_constrained_noise_block(GapFillInfo &gfi, Tpltz *N_block, Tpltz *Nm1_block, double *noise, Gap *gaps,
-                                     u_int64_t realization, u_int64_t detindx, u_int64_t obsindx, u_int64_t telescope,
-                                     double sample_rate);
+                                     int w0, uint64_t realization, uint64_t detindx, uint64_t obsindx,
+                                     uint64_t telescope, double sample_rate);
 
-    void sim_constrained_noise(GapFillInfo &gfi, Tpltz *N, Tpltz *Nm1, double *noise, Gap *gaps, u_int64_t realization,
-                               const u_int64_t *detindxs, const u_int64_t *obsindxs, const u_int64_t *telescopes,
+    void sim_constrained_noise(GapFillInfo &gfi, Tpltz *N, Tpltz *Nm1, double *noise, Gap *gaps, uint64_t realization,
+                               const uint64_t *detindxs, const uint64_t *obsindxs, const uint64_t *telescopes,
                                double sample_rate);
 } // namespace mappraiser
 #endif
@@ -88,21 +85,30 @@ namespace mappraiser {
 extern "C" {
 #endif
 
-#include <stdbool.h>
+void sim_constrained_block(bool init, bool finalize, int samples, int lambda, int w0, double *tt, double *inv_tt,
+                           double *noise, int *pix, uint64_t realization, uint64_t detindx, uint64_t obsindx,
+                           uint64_t telescope, double sample_rate);
 
 void psd_from_tt(int fftlen, int lambda, int psdlen, const double *tt, double *psd);
 
-void sim_noise_tod(int samples, int lambda, const double *tt, double *buf, u_int64_t realization, u_int64_t detindx,
-                   u_int64_t obsindx, u_int64_t telescope, double sample_rate);
+__attribute__((unused)) void running_average(int samples, const double *buf, double *baseline, const uint8_t *valid,
+                                             int bandwidth);
 
-void perform_gap_filling(MPI_Comm comm, Tpltz *N, Tpltz *Nm1, double *noise, Gap *gaps, u_int64_t realization,
-                         const u_int64_t *detindxs, const u_int64_t *obsindxs, const u_int64_t *telescopes,
+void flagged_running_average(int samples, const double *buf, double *baseline, const uint8_t *valid, int bandwidth);
+
+void remove_baseline(int samples, double *buf, double *baseline, const uint8_t *valid, int bandwidth, bool rm);
+
+void sim_noise_tod(int samples, int lambda, const double *tt, double *buf, uint64_t realization, uint64_t detindx,
+                   uint64_t obsindx, uint64_t telescope, double sample_rate);
+
+void perform_gap_filling(MPI_Comm comm, Tpltz *N, Tpltz *Nm1, double *noise, Gap *gaps, uint64_t realization,
+                         const uint64_t *detindxs, const uint64_t *obsindxs, const uint64_t *telescopes,
                          double sample_rate, bool verbose);
 
 // test routine to call from python
 void gap_filling(MPI_Comm comm, const int *data_size_proc, int nb_blocks_loc, int *local_blocks_sizes, int nnz,
-                 double *tt, double *inv_tt, int lambda, double *noise, int *indices, u_int64_t realization,
-                 const u_int64_t *detindxs, const u_int64_t *obsindxs, const u_int64_t *telescopes, double sample_rate);
+                 double *tt, double *inv_tt, int lambda, double *noise, int *indices, uint64_t realization,
+                 const uint64_t *detindxs, const uint64_t *obsindxs, const uint64_t *telescopes, double sample_rate);
 
 #ifdef __cplusplus
 }

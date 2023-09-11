@@ -310,3 +310,97 @@ def sim_noise_tod(
     )
 
     return
+
+
+############################################################
+# Baseline computation routine
+############################################################
+
+_mappraiser.remove_baseline.restype = None
+_mappraiser.remove_baseline.argtypes = [
+    ct.c_int,  # samples
+    npc.ndpointer(dtype=np.double, ndim=1, flags="C_CONTIGUOUS"),  # buf
+    npc.ndpointer(dtype=np.double, ndim=1, flags="C_CONTIGUOUS"),  # baseline
+    npc.ndpointer(dtype=np.uint8, ndim=1, flags="C_CONTIGUOUS"),  # valid
+    ct.c_int,  # w0
+    ct.c_bool,  # rm
+]
+
+
+def remove_baseline(
+        samples,
+        buf,
+        baseline,
+        valid,
+        w0,
+        rm,
+):
+    _mappraiser.remove_baseline(
+        samples,
+        buf,
+        baseline,
+        valid,
+        w0,
+        rm,
+    )
+
+    return
+
+
+############################################################
+# Single block constrained realization
+############################################################
+
+_mappraiser.sim_constrained_block.restype = None
+_mappraiser.sim_constrained_block.argtypes = [
+    ct.c_bool,
+    ct.c_bool,
+    ct.c_int,  # samples
+    ct.c_int,  # lambda
+    ct.c_int,  # w0
+    npc.ndpointer(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"),  # tt
+    npc.ndpointer(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"),  # inv_tt
+    npc.ndpointer(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"),  # noise
+    npc.ndpointer(dtype=PIXEL_TYPE, ndim=1, flags="C_CONTIGUOUS"),  # pix
+    ct.c_uint64,  # realization
+    ct.c_uint64,  # detindx
+    ct.c_uint64,  # obsindx
+    ct.c_uint64,  # telescope
+    ct.c_double,  # sample_rate
+]
+
+
+def sim_constrained_block(
+        init,
+        finalize,
+        samples,
+        Lambda,
+        w0,
+        tt,
+        inv_tt,
+        noise,
+        pix,
+        realization,
+        detindx,
+        obsindx,
+        telescope,
+        sample_rate,
+):
+    _mappraiser.sim_constrained_block(
+        init,
+        finalize,
+        samples,
+        Lambda,
+        w0,
+        tt,
+        inv_tt,
+        noise,
+        pix,
+        realization,
+        detindx,
+        obsindx,
+        telescope,
+        sample_rate,
+    )
+
+    return
