@@ -244,6 +244,8 @@ class Mappraiser(Operator):
 
     fill_noise_zero = Bool(False, help="Fill the noise vector with zeros just before calling Mappraiser")
 
+    signal_fraction = Float(1.0, help="Fraction of the sky signal to keep")
+
     # Additional parameters for the C library
 
     # solver
@@ -1024,6 +1026,10 @@ class Mappraiser(Operator):
         data_size_proc = np.array(
             data.comm.comm_world.allgather(len(self._mappraiser_signal)), dtype=np.int32
         )
+
+        # debug purposes
+        if self.signal_fraction < 1.0:
+            self._mappraiser_signal *= self.signal_fraction
 
         log_time_memory(
             data,
