@@ -656,24 +656,25 @@ class Mappraiser(Operator):
 
             # Check that the noise model exists, and that the PSD frequencies are the
             # same across all observations (required by Mappraiser).
-            if self.noise_model not in ob:
-                msg = "Noise model '{}' not in observation '{}'".format(
-                    self.noise_model, ob.name
-                )
-                raise RuntimeError(msg)
-            if psd_freqs is None:
-                psd_freqs = np.array(
-                    ob[self.noise_model].freq(ob.local_detectors[0]).to_value(u.Hz),
-                    dtype=np.float64,
-                )
-            else:
-                check_freqs = (
-                    ob[self.noise_model].freq(ob.local_detectors[0]).to_value(u.Hz)
-                )
-                if not np.allclose(psd_freqs, check_freqs):
-                    raise RuntimeError(
-                        "All PSDs passed to Mappraiser must have the same frequency binning."
+            if not self.noiseless:
+                if self.noise_model not in ob:
+                    msg = "Noise model '{}' not in observation '{}'".format(
+                        self.noise_model, ob.name
                     )
+                    raise RuntimeError(msg)
+                if psd_freqs is None:
+                    psd_freqs = np.array(
+                        ob[self.noise_model].freq(ob.local_detectors[0]).to_value(u.Hz),
+                        dtype=np.float64,
+                    )
+                else:
+                    check_freqs = (
+                        ob[self.noise_model].freq(ob.local_detectors[0]).to_value(u.Hz)
+                    )
+                    if not np.allclose(psd_freqs, check_freqs):
+                        raise RuntimeError(
+                            "All PSDs passed to Mappraiser must have the same frequency binning."
+                        )
 
             # Are we using a view of the data?  If so, we will only be copying data in
             # those valid intervals.
