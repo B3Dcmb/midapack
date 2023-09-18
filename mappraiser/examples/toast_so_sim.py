@@ -315,7 +315,7 @@ def select_pointing(job, args):
 
     ops.weights_mappraiser.detector_pointing = ops.det_pointing_radec
     ops.weights_mappraiser.hwp_angle = (
-        defaults.hwp_angle if args.correct_weights else "hwp_angle_unperturbed"
+        defaults.hwp_angle if args.correct_weights else "hwp_angle_nominal"
     )
 
     # Select Pixelization and weights for solve and final binning
@@ -379,7 +379,7 @@ def simulate_data(job, args, toast_comm, telescope, schedule):
     log.info_rank("Apply LAT co-rotation in", comm=world_comm, timer=timer)
 
     # Create a copy of the HWP angle before perturbing it
-    toast.ops.Copy(shared=[("hwp_angle", "hwp_angle_unperturbed")]).apply(data)
+    toast.ops.Copy(shared=[("hwp_angle", "hwp_angle_nominal")]).apply(data)
 
     # Perturb HWP spin
     ops.perturb_hwp.apply(data)
