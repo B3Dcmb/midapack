@@ -1,3 +1,4 @@
+import os
 from time import time
 
 import numpy as np
@@ -7,7 +8,7 @@ from astropy import units as u
 from toast import rng
 from toast.observation import default_values as defaults
 from toast.timing import Timer, function_timer
-from toast.traits import Int, Quantity, Unicode, trait_docs
+from toast.traits import Int, Quantity, Unicode, Bool, trait_docs
 from toast.utils import GlobalTimers, Logger, Timer, dtype_to_aligned, name_UID
 from toast.ops.operator import Operator
 
@@ -40,6 +41,16 @@ class MyPerturbHWP(Operator):
     )
 
     realization = Int(0, allow_none=False, help="Realization index")
+
+    output_dir = Unicode(
+        ".",
+        help="Write products to this directory",
+    )
+
+    write_angle = Bool(
+        False,
+        help="If True, write the old and new hwp_angle buffers",
+    )
 
     @function_timer
     def _exec(self, data, detectors=None, **kwargs):
@@ -133,6 +144,13 @@ class MyPerturbHWP(Operator):
                 t = new_times - new_times[0]
                 new_angle = 0.5 * accel * t**2 + begin_rate * t + hwp_angle[0]
                 new_angle %= 2 * np.pi
+                
+                # Save the data
+                if self.write_angle:
+                    fname = os.path.join(self.output_dir, f"{iobs:04d}_{obs.uid}_hwp")
+                    np.savez(
+                        fname, hwp_angle=obs.shared[self.hwp_angle].data, new_angle=new_angle
+                    )
             else:
                 new_angle = None
 
