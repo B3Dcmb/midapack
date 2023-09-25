@@ -147,7 +147,7 @@ class MyPerturbHWP(Operator):
                 
                 # Save the data
                 if self.write_angle:
-                    fname = os.path.join(self.output_dir, f"{iobs:04d}_{obs.uid}_hwp")
+                    fname = os.path.join(self.output_dir, f"{obs.uid}_hwp")
                     np.savez(
                         fname, hwp_angle=obs.shared[self.hwp_angle].data, new_angle=new_angle
                     )
