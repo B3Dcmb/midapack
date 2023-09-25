@@ -61,6 +61,9 @@ class MyPerturbHWP(Operator):
             if getattr(self, trait) is None:
                 msg = f"You must set the '{trait}' trait before calling exec()"
                 raise RuntimeError(msg)
+        
+        if self.write_angle:
+            os.makedirs(self.output_dir, exist_ok=True)
 
         for iobs, obs in enumerate(data.obs):
             offset = obs.local_index_offset
