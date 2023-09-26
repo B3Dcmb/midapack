@@ -51,7 +51,7 @@ import pixell.fft
 
 pixell.fft.engine = "fftw"
 
-from TOAST_interface import mappraiser
+from TOAST_interface import mappraiser, MySimNoise
 
 
 def parse_config(operators, templates, comm):
@@ -170,6 +170,14 @@ def parse_config(operators, templates, comm):
         required=False,
         default="run0",
         help="Reference that is added to the name of the output maps.",
+    )
+
+    parser.add_argument(
+        "--enforce_band_diagonality",
+        required=False,
+        default=False,
+        action="store_true",
+        help="Modify the noise PSDs to conform with the band diagonality requirement.",
     )
 
     # Build a config dictionary starting from the operator defaults, overriding with any
@@ -532,11 +540,21 @@ def simulate_data(job, args, toast_comm, telescope, schedule):
 
     # Simulate detector noise
 
-    if args.realization is not None:
-        ops.sim_noise.realization = args.realization
-    log.info_rank("Simulating detector noise", comm=world_comm)
-    ops.sim_noise.apply(data)
-    log.info_rank("Simulated detector noise in", comm=world_comm, timer=timer)
+    if args.enforce_band_diagonality:
+        if args.realization is not None:
+            ops.my_sim_noise.realization = args.realization
+        log.info_rank(
+            "Simulating detector noise (with band diagonal requirement)",
+            comm=world_comm,
+        )
+        ops.my_sim_noise.apply(data)
+        log.info_rank("Simulated detector noise in", comm=world_comm, timer=timer)
+    else:
+        if args.realization is not None:
+            ops.sim_noise.realization = args.realization
+        log.info_rank("Simulating detector noise", comm=world_comm)
+        ops.sim_noise.apply(data)
+        log.info_rank("Simulated detector noise in", comm=world_comm, timer=timer)
 
     ops.mem_count.prefix = "After simulating noise"
     ops.mem_count.apply(data)
@@ -949,6 +967,7 @@ def main():
     ]
 
     operators.append(mappraiser.Mappraiser(name="mappraiser"))
+    operators.append(MySimNoise(name="my_sim_noise"))
 
     # Templates we want to configure from the command line or a parameter file.
     templates = [toast.templates.Offset(name="baselines")]
