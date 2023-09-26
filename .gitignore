@@ -35,6 +35,10 @@
 # Python
 *.pyc
 
+#Cmake build
+build
+cmake-build-*
+
 # System files
 .DS_Store
 
