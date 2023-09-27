@@ -133,18 +133,18 @@ def sim_noise_timestream(
         loginterp_psd = interp(loginterp_freq)
         interp_psd = np.power(10.0, loginterp_psd) - psdshift
 
-        # Zero out DC value
-
-        interp_psd[0] = 0.0
-
         # Enforce band diagonality
-        
+
         if enforce_band:
             ninvtt = compute_autocorr(np.reciprocal(interp_psd), half_bandwidth)
             band_psd = np.reciprocal(compute_psd_eff(ninvtt, fftlen))
             scale = np.sqrt(band_psd * norm)
         else:
             scale = np.sqrt(interp_psd * norm)
+
+        # Zero out DC value
+
+        scale[0] = 0.0
 
         # gaussian Re/Im randoms, packed into a complex valued array
 
@@ -325,22 +325,38 @@ class MySimNoise(Operator):
                 # Original serial implementation (for testing / comparison)
                 for key in nse.all_keys_for_dets(dets):
                     # Simulate the noise matching this key
-                    nsedata = sim_noise_timestream(
-                        realization=self.realization,
-                        telescope=telescope,
-                        component=self.component,
-                        sindx=sindx,
-                        detindx=nse.index(key),
-                        rate=rate,
-                        firstsamp=ob.local_index_offset,
-                        samples=ob.n_local_samples,
-                        oversample=self._oversample,
-                        freq=nse.freq(key).to_value(u.Hz),
-                        psd=nse.psd(key).to_value(sim_units),
-                        py=False,
-                        enforce_band=self.enforce_band,
-                        half_bandwidth=self.half_bandwidth,
-                    )
+                    if self.enforce_band:
+                        nsedata, _, _ = sim_noise_timestream(
+                            realization=self.realization,
+                            telescope=telescope,
+                            component=self.component,
+                            sindx=sindx,
+                            detindx=nse.index(key),
+                            rate=rate,
+                            firstsamp=ob.local_index_offset,
+                            samples=ob.n_local_samples,
+                            oversample=self._oversample,
+                            freq=nse.freq(key).to_value(u.Hz),
+                            psd=nse.psd(key).to_value(sim_units),
+                            py=True,
+                            enforce_band=True,
+                            half_bandwidth=self.half_bandwidth,
+                        )
+                    else:
+                        nsedata = sim_noise_timestream(
+                            realization=self.realization,
+                            telescope=telescope,
+                            component=self.component,
+                            sindx=sindx,
+                            detindx=nse.index(key),
+                            rate=rate,
+                            firstsamp=ob.local_index_offset,
+                            samples=ob.n_local_samples,
+                            oversample=self._oversample,
+                            freq=nse.freq(key).to_value(u.Hz),
+                            psd=nse.psd(key).to_value(sim_units),
+                            py=False,
+                        )
 
                     # Add the noise to all detectors that have nonzero weights
                     for det in dets:

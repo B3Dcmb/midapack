@@ -540,21 +540,21 @@ def simulate_data(job, args, toast_comm, telescope, schedule):
 
     # Simulate detector noise
 
+    if args.realization is not None:
+        ops.sim_noise.realization = args.realization
+
     if args.enforce_band_diagonality:
-        if args.realization is not None:
-            ops.my_sim_noise.realization = args.realization
+        ops.sim_noise.enforce_band = True
         log.info_rank(
             "Simulating detector noise (with band diagonal requirement)",
             comm=world_comm,
         )
-        ops.my_sim_noise.apply(data)
-        log.info_rank("Simulated detector noise in", comm=world_comm, timer=timer)
+        ops.sim_noise.apply(data)
     else:
-        if args.realization is not None:
-            ops.sim_noise.realization = args.realization
         log.info_rank("Simulating detector noise", comm=world_comm)
         ops.sim_noise.apply(data)
-        log.info_rank("Simulated detector noise in", comm=world_comm, timer=timer)
+    
+    log.info_rank("Simulated detector noise in", comm=world_comm, timer=timer)
 
     ops.mem_count.prefix = "After simulating noise"
     ops.mem_count.apply(data)
@@ -918,7 +918,7 @@ def main():
         toast.ops.SaveHDF5(name="save_hdf5", enabled=False),
         so_ops.SaveBooks(name="save_books", enabled=False),
         toast.ops.GainScrambler(name="gainscrambler", enabled=False),
-        toast.ops.SimNoise(name="sim_noise"),
+        # toast.ops.SimNoise(name="sim_noise"),
         so_ops.SimReadout(name="sim_readout", enabled=False),
         toast.ops.PixelsHealpix(name="pixels_healpix_radec"),
         toast.ops.PixelsWCS(
@@ -967,7 +967,7 @@ def main():
     ]
 
     operators.append(mappraiser.Mappraiser(name="mappraiser"))
-    operators.append(MySimNoise(name="my_sim_noise"))
+    operators.append(MySimNoise(name="sim_noise"))
 
     # Templates we want to configure from the command line or a parameter file.
     templates = [toast.templates.Offset(name="baselines")]
