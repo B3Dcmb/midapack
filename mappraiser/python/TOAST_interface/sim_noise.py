@@ -7,14 +7,16 @@ import traitlets
 from astropy import units as u
 from scipy import interpolate
 
-from .. import rng
-from .._libtoast import tod_sim_noise_timestream, tod_sim_noise_timestream_batch
-from ..fft import FFTPlanReal1DStore
-from ..observation import default_values as defaults
-from ..timing import function_timer
-from ..traits import Bool, Int, Unicode, Unit, trait_docs
-from ..utils import AlignedF64, Logger, rate_from_times, unit_conversion
-from .operator import Operator
+from toast import rng
+from toast._libtoast import tod_sim_noise_timestream, tod_sim_noise_timestream_batch
+from toast.fft import FFTPlanReal1DStore
+from toast.observation import default_values as defaults
+from toast.timing import function_timer
+from toast.traits import Bool, Int, Unicode, Unit
+from toast.utils import AlignedF64, Logger, rate_from_times, unit_conversion
+from toast.ops.operator import Operator
+
+from .utils import compute_autocorr, compute_psd_eff
 
 
 @function_timer
@@ -31,6 +33,8 @@ def sim_noise_timestream(
     freq=None,
     psd=None,
     py=False,
+    enforce_band=False,
+    half_bandwidth=None,
 ):
     """Generate a noise timestream, given a starting RNG state.
 
@@ -75,7 +79,7 @@ def sim_noise_timestream(
 
     """
     tdata = AlignedF64(samples)
-    if py:
+    if py or enforce_band:
         fftlen = 2
         while fftlen <= (oversample * samples):
             fftlen *= 2
@@ -133,7 +137,14 @@ def sim_noise_timestream(
 
         interp_psd[0] = 0.0
 
-        scale = np.sqrt(interp_psd * norm)
+        # Enforce band diagonality
+        
+        if enforce_band:
+            ninvtt = compute_autocorr(np.reciprocal(interp_psd), half_bandwidth)
+            band_psd = np.reciprocal(compute_psd_eff(ninvtt, fftlen))
+            scale = np.sqrt(band_psd * norm)
+        else:
+            scale = np.sqrt(interp_psd * norm)
 
         # gaussian Re/Im randoms, packed into a complex valued array
 
@@ -188,7 +199,6 @@ def sim_noise_timestream(
         return tdata
 
 
-@trait_docs
 class MySimNoise(Operator):
     """Operator which generates noise timestreams.
 
@@ -227,6 +237,16 @@ class MySimNoise(Operator):
 
     serial = Bool(True, help="Use legacy serial implementation instead of batched")
 
+    enforce_band = Bool(
+        False,
+        help="Modify PSD on the fly to enforce band diagonality of the noise covariance matrix",
+    )
+
+    half_bandwidth = Int(
+        64,
+        help="Half bandwidth of the noise covariance matrix (only used when `enforce_band` is True)",
+    )
+
     @traitlets.validate("realization")
     def _check_realization(self, proposal):
         check = proposal["value"]
@@ -244,6 +264,9 @@ class MySimNoise(Operator):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._oversample = 2
+        if self.enforce_band:
+            # batch mode not implemented for this option
+            self.serial = True
 
     @function_timer
     def _exec(self, data, detectors=None, **kwargs):
@@ -315,6 +338,8 @@ class MySimNoise(Operator):
                         freq=nse.freq(key).to_value(u.Hz),
                         psd=nse.psd(key).to_value(sim_units),
                         py=False,
+                        enforce_band=self.enforce_band,
+                        half_bandwidth=self.half_bandwidth,
                     )
 
                     # Add the noise to all detectors that have nonzero weights
