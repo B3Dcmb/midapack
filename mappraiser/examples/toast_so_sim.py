@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) 2019-2021 Simons Observatory.
+# Copyright (c) 2019-2023 Simons Observatory.
 # Full license can be found in the top level "LICENSE" file.
 
 """
@@ -42,16 +42,16 @@ import toast
 import toast.ops
 
 from toast.mpi import MPI, Comm
+from toast.observation import default_values as defaults
 
-import sotodlib.toast.ops as so_ops
-import sotodlib.mapmaking
+from sotodlib.toast import ops as so_ops
 
 # Make sure pixell uses a reliable FFT engine
 import pixell.fft
 
 pixell.fft.engine = "fftw"
 
-from TOAST_interface import mappraiser
+from TOAST_interface import mappraiser, MySimNoise
 
 
 def parse_config(operators, templates, comm):
@@ -69,6 +69,18 @@ def parse_config(operators, templates, comm):
         "--hardware", required=False, default=None, help="Input hardware file"
     )
     parser.add_argument(
+        "--det_info_file",
+        required=False,
+        default=None,
+        help="Input detector info file for real hardware maps",
+    )
+    parser.add_argument(
+        "--det_info_version",
+        required=False,
+        default=None,
+        help="Detector info file version such as 'Cv4'",
+    )
+    parser.add_argument(
         "--thinfp",
         required=False,
         type=int,
@@ -78,11 +90,11 @@ def parse_config(operators, templates, comm):
         "--bands",
         required=True,
         help="Comma-separated list of bands: LAT_f030 (27GHz), LAT_f040 (39GHz), "
-             "LAT_f090 (93GHz), LAT_f150 (145GHz), "
-             "LAT_f230 (225GHz), LAT_f290 (285GHz), "
-             "SAT_f030 (27GHz), SAT_f040 (39GHz), "
-             "SAT_f090 (93GHz), SAT_f150 (145GHz), "
-             "SAT_f230 (225GHz), SAT_f290 (285GHz). "
+        "LAT_f090 (93GHz), LAT_f150 (145GHz), "
+        "LAT_f230 (225GHz), LAT_f290 (285GHz), "
+        "SAT_f030 (27GHz), SAT_f040 (39GHz), "
+        "SAT_f090 (93GHz), SAT_f150 (145GHz), "
+        "SAT_f230 (225GHz), SAT_f290 (285GHz). ",
     )
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument(
@@ -94,17 +106,19 @@ def parse_config(operators, templates, comm):
         "--tube_slots",
         default=None,
         help="Comma-separated list of optics tube slots: c1 (LAT_UHF), i5 (LAT_UHF), "
-             " i6 (LAT_MF), i1 (LAT_MF), i3 (LAT_MF), i4 (LAT_MF), o6 (LAT_LF),"
-             " ST1 (SAT_MF), ST2 (SAT_MF), ST3 (SAT_UHF), ST4 (SAT_LF)."
+        " i6 (LAT_MF), i1 (LAT_MF), i3 (LAT_MF), i4 (LAT_MF), o6 (LAT_LF),"
+        " ST1 (SAT_MF), ST2 (SAT_MF), ST3 (SAT_UHF), ST4 (SAT_LF).",
     )
     group.add_argument(
-        "--wafer_slots",
-        default=None,
-        help="Comma-separated list of wafer slots. "
+        "--wafer_slots", default=None, help="Comma-separated list of wafer slots. "
     )
 
     parser.add_argument(
-        "--sample_rate", required=False, default=10, help="Sampling rate", type=float,
+        "--sample_rate",
+        required=False,
+        default=10,
+        help="Sampling rate",
+        type=float,
     )
 
     parser.add_argument(
@@ -144,7 +158,10 @@ def parse_config(operators, templates, comm):
     )
 
     parser.add_argument(
-        "--realization", required=False, help="Realization index", type=int,
+        "--realization",
+        required=False,
+        help="Realization index",
+        type=int,
     )
 
     # Add arguments for MAPPRAISER (ref, Lambda, solver, ...)
@@ -154,7 +171,14 @@ def parse_config(operators, templates, comm):
         default="run0",
         help="Reference that is added to the name of the output maps.",
     )
-    # N.B: use Mappraiser's trait "paramfile" to pass the rest of libmappraiser parameters
+
+    parser.add_argument(
+        "--enforce_band_diagonality",
+        required=False,
+        default=False,
+        action="store_true",
+        help="Modify the noise PSDs to conform with the band diagonality requirement.",
+    )
 
     # Build a config dictionary starting from the operator defaults, overriding with any
     # config files specified with the '--config' commandline option, followed by any
@@ -187,6 +211,8 @@ def load_instrument_and_schedule(args, comm):
 
     telescope = sotoast.simulated_telescope(
         hwfile=args.hardware,
+        det_info_file=args.det_info_file,
+        det_info_version=args.det_info_version,
         telescope_name=args.telescope,
         sample_rate=args.sample_rate * u.Hz,
         bands=args.bands,
@@ -195,7 +221,8 @@ def load_instrument_and_schedule(args, comm):
         thinfp=args.thinfp,
         comm=comm,
     )
-    log.info_rank("Loaded focalplane in", comm=comm, timer=timer)
+    ndet = len(telescope.focalplane.detectors)
+    log.info_rank(f"Loaded focalplane with {ndet} detectors in", comm=comm, timer=timer)
     mem = toast.utils.memreport(msg="(whole node)", comm=comm, silent=True)
     log.info_rank(f"After loading focalplane:  {mem}", comm)
 
@@ -471,6 +498,7 @@ def simulate_data(job, args, toast_comm, telescope, schedule):
     # Simulate Solar System Objects
 
     ops.sim_sso.detector_pointing = ops.det_pointing_azel
+    ops.sim_sso.detector_weights = ops.weights_radec
     ops.sim_sso.apply(data)
     log.info_rank(
         "Simulated and observed solar system objects",
@@ -514,8 +542,18 @@ def simulate_data(job, args, toast_comm, telescope, schedule):
 
     if args.realization is not None:
         ops.sim_noise.realization = args.realization
-    log.info_rank("Simulating detector noise", comm=world_comm)
-    ops.sim_noise.apply(data)
+
+    if args.enforce_band_diagonality:
+        ops.sim_noise.enforce_band = True
+        log.info_rank(
+            "Simulating detector noise (with band diagonal requirement)",
+            comm=world_comm,
+        )
+        ops.sim_noise.apply(data)
+    else:
+        log.info_rank("Simulating detector noise", comm=world_comm)
+        ops.sim_noise.apply(data)
+    
     log.info_rank("Simulated detector noise in", comm=world_comm, timer=timer)
 
     ops.mem_count.prefix = "After simulating noise"
@@ -534,12 +572,25 @@ def simulate_data(job, args, toast_comm, telescope, schedule):
             timer=timer,
         )
 
+    # Add random flags
+
+    ops.yield_cut.apply(data)
+    log.info_rank("  Applied yield flags in", comm=world_comm, timer=timer)
+
     # Add calibration error
 
     if args.realization is not None:
         ops.gainscrambler.realization = args.realization
     ops.gainscrambler.apply(data)
     log.info_rank("Simulated gain errors in", comm=world_comm, timer=timer)
+
+    # Add readout systematics
+
+    ops.sim_readout.apply(data)
+    log.info_rank("Simulated readout systematics in", comm=world_comm, timer=timer)
+
+    mem = toast.utils.memreport(msg="(whole node)", comm=world_comm, silent=True)
+    log.info_rank(f"After simulating data:  {mem}", world_comm)
 
     # Optionally write out the data
     if args.out_dir is not None:
@@ -553,6 +604,9 @@ def simulate_data(job, args, toast_comm, telescope, schedule):
     log.info_rank("Saved HDF5 data in", comm=world_comm, timer=timer)
     ops.save_books.apply(data)
     log.info_rank("Saved book data in", comm=world_comm, timer=timer)
+
+    mem = toast.utils.memreport(msg="(whole node)", comm=world_comm, silent=True)
+    log.info_rank(f"After saving data:  {mem}", world_comm)
 
     return data
 
@@ -585,6 +639,9 @@ def reduce_data(job, args, data):
         ops.weights_radec = demod_weights
         ops.binner.stokes_weights = demod_weights
         ops.binner_final.stokes_weights = demod_weights
+
+        mem = toast.utils.memreport(msg="(whole node)", comm=world_comm, silent=True)
+        log.info_rank(f"After demodulating data:  {mem}", world_comm)
 
     # Apply noise estimation
 
@@ -736,18 +793,18 @@ def reduce_data(job, args, data):
 
     # Optionally run Mappraiser
 
-    if mappraiser.available() and ops.mappraiser.enabled:
-        # ops.madam.params = toast.ops.madam_params_from_mapmaker(ops.mapmaker)
-        ops.mappraiser.pixel_pointing = job.pixels_final
-        ops.mappraiser.stokes_weights = ops.weights_radec
-        # override output path and ref by command line args
-        ops.mappraiser.params["path_output"] = args.out_dir
-        ops.mappraiser.params["ref"] = args.ref
-        ops.mappraiser.apply(data)
-        log.info_rank("Finished Mappraiser in", comm=world_comm, timer=timer)
-
-        ops.mem_count.prefix = "After Mappraiser"
-        ops.mem_count.apply(data)
+    ops.mappraiser.params["path_output"] = args.out_dir
+    ops.mappraiser.params["ref"] = args.ref
+    ops.mappraiser.pixel_pointing = job.pixels_final
+    ops.mappraiser.stokes_weights = ops.weights_radec
+    if ops.mappraiser.enabled:
+        if mappraiser.available():
+            ops.mappraiser.apply(data)
+            log.info_rank("Finished Mappraiser in", comm=world_comm, timer=timer)
+        else:
+            log.info_rank("libmappraiser was not found", comm=world_comm)
+    else:
+        log.info_rank("Mappraiser disabled", comm=world_comm)
 
     # Collect signal statistics after filtering/destriping
 
@@ -757,6 +814,9 @@ def reduce_data(job, args, data):
 
     ops.mem_count.prefix = "After filtered statistics"
     ops.mem_count.apply(data)
+
+    mem = toast.utils.memreport(msg="(whole node)", comm=world_comm, silent=True)
+    log.info_rank(f"After reducing data:  {mem}", world_comm)
 
 
 def main():
@@ -858,7 +918,8 @@ def main():
         toast.ops.SaveHDF5(name="save_hdf5", enabled=False),
         so_ops.SaveBooks(name="save_books", enabled=False),
         toast.ops.GainScrambler(name="gainscrambler", enabled=False),
-        toast.ops.SimNoise(name="sim_noise"),
+        # toast.ops.SimNoise(name="sim_noise"),
+        so_ops.SimReadout(name="sim_readout", enabled=False),
         toast.ops.PixelsHealpix(name="pixels_healpix_radec"),
         toast.ops.PixelsWCS(
             name="pixels_wcs_radec",
@@ -875,6 +936,7 @@ def main():
             enabled=False,
         ),
         toast.ops.StokesWeights(name="weights_radec", mode="IQU"),
+        toast.ops.YieldCut(name="yield_cut", enabled=False),
         toast.ops.Demodulate(name="demodulate", enabled=False),
         toast.ops.NoiseEstim(name="noise_estim", enabled=False),
         toast.ops.FlagSSO(name="flag_sso", enabled=False),
@@ -903,14 +965,19 @@ def main():
         so_ops.MLMapmaker(name="mlmapmaker", enabled=False, comps="TQU"),
         toast.ops.MemoryCounter(name="mem_count", enabled=False),
     ]
-    if mappraiser.available():
-        operators.append(mappraiser.Mappraiser(name="mappraiser", enabled=False))
+
+    operators.append(mappraiser.Mappraiser(name="mappraiser"))
+    operators.append(MySimNoise(name="sim_noise"))
 
     # Templates we want to configure from the command line or a parameter file.
     templates = [toast.templates.Offset(name="baselines")]
 
+    log.info_rank(f"Parsing config at {datetime.datetime.now()}", comm)
+
     # Parse options
     config, args, jobargs = parse_config(operators, templates, comm)
+
+    log.info_rank(f"Loading schedule at {datetime.datetime.now()}", comm)
 
     # Load our instrument model and observing schedule
     telescope, schedule = load_instrument_and_schedule(args, comm)
@@ -922,6 +989,8 @@ def main():
 
     # Create the toast communicator
     toast_comm = toast.Comm(world=comm, groupsize=group_size)
+
+    log.info_rank(f"Simulating data at {datetime.datetime.now()}", comm)
 
     # Create simulated data
     data = simulate_data(job, args, toast_comm, telescope, schedule)
@@ -942,7 +1011,11 @@ def main():
     log.info_rank("Workflow completed in", comm=comm, timer=timer0)
 
 
-if __name__ == "__main__":
+def cli():
     world, procs, rank = toast.mpi.get_world()
     with toast.mpi.exception_guard(comm=world):
         main()
+
+
+if __name__ == "__main__":
+    cli()

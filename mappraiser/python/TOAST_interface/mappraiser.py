@@ -138,10 +138,7 @@ class Mappraiser(Operator):
         help="Observation detdata key for noise data (if None, triggers noiseless mode)",
     )
 
-    noiseless = Bool(
-        False,
-        help="Activate noiseless mode"
-    )
+    noiseless = Bool(False, help="Activate noiseless mode")
 
     det_flags = Unicode(
         defaults.det_flags,
@@ -235,14 +232,20 @@ class Mappraiser(Operator):
     )
 
     nperseg = Int(
-        0, help="If 0, set nperseg = timestream length to compute the noise periodograms. If > 0, nperseg = Lambda."
+        0,
+        help="If 0, set nperseg = timestream length to compute the noise periodograms. If > 0, nperseg = Lambda.",
     )
 
     bandwidth = Int(16384, help="Half-bandwidth for the noise model")
 
-    downscale = Int(1, help="Scale down the noise by the sqrt of this number to artifically increase S/N ratio")
+    downscale = Int(
+        1,
+        help="Scale down the noise by the sqrt of this number to artifically increase S/N ratio",
+    )
 
-    fill_noise_zero = Bool(False, help="Fill the noise vector with zeros just before calling Mappraiser")
+    fill_noise_zero = Bool(
+        False, help="Fill the noise vector with zeros just before calling Mappraiser"
+    )
 
     signal_fraction = Float(1.0, help="Fraction of the sky signal to keep")
 
@@ -256,7 +259,9 @@ class Mappraiser(Operator):
     bs_red = Int(0, help="Use dynamic search reduction")
 
     # preconditioner
-    precond = Int(0, help="Choose preconditioner (0->BJ, 1->2lvl a priori, 2->2lvl a posteriori")
+    precond = Int(
+        0, help="Choose preconditioner (0->BJ, 1->2lvl a priori, 2->2lvl a posteriori"
+    )
     z_2lvl = Int(0, help="Size of 2lvl deflation space")
     ortho_alg = Int(1, help="Orthogonalization scheme for ECG (O->odir, 1->omin)")
 
@@ -376,8 +381,10 @@ class Mappraiser(Operator):
             msg = "Invalid gap_stgy - accepted values are:\n"
             msg += "0 -> perfect noise reconstruction (use original simulated noise)\n"
             msg += "1 -> gap filling with a constrained noise realization\n"
-            msg += "2 -> 'nested PCG' i.e. invert the noise covariance matrix with a PCG at each noise weighting " \
-                   "operation (completely ignore the gaps)\n"
+            msg += (
+                "2 -> 'nested PCG' i.e. invert the noise covariance matrix with a PCG at each noise weighting "
+                "operation (completely ignore the gaps)\n"
+            )
             msg += "3 -> perfect noise reconstruction + nested PCG\n"
             msg += "4 -> gap filling + nested PCG"
             raise traitlets.TraitError(msg)
@@ -481,20 +488,22 @@ class Mappraiser(Operator):
                 #     params[k] = v
                 params[k] = v
 
-        params.update({
-            "Lambda": self.bandwidth,
-            "solver": self.solver,
-            "precond": self.precond,
-            "Z_2lvl": self.z_2lvl,
-            "ptcomm_flag": self.ptcomm_flag,
-            "tol": np.double(self.tol),
-            "maxiter": self.maxiter,
-            "enlFac": self.enlFac,
-            "ortho_alg": self.ortho_alg,
-            "bs_red": self.bs_red,
-            "gap_stgy": self.gap_stgy,
-            "realization": self.realization,
-        })
+        params.update(
+            {
+                "Lambda": self.bandwidth,
+                "solver": self.solver,
+                "precond": self.precond,
+                "Z_2lvl": self.z_2lvl,
+                "ptcomm_flag": self.ptcomm_flag,
+                "tol": np.double(self.tol),
+                "maxiter": self.maxiter,
+                "enlFac": self.enlFac,
+                "ortho_alg": self.ortho_alg,
+                "bs_red": self.bs_red,
+                "gap_stgy": self.gap_stgy,
+                "realization": self.realization,
+            }
+        )
 
         # params dictionary overrides operator traits for mappraiser C library arguments
         if self.params is not None:
@@ -533,8 +542,8 @@ class Mappraiser(Operator):
         # Log the libmappraiser parameters that were used.
         if data.comm.world_rank == 0:
             with open(
-                    os.path.join(params["path_output"], "mappraiser_args_log.toml"),
-                    "w",
+                os.path.join(params["path_output"], "mappraiser_args_log.toml"),
+                "w",
             ) as f:
                 toml.dump(params, f)
 
@@ -619,7 +628,7 @@ class Mappraiser(Operator):
                     os.path.join(params["path_output"], f"data/gf_{params['ref']}"),
                     tod=original_tod,
                     gaps=tgaps,
-                    gf=self._mappraiser_signal
+                    gf=self._mappraiser_signal,
                 )
 
         log.info_rank(
@@ -730,24 +739,25 @@ class Mappraiser(Operator):
 
             # Check that the noise model exists, and that the PSD frequencies are the
             # same across all observations (required by Mappraiser).
-            if self.noise_model not in ob:
-                msg = "Noise model '{}' not in observation '{}'".format(
-                    self.noise_model, ob.name
-                )
-                raise RuntimeError(msg)
-            if psd_freqs is None:
-                psd_freqs = np.array(
-                    ob[self.noise_model].freq(ob.local_detectors[0]).to_value(u.Hz),
-                    dtype=np.float64,
-                )
-            else:
-                check_freqs = (
-                    ob[self.noise_model].freq(ob.local_detectors[0]).to_value(u.Hz)
-                )
-                if not np.allclose(psd_freqs, check_freqs):
-                    raise RuntimeError(
-                        "All PSDs passed to Mappraiser must have the same frequency binning."
+            if not self.noiseless:
+                if self.noise_model not in ob:
+                    msg = "Noise model '{}' not in observation '{}'".format(
+                        self.noise_model, ob.name
                     )
+                    raise RuntimeError(msg)
+                if psd_freqs is None:
+                    psd_freqs = np.array(
+                        ob[self.noise_model].freq(ob.local_detectors[0]).to_value(u.Hz),
+                        dtype=np.float64,
+                    )
+                else:
+                    check_freqs = (
+                        ob[self.noise_model].freq(ob.local_detectors[0]).to_value(u.Hz)
+                    )
+                    if not np.allclose(psd_freqs, check_freqs):
+                        raise RuntimeError(
+                            "All PSDs passed to Mappraiser must have the same frequency binning."
+                        )
 
             # Are we using a view of the data?  If so, we will only be copying data in
             # those valid intervals.
@@ -815,16 +825,16 @@ class Mappraiser(Operator):
 
     @function_timer
     def _stage_data(
-            self,
-            params,
-            data,
-            all_dets,
-            nsamp,
-            nnz,
-            nnz_full,
-            nnz_stride,
-            interval_starts,
-            psd_freqs,
+        self,
+        params,
+        data,
+        all_dets,
+        nsamp,
+        nnz,
+        nnz_full,
+        nnz_stride,
+        interval_starts,
+        psd_freqs,
     ):
         """Create mappraiser-compatible buffers.
         Collect the data into Mappraiser buffers.  If we are purging TOAST data to save
@@ -1295,15 +1305,15 @@ class Mappraiser(Operator):
 
     @function_timer
     def _unstage_data(
-            self,
-            params,
-            data,
-            all_dets,
-            nsamp,
-            nnz,
-            nnz_full,
-            interval_starts,
-            signal_dtype,
+        self,
+        params,
+        data,
+        all_dets,
+        nsamp,
+        nnz,
+        nnz_full,
+        interval_starts,
+        signal_dtype,
     ):
         """
         Restore data to TOAST observations.
