@@ -81,34 +81,6 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N, double 
     // recombine signal and noise
     for (i = 0; i < m; ++i) { b[i] += noise[i]; }
 
-    // DEBUG
-    // int proc = 0;
-    // while (proc < size) {
-    //     if (proc == rank) {
-    //         int bidx = 0;
-    //         printf("[proc %d] block %d (idv = %ld    n = %d)\n", proc, bidx, Nm1->tpltzblocks[bidx].idv,
-    //                Nm1->tpltzblocks[bidx].n);
-    //         printf("first gap: id0 = %ld    lgap = %d    (gap n° %d)\n",
-    //         Gaps->id0gap[Nm1->tpltzblocks[bidx].first_gap],
-    //                Gaps->lgap[Nm1->tpltzblocks[bidx].first_gap], Nm1->tpltzblocks[bidx].first_gap);
-    //         printf("last gap: id0 = %ld    lgap = %d    (gap n° %d)\n",
-    //         Gaps->id0gap[Nm1->tpltzblocks[bidx].last_gap],
-    //                Gaps->lgap[Nm1->tpltzblocks[bidx].last_gap], Nm1->tpltzblocks[bidx].last_gap);
-    //         bidx = Nm1->nb_blocks_loc - 1;
-    //         printf("[proc %d] block %d (idv = %ld    n = %d)\n", proc, bidx, Nm1->tpltzblocks[bidx].idv,
-    //                Nm1->tpltzblocks[bidx].n);
-    //         printf("first gap: id0 = %ld    lgap = %d    (gap n° %d)\n",
-    //         Gaps->id0gap[Nm1->tpltzblocks[bidx].first_gap],
-    //                Gaps->lgap[Nm1->tpltzblocks[bidx].first_gap], Nm1->tpltzblocks[bidx].first_gap);
-    //         printf("last gap: id0 = %ld    lgap = %d    (gap n° %d)\n",
-    //         Gaps->id0gap[Nm1->tpltzblocks[bidx].last_gap],
-    //                Gaps->lgap[Nm1->tpltzblocks[bidx].last_gap], Nm1->tpltzblocks[bidx].last_gap);
-    //     }
-    //     fflush(stdout);
-    //     MPI_Barrier(A->comm);
-    //     proc++;
-    // }
-
     WeightStgy strategy;
     switch (gap_stgy) {
         case 0:
