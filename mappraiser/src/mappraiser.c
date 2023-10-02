@@ -20,11 +20,12 @@
 #include <fitsio.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
-int x2map_pol(double *mapI, double *mapQ, double *mapU, double *Cond, int *hits,
-              const double *x, const int *lstid, const double *cond,
-              const int *lhits, int xsize);
+void x2map_pol(double *mapI, double *mapQ, double *mapU, double *Cond,
+               int *hits, const double *x, const int *lstid, const double *cond,
+               const int *lhits, int xsize);
 
 void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
            int Z_2lvl, int pointing_commflag, double tol, int maxiter,
@@ -41,6 +42,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     int i, j, k;
     Mat A;                   // pointing matrix structure
     int nbr_valid_pixels;    // nbr of valid pixel indices
+    int nbr_extra_pixels;    // nbr of extra pixel indices
     int ngap;                // nbr of timestream gaps
     Gap Gaps;                // timestream gaps structure
     double *x, *cond = NULL; // pixel domain vectors
@@ -91,10 +93,13 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
         fflush(stdout);
     }
 
-    // Create extra pixels for marginalization
-    create_extra_pix(pix, Nnz, nb_blocks_loc, local_blocks_sizes,
-                     MARG_LOCAL_SCAN);
+    // Hardcode this for the moment
+    ExtraPixStgy stg = MARG_LOCAL_SCAN;
 
+    // Create extra pixels for marginalization
+    create_extra_pix(pix, Nnz, nb_blocks_loc, local_blocks_sizes, stg);
+
+    // ____________________________________________________________
     // Pointing matrix initialization
 
     st = MPI_Wtime();
@@ -107,23 +112,22 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     fflush(stdout);
 #endif
 
-    nbr_valid_pixels = A.lcount;
-
-    // check if trash_pix flag was raised during MatInit
-    if (A.trash_pix) {
-        nbr_valid_pixels -= A.nnz;
-    }
+    nbr_extra_pixels = A.trash_pix * A.nnz;
+    nbr_valid_pixels = A.lcount - nbr_extra_pixels;
 
     t = MPI_Wtime();
     if (rank == 0) {
         printf("[rank %d] Initializing pointing matrix time = %lf\n", rank,
                t - st);
+        printf("Treatment of gaps: %d ", stg);
+        puts(stg == COND ? "(conditioning)" : "(marginalization)");
         printf("  -> nbr of sky pixels = %d\n", A.lcount);
-        printf("  -> valid sky pixels  = %d\n", nbr_valid_pixels);
-        printf("  -> trash_pix flag    = %d\n", A.trash_pix);
+        printf("  -> valid pixels = %d\n", nbr_valid_pixels);
+        printf("  -> extra pixels = %d\n", nbr_extra_pixels);
         fflush(stdout);
     }
 
+    // ____________________________________________________________
     // Build pixel-to-time-domain mapping
 
     st = MPI_Wtime();
@@ -138,26 +142,42 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
         fflush(stdout);
     }
 
+    // ____________________________________________________________
     // Map objects memory allocation
-    // MatInit gives A.lcount which is used to compute nbr_valid_pixels
 
-    x = (double *)malloc(nbr_valid_pixels * sizeof(double));
-    cond = (double *)malloc((int)(nbr_valid_pixels / 3) * sizeof(double));
-    lhits = (int *)malloc((int)(nbr_valid_pixels / 3) * sizeof(int));
+    // Decide size of map that will be solved
+    // We have computed the amount of valid/extra pixels beforehand
+    int solver_map_size;
+
+    switch (stg) {
+    case COND:
+        solver_map_size = nbr_valid_pixels;
+        break;
+    case MARG_LOCAL_SCAN:
+        solver_map_size = nbr_valid_pixels + nbr_extra_pixels;
+        break;
+    }
+
+    x = (double *)malloc(solver_map_size * sizeof(double));
+    cond = (double *)malloc((int)(solver_map_size / A.nnz) * sizeof(double));
+    lhits = (int *)malloc((int)(solver_map_size / A.nnz) * sizeof(int));
     if (x == NULL || cond == NULL || lhits == NULL) {
         printf("memory allocation failed");
         exit(1);
     }
 
-    for (j = 0; j < nbr_valid_pixels; j++) {
+    for (j = 0; j < solver_map_size; j++) {
         x[j] = 0.;
-        if (j % 3 == 0) {
-            lhits[(int)(j / 3)] = 0;
-            cond[(int)(j / 3)] = 0.;
+        if (j % A.nnz == 0) {
+            lhits[(int)(j / A.nnz)] = 0;
+            cond[(int)(j / A.nnz)] = 0.;
         }
     }
 
+#if 0
+    // ____________________________________________________________
     // Create piecewise Toeplitz matrix
+
     // specifics parameters:
     int nb_blocks_tot = Nb_t_Intervals;
     int lambda_block_avg = lambda;
@@ -205,6 +225,9 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
                rank, lambda_block_avg);
     }
 
+    // ____________________________________________________________
+    // Solve the system
+
     MPI_Barrier(comm);
     if (rank == 0) {
         printf("##### Start PCG ####################\n");
@@ -249,25 +272,63 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     // free Gap structure
     free(Gaps.id0gap);
     free(Gaps.lgap);
+#endif
 
-    // write output to fits files:
+    // ____________________________________________________________
+    // Write output to fits files
+
     st = MPI_Wtime();
 
-    int mapsize = A.lcount - (A.nnz) * (A.trash_pix);
-    int map_id = rank;
+    // size of the estimated map without extra pixels
+    int map_size = A.lcount - (A.nnz) * (A.trash_pix);
 
-    int *lstid;
-    lstid = (int *)calloc(mapsize, sizeof(int));
-    for (i = 0; i < mapsize; i++) {
+    switch (stg) {
+    case COND:
+        /* map only contains valid pixels, nothing more to do */
+        break;
+
+    case MARG_LOCAL_SCAN:
+        solver_map_size = A.lcount;
+
+        // map contains estimates for extra pixels which we don't want to keep
+        int extra = A.nnz * A.trash_pix;
+        double *extra_map = (double *)malloc(extra * sizeof(double));
+        memcpy(extra_map, x, extra * sizeof(double));
+
+        // valid map
+        memmove(x, (x + extra), map_size * sizeof(double));
+        double *tmp = realloc(x, map_size * sizeof(double));
+        if (tmp == NULL) {
+            fprintf(stderr, "Map reallocation failed");
+            exit(EXIT_FAILURE);
+        }
+        x = tmp;
+
+        // TODO what to do with the extra map?
+#if 0
+        if (rank == 0) {
+            printf("extra map with %d pixels\nI component = {", extra);
+            for (j = 0; j < extra; j += A.nnz) {
+                printf("%lf ", extra_map[j]);
+            }
+            puts("}");
+        }
+        fflush(stdout);
+#endif
+        break;
+    }
+
+    int *lstid = (int *)malloc(map_size * sizeof(int));
+    for (i = 0; i < map_size; i++) {
         lstid[i] = A.lindices[i + (A.nnz) * (A.trash_pix)];
     }
 
     if (rank != 0) {
-        MPI_Send(&mapsize, 1, MPI_INT, 0, 0, comm);
-        MPI_Send(lstid, mapsize, MPI_INT, 0, 1, comm);
-        MPI_Send(x, mapsize, MPI_DOUBLE, 0, 2, comm);
-        MPI_Send(cond, mapsize / Nnz, MPI_DOUBLE, 0, 3, comm);
-        MPI_Send(lhits, mapsize / Nnz, MPI_INT, 0, 4, comm);
+        MPI_Send(&map_size, 1, MPI_INT, 0, 0, comm);
+        MPI_Send(lstid, map_size, MPI_INT, 0, 1, comm);
+        MPI_Send(x, map_size, MPI_DOUBLE, 0, 2, comm);
+        MPI_Send(cond, map_size / Nnz, MPI_DOUBLE, 0, 3, comm);
+        MPI_Send(lhits, map_size / Nnz, MPI_INT, 0, 4, comm);
     }
 
     if (rank == 0) {
@@ -287,15 +348,15 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
 
         for (i = 0; i < size; i++) {
             if (i != 0) {
-                oldsize = mapsize;
-                MPI_Recv(&mapsize, 1, MPI_INT, i, 0, comm, &status);
-                if (oldsize != mapsize) {
+                oldsize = map_size;
+                MPI_Recv(&map_size, 1, MPI_INT, i, 0, comm, &status);
+                if (oldsize != map_size) {
                     int *tmp1, *tmp4;
                     double *tmp2, *tmp3;
-                    tmp1 = (int *)realloc(lstid, mapsize * sizeof(int));
-                    tmp2 = (double *)realloc(x, mapsize * sizeof(double));
-                    tmp3 = (double *)realloc(cond, mapsize * sizeof(double));
-                    tmp4 = (int *)realloc(lhits, mapsize * sizeof(int));
+                    tmp1 = (int *)realloc(lstid, map_size * sizeof(int));
+                    tmp2 = (double *)realloc(x, map_size * sizeof(double));
+                    tmp3 = (double *)realloc(cond, map_size * sizeof(double));
+                    tmp4 = (int *)realloc(lhits, map_size * sizeof(int));
                     if (tmp1 == NULL || tmp2 == NULL || tmp3 == NULL ||
                         tmp4 == NULL) {
                         fprintf(
@@ -310,13 +371,13 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
                         lhits = tmp4;
                     }
                 }
-                MPI_Recv(lstid, mapsize, MPI_INT, i, 1, comm, &status);
-                MPI_Recv(x, mapsize, MPI_DOUBLE, i, 2, comm, &status);
-                MPI_Recv(cond, mapsize / Nnz, MPI_DOUBLE, i, 3, comm, &status);
-                MPI_Recv(lhits, mapsize / Nnz, MPI_INT, i, 4, comm, &status);
+                MPI_Recv(lstid, map_size, MPI_INT, i, 1, comm, &status);
+                MPI_Recv(x, map_size, MPI_DOUBLE, i, 2, comm, &status);
+                MPI_Recv(cond, map_size / Nnz, MPI_DOUBLE, i, 3, comm, &status);
+                MPI_Recv(lhits, map_size / Nnz, MPI_INT, i, 4, comm, &status);
             }
             x2map_pol(mapI, mapQ, mapU, Cond, hits, x, lstid, cond, lhits,
-                      mapsize);
+                      map_size);
         }
         printf("Checking output directory ... old files will be overwritten\n");
         char Imap_name[256];
@@ -408,13 +469,10 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     // MPI_Finalize();
 }
 
-int x2map_pol(double *mapI, double *mapQ, double *mapU, double *Cond, int *hits,
-              const double *x, const int *lstid, const double *cond,
-              const int *lhits, int xsize) {
-
-    int i;
-
-    for (i = 0; i < xsize; i++) {
+void x2map_pol(double *mapI, double *mapQ, double *mapU, double *Cond,
+               int *hits, const double *x, const int *lstid, const double *cond,
+               const int *lhits, int xsize) {
+    for (int i = 0; i < xsize; i++) {
         if (i % 3 == 0) {
             mapI[(int)(lstid[i] / 3)] = x[i];
             hits[(int)(lstid[i] / 3)] = lhits[(int)(i / 3)];
@@ -424,6 +482,4 @@ int x2map_pol(double *mapI, double *mapQ, double *mapU, double *Cond, int *hits,
         else
             mapU[(int)(lstid[i] / 3)] = x[i];
     }
-
-    return 0;
 }
