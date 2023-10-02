@@ -1,7 +1,8 @@
 /**
  * @file noise_weighting.c
  * @author Simon Biquard
- * @brief Inverse noise weighting of the map-making procedure with an iterative approach
+ * @brief Inverse noise weighting of the map-making procedure with an iterative
+ * approach
  * @date Nov 2022
  * @last_update Jan 2023
  */
@@ -22,10 +23,12 @@ __attribute__((unused)) void reset_tod_gaps(double *tod, Tpltz *N, Gap *Gaps);
 
 void gappy_tpltz_mult(Tpltz *tmat_block, double *tod, Gap *gaps);
 
-void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_block, const double *x0, SolverInfo *si,
+void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps,
+                      double *tod_block, const double *x0, SolverInfo *si,
                       bool ignore_gaps);
 
-// void PCG_global ( Tpltz *N, Tpltz *Nm1, Gap *Gaps, double *tod, int m, int rank, int verbose );
+// void PCG_global ( Tpltz *N, Tpltz *Nm1, Gap *Gaps, double *tod, int m, int
+// rank, int verbose );
 
 /**
  * @brief Weight TOD with the adopted noise model.
@@ -37,7 +40,8 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
  * @param tod data vector
  * @return number of PCG iterations if there is a single data block, 0 otherwise
  */
-int apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod, WeightStgy stgy, bool verbose) {
+int apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod, WeightStgy stgy,
+                  bool verbose) {
     int t_id = 0; // time sample index in local data
 
     int rank, size;
@@ -45,16 +49,18 @@ int apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod, WeightStgy stgy,
     MPI_Comm_size(N->comm, &size);
 
     if (stgy == BASIC) {
-        // assume no gaps (this is the case if we use a gap-filling procedure, for example)
+        // assume no gaps (this is the case if we use a gap-filling procedure,
+        // for example)
 
         if (Nm1->tpltzblocks[0].lambda == 1) {
             // Use straightforward loop for white noise model
 
-            // Here it is assumed that we use a single bandwidth for all TOD intervals
-            // i.e. lambda is the same for all Toeplitz blocks
+            // Here it is assumed that we use a single bandwidth for all TOD
+            // intervals i.e. lambda is the same for all Toeplitz blocks
             for (int i = 0; i < Nm1->nb_blocks_loc; i++) {
                 for (int j = 0; j < Nm1->tpltzblocks[i].n; j++) {
-                    tod[t_id + j] = Nm1->tpltzblocks[i].T_block[0] * tod[t_id + j];
+                    tod[t_id + j] =
+                        Nm1->tpltzblocks[i].T_block[0] * tod[t_id + j];
                 }
                 t_id += Nm1->tpltzblocks[i].n;
             }
@@ -89,20 +95,20 @@ int apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod, WeightStgy stgy,
         if (n_blocks > 1) {
 
             // variables for a single toeplitz block
-            Block   block, block_m1;
-            Tpltz   N_block, Nm1_block;
+            Block block, block_m1;
+            Tpltz N_block, Nm1_block;
             double *tod_block = NULL;
 
             for (int i = 0; i < N->nb_blocks_loc; ++i) {
                 // pick the single Toeplitz block
-                block    = N->tpltzblocks[i];
+                block = N->tpltzblocks[i];
                 block_m1 = Nm1->tpltzblocks[i];
 
                 // if (rank == 0)
                 // {
-                //     printf("process toeplitz block %d/%d\n", i, (N->nb_blocks_loc) - 1);
-                //     printf("  block.n = %d\n", block.n);
-                //     printf("  block.idv = %ld\n", block.idv);
+                //     printf("process toeplitz block %d/%d\n", i,
+                //     (N->nb_blocks_loc) - 1); printf("  block.n = %d\n",
+                //     block.n); printf("  block.idv = %ld\n", block.idv);
                 //     printf("  offset = %d\n", t_id);
                 //     fflush(stdout);
                 // }
@@ -115,13 +121,15 @@ int apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod, WeightStgy stgy,
                 tod_block = (tod + t_id);
 
                 // apply the weights with a PCG
-                PCG_single_block(&N_block, &Nm1_block, Gaps, tod_block, NULL, &si, ignore_gaps);
+                PCG_single_block(&N_block, &Nm1_block, Gaps, tod_block, NULL,
+                                 &si, ignore_gaps);
 
                 // do something with solver output
                 //
                 //
 
-                if (si.store_hist) solverinfo_free(&si);
+                if (si.store_hist)
+                    solverinfo_free(&si);
 
                 // update our index of local samples
                 t_id += block.n;
@@ -134,7 +142,8 @@ int apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod, WeightStgy stgy,
             return si.n_iter;
         }
 
-        if (si.store_hist) solverinfo_free(&si);
+        if (si.store_hist)
+            solverinfo_free(&si);
     }
 }
 
@@ -142,27 +151,30 @@ int apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod, WeightStgy stgy,
 /// @param single_block_struct [out] Tpltz structure to initialize
 /// @param full_struct [in] Tpltz structure of the whole data
 /// @param block [in] the Block structure representing the single data block
-void set_tpltz_struct(Tpltz *single_block_struct, Tpltz *full_struct, Block *block) {
-    single_block_struct->nrow          = full_struct->nrow; // does not matter anyway
-    single_block_struct->m_cw          = full_struct->m_cw; // 1
-    single_block_struct->m_rw          = full_struct->m_rw; // 1
-    single_block_struct->tpltzblocks   = block;
+void set_tpltz_struct(Tpltz *single_block_struct, Tpltz *full_struct,
+                      Block *block) {
+    single_block_struct->nrow = full_struct->nrow; // does not matter anyway
+    single_block_struct->m_cw = full_struct->m_cw; // 1
+    single_block_struct->m_rw = full_struct->m_rw; // 1
+    single_block_struct->tpltzblocks = block;
     single_block_struct->nb_blocks_loc = 1;
     single_block_struct->nb_blocks_tot = 1;
-    single_block_struct->idp           = block->idv;
-    single_block_struct->local_V_size  = block->n;
-    single_block_struct->flag_stgy     = full_struct->flag_stgy;
-    single_block_struct->comm          = full_struct->comm;
+    single_block_struct->idp = block->idv;
+    single_block_struct->local_V_size = block->n;
+    single_block_struct->flag_stgy = full_struct->flag_stgy;
+    single_block_struct->comm = full_struct->comm;
 }
 
 __attribute__((unused)) void reset_tod_gaps(double *tod, Tpltz *N, Gap *Gaps) {
 #ifdef DEBUG
     double start = MPI_Wtime();
 #endif
-    reset_gaps(&tod, N->idp, N->local_V_size, N->m_cw, N->nrow, N->m_rw, Gaps->id0gap, Gaps->lgap, Gaps->ngap);
+    reset_gaps(&tod, N->idp, N->local_V_size, N->m_cw, N->nrow, N->m_rw,
+               Gaps->id0gap, Gaps->lgap, Gaps->ngap);
 #ifdef DEBUG
     double duration = MPI_Wtime() - start;
-    printf(" reset_tod_gaps (size=%d) in %lf seconds\n", N->local_V_size, duration);
+    printf(" reset_tod_gaps (size=%d) in %lf seconds\n", N->local_V_size,
+           duration);
     fflush(stdout);
 #endif
 }
@@ -177,17 +189,19 @@ void gappy_tpltz_mult(Tpltz *tmat_block, double *tod, Gap *gaps) {
 }
 
 /**
- * @brief Iteratively solve Nx=b in order to compute an inverse noise-weighted timestream.
- * Here it is assumed that we work with a single toeplitz block.
+ * @brief Iteratively solve Nx=b in order to compute an inverse noise-weighted
+ * timestream. Here it is assumed that we work with a single toeplitz block.
  *
  * @param N_block [in] Tpltz structure of the single block
  * @param Nm1_block [in] Tpltz structure of the single inverse block
  * @param Gaps [in] structure of the timestream gaps
  * @param tod_block [in] pointer to the RHS vector [out] solution of the system
  * @param x0 [in] starting vector; if NULL, the RHS is used as initial guess
- * @param si SolverInfo structure [in] contains solver parameters [out] contains iteration info
+ * @param si SolverInfo structure [in] contains solver parameters [out] contains
+ * iteration info
  */
-void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_block, const double *x0, SolverInfo *si,
+void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps,
+                      double *tod_block, const double *x0, SolverInfo *si,
                       bool ignore_gaps) {
 #ifndef NDEBUG
     assert(N_block->nb_blocks_loc == 1 && Nm1_block->nb_blocks_loc == 1);
@@ -198,23 +212,24 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
     // if (si->print)
     //     solverinfo_print(si);
 
-    int k  = 0;                         // iteration number
-    int ng = Gaps->ngap;                // number of gaps
-    int m  = N_block->tpltzblocks[0].n; // size of the data
+    int k = 0;                         // iteration number
+    int ng = Gaps->ngap;               // number of gaps
+    int m = N_block->tpltzblocks[0].n; // size of the data
 
     double res;            // norm of residual
     double coef_1, coef_2; // scalars
     double wtime;          // timing variable
 
-    bool stop       = false;      // stop iteration or continue
+    bool stop = false;            // stop iteration or continue
     bool init_guess = x0 != NULL; // starting vector provided or not
 
-    if (ng == 0) ignore_gaps = true;
+    if (ng == 0)
+        ignore_gaps = true;
 
     double *_r = NULL;
-    double *r  = NULL; // residual
-    double *p  = NULL; // search direction
-    double *z  = NULL; // M^{-1} * r
+    double *r = NULL;  // residual
+    double *p = NULL;  // search direction
+    double *z = NULL;  // M^{-1} * r
     double *zp = NULL; // previous z
     double *zt = NULL; // backup pointer for zp
 
@@ -223,15 +238,18 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
 
     // reset gaps of the rhs
     // if (!ignore_gaps) reset_tod_gaps(tod_block, N_block, Gaps);
-    if (!ignore_gaps) reset_relevant_gaps(tod_block, N_block, Gaps);
+    if (!ignore_gaps)
+        reset_relevant_gaps(tod_block, N_block, Gaps);
 
     _r = malloc((sizeof *_r) * m);
-    r  = malloc((sizeof *r) * m);
+    r = malloc((sizeof *r) * m);
 
     if (_r == NULL || r == NULL) {
         // free memory if possible
-        if (_r) free(_r);
-        if (r) free(r);
+        if (_r)
+            free(_r);
+        if (r)
+            free(r);
 
         si->has_failed = true;
         solverinfo_finalize(si);
@@ -284,15 +302,18 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
         // iterate to solve the system
 
         // allocate buffers needed for the iteration
-        p  = malloc((sizeof *p) * m);
-        z  = malloc((sizeof *z) * m);
+        p = malloc((sizeof *p) * m);
+        z = malloc((sizeof *z) * m);
         zp = malloc((sizeof *zp) * m);
 
         if (p == NULL || z == NULL || zp == NULL) {
             // free memory if possible
-            if (p) free(p);
-            if (z) free(z);
-            if (zp) free(zp);
+            if (p)
+                free(p);
+            if (z)
+                free(z);
+            if (zp)
+                free(zp);
 
             si->has_failed = true;
             solverinfo_finalize(si);
@@ -301,7 +322,8 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
         }
 
         // apply preconditioner (z0 = M^{-1} * r0)
-        for (int i = 0; i < m; ++i) z[i] = r[i];
+        for (int i = 0; i < m; ++i)
+            z[i] = r[i];
 
         if (ignore_gaps) {
             stbmmProd(Nm1_block, z);
@@ -311,7 +333,8 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
         }
 
         // set initial search direction (p0 = z0)
-        for (int i = 0; i < m; ++i) p[i] = z[i];
+        for (int i = 0; i < m; ++i)
+            p[i] = z[i];
 
         // iteration loop
         while (!stop) {
@@ -319,9 +342,11 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
             ++k;
 
             // apply system matrix (_r = Np)
-            for (int i = 0; i < m; ++i) _r[i] = p[i];
+            for (int i = 0; i < m; ++i)
+                _r[i] = p[i];
 
-            if (ignore_gaps) stbmmProd(N_block, _r);
+            if (ignore_gaps)
+                stbmmProd(N_block, _r);
             else {
                 // gstbmmProd(N_block, _r, Gaps);
                 gappy_tpltz_mult(N_block, _r, Gaps);
@@ -338,14 +363,14 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
             // swap pointers to store previous z before updating
             zt = zp;
             zp = z;
-            z  = zt;
+            z = zt;
 
             // update current vector (x = x + alpha * p)
             // update residual (r = r - alpha * Np)
             for (int i = 0; i < m; ++i) {
                 tod_block[i] = tod_block[i] + (coef_1 / coef_2) * p[i];
-                r[i]         = r[i] - (coef_1 / coef_2) * _r[i];
-                z[i]         = r[i];
+                r[i] = r[i] - (coef_1 / coef_2) * _r[i];
+                z[i] = r[i];
             }
 
             // apply preconditioner (z = M^{-1} r)
@@ -391,9 +416,8 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps, double *tod_b
 }
 
 /*
-void PCG_global ( Tpltz *N, Tpltz *Nm1, Gap *Gaps, double *tod, int m, int rank, int verbose ) {
-    const double tol       = 1e-6;
-    const int    kmax      = 100;
+void PCG_global ( Tpltz *N, Tpltz *Nm1, Gap *Gaps, double *tod, int m, int rank,
+int verbose ) { const double tol       = 1e-6; const int    kmax      = 100;
 
     int    k  = 0;               // iteration number
     double r0, res, tol2rel; // residuals
@@ -416,9 +440,8 @@ void PCG_global ( Tpltz *N, Tpltz *Nm1, Gap *Gaps, double *tod, int m, int rank,
     r  = malloc ((sizeof *r) * m );
 
     if (_r == NULL || r == NULL) {
-        puts ( "out of memory: allocation of time-domain vectors for tod weighting failed" );
-        fflush ( stdout );
-        exit ( EXIT_FAILURE );
+        puts ( "out of memory: allocation of time-domain vectors for tod
+weighting failed" ); fflush ( stdout ); exit ( EXIT_FAILURE );
     }
 
     for (i = 0; i < m; ++i) {
@@ -453,8 +476,8 @@ void PCG_global ( Tpltz *N, Tpltz *Nm1, Gap *Gaps, double *tod, int m, int rank,
     t = MPI_Wtime ();
 
     if ((rank == 0) && (verbose > 0)) {
-        printf ( "  apply_weights: k = %d, r0 = %e, time=%lf\n", k, r0, t - st );
-        fflush ( stdout );
+        printf ( "  apply_weights: k = %d, r0 = %e, time=%lf\n", k, r0, t - st
+); fflush ( stdout );
     }
 
     if (res < tol * tol) {
@@ -473,9 +496,8 @@ void PCG_global ( Tpltz *N, Tpltz *Nm1, Gap *Gaps, double *tod, int m, int rank,
     p = malloc ((sizeof *p) * m );
     z = malloc ((sizeof *z) * m );
     if (p == NULL || z == NULL) {
-        puts ( "out of memory: allocation of time-domain vectors for tod weighting failed" );
-        fflush ( stdout );
-        exit ( EXIT_FAILURE );
+        puts ( "out of memory: allocation of time-domain vectors for tod
+weighting failed" ); fflush ( stdout ); exit ( EXIT_FAILURE );
     }
 
     // apply preconditioner (z0 = M^{-1} * r0)
@@ -547,8 +569,8 @@ void PCG_global ( Tpltz *N, Tpltz *Nm1, Gap *Gaps, double *tod, int m, int rank,
         MPI_Allreduce ( &lval_1, &res, 1, MPI_DOUBLE, MPI_SUM, N->comm );
 
         if ((rank == 0) && (verbose > 0)) {
-            printf ( "  -> k = %d, res = %e, relative = %e\n", k, res, sqrt ( res / r0 ));
-            fflush ( stdout );
+            printf ( "  -> k = %d, res = %e, relative = %e\n", k, res, sqrt (
+res / r0 )); fflush ( stdout );
         }
 
         if (res < tol2rel) {
@@ -557,10 +579,10 @@ void PCG_global ( Tpltz *N, Tpltz *Nm1, Gap *Gaps, double *tod, int m, int rank,
             if (rank == 0) {
                 if (verbose > 0) {
                     printf ( "  -> converged (%e < %e)\n", res, tol2rel );
-                    printf ( "  -> i.e.      (%e < %e)\n", sqrt ( res / r0 ), tol );
-                    printf ( "  -> n_iter = %d, solve time = %lf s\n", k, t - st );
-                } else {
-                    printf ( "  -> applied noise weights in %d iterations (%lf s)\n", k - 1, t - st );
+                    printf ( "  -> i.e.      (%e < %e)\n", sqrt ( res / r0 ),
+tol ); printf ( "  -> n_iter = %d, solve time = %lf s\n", k, t - st ); } else {
+                    printf ( "  -> applied noise weights in %d iterations (%lf
+s)\n", k - 1, t - st );
                 }
             }
             break;
@@ -569,7 +591,8 @@ void PCG_global ( Tpltz *N, Tpltz *Nm1, Gap *Gaps, double *tod, int m, int rank,
 
     if (!converged && rank == 0) {
         t = MPI_Wtime ();
-        printf ( "  -> did not converge in %d iterations (%lf s)\n", k - 1, t - st );
+        printf ( "  -> did not converge in %d iterations (%lf s)\n", k - 1, t -
+st );
     }
 
     fflush ( stdout );
