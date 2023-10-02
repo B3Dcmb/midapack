@@ -94,10 +94,11 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     }
 
     // Hardcode this for the moment
-    ExtraPixStgy stg = MARG_LOCAL_SCAN;
+    ExtraPixStgy pix_stgy = MARG_LOCAL_SCAN;
+    A.flag_ignore_extra = false;
 
     // Create extra pixels for marginalization
-    create_extra_pix(pix, Nnz, nb_blocks_loc, local_blocks_sizes, stg);
+    create_extra_pix(pix, Nnz, nb_blocks_loc, local_blocks_sizes, pix_stgy);
 
     // ____________________________________________________________
     // Pointing matrix initialization
@@ -119,8 +120,8 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     if (rank == 0) {
         printf("[rank %d] Initializing pointing matrix time = %lf\n", rank,
                t - st);
-        printf("Treatment of gaps: %d ", stg);
-        puts(stg == COND ? "(conditioning)" : "(marginalization)");
+        printf("Treatment of gaps: %d ", pix_stgy);
+        puts(pix_stgy == COND ? "(conditioning)" : "(marginalization)");
         printf("  -> nbr of sky pixels = %d\n", A.lcount);
         printf("  -> valid pixels = %d\n", nbr_valid_pixels);
         printf("  -> extra pixels = %d\n", nbr_extra_pixels);
@@ -148,14 +149,11 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     // Decide size of map that will be solved
     // We have computed the amount of valid/extra pixels beforehand
     int solver_map_size;
-
-    switch (stg) {
-    case COND:
+    if (A.flag_ignore_extra) {
         solver_map_size = nbr_valid_pixels;
-        break;
-    case MARG_LOCAL_SCAN:
+    } else {
+        // include extra pixels in the map
         solver_map_size = nbr_valid_pixels + nbr_extra_pixels;
-        break;
     }
 
     x = (double *)malloc(solver_map_size * sizeof(double));
@@ -174,7 +172,6 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
         }
     }
 
-#if 0
     // ____________________________________________________________
     // Create piecewise Toeplitz matrix
 
@@ -238,8 +235,9 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     // Conjugate Gradient
     if (solver == 0) {
         PCG_GLS_true(outpath, ref, &A, &Nm1, &N, x, signal, noise, cond, lhits,
-                     tol, maxiter, precond, Z_2lvl, &Gaps, gif, gap_stgy,
-                     realization, detindxs, obsindxs, telescopes, sample_rate);
+                     tol, maxiter, precond, Z_2lvl, pix_stgy, &Gaps, gif,
+                     gap_stgy, realization, detindxs, obsindxs, telescopes,
+                     sample_rate);
     } else if (solver == 1) {
 #ifdef WITH_ECG
         ECG_GLS(outpath, ref, &A, &Nm1, x, signal, noise, cond, lhits, tol,
@@ -272,7 +270,6 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     // free Gap structure
     free(Gaps.id0gap);
     free(Gaps.lgap);
-#endif
 
     // ____________________________________________________________
     // Write output to fits files
@@ -282,7 +279,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     // size of the estimated map without extra pixels
     int map_size = A.lcount - (A.nnz) * (A.trash_pix);
 
-    switch (stg) {
+    switch (pix_stgy) {
     case COND:
         /* map only contains valid pixels, nothing more to do */
         break;

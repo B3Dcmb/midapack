@@ -426,7 +426,7 @@ void MatFree(Mat *A) {
    files denotes by "basename + processor number"
     @return error code
     @ingroup matmap_group11 */
-int MatLoad(Mat *mat, char *filename) {
+__attribute__((unused)) int MatLoad(Mat *mat, char *filename) {
     int err;
     int rank;
 #if W_MPI
@@ -474,7 +474,7 @@ int MatLoad(Mat *mat, char *filename) {
    the output files named "toto_$(rank)"
     @return error code
     @ingroup matmap_group11 */
-int MatSave(Mat *mat, char *filename) {
+__attribute__((unused)) int MatSave(Mat *mat, char *filename) {
     FILE *out;
     char fn[100];
     int i, j;
@@ -729,24 +729,21 @@ int MatVecProd(Mat *A, double *x, double *y, int pflag) {
     for (i = 0; i < A->m; i++)
         y[i] = 0.0;
 
-    e = 0;
-    if (A->trash_pix) {
+    int extra = A->trash_pix * A->nnz;
+    if (A->flag_ignore_extra) {
+        e = 0;
         for (i = 0; i < A->m * A->nnz; i += A->nnz) {
-            if (A->indices[i] != 0) {
+            if (A->indices[i] > extra) {
                 for (j = 0; j < A->nnz; j++) {
-                    y[e] += A->values[i + j] * x[A->indices[i + j] - (A->nnz)];
+                    y[e] += A->values[i + j] * x[A->indices[i + j] - extra];
                 }
             }
             e++;
         }
     } else {
-        for (i = 0; i < A->m * A->nnz; i += A->nnz) {
-            for (j = 0; j < A->nnz; j++) {
-                y[e] += A->values[i + j] * x[A->indices[i + j]];
-            }
-            e++;
-        }
+        // TODO
     }
+
     return 0;
 }
 
@@ -763,7 +760,8 @@ int MatVecProd(Mat *A, double *x, double *y, int pflag) {
     @param x local output vector (overlapped)
     @ingroup matmap_group11
     @ingroup matmap_group12b */
-int TrMatVecProd_Naive(Mat *A, double *y, double *x, int pflag) {
+__attribute__((unused)) int TrMatVecProd_Naive(Mat *A, double *y, double *x,
+                                               int pflag) {
     int i, j, e, rank, size;
     int *rbuf, rbufcount;
     double *rbufvalues, *lvalues;
@@ -844,34 +842,25 @@ int TrMatVecProd(Mat *A, double *y, double *x, int pflag) {
     // int nSmax, nRmax;
     // double *lvalues;
 
-    if (A->trash_pix) {
+    int extra = A->trash_pix * A->nnz;
+    if (A->flag_ignore_extra) {
         // refresh output vector
-        for (i = 0; i < A->lcount - A->nnz; i++)
+        for (i = 0; i < A->lcount - extra; i++) {
             x[i] = 0.0;
+        }
 
         e = 0;
         for (i = 0; i < A->m * A->nnz; i += A->nnz) {
-            if (A->indices[i] != 0) {
+            if (A->indices[i] > extra) {
                 // local transform reduce
                 for (j = 0; j < A->nnz; j++) {
-                    x[A->indices[i + j] - (A->nnz)] += A->values[i + j] * y[e];
+                    x[A->indices[i + j] - extra] += A->values[i + j] * y[e];
                 }
             }
             e++;
         }
     } else {
-        // refresh output vector
-        for (i = 0; i < A->lcount; i++)
-            x[i] = 0.0;
-
-        e = 0;
-        for (i = 0; i < A->m * A->nnz; i += A->nnz) {
-            // local transform reduce
-            for (j = 0; j < A->nnz; j++) {
-                x[A->indices[i + j]] += A->values[i + j] * y[e];
-            }
-            e++;
-        }
+        // TODO
     }
 
 #ifdef W_MPI
@@ -887,7 +876,7 @@ int TrMatVecProd(Mat *A, double *y, double *x, int pflag) {
     @sa MatSave
     @param A pointer to the Mat
     @ingroup matmap_group11*/
-int MatInfo(Mat *mat, int verbose, char *filename) {
+__attribute__((unused)) int MatInfo(Mat *mat, int verbose, char *filename) {
     FILE *out;
     int *n;
     int *sr;
