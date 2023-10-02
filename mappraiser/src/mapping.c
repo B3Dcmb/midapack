@@ -15,6 +15,40 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+int create_extra_pix(int *indices, int nnz, int nb_blocks_loc,
+                     const int *local_blocks_sizes, ExtraPixStgy stg) {
+    switch (stg) {
+    case COND:
+        /* nothing to do */
+        break;
+
+    case MARG_LOCAL_SCAN: {
+        // position in the data
+        int offset = 0;
+
+        // loop through local blocks
+        for (int i = 0; i < nb_blocks_loc; ++i) {
+            int local_size = local_blocks_sizes[i];
+            for (int j = 0; j < local_size * nnz; j += nnz) {
+                if (indices[offset + j] < 0) {
+                    // set a negative index corresponding to local scan number
+                    // don't forget the nnz multiplicity of the indices
+                    for (int k = 0; k < nnz; ++k) {
+                        indices[offset + j + k] = -(i * nnz + k + 1);
+                    }
+                }
+            }
+            offset += local_size;
+        }
+        break;
+    }
+
+    default:
+        break;
+    }
+    return 0;
+}
+
 /**
  * @brief Build the pixel-to-time-domain mapping, i.e.
  * i) A->id_last_pix which contains the indexes of the last samples pointing to

@@ -91,12 +91,21 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
         fflush(stdout);
     }
 
+    // Create extra pixels for marginalization
+    create_extra_pix(pix, Nnz, nb_blocks_loc, local_blocks_sizes,
+                     MARG_LOCAL_SCAN);
+
     // Pointing matrix initialization
 
     st = MPI_Wtime();
 
     A.trash_pix = 0;
     MatInit(&A, m, Nnz, pix, pixweights, pointing_commflag, comm);
+
+#if 0
+    printf("rank %d: %d extra pixels\n", rank, A.trash_pix);
+    fflush(stdout);
+#endif
 
     nbr_valid_pixels = A.lcount;
 

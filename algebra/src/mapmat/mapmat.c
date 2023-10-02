@@ -531,10 +531,14 @@ int MatLocalShape(Mat *A, int sflag) {
 
     sindex(A->lindices, A->lcount, A->indices, A->nnz * A->m);
 
-    // check for masked pixels
-    if (A->lindices[0] < 0) {
-        A->trash_pix = 1;
+    // count extra pixels
+    int c = 0;
+    while (A->lindices[c] < 0) {
+        c += 1;
     }
+
+    // store information in the pointing matrix
+    A->trash_pix = c / A->nnz;
 
     return 0;
 }
