@@ -75,14 +75,21 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N,
     }
 
     //____________________________________________________________
-    // Gap filling
+    // Gap treatment
 
     compute_gaps_per_block(Gaps, Nm1->nb_blocks_loc, Nm1->tpltzblocks);
     copy_gap_info(Nm1->nb_blocks_loc, Nm1->tpltzblocks, N->tpltzblocks);
 
-    // set signal in all gaps to zero
-    reset_relevant_gaps(b, Nm1, Gaps);
-    condition_extra_pix_zero(A);
+    switch (pix_stgy) {
+    case COND:
+        // set signal in all gaps to zero
+        reset_relevant_gaps(b, Nm1, Gaps);
+        condition_extra_pix_zero(A);
+        break;
+    case MARG_LOCAL_SCAN:
+        // nothing to do, we want to estimate a value in the extra pixels
+        break;
+    }
 
     // recombine signal and noise
     for (i = 0; i < m; ++i) {

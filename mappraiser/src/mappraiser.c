@@ -212,7 +212,6 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     fflush(stdout);
 #endif
 
-#if 0
     // ____________________________________________________________
     // Create piecewise Toeplitz matrix
 
@@ -311,7 +310,6 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     // free Gap structure
     free(Gaps.id0gap);
     free(Gaps.lgap);
-#endif
 
     // ____________________________________________________________
     // Write output to fits files
