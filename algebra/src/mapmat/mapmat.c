@@ -723,25 +723,35 @@ int MatComShape(Mat *A, int flag, MPI_Comm comm) {
     @ingroup matmap_group11
     @ingroup matmap_group12a */
 int MatVecProd(Mat *A, double *x, double *y, int pflag) {
-    int i, j, e; // indexes
-
-    // set output vector to zero
-    for (i = 0; i < A->m; i++)
+    // refresh output vector
+    for (int i = 0; i < A->m; i++)
         y[i] = 0.0;
 
+    // elements not present in input vector (potentially zero)
     int extra = A->trash_pix * A->nnz;
+
     if (A->flag_ignore_extra) {
-        e = 0;
-        for (i = 0; i < A->m * A->nnz; i += A->nnz) {
-            if (A->indices[i] > extra) {
-                for (j = 0; j < A->nnz; j++) {
-                    y[e] += A->values[i + j] * x[A->indices[i + j] - extra];
+        /* do not observe the extra pixels */
+
+        // index to go through output vector
+        int c = 0;
+
+        for (int j = 0; j < A->m * A->nnz; j += A->nnz) {
+            if (A->indices[j] > extra) {
+                for (int k = 0; k < A->nnz; k++) {
+                    y[c] += A->values[j + k] * x[A->indices[j + k] - extra];
                 }
             }
-            e++;
+            c++;
         }
     } else {
-        // TODO
+        /* observe all pixels */
+        for (int j = 0; j < A->m; j++) {
+            for (int k = 0; k < A->nnz; k++) {
+                int d = j * A->nnz + k;
+                y[j] += A->values[d] * x[A->indices[d]];
+            }
+        }
     }
 
     return 0;
@@ -837,30 +847,38 @@ __attribute__((unused)) int TrMatVecProd_Naive(Mat *A, double *y, double *x,
     @param x local output vector (overlapped)
     @ingroup matmap_group11 */
 int TrMatVecProd(Mat *A, double *y, double *x, int pflag) {
-    // double *sbuf, *rbuf;
-    int i, j, k, e;
-    // int nSmax, nRmax;
-    // double *lvalues;
-
+    // elements not present in output vector (potentially zero)
     int extra = A->trash_pix * A->nnz;
-    if (A->flag_ignore_extra) {
-        // refresh output vector
-        for (i = 0; i < A->lcount - extra; i++) {
-            x[i] = 0.0;
-        }
 
-        e = 0;
-        for (i = 0; i < A->m * A->nnz; i += A->nnz) {
-            if (A->indices[i] > extra) {
+    // refresh output vector
+    for (int i = 0; i < A->lcount - extra; i++) {
+        x[i] = 0.0;
+    }
+
+    if (A->flag_ignore_extra) {
+        /* do not project on the extra pixels */
+
+        // index to go through input vector
+        int c = 0;
+
+        for (int j = 0; j < A->m * A->nnz; j += A->nnz) {
+            if (A->indices[j] > extra) {
                 // local transform reduce
-                for (j = 0; j < A->nnz; j++) {
-                    x[A->indices[i + j] - extra] += A->values[i + j] * y[e];
+                for (int k = 0; k < A->nnz; k++) {
+                    x[A->indices[j + k] - extra] += A->values[j + k] * y[c];
                 }
             }
-            e++;
+            c++;
         }
     } else {
-        // TODO
+        /* project on all pixels */
+        for (int j = 0; j < A->m; j++) {
+            // local transform reduce
+            for (int k = 0; k < A->nnz; k++) {
+                int d = j * A->nnz + k;
+                x[A->indices[d]] += A->values[d] * y[j];
+            }
+        }
     }
 
 #ifdef W_MPI

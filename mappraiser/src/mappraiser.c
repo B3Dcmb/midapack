@@ -94,8 +94,13 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     }
 
     // Hardcode this for the moment
+#if 1
     ExtraPixStgy pix_stgy = MARG_LOCAL_SCAN;
     A.flag_ignore_extra = false;
+#else
+    ExtraPixStgy pix_stgy = COND;
+    A.flag_ignore_extra = true;
+#endif
 
     // Create extra pixels for marginalization
     create_extra_pix(pix, Nnz, nb_blocks_loc, local_blocks_sizes, pix_stgy);
@@ -172,6 +177,42 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
         }
     }
 
+#if 0
+    /* test pointing operations */
+
+    // time-domain vector
+    double *y = (double *)malloc(m * sizeof(double));
+    if (y == NULL) {
+        fprintf(stderr, "memory allocation error");
+        exit(EXIT_FAILURE);
+    }
+
+    // un-pointing operation
+    MatVecProd(&A, x, y, 0);
+
+    if (rank == 0) {
+        printf("MatVecProd -> [ ");
+        for (i = 0; i < 100; i++) {
+            printf("%lf ", y[i]);
+        }
+        puts("] ");
+    }
+
+    // pointing operation
+    TrMatVecProd(&A, y, x, 0);
+
+    if (rank == 0) {
+        printf("TrMatVecProd -> [ ");
+        for (j = 0; j < 100; j++) {
+            printf("%lf ", x[j]);
+        }
+        puts("] ");
+    }
+
+    fflush(stdout);
+#endif
+
+#if 0
     // ____________________________________________________________
     // Create piecewise Toeplitz matrix
 
@@ -270,6 +311,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     // free Gap structure
     free(Gaps.id0gap);
     free(Gaps.lgap);
+#endif
 
     // ____________________________________________________________
     // Write output to fits files
