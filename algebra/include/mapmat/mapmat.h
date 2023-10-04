@@ -57,8 +57,8 @@ typedef struct mat_t {
     int m;         // number local rows
     int nnz;       // number non-zero per rows
     int trash_pix; // amount of extra pixels
-    bool flag_ignore_extra; // flag to ignore extra pixels (ie. don't
-                            // include them in estimated map)
+    bool flag_ignore_extra; // if true, do not include extra pixels in estimated
+                            // map
     int *indices;     // column indices tab; size = m * nnz; can be a global or
                       // local numbering
     double *values;   // non-zero values tab; size = m * nnz

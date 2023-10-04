@@ -19,13 +19,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-double scalar_prod_reduce(Mat *A, Precond *P, const double *p1,
+double scalar_prod_reduce(MPI_Comm comm, Precond *P, const double *p1,
                           const double *p2, const double *p_sub);
+
+WeightStgy handle_gaps(Gap *Gaps, Mat *A, Tpltz *Nm1, Tpltz *N, GapStrategy gs,
+                       double *b, const double *noise, bool do_gap_filling,
+                       uint64_t realization, const uint64_t *detindxs,
+                       const uint64_t *obsindxs, const uint64_t *telescopes,
+                       double sample_rate);
 
 int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N,
                  double *x, double *b, double *noise, double *cond, int *lhits,
-                 double tol, int K, int precond, int Z_2lvl,
-                 ExtraPixStgy pix_stgy, Gap *Gaps, int64_t gif, int gap_stgy,
+                 double tol, int K, int precond, int Z_2lvl, GapStrategy gs,
+                 bool do_gap_filling, Gap *Gaps, int64_t gif,
                  uint64_t realization, const uint64_t *detindxs,
                  const uint64_t *obsindxs, const uint64_t *telescopes,
                  double sample_rate) {
@@ -81,73 +87,9 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N,
     //____________________________________________________________
     // Gap treatment
 
-    compute_gaps_per_block(Gaps, Nm1->nb_blocks_loc, Nm1->tpltzblocks);
-    copy_gap_info(Nm1->nb_blocks_loc, Nm1->tpltzblocks, N->tpltzblocks);
-
-    switch (pix_stgy) {
-    case COND:
-        // set signal in all gaps to zero
-        reset_relevant_gaps(b, Nm1, Gaps);
-        condition_extra_pix_zero(A);
-        break;
-    case MARG_LOCAL_SCAN:
-        // nothing to do, we want to estimate a value in the extra pixels
-        break;
-    }
-
-    // recombine signal and noise
-    for (i = 0; i < m; ++i) {
-        b[i] += noise[i];
-    }
-
-    WeightStgy strategy;
-    switch (gap_stgy) {
-    case 0:
-        // perfect noise reconstruction
-        if (rank == 0)
-            printf("[rank %d] gap_stgy = %d (perfect noise reconstruction)\n",
-                   rank, gap_stgy);
-        strategy = BASIC;
-        break;
-    case 1:
-        // gap filling with constrained noise realization
-        if (rank == 0)
-            printf("[rank %d] gap_stgy = %d (gap filling)\n", rank, gap_stgy);
-        perform_gap_filling(A->comm, N, Nm1, b, Gaps, realization, detindxs,
-                            obsindxs, telescopes, sample_rate, true);
-        strategy = BASIC;
-        break;
-    case 2:
-        // nested PCG
-        if (rank == 0)
-            printf("[rank %d] gap_stgy = %d (nested PCG)\n", rank, gap_stgy);
-        strategy = ITER;
-        break;
-    case 3:
-        // perfect noise reconstruction + nested PCG (ignoring gaps)
-        if (rank == 0)
-            printf("[rank %d] gap_stgy = %d (perfect noise reconstruction + "
-                   "nested PCG)\n",
-                   rank, gap_stgy);
-        strategy = ITER_IGNORE;
-        break;
-    case 4:
-        // gap filling + nested PCG (ignoring gaps)
-        if (rank == 0)
-            printf("[rank %d] gap_stgy = %d (gap filling + nested PCG)\n", rank,
-                   gap_stgy);
-        perform_gap_filling(A->comm, N, Nm1, b, Gaps, realization, detindxs,
-                            obsindxs, telescopes, sample_rate, true);
-        strategy = ITER_IGNORE;
-        break;
-    default:
-        if (rank == 0)
-            printf("[rank %d] invalid gap_stgy (%d), defaulting to 0\n", rank,
-                   gap_stgy);
-        gap_stgy = 0;
-        strategy = BASIC;
-    }
-    fflush(stdout);
+    WeightStgy ws =
+        handle_gaps(Gaps, A, Nm1, N, gs, b, noise, do_gap_filling, realization,
+                    detindxs, obsindxs, telescopes, sample_rate);
 
     MPI_Barrier(A->comm);
     if (rank == 0) {
@@ -176,7 +118,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N,
     for (i = 0; i < m; i++)
         _g[i] = b[i] - _g[i];
 
-    apply_weights(Nm1, N, Gaps, _g, strategy,
+    apply_weights(Nm1, N, Gaps, _g, ws,
                   false); // _g = Nm1 (d-Ax0)  (d = signal + noise)
 
     TrMatVecProd(A, _g, g, 0); // g = At _g
@@ -187,14 +129,14 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N,
         h[j] = Cg[j];
 
     // g2pix = (Cg, g)
-    g2pix = scalar_prod_reduce(A, p, Cg, g, NULL);
+    g2pix = scalar_prod_reduce(A->comm, p, Cg, g, NULL);
 
     t = MPI_Wtime();
     solve_time += (t - st);
 
     if (TRUE_NORM == 1) {
         // res = (g, g)
-        res = scalar_prod_reduce(A, p, g, g, NULL);
+        res = scalar_prod_reduce(A->comm, p, g, g, NULL);
     } else {
         res = g2pix;
     }
@@ -237,12 +179,12 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N,
 
         MatVecProd(A, h, Ah, 0); // Ah = A h
 
-        apply_weights(Nm1, N, Gaps, Nm1Ah, strategy,
+        apply_weights(Nm1, N, Gaps, Nm1Ah, ws,
                       false); // Nm1Ah = Nm1 Ah   (Nm1Ah == Ah)
 
         TrMatVecProd(A, Nm1Ah, AtNm1Ah, 0); // AtNm1Ah = At Nm1Ah
 
-        coeff = scalar_prod_reduce(A, p, h, AtNm1Ah, NULL);
+        coeff = scalar_prod_reduce(A->comm, p, h, AtNm1Ah, NULL);
 
         ro = g2pix / coeff;
 
@@ -255,16 +197,16 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N,
         apply_precond(p, A, Nm1, g, Cg);
 
         g2pix_prev = g2pix; // g2p = "res"
-        g2pix = scalar_prod_reduce(A, p, Cg, g, NULL);
+        g2pix = scalar_prod_reduce(A->comm, p, Cg, g, NULL);
 
-        g2pix_polak = scalar_prod_reduce(A, p, Cg, g, gp);
+        g2pix_polak = scalar_prod_reduce(A->comm, p, Cg, g, gp);
 
         t = MPI_Wtime();
         solve_time += (t - st);
 
         // Just to check with the true norm:
         if (TRUE_NORM == 1) {
-            res = scalar_prod_reduce(A, p, g, g, NULL);
+            res = scalar_prod_reduce(A->comm, p, g, g, NULL);
         } else {
             res = g2pix_polak;
         }
@@ -325,7 +267,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N,
     return 0;
 }
 
-double scalar_prod_reduce(Mat *A, Precond *P, const double *p1,
+double scalar_prod_reduce(MPI_Comm comm, Precond *P, const double *p1,
                           const double *p2, const double *p_sub) {
     double result;
 
@@ -341,7 +283,7 @@ double scalar_prod_reduce(Mat *A, Precond *P, const double *p1,
     }
 
     // reduce the results for valid pixels
-    MPI_Allreduce(&local_sum, &result, 1, MPI_DOUBLE, MPI_SUM, A->comm);
+    MPI_Allreduce(&local_sum, &result, 1, MPI_DOUBLE, MPI_SUM, comm);
 
     // contributions from extra pixels
     for (int i = 0; i < P->n_extra; i++) {
@@ -353,4 +295,120 @@ double scalar_prod_reduce(Mat *A, Precond *P, const double *p1,
     }
 
     return result;
+}
+
+WeightStgy handle_gaps(Gap *Gaps, Mat *A, Tpltz *Nm1, Tpltz *N, GapStrategy gs,
+                       double *b, const double *noise, bool do_gap_filling,
+                       uint64_t realization, const uint64_t *detindxs,
+                       const uint64_t *obsindxs, const uint64_t *telescopes,
+                       double sample_rate) {
+    int my_rank;
+    MPI_Comm_rank(A->comm, &my_rank);
+
+    compute_gaps_per_block(Gaps, Nm1->nb_blocks_loc, Nm1->tpltzblocks);
+    copy_gap_info(Nm1->nb_blocks_loc, Nm1->tpltzblocks, N->tpltzblocks);
+
+    WeightStgy ws;
+
+    switch (gs) {
+
+    case COND:
+        // set signal in all gaps to zero
+        reset_relevant_gaps(b, Nm1, Gaps);
+
+        // TODO check if this is still useful
+        condition_extra_pix_zero(A);
+
+        // recombine signal and noise
+        for (int i = 0; i < A->m; ++i) {
+            b[i] += noise[i];
+        }
+
+        if (do_gap_filling) {
+            perform_gap_filling(A->comm, N, Nm1, b, Gaps, realization, detindxs,
+                                obsindxs, telescopes, sample_rate, true);
+        } else {
+            // perfect noise reconstruction
+            if (my_rank == 0) {
+                puts("[gaps/conditioning] perfect noise reconstruction");
+            }
+        }
+
+        // set noise weighting strategy
+        ws = BASIC;
+
+        if (my_rank == 0) {
+            puts("[gaps/conditioning] weighting strategy = BASIC");
+        }
+
+        break;
+
+    case MARG_LOCAL_SCAN:
+        // recombine signal and noise
+        for (int i = 0; i < A->m; ++i) {
+            b[i] += noise[i];
+        }
+
+        if (do_gap_filling) {
+            perform_gap_filling(A->comm, N, Nm1, b, Gaps, realization, detindxs,
+                                obsindxs, telescopes, sample_rate, true);
+        } else {
+            // perfect noise reconstruction
+            if (my_rank == 0) {
+                puts("[gaps/marginalization] perfect noise reconstruction");
+            }
+        }
+
+        // set noise weighting strategy
+        ws = BASIC;
+
+        if (my_rank == 0) {
+            puts("[gaps/marginalization] weighting strategy = BASIC");
+        }
+
+        break;
+
+    case NESTED_PCG:
+        // recombine signal and noise
+        for (int i = 0; i < A->m; ++i) {
+            b[i] += noise[i];
+        }
+
+        // set noise weighting strategy
+        ws = ITER;
+
+        if (my_rank == 0) {
+            puts("[gaps/nested] weighting strategy = ITER");
+        }
+
+        break;
+
+    case NESTED_PCG_NO_GAPS:
+        // recombine signal and noise
+        for (int i = 0; i < A->m; ++i) {
+            b[i] += noise[i];
+        }
+
+        if (do_gap_filling) {
+            perform_gap_filling(A->comm, N, Nm1, b, Gaps, realization, detindxs,
+                                obsindxs, telescopes, sample_rate, true);
+        } else {
+            // perfect noise reconstruction
+            if (my_rank == 0) {
+                puts("[gaps/nested-ignore] perfect noise reconstruction");
+            }
+        }
+
+        // set noise weighting strategy
+        ws = ITER_IGNORE;
+
+        if (my_rank == 0) {
+            puts("[gaps/nested-ignore] weighting strategy = ITER_IGNORE");
+        }
+
+        break;
+    }
+    fflush(stdout);
+
+    return ws;
 }

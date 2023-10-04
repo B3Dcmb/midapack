@@ -30,11 +30,11 @@ void x2map_pol(double *mapI, double *mapQ, double *mapU, double *Cond,
 void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
            int Z_2lvl, int pointing_commflag, double tol, int maxiter,
            int enlFac, int ortho_alg, int bs_red, int nside, int gap_stgy,
-           uint64_t realization, void *data_size_proc, int nb_blocks_loc,
-           void *local_blocks_sizes, double sample_rate, uint64_t *detindxs,
-           uint64_t *obsindxs, uint64_t *telescopes, int Nnz, void *pix,
-           void *pixweights, void *signal, double *noise, int lambda,
-           double *inv_tt, double *tt) {
+           bool do_gap_filling, uint64_t realization, void *data_size_proc,
+           int nb_blocks_loc, void *local_blocks_sizes, double sample_rate,
+           uint64_t *detindxs, uint64_t *obsindxs, uint64_t *telescopes,
+           int Nnz, void *pix, void *pixweights, void *signal, double *noise,
+           int lambda, double *inv_tt, double *tt) {
     int64_t M;             // Global number of rows
     int m, Nb_t_Intervals; // local number of rows of the pointing matrix A, nbr
                            // of stationary intervals
@@ -95,15 +95,23 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
 
     // Hardcode this for the moment
 #if 1
-    ExtraPixStgy pix_stgy = MARG_LOCAL_SCAN;
+    gap_stgy = MARG_LOCAL_SCAN;
     A.flag_ignore_extra = false;
-#else
-    ExtraPixStgy pix_stgy = COND;
+#elif 0
+    gap_stgy = COND;
+    A.flag_ignore_extra = true;
+#elif 0
+    gap_stgy = NESTED_PCG;
+    A.flag_ignore_extra = true;
+#elif 0
+    gap_stgy = NESTED_PCG_NO_GAPS;
     A.flag_ignore_extra = true;
 #endif
 
-    // Create extra pixels for marginalization
-    create_extra_pix(pix, Nnz, nb_blocks_loc, local_blocks_sizes, pix_stgy);
+    GapStrategy gs = gap_stgy;
+
+    // Create extra pixels according to the chosen strategy
+    create_extra_pix(pix, Nnz, nb_blocks_loc, local_blocks_sizes, gs);
 
     // ____________________________________________________________
     // Pointing matrix initialization
@@ -125,8 +133,8 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     if (rank == 0) {
         printf("[rank %d] Initializing pointing matrix time = %lf\n", rank,
                t - st);
-        printf("Treatment of gaps: %d ", pix_stgy);
-        puts(pix_stgy == COND ? "(conditioning)" : "(marginalization)");
+        printf("Treatment of gaps: ");
+        print_gap_stgy(gs);
         printf("  -> nbr of sky pixels = %d\n", A.lcount);
         printf("  -> valid pixels = %d\n", nbr_valid_pixels);
         printf("  -> extra pixels = %d\n", nbr_extra_pixels);
@@ -275,8 +283,8 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     // Conjugate Gradient
     if (solver == 0) {
         PCG_GLS_true(outpath, ref, &A, &Nm1, &N, x, signal, noise, cond, lhits,
-                     tol, maxiter, precond, Z_2lvl, pix_stgy, &Gaps, gif,
-                     gap_stgy, realization, detindxs, obsindxs, telescopes,
+                     tol, maxiter, precond, Z_2lvl, gs, do_gap_filling, &Gaps,
+                     gif, realization, detindxs, obsindxs, telescopes,
                      sample_rate);
     } else if (solver == 1) {
 #ifdef WITH_ECG
@@ -319,30 +327,14 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     // size of the estimated map without extra pixels
     int map_size = A.lcount - (A.nnz) * (A.trash_pix);
 
-    switch (pix_stgy) {
-    case COND:
-        /* map only contains valid pixels, nothing more to do */
-        break;
-
-    case MARG_LOCAL_SCAN:
-        solver_map_size = A.lcount;
-
+    if (gs == MARG_LOCAL_SCAN) {
         // map contains estimates for extra pixels which we don't want to keep
         int extra = A.nnz * A.trash_pix;
+
+#if 0
         double *extra_map = (double *)malloc(extra * sizeof(double));
         memcpy(extra_map, x, extra * sizeof(double));
 
-        // valid map
-        memmove(x, (x + extra), map_size * sizeof(double));
-        double *tmp = realloc(x, map_size * sizeof(double));
-        if (tmp == NULL) {
-            fprintf(stderr, "Map reallocation failed");
-            exit(EXIT_FAILURE);
-        }
-        x = tmp;
-
-        // TODO what to do with the extra map?
-#if 0
         if (rank == 0) {
             printf("extra map with %d pixels\nI component = {", extra);
             for (j = 0; j < extra; j += A.nnz) {
@@ -352,7 +344,15 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
         }
         fflush(stdout);
 #endif
-        break;
+
+        // valid map
+        memmove(x, (x + extra), map_size * sizeof(double));
+        double *tmp = realloc(x, map_size * sizeof(double));
+        if (tmp == NULL) {
+            fprintf(stderr, "Map reallocation failed");
+            exit(EXIT_FAILURE);
+        }
+        x = tmp;
     }
 
     int *lstid = (int *)malloc(map_size * sizeof(int));

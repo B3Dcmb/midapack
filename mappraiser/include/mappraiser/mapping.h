@@ -8,7 +8,7 @@ extern "C" {
 #endif
 
 /// @brief Possible choices for taking gaps into account in the map
-typedef enum extra_pix_stgy_t {
+typedef enum gap_strategy_t {
     // condition on signal being zero inside gaps
     // (original approach)
     COND = 0,
@@ -16,11 +16,23 @@ typedef enum extra_pix_stgy_t {
     // marginalize on extra pixels
     // introduce 1 extra pixel per scan
     // the extra pixels are not shared among processes
-    MARG_LOCAL_SCAN = 1,
-} ExtraPixStgy;
+    MARG_LOCAL_SCAN,
+
+    // inverse the noise covariance matrix anyway
+    // despite some rows and columns missing
+    NESTED_PCG,
+
+    // inverse the noise covariance matrix iteratively
+    // BUT ignore the gaps
+    // this will only correct the Toeplitz approximation
+    // near the timestream edges
+    NESTED_PCG_NO_GAPS,
+} GapStrategy;
+
+void print_gap_stgy(GapStrategy gs);
 
 int create_extra_pix(int *indices, int nnz, int nb_blocks_loc,
-                     const int *local_blocks_sizes, ExtraPixStgy stg);
+                     const int *local_blocks_sizes, GapStrategy gs);
 
 int build_pixel_to_time_domain_mapping(Mat *A);
 

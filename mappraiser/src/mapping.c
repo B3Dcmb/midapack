@@ -15,13 +15,25 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-int create_extra_pix(int *indices, int nnz, int nb_blocks_loc,
-                     const int *local_blocks_sizes, ExtraPixStgy stg) {
-    switch (stg) {
+void print_gap_stgy(GapStrategy gs) {
+    switch (gs) {
     case COND:
-        /* nothing to do */
+        puts("conditioning");
         break;
+    case MARG_LOCAL_SCAN:
+        puts("marginalization (1 extra pixel/scan)");
+        break;
+    case NESTED_PCG:
+        puts("nested PCG");
+        break;
+    case NESTED_PCG_NO_GAPS:
+        puts("nested PCG ignoring gaps");
+    }
+}
 
+int create_extra_pix(int *indices, int nnz, int nb_blocks_loc,
+                     const int *local_blocks_sizes, GapStrategy gs) {
+    switch (gs) {
     case MARG_LOCAL_SCAN: {
         // position in the data
         int offset = 0;
@@ -42,6 +54,10 @@ int create_extra_pix(int *indices, int nnz, int nb_blocks_loc,
         }
         break;
     }
+
+    default:
+        /* nothing to do */
+        break;
     }
     return 0;
 }
