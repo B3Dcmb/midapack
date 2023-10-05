@@ -316,8 +316,8 @@ WeightStgy handle_gaps(Gap *Gaps, Mat *A, Tpltz *Nm1, Tpltz *N, GapStrategy gs,
         // set signal in all gaps to zero
         reset_relevant_gaps(b, Nm1, Gaps);
 
-        // TODO check if this is still useful
-        condition_extra_pix_zero(A);
+        // this is not needed any more
+        // condition_extra_pix_zero(A);
 
         // recombine signal and noise
         for (int i = 0; i < A->m; ++i) {
