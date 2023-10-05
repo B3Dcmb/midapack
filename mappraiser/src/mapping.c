@@ -285,16 +285,19 @@ void reset_relevant_gaps(double *tod, Tpltz *tmat, Gap *gaps) {
 }
 
 void condition_extra_pix_zero(Mat *A) {
-    // if no samples are pointed to "trash" pixel, there is nothing to do
-    if (!A->trash_pix)
+    // number of extra pixels in the pointing matrix
+    int extra = A->trash_pix * A->nnz;
+    int nnz = A->nnz;
+
+    // if no extra pixels, there is nothing to do
+    if (extra == 0)
         return;
 
-    // otherwise set the relevant pointing weights to zero
-    int nnz = A->nnz;
-    for (int i = 0; i < A->m; ++i) {
-        if (A->indices[i * nnz] == 0) {
+    // set pointing weights for extra pixels to zero
+    for (int i = 0; i < A->m * nnz; i += nnz) {
+        if (A->indices[i] < extra) {
             for (int j = 0; j < nnz; ++j) {
-                A->values[i * nnz + j] = 0;
+                A->values[i + j] = 0;
             }
         }
     }

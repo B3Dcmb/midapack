@@ -737,7 +737,7 @@ int MatVecProd(Mat *A, double *x, double *y, int pflag) {
         int c = 0;
 
         for (int j = 0; j < A->m * A->nnz; j += A->nnz) {
-            if (A->indices[j] > extra) {
+            if (A->indices[j] >= extra) {
                 for (int k = 0; k < A->nnz; k++) {
                     y[c] += A->values[j + k] * x[A->indices[j + k] - extra];
                 }
@@ -862,7 +862,7 @@ int TrMatVecProd(Mat *A, double *y, double *x, int pflag) {
         int c = 0;
 
         for (int j = 0; j < A->m * A->nnz; j += A->nnz) {
-            if (A->indices[j] > extra) {
+            if (A->indices[j] >= extra) {
                 // local transform reduce
                 for (int k = 0; k < A->nnz; k++) {
                     x[A->indices[j + k] - extra] += A->values[j + k] * y[c];
