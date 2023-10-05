@@ -41,19 +41,43 @@
         _a < _b ? _a : _b;                                                     \
     })
 
-// do the local Atdiag(Nm1)A with as output a block-diagonal matrix (stored as a
-// vector) in the pixel domain
-int getlocalW(const Mat *A, Tpltz *Nm1, double *vpixBlock, int *lhits) {
-    int m = Nm1->local_V_size; // number of local time samples
-    int nnz = A->nnz;          // number of non-zero entries
-    int n_valid =
-        A->lcount - (A->trash_pix) * nnz; // size of map-domain objects
+void compute_block(const Mat *A, int64_t ipix, int extra, int off_extra,
+                   int *lhits, double *vpixBlock, double diagNm1) {
+    int nnz = A->nnz;
+    int64_t innz = ipix * nnz;
+    lhits[(A->indices[innz] - off_extra) / nnz] += 1;
+    if (!(A->flag_ignore_extra) || A->indices[innz] >= extra) {
+        for (int j = 0; j < nnz; j++) {
+            for (int k = 0; k < nnz; k++) {
+                int idx_j = A->indices[innz + j] - off_extra;
+                // coeff (j, k) of the nnz * nnz block
+                vpixBlock[nnz * idx_j + k] +=
+                    A->values[innz + j] * A->values[innz + k] * diagNm1;
+            }
+        }
+    }
+}
 
-    // Define the indices for each process
-    int idv0,
-        idvn; // indice of the first and the last block of V for each processes
-    int *nnew;
-    nnew = (int *)calloc(Nm1->nb_blocks_loc, sizeof(int));
+/**
+ * @brief Compute the local block-diagonal weight matrix W = At diag(Nm1) A.
+ * If A->flag_ignore_extra is raised, this routine only computes W for the
+ * valid pixels. Otherwise for valid + extra pixels.
+ * @param A pointing matrix
+ * @param Nm1 inverse noise covariance
+ * @param vpixBlock vector for storing W (size = nnz * Npixels)
+ * @param lhits vector counting hits on pixels (size = Npixels)
+ */
+void getlocalW(const Mat *A, Tpltz *Nm1, double *vpixBlock, int *lhits) {
+    int m = Nm1->local_V_size;      // number of local time samples
+    int nnz = A->nnz;               // number of non-zero entries
+    int extra = nnz * A->trash_pix; // number of extra pixels
+    int off_extra = A->flag_ignore_extra ? extra : 0;
+    int mapsize = A->lcount - off_extra; // size of map-domain objects
+
+    // indices of the first and last blocks of V for each process
+    int idv0, idvn;
+
+    int *nnew = (int *)calloc(Nm1->nb_blocks_loc, sizeof(int));
     int64_t idpnew;
     int local_V_size_new;
 
@@ -61,45 +85,32 @@ int getlocalW(const Mat *A, Tpltz *Nm1, double *vpixBlock, int *lhits) {
     get_overlapping_blocks_params(
         Nm1->nb_blocks_loc, Nm1->tpltzblocks, Nm1->local_V_size, Nm1->nrow,
         Nm1->idp, &idpnew, &local_V_size_new, nnew, &idv0, &idvn);
-    // double *vpixDiag;
-    // vpixDiag = (double *) malloc(A->lcount *sizeof(double));
 
-    int64_t istart, il, istartn;
-    for (int i = 0; i < nnz * n_valid; i++)
+    for (int i = 0; i < nnz * mapsize; i++) {
         vpixBlock[i] = 0.0;
+    }
 
-    int64_t vShft =
-        idpnew - Nm1->idp; //=Nm1->tpltzblocks[idv0].idv-Nm1->idp in principle
-    /*
-        printf("Nm1->idp=%d, idpnew=%d, vShft=%d\n", Nm1->idp, idpnew, vShft);
-        printf("idv0=%d, idvn=%d\n", idv0, idvn);
-        printf("Nm1->nb_blocks_loc=%d, Nm1->local_V_size=%d\n",
-       Nm1->nb_blocks_loc, Nm1->local_V_size);
+    int64_t vShft = idpnew - Nm1->idp;
+    // in principle == Nm1->tpltzblocks[idv0].idv-Nm1->idp
 
-        for(i=0; i < Nm1->nb_blocks_loc; i++)
-        printf("Nm1->tpltzblocks[%d].idv=%d\n", i, Nm1->tpltzblocks[i].idv);
-    */
+#if 0
+    printf("Nm1->idp=%ld, idpnew=%ld, vShft=%ld\n", Nm1->idp, idpnew, vShft);
+    printf("idv0=%d, idvn=%d\n", idv0, idvn);
+    printf("Nm1->nb_blocks_loc=%d, Nm1->local_V_size=%d\n", Nm1->nb_blocks_loc,
+           Nm1->local_V_size);
 
-    // go until the first piecewise stationary period
-    int vpix_i, vpix_j = 0;
+    for (int i = 0; i < Nm1->nb_blocks_loc; i++)
+        printf("Nm1->tpltzblocks[%d].idv=%ld\n", i, Nm1->tpltzblocks[i].idv);
+#endif
+
+    // go to the first piecewise stationary period
     for (int i = 0; i < vShft; i++) {
-        // only do something for valid pixels
-        if (!A->trash_pix || (A->trash_pix && (A->indices[i * nnz] != 0))) {
-            vpix_i = A->indices[i * nnz] / nnz - A->trash_pix;
-            lhits[vpix_i] += 1;
-            for (int j = 0; j < nnz; j++) {
-                vpix_j = A->indices[i * nnz + j] - nnz * A->trash_pix;
-                for (int k = 0; k < nnz; k++) {
-                    // value (j, k) of 3*3 block
-                    vpixBlock[nnz * vpix_j + k] +=
-                        A->values[i * nnz + j] * A->values[i * nnz + k];
-                }
-            }
-        }
+        compute_block(A, (int64_t)i, extra, off_extra, lhits, vpixBlock, 1.0);
     }
 
     // temporary buffer for one diag value of Nm1
     double diagNm1;
+    int64_t istart, il, istartn;
     // loop on the blocks
     for (int k = idv0; k < (idv0 + Nm1->nb_blocks_loc); k++) {
         if (nnew[idv0] > 0) { // if nnew==0, this is a wrong defined block
@@ -130,55 +141,27 @@ int getlocalW(const Mat *A, Tpltz *Nm1, double *vpixBlock, int *lhits) {
 
             // get the diagonal value of the Toeplitz
             diagNm1 = Nm1->tpltzblocks[k].T_block[0];
-            /*
-            printf("istart=%d, il=%d, istartn=%d\n", istart, il, istartn);
-            printf("Nm1->tpltzblocks[k=%d].idv=%d, Nm1->tpltzblocks[k=%d].n=%d,
-            Nm1->idp=%d\n", k, Nm1->tpltzblocks[k].idv, k,
-            Nm1->tpltzblocks[k].n, Nm1->idp);
-            */
+
+#if 0
+            printf("istart=%ld, il=%ld, istartn=%ld\n", istart, il, istartn);
+            printf("Nm1->tpltzblocks[k=%d].idv=%ld, Nm1->tpltzblocks[k=%d]"
+                   ".n=%d, Nm1->idp=%ld\n",
+                   k, Nm1->tpltzblocks[k].idv, k, Nm1->tpltzblocks[k].n,
+                   Nm1->idp);
+#endif
 
             // a piecewise stationary period
-            vpix_i = 0;
-            vpix_j = 0;
             for (int64_t q = istart; q < istart + il; q++) {
-                // only do something for valid pixels
-                if (!A->trash_pix ||
-                    (A->trash_pix && (A->indices[q * nnz] != 0))) {
-                    vpix_i = A->indices[q * nnz] / nnz - A->trash_pix;
-                    lhits[vpix_i] += 1;
-                    for (int j = 0; j < nnz; j++) {
-                        vpix_j = A->indices[q * nnz + j] - nnz * A->trash_pix;
-                        for (int l = 0; l < nnz; l++) {
-                            vpixBlock[nnz * vpix_j + l] +=
-                                A->values[q * nnz + j] *
-                                A->values[q * nnz + l] * diagNm1;
-                        }
-                    }
-                }
+                compute_block(A, q, extra, off_extra, lhits, vpixBlock,
+                              diagNm1);
             }
 
             // continue until the next period if exist or to the last line of V
-            vpix_i = 0;
-            vpix_j = 0;
             for (int64_t i = istart + il; i < istartn; i++) {
-                // only do something for valid pixels
-                if (!A->trash_pix ||
-                    (A->trash_pix && (A->indices[i * nnz] != 0))) {
-                    vpix_i = A->indices[i * nnz] / nnz - A->trash_pix;
-                    lhits[vpix_i] += 1;
-                    for (int j = 0; j < nnz; j++) {
-                        vpix_j = A->indices[i * nnz + j] - nnz * A->trash_pix;
-                        for (int l = 0; l < nnz; l++) {
-                            vpixBlock[nnz * vpix_j + l] +=
-                                A->values[i * nnz + j] * A->values[i * nnz + l];
-                        }
-                    }
-                }
+                compute_block(A, i, extra, off_extra, lhits, vpixBlock, 1.0);
             }
         }
     } // end of the loop over the blocks
-
-    return 0;
 }
 
 // do the local diag( At diag(Nm1) A ) with as output a vector in the pixel

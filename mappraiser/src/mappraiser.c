@@ -173,7 +173,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
         }
     }
 
-#if 0
+#if 1
     /* test pointing operations */
 
     // time-domain vector
@@ -208,6 +208,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     fflush(stdout);
 #endif
 
+#if 1
     // ____________________________________________________________
     // Create piecewise Toeplitz matrix
 
@@ -479,6 +480,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
         fflush(stdout);
     }
     st = MPI_Wtime();
+#endif
 
     // free map domain objects
     free(x);

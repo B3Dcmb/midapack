@@ -724,32 +724,19 @@ int MatComShape(Mat *A, int flag, MPI_Comm comm) {
     @ingroup matmap_group12a */
 int MatVecProd(Mat *A, double *x, double *y, int pflag) {
     // refresh output vector
-    for (int i = 0; i < A->m; i++)
-        y[i] = 0.0;
+    for (int j = 0; j < A->m; j++)
+        y[j] = 0.0;
 
     // elements not present in input vector (potentially zero)
     int extra = A->trash_pix * A->nnz;
+    int off_extra = A->flag_ignore_extra ? extra : 0;
 
-    if (A->flag_ignore_extra) {
-        /* do not observe the extra pixels */
-
-        // index to go through output vector
-        int c = 0;
-
-        for (int j = 0; j < A->m * A->nnz; j += A->nnz) {
-            if (A->indices[j] >= extra) {
-                for (int k = 0; k < A->nnz; k++) {
-                    y[c] += A->values[j + k] * x[A->indices[j + k] - extra];
-                }
-            }
-            c++;
-        }
-    } else {
-        /* observe all pixels */
-        for (int j = 0; j < A->m; j++) {
+    for (int j = 0; j < A->m; j++) {
+        int jnnz = j * A->nnz;
+        if (!(A->flag_ignore_extra) || A->indices[jnnz] >= extra) {
             for (int k = 0; k < A->nnz; k++) {
-                int d = j * A->nnz + k;
-                y[j] += A->values[d] * x[A->indices[d]];
+                int map_index = A->indices[jnnz + k] - off_extra;
+                y[j] += A->values[jnnz + k] * x[map_index];
             }
         }
     }
@@ -849,34 +836,19 @@ __attribute__((unused)) int TrMatVecProd_Naive(Mat *A, double *y, double *x,
 int TrMatVecProd(Mat *A, double *y, double *x, int pflag) {
     // elements not present in output vector (potentially zero)
     int extra = A->trash_pix * A->nnz;
+    int off_extra = A->flag_ignore_extra ? extra : 0;
 
     // refresh output vector
-    for (int i = 0; i < A->lcount - extra; i++) {
+    for (int i = 0; i < A->lcount - off_extra; i++) {
         x[i] = 0.0;
     }
 
-    if (A->flag_ignore_extra) {
-        /* do not project on the extra pixels */
-
-        // index to go through input vector
-        int c = 0;
-
-        for (int j = 0; j < A->m * A->nnz; j += A->nnz) {
-            if (A->indices[j] >= extra) {
-                // local transform reduce
-                for (int k = 0; k < A->nnz; k++) {
-                    x[A->indices[j + k] - extra] += A->values[j + k] * y[c];
-                }
-            }
-            c++;
-        }
-    } else {
-        /* project on all pixels */
-        for (int j = 0; j < A->m; j++) {
-            // local transform reduce
+    for (int j = 0; j < A->m; j++) {
+        int jnnz = j * A->nnz;
+        if (!(A->flag_ignore_extra) || A->indices[jnnz] >= extra) {
             for (int k = 0; k < A->nnz; k++) {
-                int d = j * A->nnz + k;
-                x[A->indices[d]] += A->values[d] * y[j];
+                int map_index = A->indices[jnnz + k] - off_extra;
+                x[map_index] += A->values[jnnz + k] * y[j];
             }
         }
     }
