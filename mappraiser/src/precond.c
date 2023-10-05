@@ -1510,10 +1510,10 @@ void Lanczos_eig(Mat *A, Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ,
 }
 
 // General routine for constructing a preconditioner
-void build_precond(Precond **out_p, double **out_pixpond, int *out_n, Mat *A,
-                   Tpltz *Nm1, double **in_out_x, double *b, double *noise,
-                   double *cond, int *lhits, double tol, int Zn, int precond,
-                   Gap *Gaps, int64_t gif) {
+void build_precond(Precond **out_p, double **out_pixpond, Mat *A, Tpltz *Nm1,
+                   double **in_out_x, double *b, double *noise, double *cond,
+                   int *lhits, double tol, int Zn, int precond, Gap *Gaps,
+                   int64_t gif) {
     int rank, size, i;
     double st, t;
     double *x;
@@ -1530,7 +1530,16 @@ void build_precond(Precond **out_p, double **out_pixpond, int *out_n, Mat *A,
     precondblockjacobilike(A, Nm1, &(p->BJ_inv), &(p->BJ), b, noise, cond,
                            lhits, Gaps, gif);
 
-    p->n = (A->lcount) - (A->nnz) * (A->trash_pix);
+    if (A->flag_ignore_extra) {
+        // preconditioner not computed for the extra pixels
+        p->n_extra = 0;
+    } else {
+        // preconditioner also deals with the extra pixels
+        p->n_extra = A->nnz * A->trash_pix;
+    }
+
+    p->n_valid = A->lcount - A->nnz * A->trash_pix;
+    p->n = p->n_extra + p->n_valid;
 
     // Reallocate memory for well-conditioned map
     x = realloc(*in_out_x, p->n * sizeof(double));
@@ -1539,7 +1548,7 @@ void build_precond(Precond **out_p, double **out_pixpond, int *out_n, Mat *A,
         exit(1);
     }
 
-    p->pixpond = (double *)malloc(p->n * sizeof(double));
+    p->pixpond = (double *)malloc(p->n_valid * sizeof(double));
 
     // Compute pixel share ponderation
     get_pixshare_pond(A, p->pixpond);
@@ -1603,7 +1612,6 @@ void build_precond(Precond **out_p, double **out_pixpond, int *out_n, Mat *A,
 
     *out_p = p;
     *out_pixpond = p->pixpond;
-    *out_n = p->n;
     *in_out_x = x;
 }
 
