@@ -384,10 +384,6 @@ class Mappraiser(Operator):
     def _check_gap_stgy(self, proposal):
         check = proposal["value"]
         if check not in (0, 1, 2, 3):
-            # 0 -> Condition on gaps having zero signal
-            # 1 -> Marginalize on gap contents using 1 extra pixel/scan/detector
-            # 2 -> Iterative noise weighting (nested PCG)
-            # 3 -> Iterative noise weighting without gaps
             msg = "Invalid gap_stgy - accepted values are:\n"
             msg += "0 -> condition on gaps having zero signal\n"
             msg += "1 -> marginalize on gap contents using 1 extra pixel/scan/detector\n"
