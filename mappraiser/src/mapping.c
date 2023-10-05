@@ -116,7 +116,7 @@ int build_pixel_to_time_domain_mapping(Mat *A) {
 
         // compute the number of gaps in the timestream
         if (A->trash_pix > 0) {
-            if (A->indices[i * A->nnz] > A->trash_pix * A->nnz) {
+            if (A->indices[i * A->nnz] >= A->trash_pix * A->nnz) {
                 // valid sample: reset gap length
                 lengap = 0;
             } else {
