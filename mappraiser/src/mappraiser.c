@@ -173,7 +173,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
         }
     }
 
-#if 1
+#if 0
     /* test pointing operations */
 
     // time-domain vector
@@ -208,7 +208,6 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     fflush(stdout);
 #endif
 
-#if 1
     // ____________________________________________________________
     // Create piecewise Toeplitz matrix
 
@@ -304,10 +303,6 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     free(tpltzblocks);
     free(tpltzblocks_N);
 
-    // free Gap structure
-    free(Gaps.id0gap);
-    free(Gaps.lgap);
-
     // ____________________________________________________________
     // Write output to fits files
 
@@ -344,6 +339,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
         x = tmp;
     }
 
+#if 0
     int *lstid = (int *)malloc(map_size * sizeof(int));
     for (i = 0; i < map_size; i++) {
         lstid[i] = A.lindices[i + (A.nnz) * (A.trash_pix)];
@@ -473,6 +469,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
                    "not be stored ;(\n");
         }
     }
+#endif
 
     t = MPI_Wtime();
     if (rank == 0) {
@@ -480,7 +477,6 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
         fflush(stdout);
     }
     st = MPI_Wtime();
-#endif
 
     // free map domain objects
     free(x);

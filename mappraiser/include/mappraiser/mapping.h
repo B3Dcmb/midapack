@@ -31,7 +31,9 @@ typedef enum gap_strategy_t {
 
 void print_gap_stgy(GapStrategy gs);
 
-int get_correct_map_size(Mat *A);
+int get_actual_map_size(const Mat *A);
+
+int get_valid_map_size(const Mat *A);
 
 int create_extra_pix(int *indices, int nnz, int nb_blocks_loc,
                      const int *local_blocks_sizes, GapStrategy gs);

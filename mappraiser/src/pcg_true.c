@@ -84,6 +84,7 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N,
         fflush(stdout);
     }
 
+#if 0
     //____________________________________________________________
     // Gap treatment
 
@@ -263,6 +264,11 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N,
     free(AtNm1Ah);
     free(Ah);
     free_precond(&p);
+
+    // free Gap structure
+    free(Gaps.id0gap);
+    free(Gaps.lgap);
+#endif
 
     return 0;
 }

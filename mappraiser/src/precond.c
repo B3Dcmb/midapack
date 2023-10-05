@@ -41,12 +41,14 @@
         _a < _b ? _a : _b;                                                     \
     })
 
-void compute_block(const Mat *A, int64_t ipix, int extra, int off_extra,
-                   int *lhits, double *vpixBlock, double diagNm1) {
+void compute_block(const Mat *A, int64_t ipix, int *lhits, double *vpixBlock,
+                   double diagNm1) {
     int nnz = A->nnz;
+    int extra = nnz * A->trash_pix;
+    int off_extra = A->flag_ignore_extra ? extra : 0;
     int64_t innz = ipix * nnz;
-    lhits[(A->indices[innz] - off_extra) / nnz] += 1;
     if (!(A->flag_ignore_extra) || A->indices[innz] >= extra) {
+        lhits[(A->indices[innz] - off_extra) / nnz] += 1;
         for (int j = 0; j < nnz; j++) {
             for (int k = 0; k < nnz; k++) {
                 int idx_j = A->indices[innz + j] - off_extra;
@@ -70,9 +72,7 @@ void compute_block(const Mat *A, int64_t ipix, int extra, int off_extra,
 void getlocalW(const Mat *A, Tpltz *Nm1, double *vpixBlock, int *lhits) {
     int m = Nm1->local_V_size;      // number of local time samples
     int nnz = A->nnz;               // number of non-zero entries
-    int extra = nnz * A->trash_pix; // number of extra pixels
-    int off_extra = A->flag_ignore_extra ? extra : 0;
-    int mapsize = A->lcount - off_extra; // size of map-domain objects
+    int n = get_actual_map_size(A); // actual size of local map
 
     // indices of the first and last blocks of V for each process
     int idv0, idvn;
@@ -86,7 +86,7 @@ void getlocalW(const Mat *A, Tpltz *Nm1, double *vpixBlock, int *lhits) {
         Nm1->nb_blocks_loc, Nm1->tpltzblocks, Nm1->local_V_size, Nm1->nrow,
         Nm1->idp, &idpnew, &local_V_size_new, nnew, &idv0, &idvn);
 
-    for (int i = 0; i < nnz * mapsize; i++) {
+    for (int i = 0; i < nnz * n; i++) {
         vpixBlock[i] = 0.0;
     }
 
@@ -105,7 +105,7 @@ void getlocalW(const Mat *A, Tpltz *Nm1, double *vpixBlock, int *lhits) {
 
     // go to the first piecewise stationary period
     for (int i = 0; i < vShft; i++) {
-        compute_block(A, (int64_t)i, extra, off_extra, lhits, vpixBlock, 1.0);
+        compute_block(A, (int64_t)i, lhits, vpixBlock, 1.0);
     }
 
     // temporary buffer for one diag value of Nm1
@@ -152,13 +152,12 @@ void getlocalW(const Mat *A, Tpltz *Nm1, double *vpixBlock, int *lhits) {
 
             // a piecewise stationary period
             for (int64_t q = istart; q < istart + il; q++) {
-                compute_block(A, q, extra, off_extra, lhits, vpixBlock,
-                              diagNm1);
+                compute_block(A, q, lhits, vpixBlock, diagNm1);
             }
 
             // continue until the next period if exist or to the last line of V
             for (int64_t i = istart + il; i < istartn; i++) {
-                compute_block(A, i, extra, off_extra, lhits, vpixBlock, 1.0);
+                compute_block(A, i, lhits, vpixBlock, 1.0);
             }
         }
     } // end of the loop over the blocks
@@ -532,7 +531,7 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b,
     MPI_Comm_rank(A->comm, &rank);
     MPI_Comm_size(A->comm, &size);
 
-    int m, n, nnz, nnz2;
+    int m, nnz, nnz2;
     int *indices_new, *tmp1;
     double *vpixBlock, *vpixBlock_inv, *vpixBlock_loc, *hits_proc, *tmp2, *tmp3,
         *tmp4;
@@ -543,20 +542,23 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b,
     nnz = A->nnz;
     nnz2 = nnz * nnz;
 
-    int *ipiv =
-        (int *)calloc(nnz, sizeof(int)); // pivot indices of LU factorization
-    double *x = (double *)calloc(nnz2, sizeof(double)); // the nnz*nnz matrix
+    // pivot indices of LU factorization
+    int *ipiv = (int *)calloc(nnz, sizeof(int));
+
+    // the nnz*nnz matrix
+    double *x = (double *)calloc(nnz2, sizeof(double));
 
     nb = nnz;
     lda = nnz;
 
-    // at this stage there can be some invalid (flagged) pixels
-    n = (A->lcount) - nnz * (A->trash_pix);
+    int n = get_actual_map_size(A); // actual map size
+    int nv = get_valid_map_size(A); // valid map size
+    int dn = n - nv;                // size diff between actual and valid maps
 
-    vpixBlock_loc = (double *)malloc(n * sizeof(double));
+    vpixBlock_loc = (double *)malloc(nv * sizeof(double));
     vpixBlock = (double *)malloc(n * nnz * sizeof(double));
     vpixBlock_inv = (double *)malloc(n * nnz * sizeof(double));
-    hits_proc = (double *)malloc(n * sizeof(double));
+    hits_proc = (double *)malloc(nv * sizeof(double));
     if (vpixBlock_loc == NULL || vpixBlock == NULL || vpixBlock_inv == NULL ||
         hits_proc == NULL) {
         fprintf(stderr, "Out of memory: allocation of vpixBlock_loc, "
@@ -569,34 +571,35 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b,
 
     // sum hits globally: dumb chunk of code that needs to be rewritten, but
     // works for now ...
-    for (int q = 0; q < n; q += nnz) {
+    for (int q = 0; q < nv; q += nnz) {
         for (int i = 0; i < nnz; ++i) {
-            hits_proc[q + i] = lhits[(int)(q / nnz)];
+            hits_proc[q + i] = lhits[(int)((q + dn) / nnz)];
         }
     }
     commScheme(A, hits_proc, 2);
-    for (int q = 0; q < n; q += nnz) {
-        lhits[(int)(q / nnz)] = (int)hits_proc[q];
+    for (int q = 0; q < nv; q += nnz) {
+        lhits[(int)((q + dn) / nnz)] = (int)hits_proc[q];
     }
     free(hits_proc);
 
     // communicate with the other processes to have the global reduce
     // TODO : This should be done in a more efficient way
     for (int q = 0; q < nnz2; q += nnz) {
-        for (int i = q; i < n * nnz; i += nnz2) {
+        for (int i = q; i < nv * nnz; i += nnz2) {
             for (int j = 0; j < nnz; j++) {
-                vpixBlock_loc[(i - q) / nnz + j] = vpixBlock[i + j];
+                vpixBlock_loc[(i - q) / nnz + j] = vpixBlock[nnz * dn + i + j];
             }
         }
         commScheme(A, vpixBlock_loc, 2);
-        for (int i = q; i < n * nnz; i += nnz2) {
+        for (int i = q; i < nv * nnz; i += nnz2) {
             for (int j = 0; j < nnz; j++) {
-                vpixBlock[i + j] = vpixBlock_loc[(i - q) / nnz + j];
+                vpixBlock[nnz * dn + i + j] = vpixBlock_loc[(i - q) / nnz + j];
             }
         }
     }
     free(vpixBlock_loc);
 
+#if 0
     // Compute the inverse of the global Atdiag(N^-1)A blocks
 
     // Initialize to 0 if no flagged samples (trash_pix = 0 from 1st MatInit)
@@ -822,6 +825,7 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b,
     MatSetValues(BJ, n, nnz, vpixBlock);
     BJ->trash_pix = 0;
     MatLocalShape(BJ, 3);
+#endif
 
     return 0;
 }
@@ -1536,6 +1540,7 @@ void build_precond(Precond **out_p, double **out_pixpond, Mat *A, Tpltz *Nm1,
     // Compute pixel share ponderation
     get_pixshare_pond(A, p->pixpond);
 
+#if 0 /* 2-lvl preconditioners */
     if (precond != 0) {
         p->Qg = calloc(p->n, sizeof(double));
         p->AQg = calloc(p->n, sizeof(double));
@@ -1592,6 +1597,7 @@ void build_precond(Precond **out_p, double **out_pixpond, Mat *A, Tpltz *Nm1,
         // for (i = 0; i < p->n; i++)
         //  x[i] = x[i] +  p->Z[Zn-1][i];
     }
+#endif
 
     *out_p = p;
     *out_pixpond = p->pixpond;
