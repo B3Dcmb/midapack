@@ -93,22 +93,10 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
         fflush(stdout);
     }
 
-    // Hardcode this for the moment
-#if 1
-    gap_stgy = MARG_LOCAL_SCAN;
-    A.flag_ignore_extra = false;
-#elif 0
-    gap_stgy = COND;
-    A.flag_ignore_extra = true;
-#elif 0
-    gap_stgy = NESTED_PCG;
-    A.flag_ignore_extra = true;
-#elif 0
-    gap_stgy = NESTED_PCG_NO_GAPS;
-    A.flag_ignore_extra = true;
-#endif
-
     GapStrategy gs = gap_stgy;
+
+    // Set flag to ignore extra pixels when not marginalizing
+    A.flag_ignore_extra = gs != MARG_LOCAL_SCAN;
 
     // Create extra pixels according to the chosen strategy
     create_extra_pix(pix, Nnz, nb_blocks_loc, local_blocks_sizes, gs);

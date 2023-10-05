@@ -269,13 +269,19 @@ class Mappraiser(Operator):
     ptcomm_flag = Int(6, help="Choose collective communication scheme")
 
     # gap treatment strategy
-    # 0 -> perfect noise reconstruction (only possible on simulations)
-    # 1 -> gap filling with a constrained noise realization
-    # 2 -> "nested PCG" i.e. invert the noise covariance matrix with a PCG at each noise weighting operation
-    # 3 -> 0 + nested PCG (to correct for non-Toeplitz character of the inverse noise covariance)
-    # 4 -> 1 + nested PCG (to correct for non-Toeplitz character of the inverse noise covariance)
+    # 0 -> Condition on gaps having zero signal
+    # 1 -> Marginalize on gap contents using 1 extra pixel/scan/detector
+    # 2 -> Iterative noise weighting (nested PCG)
+    # 3 -> Iterative noise weighting without gaps
     gap_stgy = Int(0, help="Strategy for handling timestream gaps")
-    realization = Int(0, help="Noise realization index (for gap-filling)")
+
+    # Gap filling
+    # choosing False is only possible on simulations
+    # Mappraiser will take the noise from the simulation
+    # as if the noise reconstruction inside the gaps was perfect
+    do_gap_filling = Bool(True, action='store_true', help="Perform gap filling on the data")
+
+    realization = Int(0, help="Noise realization index (for gap filling)")
 
     @traitlets.validate("shared_flag_mask")
     def _check_shared_flag_mask(self, proposal):
@@ -377,16 +383,16 @@ class Mappraiser(Operator):
     @traitlets.validate("gap_stgy")
     def _check_gap_stgy(self, proposal):
         check = proposal["value"]
-        if check not in (0, 1, 2, 3, 4):
+        if check not in (0, 1, 2, 3):
+            # 0 -> Condition on gaps having zero signal
+            # 1 -> Marginalize on gap contents using 1 extra pixel/scan/detector
+            # 2 -> Iterative noise weighting (nested PCG)
+            # 3 -> Iterative noise weighting without gaps
             msg = "Invalid gap_stgy - accepted values are:\n"
-            msg += "0 -> perfect noise reconstruction (use original simulated noise)\n"
-            msg += "1 -> gap filling with a constrained noise realization\n"
-            msg += (
-                "2 -> 'nested PCG' i.e. invert the noise covariance matrix with a PCG at each noise weighting "
-                "operation (completely ignore the gaps)\n"
-            )
-            msg += "3 -> perfect noise reconstruction + nested PCG\n"
-            msg += "4 -> gap filling + nested PCG"
+            msg += "0 -> condition on gaps having zero signal\n"
+            msg += "1 -> marginalize on gap contents using 1 extra pixel/scan/detector\n"
+            msg += "2 -> iterative noise weighting 'nested PCG' (completely ignore the gaps)\n"
+            msg += "3 -> iterative noise weighting without gaps"
             raise traitlets.TraitError(msg)
         return check
 
@@ -501,6 +507,7 @@ class Mappraiser(Operator):
                 "ortho_alg": self.ortho_alg,
                 "bs_red": self.bs_red,
                 "gap_stgy": self.gap_stgy,
+                "do_gap_filling": self.do_gap_filling,
                 "realization": self.realization,
             }
         )
@@ -542,8 +549,8 @@ class Mappraiser(Operator):
         # Log the libmappraiser parameters that were used.
         if data.comm.world_rank == 0:
             with open(
-                os.path.join(params["path_output"], "mappraiser_args_log.toml"),
-                "w",
+                    os.path.join(params["path_output"], "mappraiser_args_log.toml"),
+                    "w",
             ) as f:
                 toml.dump(params, f)
 
@@ -825,16 +832,16 @@ class Mappraiser(Operator):
 
     @function_timer
     def _stage_data(
-        self,
-        params,
-        data,
-        all_dets,
-        nsamp,
-        nnz,
-        nnz_full,
-        nnz_stride,
-        interval_starts,
-        psd_freqs,
+            self,
+            params,
+            data,
+            all_dets,
+            nsamp,
+            nnz,
+            nnz_full,
+            nnz_stride,
+            interval_starts,
+            psd_freqs,
     ):
         """Create mappraiser-compatible buffers.
         Collect the data into Mappraiser buffers.  If we are purging TOAST data to save
@@ -1305,15 +1312,15 @@ class Mappraiser(Operator):
 
     @function_timer
     def _unstage_data(
-        self,
-        params,
-        data,
-        all_dets,
-        nsamp,
-        nnz,
-        nnz_full,
-        interval_starts,
-        signal_dtype,
+            self,
+            params,
+            data,
+            all_dets,
+            nsamp,
+            nnz,
+            nnz_full,
+            interval_starts,
+            signal_dtype,
     ):
         """
         Restore data to TOAST observations.
