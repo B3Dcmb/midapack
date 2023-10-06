@@ -40,4 +40,8 @@ void apply_precond(Precond *p, const Mat *A, Tpltz *Nm1, double *g, double *Cg);
 // Free memory of the preconditioner
 void free_precond(Precond **in_out_p);
 
+// Pixel share ponderation to deal with overlapping pixels between multiple MPI
+// procs
+void get_pixshare_pond(Mat *A, double *pixpond);
+
 #endif // MAPPRAISER_PRECOND_H

@@ -8,10 +8,13 @@
  */
 
 #include "mappraiser/create_toeplitz.h"
+#include "mappraiser/gap_filling.h"
 #include "mappraiser/iofiles.h"
 #include "mappraiser/map.h"
 #include "mappraiser/mapping.h"
+#include "mappraiser/noise_weighting.h"
 #include "mappraiser/pcg_true.h"
+#include "mappraiser/precond.h"
 
 #ifdef WITH_ECG
 #include "mappraiser/ecg.h"
@@ -22,6 +25,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+WeightStgy handle_gaps(Gap *Gaps, Mat *A, Tpltz *Nm1, Tpltz *N, GapStrategy gs,
+                       double *b, const double *noise, bool do_gap_filling,
+                       uint64_t realization, const uint64_t *detindxs,
+                       const uint64_t *obsindxs, const uint64_t *telescopes,
+                       double sample_rate);
 
 void x2map_pol(double *mapI, double *mapQ, double *mapU, double *Cond,
                int *hits, const double *x, const int *lstid, const double *cond,
@@ -147,15 +156,8 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     // ____________________________________________________________
     // Map objects memory allocation
 
-    // Decide size of map that will be solved
-    // We have computed the amount of valid/extra pixels beforehand
-    int solver_map_size;
-    if (A.flag_ignore_extra) {
-        solver_map_size = nbr_valid_pixels;
-    } else {
-        // include extra pixels in the map
-        solver_map_size = nbr_valid_pixels + nbr_extra_pixels;
-    }
+    // Size of map that will be estimated by the solver
+    int solver_map_size = get_actual_map_size(&A);
 
     x = (double *)malloc(solver_map_size * sizeof(double));
     cond = (double *)malloc((int)(solver_map_size / A.nnz) * sizeof(double));
@@ -259,6 +261,39 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     }
 
     // ____________________________________________________________
+    // Compute the system preconditioner
+
+    Precond *P = NULL;
+    double *pixpond;
+
+    st = MPI_Wtime();
+
+    if (Z_2lvl == 0)
+        Z_2lvl = size;
+
+    build_precond(&P, &pixpond, &A, &Nm1, &x, signal, noise, cond, lhits, tol,
+                  Z_2lvl, precond, gs, &Gaps, gif);
+
+    MPI_Barrier(A.comm);
+    t = MPI_Wtime();
+
+    if (rank == 0) {
+        printf("[rank %d] Preconditioner computation time = %lf\n", rank,
+               t - st);
+        printf("  -> nbr of sky pixels = %d\n", P->n);
+        printf("  -> valid pixels = %d\n", P->n_valid);
+        printf("  -> extra pixels = %d\n", P->n_extra);
+        fflush(stdout);
+    }
+
+    //____________________________________________________________
+    // Gap treatment
+
+    WeightStgy ws =
+        handle_gaps(&Gaps, &A, &Nm1, &N, gs, signal, noise, do_gap_filling,
+                    realization, detindxs, obsindxs, telescopes, sample_rate);
+
+    // ____________________________________________________________
     // Solve the system
 
     MPI_Barrier(comm);
@@ -270,10 +305,8 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     st = MPI_Wtime();
     // Conjugate Gradient
     if (solver == 0) {
-        PCG_GLS_true(outpath, ref, &A, &Nm1, &N, x, signal, noise, cond, lhits,
-                     tol, maxiter, precond, Z_2lvl, gs, do_gap_filling, &Gaps,
-                     gif, realization, detindxs, obsindxs, telescopes,
-                     sample_rate);
+        PCG_GLS_true(outpath, ref, &A, P, &Nm1, &N, x, signal, tol, maxiter,
+                     &Gaps, ws);
     } else if (solver == 1) {
 #ifdef WITH_ECG
         ECG_GLS(outpath, ref, &A, &Nm1, x, signal, noise, cond, lhits, tol,
@@ -302,6 +335,13 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     // free tpltz blocks
     free(tpltzblocks);
     free(tpltzblocks_N);
+
+    // free Gap structure
+    free(Gaps.id0gap);
+    free(Gaps.lgap);
+
+    // free preconditioner structure
+    free_precond(&P);
 
     // ____________________________________________________________
     // Write output to fits files
@@ -490,6 +530,122 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
         fflush(stdout);
     }
     // MPI_Finalize();
+}
+
+WeightStgy handle_gaps(Gap *Gaps, Mat *A, Tpltz *Nm1, Tpltz *N, GapStrategy gs,
+                       double *b, const double *noise, bool do_gap_filling,
+                       uint64_t realization, const uint64_t *detindxs,
+                       const uint64_t *obsindxs, const uint64_t *telescopes,
+                       double sample_rate) {
+    int my_rank;
+    MPI_Comm_rank(A->comm, &my_rank);
+
+    compute_gaps_per_block(Gaps, Nm1->nb_blocks_loc, Nm1->tpltzblocks);
+    copy_gap_info(Nm1->nb_blocks_loc, Nm1->tpltzblocks, N->tpltzblocks);
+
+    WeightStgy ws;
+
+    switch (gs) {
+
+    case COND:
+        // set signal in all gaps to zero
+        reset_relevant_gaps(b, Nm1, Gaps);
+
+        // this is not needed any more
+        // condition_extra_pix_zero(A);
+
+        // recombine signal and noise
+        for (int i = 0; i < A->m; ++i) {
+            b[i] += noise[i];
+        }
+
+        if (do_gap_filling) {
+            perform_gap_filling(A->comm, N, Nm1, b, Gaps, realization, detindxs,
+                                obsindxs, telescopes, sample_rate, true);
+        } else {
+            // perfect noise reconstruction
+            if (my_rank == 0) {
+                puts("[gaps/conditioning] perfect noise reconstruction");
+            }
+        }
+
+        // set noise weighting strategy
+        ws = BASIC;
+
+        if (my_rank == 0) {
+            puts("[gaps/conditioning] weighting strategy = BASIC");
+        }
+
+        break;
+
+    case MARG_LOCAL_SCAN:
+        // recombine signal and noise
+        for (int i = 0; i < A->m; ++i) {
+            b[i] += noise[i];
+        }
+
+        if (do_gap_filling) {
+            perform_gap_filling(A->comm, N, Nm1, b, Gaps, realization, detindxs,
+                                obsindxs, telescopes, sample_rate, true);
+        } else {
+            // perfect noise reconstruction
+            if (my_rank == 0) {
+                puts("[gaps/marginalization] perfect noise reconstruction");
+            }
+        }
+
+        // set noise weighting strategy
+        ws = BASIC;
+
+        if (my_rank == 0) {
+            puts("[gaps/marginalization] weighting strategy = BASIC");
+        }
+
+        break;
+
+    case NESTED_PCG:
+        // recombine signal and noise
+        for (int i = 0; i < A->m; ++i) {
+            b[i] += noise[i];
+        }
+
+        // set noise weighting strategy
+        ws = ITER;
+
+        if (my_rank == 0) {
+            puts("[gaps/nested] weighting strategy = ITER");
+        }
+
+        break;
+
+    case NESTED_PCG_NO_GAPS:
+        // recombine signal and noise
+        for (int i = 0; i < A->m; ++i) {
+            b[i] += noise[i];
+        }
+
+        if (do_gap_filling) {
+            perform_gap_filling(A->comm, N, Nm1, b, Gaps, realization, detindxs,
+                                obsindxs, telescopes, sample_rate, true);
+        } else {
+            // perfect noise reconstruction
+            if (my_rank == 0) {
+                puts("[gaps/nested-ignore] perfect noise reconstruction");
+            }
+        }
+
+        // set noise weighting strategy
+        ws = ITER_IGNORE;
+
+        if (my_rank == 0) {
+            puts("[gaps/nested-ignore] weighting strategy = ITER_IGNORE");
+        }
+
+        break;
+    }
+    fflush(stdout);
+
+    return ws;
 }
 
 void x2map_pol(double *mapI, double *mapQ, double *mapU, double *Cond,

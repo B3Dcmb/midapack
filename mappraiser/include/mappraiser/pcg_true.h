@@ -7,23 +7,13 @@
 extern "C" {
 #endif
 
-#include <stdbool.h>
-#include <stdint.h>
-
-#include <mapping.h>
-
-// Pixel share ponderation to deal with overlapping pixels between multiple MPI
-// procs
-void get_pixshare_pond(Mat *A, double *pixpond);
+#include <noise_weighting.h>
+#include <precond.h>
 
 // PCG routine
-int PCG_GLS_true(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Tpltz *N,
-                 double *x, double *b, double *noise, double *cond, int *lhits,
-                 double tol, int K, int precond, int Z_2lvl, GapStrategy gs,
-                 bool do_gap_filling, Gap *Gaps, int64_t gif,
-                 uint64_t realization, const uint64_t *detindxs,
-                 const uint64_t *obsindxs, const uint64_t *telescopes,
-                 double sample_rate);
+int PCG_GLS_true(char *outpath, char *ref, Mat *A, Precond *P, Tpltz *Nm1,
+                 Tpltz *N, double *x, const double *b, double tol, int K,
+                 Gap *G, WeightStgy ws);
 
 #ifdef __cplusplus
 }
