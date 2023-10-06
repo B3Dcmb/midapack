@@ -1,6 +1,7 @@
 #ifndef MAPPRAISER_PRECOND_H
 #define MAPPRAISER_PRECOND_H
 
+#include <mapping.h>
 #include <midapack.h>
 
 typedef struct precond_t {
@@ -10,8 +11,10 @@ typedef struct precond_t {
     int n_extra;     // number of extra pixels
     double *pixpond; // pixel share ponderation
     Mat BJ_inv;      // inverse preconditioner matrix
+#if 0
     Mat BJ;          // preconditioner matrix
-    int Zn;          // size of deflation space (2-lvl preconditioners)
+#endif
+    int Zn; // size of deflation space (2-lvl preconditioners)
 
     /* 2 lvl only (NULL otherwise) */
     double **Z;
@@ -24,15 +27,18 @@ typedef struct precond_t {
 } Precond;
 
 // Block-Jacobi preconditioner
-int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b,
-                           double *noise, double *cond, int *lhits, Gap *Gaps,
-                           int64_t gif);
+int precondblockjacobilike(Mat *A, Tpltz *Nm1, double *vpixBlock,
+                           double *vpixBlock_inv, double *cond, int *lhits);
 
 // Preconditioner constructor
 void build_precond(Precond **out_p, double **out_pixpond, Mat *A, Tpltz *Nm1,
                    double **in_out_x, double *b, double *noise, double *cond,
-                   int *lhits, double tol, int Zn, int precond, Gap *Gaps,
-                   int64_t gif);
+                   int *lhits, double tol, int Zn, int precond, GapStrategy gs,
+                   Gap *Gaps, int64_t gif, int *local_blocks_sizes);
+
+void build_BJinv(Mat *A, Tpltz *Nm1, Mat *BJ_inv, double *cond, int *lhits,
+                 GapStrategy gs, Gap *Gaps, int64_t gif,
+                 int *local_blocks_sizes);
 
 // Product of the preconditioner with a map vector
 void apply_precond(Precond *p, const Mat *A, Tpltz *Nm1, double *g, double *Cg);

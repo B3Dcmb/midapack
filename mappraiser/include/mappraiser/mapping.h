@@ -52,6 +52,8 @@ void reset_relevant_gaps(double *tod, Tpltz *tmat, Gap *gaps);
 
 void condition_extra_pix_zero(Mat *A);
 
+void point_pixel_to_trash(Mat *A, int ipix);
+
 __attribute__((unused)) void print_gap_info(Gap *gaps);
 
 #ifdef __cplusplus

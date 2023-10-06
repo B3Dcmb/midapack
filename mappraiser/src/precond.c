@@ -8,7 +8,6 @@
  */
 
 #include "mappraiser/precond.h"
-#include "mappraiser/mapping.h"
 
 #include <assert.h>
 #include <math.h>
@@ -522,52 +521,92 @@ void get_pixshare_pond(Mat *A, double *pixpond) {
 //     }
 // }
 
+/**
+ * Compute the reciprocal condition number of a square matrix block.
+ * For this, x is modified in-place with a LU decomposition, and ipiv is used
+ * to store the pivot indices of this decomposition.
+ * @param x array containing the block values in ROW MAJOR layout
+ * @param nb size of the block
+ * @param lda leading dimension
+ * @param ipiv array for pivot indices of LU factorization
+ * @return The value of the reciprocal condition number
+ */
+double compute_rcond_block(double *x, int nb, int lda, int *ipiv) {
+    double anorm, rcond;
+    int info;
+
+    // Compute the norm of x
+    anorm = LAPACKE_dlange(LAPACK_ROW_MAJOR, '1', nb, nb, x, lda);
+
+    // Modify x in place with a LU decomposition
+    info = LAPACKE_dgetrf(LAPACK_ROW_MAJOR, nb, nb, x, lda, ipiv);
+    if (info < 0) {
+        fprintf(stderr, "LAPACKE_dgetrf: %d-th argument had an illegal value\n",
+                -info);
+    }
+
+    // dgetrf will fail (and return info > 0) if the block is singular
+    // the condition number will be zero and the corresponding pixel
+    // will be removed from the map making
+
+    // Compute the reciprocal norm
+    info = LAPACKE_dgecon(LAPACK_ROW_MAJOR, '1', nb, x, lda, anorm, &rcond);
+    if (info != 0) {
+        fprintf(stderr, "LAPACKE_dgecon: %d-th argument had an illegal value\n",
+                -info);
+    }
+
+    return rcond;
+}
+
+void invert_block(double *x, int nb, int lda, int *ipiv) {
+    // invert assuming x has been through LU decomposition
+    // ipiv must contain the corresponding pivot indices
+    int info = LAPACKE_dgetri(LAPACK_ROW_MAJOR, nb, x, lda, ipiv);
+
+    // check for errors
+    if (info < 0) {
+        fprintf(stderr, "LAPACKE_dgetri: %d-th argument had an illegal value\n",
+                -info);
+    } else if (info > 0) {
+        // We should never enter this condition since in the case of a
+        // singular block rcond will be zero and the pixel should be
+        // removed from the map-making
+        fprintf(stderr,
+                "LAPACKE_dgetri: %d-th diagonal element of the factor U is "
+                "zero, U is singular, inversion could not be completed",
+                info);
+        exit(1);
+    }
+}
+
 // Block diagonal jacobi preconditioner with degenerate pixels pre-processing
-int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b,
-                           double *noise, double *cond, int *lhits, Gap *Gaps,
-                           int64_t gif) {
+int precondblockjacobilike(Mat *A, Tpltz *Nm1, double *vpixBlock,
+                           double *vpixBlock_inv, double *cond, int *lhits) {
     // MPI info
     int rank, size;
     MPI_Comm_rank(A->comm, &rank);
     MPI_Comm_size(A->comm, &size);
 
-    int m, nnz, nnz2;
-    int *indices_new, *tmp1;
-    double *vpixBlock, *vpixBlock_inv, *vpixBlock_loc, *hits_proc, *tmp2, *tmp3,
-        *tmp4;
-    int info, nb, lda;
-    double anorm, rcond;
+    int nnz = A->nnz;
+    int nnz2 = nnz * nnz;
 
-    m = A->m;
-    nnz = A->nnz;
-    nnz2 = nnz * nnz;
-
-    // pivot indices of LU factorization
-    int *ipiv = (int *)calloc(nnz, sizeof(int));
-
-    // the nnz*nnz matrix
-    double *x = (double *)calloc(nnz2, sizeof(double));
-
-    nb = nnz;
-    lda = nnz;
+    // Compute local Atdiag(N^1)A
+    getlocalW(A, Nm1, vpixBlock, lhits);
 
     int n = get_actual_map_size(A); // actual map size
     int nv = get_valid_map_size(A); // valid map size
     int dn = n - nv;                // size diff between actual and valid maps
 
+    // dummy arrays for communicating between processes using commScheme
+    double *vpixBlock_loc, *hits_proc;
     vpixBlock_loc = (double *)malloc(nv * sizeof(double));
-    vpixBlock = (double *)malloc(n * nnz * sizeof(double));
-    vpixBlock_inv = (double *)malloc(n * nnz * sizeof(double));
     hits_proc = (double *)malloc(nv * sizeof(double));
-    if (vpixBlock_loc == NULL || vpixBlock == NULL || vpixBlock_inv == NULL ||
-        hits_proc == NULL) {
+    if (vpixBlock_loc == NULL || hits_proc == NULL) {
         fprintf(stderr, "Out of memory: allocation of vpixBlock_loc, "
-                        "vpixBlock, vpixBlock_inv or hits_proc failed");
+                        "vpixBlock or hits_proc failed");
         exit(1);
     }
-
-    // Compute local Atdiag(N^1)A
-    getlocalW(A, Nm1, vpixBlock, lhits);
 
     // sum hits globally: dumb chunk of code that needs to be rewritten, but
     // works for now ...
@@ -599,155 +638,84 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b,
     }
     free(vpixBlock_loc);
 
-#if 0
     // Compute the inverse of the global Atdiag(N^-1)A blocks
+    // (invert preconditioner blocks for valid pixels)
 
-    // Initialize to 0 if no flagged samples (trash_pix = 0 from 1st MatInit)
-    // Initialize to 1 if flagged samples to take into account additional
-    // element in pix_to_last_samp at index 0
-    int uncut_pixel_index = A->trash_pix;
+    int nb = nnz;
+    int lda = nnz;
 
-    for (int i = 0; i < n * nnz; i += nnz2) {
-        // initialize preconditioner block of size nnz * nnz
-        for (int j = 0; j < nb; j++) {
-            for (int k = 0; k < lda; k++) {
-                x[lda * j + k] = vpixBlock[i + (lda * j + k)];
-            }
-        }
+    // pivot indices of LU factorization
+    int *ipiv = (int *)calloc(nnz, sizeof(int));
 
-        // Compute the reciprocal condition number of the block
-        // bool dgetrf_fail = false;
+    // the nnz*nnz matrix
+    double *x = (double *)calloc(nnz2, sizeof(double));
 
-        /* Computes the norm of x */
-        anorm = LAPACKE_dlange(LAPACK_ROW_MAJOR, '1', nb, nb, x, lda);
+    int degenerate = 0;
 
-        /* Modifies x in place with a LU decomposition */
-        info = LAPACKE_dgetrf(LAPACK_ROW_MAJOR, nb, nb, x, lda, ipiv);
-        if (info < 0) {
-            fprintf(stderr,
-                    "[rank %d] LAPACKE_dgetrf: %d-th argument had an illegal "
-                    "value\n",
-                    rank, -info);
-        } else if (info > 0) {
-            // dgetrf_fail = true;
-            /* Don't print any error message
-             * presumably, this happens when the block is singular
-             * the rcond value will be zero, so the pixel will be removed
-             */
-            // fprintf(stderr, "[rank %d] LAPACKE_dgetrf: %d-th diagonal value
-            // is exactly zero\n", rank, info);
-        }
+    for (int ipix = dn / nnz; ipix < n / nnz; ipix++) {
+        // pixel index with nnz multiplicity
+        int innz = ipix * nnz;
+        int innz2 = ipix * nnz2;
 
-        /* Computes the reciprocal norm */
-        info = LAPACKE_dgecon(LAPACK_ROW_MAJOR, '1', nb, x, lda, anorm, &rcond);
-        if (info != 0)
-            fprintf(stderr,
-                    "[rank %d] LAPACKE_dgecon: %d-th argument had an illegal "
-                    "value\n",
-                    rank, -info);
+        // initialize block of size nnz * nnz
+        memcpy(x, vpixBlock + innz2, nb * nb * sizeof(double));
 
-        cond[(int)(i / nnz2)] = rcond;
-
-        // if (dgetrf_fail) {
-        //     printf("rcond = %lf ", rcond);
-        //     print_matrix("block", nb, nb, x, lda);
-        //     fflush(stdout);
-        // }
-
-        // Remove the degenerate pixels from the map-making
+        // reciprocal condition number of the block
+        double rcond = compute_rcond_block(x, nb, lda, ipiv);
 
         if (rcond > 1e-1) {
             // The pixel is well enough observed, inverse the preconditioner
-            // block We use LAPACK's dgetri routine which inverts a matrix given
-            // its LU decomposition (which we already have because it was used
-            // to compute rcond!)
+            // block. We use LAPACK's dgetri routine which inverts a matrix
+            // given its LU decomposition (which we already have because it was
+            // used to compute rcond!)
 
-            info = LAPACKE_dgetri(LAPACK_ROW_MAJOR, nb, x, lda, ipiv);
-            if (info < 0) {
-                fprintf(stderr,
-                        "[rank %d] LAPACKE_dgetri: %d-th argument had an "
-                        "illegal value\n",
-                        rank, -info);
-            } else if (info > 0) {
-                // We should never enter this condition since in the case of a
-                // singular block rcond will be zero and the pixel should be
-                // removed from the map-making
-                fprintf(stderr,
-                        "[rank %d] LAPACKE_dgetri: %d-th diagonal element of "
-                        "the factor U is zero, U is "
-                        "singular, inversion could not be completed",
-                        rank, info);
-                exit(1);
-            }
+            // store rcond value
+            cond[ipix] = rcond;
+
+            // invert the block using the previous LU decomposition
+            invert_block(x, nb, lda, ipiv);
 
             // copy inverse block into vpixBlock_inv
-            for (int j = 0; j < nb; ++j) {
-                for (int k = 0; k < lda; ++k) {
-                    vpixBlock_inv[i + (lda * j + k)] = x[lda * j + k];
-                }
-            }
+            memcpy(vpixBlock_inv + innz2, x, nb * nb * sizeof(double));
 
         } else {
             // The pixel is not well enough observed
-            // Remove the poorly conditioned pixel from the map
-            // and point the associated gap samples to trash pixel
+            degenerate++;
 
-            // Raise pointing matrix flag to signal presence of trash pixels
-            A->trash_pix = 1;
-
-            // Search for the corresponding gap samples
-
-            // last index of time sample pointing to degenerate pixel
-            int j = A->id_last_pix[uncut_pixel_index];
-
-            // Point the last gap sample to trash pixel
-            for (int k = 0; k < nnz; k++) {
-                A->indices[j * nnz + k] = k - nnz;
-                A->values[j * nnz + k] = 0;
-            }
-
-            // Set the corresponding signal time stream sample to zero
-            // (equivalent to a perfect noise reconstruction)
-            b[j] = 0;
-
-            // Point all the preceding gap samples to trash pixel and set them
-            // to zero in the TOD
-            while (A->ll[j] != -1) {
-                b[A->ll[j]] = 0;
-                for (int k = 0; k < nnz; k++) {
-                    A->indices[A->ll[j] * nnz + k] = k - nnz;
-                    A->values[A->ll[j] * nnz + k] = 0;
-                }
-                j = A->ll[j];
-            }
+            // remove pixel from valid map
+            point_pixel_to_trash(A, ipix);
 
             // Remove degenerate pixel from vpixBlock, lhits, and cond
-            memmove(vpixBlock + i, vpixBlock + i + nnz2,
-                    (n * nnz - nnz2 - i) * sizeof(double));
-            memmove(lhits + (int)(i / nnz2), lhits + (int)(i / nnz2) + 1,
-                    ((int)(n / nnz) - 1 - (int)(i / nnz2)) * sizeof(int));
-            memmove(cond + (int)(i / nnz2), cond + (int)(i / nnz2) + 1,
-                    ((int)(n / nnz) - 1 - (int)(i / nnz2)) * sizeof(double));
+            memmove(vpixBlock + innz2, vpixBlock + innz2 + nnz2,
+                    (n * nnz - nnz2 - innz2) * sizeof(double));
+            memmove(lhits + ipix, lhits + ipix + 1,
+                    (n / nnz - 1 - ipix) * sizeof(int));
+            memmove(cond + ipix, cond + ipix + 1,
+                    (n / nnz - 1 - ipix) * sizeof(double));
 
             // Shrink effective size of vpixBlock
             n -= nnz;
-            i -= nnz2;
+            ipix--;
         }
-        ++uncut_pixel_index;
     }
+
     // free buffers allocated for lapacke
     free(ipiv);
     free(x);
 
-    // Reallocate memory for preconditioner blocks and redefine pointing matrix
+    // Reallocate memory for preconditioner blocks
     // in case of the presence of degenerate pixels
-    if (A->trash_pix) {
+    if (degenerate > 0) {
         // Reallocate memory of vpixBlock by shrinking its memory size to its
         // effective size (no degenerate pixel)
+
+        int *tmp1;
+        double *tmp2, *tmp3, *tmp4;
+
         tmp2 = (double *)realloc(vpixBlock, n * nnz * sizeof(double));
         tmp4 = (double *)realloc(vpixBlock_inv, n * nnz * sizeof(double));
-        tmp1 = (int *)realloc(lhits, (int)(n / nnz) * sizeof(int));
-        tmp3 = (double *)realloc(cond, (int)(n / nnz) * sizeof(double));
+        tmp1 = (int *)realloc(lhits, (n / nnz) * sizeof(int));
+        tmp3 = (double *)realloc(cond, (n / nnz) * sizeof(double));
         if (tmp1 == NULL || tmp2 == NULL || tmp3 == NULL || tmp4 == NULL) {
             fprintf(stderr,
                     "[rank %d] Out of memory: reallocation of preconditioner "
@@ -762,72 +730,7 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, Mat *BJ_inv, Mat *BJ, double *b,
         }
     }
 
-    // map local indices to global indices in indices_cut
-    for (int i = 0; i < m * nnz; i++) {
-        // switch to global indices
-        // except degenerate pixels, which have index < 0
-        if (A->indices[i] >= 0)
-            A->indices[i] = A->lindices[A->indices[i]];
-    }
-
-    // free memory of original pointing matrix and synchronize
-    MatFree(A);
-
-    // Define new pointing matrix (marginalized over degenerate pixels and free
-    // from gap samples)
-    MatInit(A, m, nnz, A->indices, A->values, A->flag, MPI_COMM_WORLD);
-
-    // Here we have to build the Gap struct
-    // including the samples observing the degenerate pixels
-    // to do so we must first rebuild the pixel to time-domain mapping
-    Gaps->ngap = build_pixel_to_time_domain_mapping(A);
-
-    build_gap_struct(gif, Gaps, A);
-
-    int global_gap_count = compute_global_gap_count(A->comm, Gaps);
-
-    if (rank == 0) {
-        printf("[rank %d] after degenerate pixels\n", rank);
-        printf("  -> # of timestream gaps [local]  = %d\n", Gaps->ngap);
-        printf("  -> # of timestream gaps [global] = %d\n", global_gap_count);
-        //        print_gap_info(Gaps);
-        fflush(stdout);
-    }
-
-    // free memory
-    free(A->id_last_pix);
-    free(A->ll);
-
-    // Define Block-Jacobi preconditioner indices
-    indices_new = (int *)malloc(n * nnz * sizeof(int));
-    if (indices_new == NULL) {
-        fprintf(stderr,
-                "[rank %d] Out of memory: allocation of indices_new failed",
-                rank);
-        exit(1);
-    }
-
-    for (int i = 0; i < n; i++) {
-        for (int j = 0; j < nnz; j++) {
-            indices_new[i * nnz + j] =
-                A->lindices[nnz * (A->trash_pix) + nnz * (int)(i / nnz) + j];
-        }
-    }
-
-    // Init Block-Jacobi inv preconditioner
-    MatSetIndices(BJ_inv, n, nnz, indices_new);
-    MatSetValues(BJ_inv, n, nnz, vpixBlock_inv);
-    BJ_inv->trash_pix = 0;
-    MatLocalShape(BJ_inv, 3);
-
-    // Init Block-Jacobi preconditioner
-    MatSetIndices(BJ, n, nnz, indices_new);
-    MatSetValues(BJ, n, nnz, vpixBlock);
-    BJ->trash_pix = 0;
-    MatLocalShape(BJ, 3);
-#endif
-
-    return 0;
+    return degenerate;
 }
 
 int precondjacobilike_avg(Mat A, Tpltz Nm1, double *c) {
@@ -1496,26 +1399,157 @@ void Lanczos_eig(Mat *A, Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ,
     *out_Ritz_vectors_AZ = Ritz_vectors_AZ;
 }
 
+void build_BJinv(Mat *A, Tpltz *Nm1, Mat *BJ_inv, double *cond, int *lhits,
+                 GapStrategy gs, Gap *Gaps, int64_t gif,
+                 int *local_blocks_sizes) {
+    // MPI info
+    int rank, size;
+    MPI_Comm_rank(A->comm, &rank);
+
+    // map size
+    int n = get_actual_map_size(A);
+    int nnz = A->nnz;
+
+    // buffers for preconditioner blocks
+    double *vpixBlock, *vpixBlock_inv;
+
+    vpixBlock = malloc((sizeof *vpixBlock_inv) * n * nnz);
+    vpixBlock_inv = malloc((sizeof *vpixBlock_inv) * n * nnz);
+    if (vpixBlock == NULL || vpixBlock_inv == NULL) {
+        fprintf(stderr, "Out of memory: allocation of vpixBlock "
+                        "or vpixBlock_inv failed");
+        exit(1);
+    }
+
+    int nd =
+        precondblockjacobilike(A, Nm1, vpixBlock, vpixBlock_inv, cond, lhits);
+
+    if (nd > 0) {
+        // some pixels were degenerate, so we have to rebuild the mapping
+
+        // switch back to global indexation scheme
+        for (int i = 0; i < A->m * nnz; i++) {
+            // exclude degenerate pixels, which have index < 0
+            if (A->indices[i] >= 0)
+                A->indices[i] = A->lindices[A->indices[i]];
+        }
+
+        // free memory of original pointing matrix and synchronize
+        MatFree(A);
+
+        // create extra pixels according to the chosen strategy
+        create_extra_pix(A->indices, nnz, Nm1->nb_blocks_loc,
+                         local_blocks_sizes, gs);
+
+        // define new pointing matrix
+        MatInit(A, A->m, nnz, A->indices, A->values, A->flag, MPI_COMM_WORLD);
+
+        // rebuild the pixel to time-domain mapping
+        Gaps->ngap = build_pixel_to_time_domain_mapping(A);
+
+        if (!(A->flag_ignore_extra)) {
+            // we have to recompute vpixBlock_inv because more samples are
+            // pointing to extra pixels
+            // TODO : optimize so that valid blocks are not recomputed
+
+            // it should not be necessary to resize the buffers
+            // but let's check anyway
+            int np = n;
+            n = get_actual_map_size(A);
+            if (n != np) {
+                double *t1, *t2;
+                t1 = realloc(vpixBlock_inv, (sizeof *vpixBlock_inv) * n * nnz);
+                t2 = realloc(vpixBlock, (sizeof *vpixBlock_inv) * n * nnz);
+                if (t1 == NULL || t2 == NULL) {
+                    fprintf(stderr, "Reallocation of vpixBlock "
+                                    "or vpixBlock_inv failed");
+                    exit(1);
+                }
+                vpixBlock_inv = t1;
+                vpixBlock = t2;
+            }
+            precondblockjacobilike(A, Nm1, vpixBlock, vpixBlock_inv, cond,
+                                   lhits);
+        }
+    }
+
+    // build definitive Gap structure
+    build_gap_struct(gif, Gaps, A);
+
+    int global_gap_count = compute_global_gap_count(A->comm, Gaps);
+
+    if (rank == 0) {
+        printf("[rank %d] after BJ preconditioner\n", rank);
+        printf("  -> # of degenerate pixels = %d\n", nd);
+        printf("  -> # of timestream gaps [local]  = %d\n", Gaps->ngap);
+        printf("  -> # of timestream gaps [global] = %d\n", global_gap_count);
+#if 0
+        print_gap_info(Gaps);
+#endif
+        fflush(stdout);
+    }
+
+    // free memory
+    free(A->id_last_pix);
+    free(A->ll);
+
+    // Define Block-Jacobi preconditioner indices
+    int *indices_new = malloc((sizeof *indices_new) * n * nnz);
+    if (indices_new == NULL) {
+        fprintf(stderr,
+                "[rank %d] Out of memory: allocation of indices_new failed",
+                rank);
+        exit(1);
+    }
+
+    // only include relevant indices in the Mat structs for preconditioners
+    int off_extra = A->flag_ignore_extra ? A->trash_pix * nnz : 0;
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < nnz; j++) {
+            indices_new[i * nnz + j] =
+                A->lindices[off_extra + nnz * (int)(i / nnz) + j];
+        }
+    }
+
+    // Init Block-Jacobi inv preconditioner
+    MatSetIndices(BJ_inv, n, nnz, indices_new);
+    MatSetValues(BJ_inv, n, nnz, vpixBlock_inv);
+    BJ_inv->trash_pix = A->trash_pix;
+    BJ_inv->flag_ignore_extra = A->flag_ignore_extra;
+    MatLocalShape(BJ_inv, 3);
+
+#if 0
+    // Init Block-Jacobi preconditioner
+    MatSetIndices(BJ, n, nnz, indices_new);
+    MatSetValues(BJ, n, nnz, vpixBlock);
+    BJ->trash_pix = A->trash_pix;
+    BJ->flag_ignore_extra = A->flag_ignore_extra;
+    MatLocalShape(BJ, 3);
+#endif
+}
+
 // General routine for constructing a preconditioner
 void build_precond(Precond **out_p, double **out_pixpond, Mat *A, Tpltz *Nm1,
                    double **in_out_x, double *b, double *noise, double *cond,
-                   int *lhits, double tol, int Zn, int precond, Gap *Gaps,
-                   int64_t gif) {
-    int rank, size, i;
+                   int *lhits, double tol, int Zn, int precond, GapStrategy gs,
+                   Gap *Gaps, int64_t gif, int *local_blocks_sizes) {
+    // MPI info
+    int rank, size;
+    MPI_Comm_rank(A->comm, &rank);
+    MPI_Comm_size(A->comm, &size);
+
     double st, t;
     double *x;
     // double *t1, *t2;
 
     Precond *p = calloc(1, sizeof(Precond));
 
-    MPI_Comm_rank(A->comm, &rank);
-    MPI_Comm_size(A->comm, &size);
-
     p->precond = precond;
     p->Zn = Zn;
 
-    precondblockjacobilike(A, Nm1, &(p->BJ_inv), &(p->BJ), b, noise, cond,
-                           lhits, Gaps, gif);
+    // Compute BJ preconditioner
+    build_BJinv(A, Nm1, &(p->BJ_inv), cond, lhits, gs, Gaps, gif,
+                local_blocks_sizes);
 
     if (A->flag_ignore_extra) {
         // preconditioner not computed for the extra pixels
@@ -1642,9 +1676,11 @@ void free_precond(Precond **in_out_p) {
     free(p->BJ_inv.values);
     MatFree(&(p->BJ_inv));
 
+#if 0
     // free(p->BJ.indices); // Shared with p->BJ_inv.indices
     free(p->BJ.values);
     MatFree(&(p->BJ));
+#endif
 
     if (p->precond != 0) {
         for (i = 0; i < p->Zn; i++)

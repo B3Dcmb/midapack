@@ -314,6 +314,25 @@ void condition_extra_pix_zero(Mat *A) {
     }
 }
 
+void point_pixel_to_trash(Mat *A, int ipix) {
+    // last index of time sample pointing to pixel
+    int j = A->id_last_pix[ipix];
+    int nnz = A->nnz;
+
+    // point last sample to trash pixel
+    for (int k = 0; k < nnz; k++) {
+        A->indices[j * nnz + k] = k - nnz;
+    }
+
+    // point all the preceding samples to trash pixel
+    while (A->ll[j] != -1) {
+        for (int k = 0; k < nnz; k++) {
+            A->indices[A->ll[j] * nnz + k] = k - nnz;
+        }
+        j = A->ll[j];
+    }
+}
+
 __attribute__((unused)) void print_gap_info(Gap *gaps) {
     printf("Local Gap structure\n");
     printf("  { ngap: %d\n", gaps->ngap);

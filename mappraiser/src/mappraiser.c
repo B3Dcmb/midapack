@@ -272,7 +272,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
         Z_2lvl = size;
 
     build_precond(&P, &pixpond, &A, &Nm1, &x, signal, noise, cond, lhits, tol,
-                  Z_2lvl, precond, gs, &Gaps, gif);
+                  Z_2lvl, precond, gs, &Gaps, gif, local_blocks_sizes);
 
     MPI_Barrier(A.comm);
     t = MPI_Wtime();
@@ -310,7 +310,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     } else if (solver == 1) {
 #ifdef WITH_ECG
         ECG_GLS(outpath, ref, &A, &Nm1, x, signal, noise, cond, lhits, tol,
-                maxiter, enlFac, ortho_alg, bs_red, &Gaps, gif);
+                maxiter, enlFac, ortho_alg, bs_red);
 #else
         if (rank == 0)
             fprintf(stderr,
