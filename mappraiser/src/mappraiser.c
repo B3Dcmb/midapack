@@ -309,8 +309,8 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
                      &Gaps, ws);
     } else if (solver == 1) {
 #ifdef WITH_ECG
-        ECG_GLS(outpath, ref, &A, &Nm1, x, signal, noise, cond, lhits, tol,
-                maxiter, enlFac, ortho_alg, bs_red);
+        ECG_GLS(outpath, ref, &A, &Nm1, &(P->BJ_inv), P->pixpond, x, signal,
+                noise, tol, maxiter, enlFac, ortho_alg, bs_red);
 #else
         if (rank == 0)
             fprintf(stderr,

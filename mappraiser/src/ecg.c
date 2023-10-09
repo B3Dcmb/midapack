@@ -22,7 +22,6 @@
 /* MAPPRAISER */
 #include "mappraiser/ecg.h"
 #include "mappraiser/pcg_true.h"
-#include "mappraiser/precond.h"
 /* preAlps */
 #include <overlap_ecg.h>
 /*****************************************************************************/
@@ -43,8 +42,8 @@ double Opmmmatrix(Mat *A, Tpltz *Nm1, double *X, double *Y, int ncol);
 /*                                 CODE                                      */
 /*****************************************************************************/
 int ECG_GLS(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Mat *BJ_inv,
-            double *x, double *b, double *noise, double *cond, int *lhits,
-            double tol, int maxIter, int enlFac, int ortho_alg, int bs_red) {
+            double *pixpond, double *x, double *b, double *noise, double tol,
+            int maxIter, int enlFac, int ortho_alg, int bs_red) {
     /*================ Get MPI rank & size parameters ================*/
     int rank, size;
     MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -54,8 +53,8 @@ int ECG_GLS(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Mat *BJ_inv,
     // OT: I tested and it still works with OpenMP activated
     MKL_Set_Num_Threads(1);
     /*===================== Variables declaration ====================*/
-    int N = 0;   // Global number of pixels (no overlapping correction)
-    int n;       // local number of pixels x nnz (IQU)
+    int N = 0; // Global number of pixels (no overlapping correction)
+    int n;     // local number of pixels x nnz (IQU)
 
     n = get_actual_map_size(A);
 
@@ -65,11 +64,6 @@ int ECG_GLS(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Mat *BJ_inv,
     if (rank == 0) {
         printf("GLOBAL N = %d \n", N);
     }
-
-    /*=========== Compute the pixels share ponderation =============*/
-    double *pixpond;
-    pixpond = (double *)malloc(n * sizeof(double));
-    get_pixshare_pond(A, pixpond);
 
     /*======= Build the rhs & compute initial residual norm =======*/
     double *rhs;
@@ -119,7 +113,7 @@ int ECG_GLS(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Mat *BJ_inv,
     rel_res[0] = 1.0;
 
     // Finish initialization
-    time_invMV += Opmmpreconditioner(A, &BJ_inv, ecg.R_p, ecg.P_p, ecg.bs);
+    time_invMV += Opmmpreconditioner(A, BJ_inv, ecg.R_p, ecg.P_p, ecg.bs);
     // preconditioner ecg.R -> ecg.P
     time_AV += Opmmmatrix(A, Nm1, ecg.P_p, ecg.AP_p, ecg.bs);
     // block operator ecg.P -> ecg.AP
@@ -138,12 +132,12 @@ int ECG_GLS(char *outpath, char *ref, Mat *A, Tpltz *Nm1, Mat *BJ_inv,
             if (stop == 1)
                 break;
             if (ecg.ortho_alg == ORTHOMIN) {
-                time_invMV += Opmmpreconditioner(A, &BJ_inv, ecg.R_p, ecg.Z_p,
-                                                 ecg.enlFac);
+                time_invMV +=
+                    Opmmpreconditioner(A, BJ_inv, ecg.R_p, ecg.Z_p, ecg.enlFac);
                 // preconditioner ecg.R -> ecg.Z
             } else if (ecg.ortho_alg == ORTHODIR) {
                 time_invMV +=
-                    Opmmpreconditioner(A, &BJ_inv, ecg.AP_p, ecg.Z_p, ecg.bs);
+                    Opmmpreconditioner(A, BJ_inv, ecg.AP_p, ecg.Z_p, ecg.bs);
                 // preconditioner ecg.AP -> ecg.Z
             }
         }
