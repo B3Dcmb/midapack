@@ -14,7 +14,6 @@
 #include "mappraiser/mapping.h"
 #include "mappraiser/noise_weighting.h"
 #include "mappraiser/pcg_true.h"
-#include "mappraiser/precond.h"
 
 #ifdef WITH_ECG
 #include "mappraiser/ecg.h"
@@ -358,14 +357,13 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
 
     st = MPI_Wtime();
 
-    // size of the estimated map without extra pixels
-    int map_size = A.lcount - (A.nnz) * (A.trash_pix);
+    // throw away estimated extra pixels if there are any
 
-    if (gs == MARG_LOCAL_SCAN) {
-        // map contains estimates for extra pixels which we don't want to keep
-        int extra = A.nnz * A.trash_pix;
+    int map_size = get_valid_map_size(&A);
+    int extra = get_actual_map_size(&A) - map_size;
 
-#if 0
+    if (extra > 0) {
+#if 0 /* code to recover extra map */
         double *extra_map = (double *)malloc(extra * sizeof(double));
         memcpy(extra_map, x, extra * sizeof(double));
 
@@ -378,7 +376,6 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
         }
         fflush(stdout);
 #endif
-
         // valid map
         memmove(x, (x + extra), map_size * sizeof(double));
         double *tmp = realloc(x, map_size * sizeof(double));
@@ -389,10 +386,11 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
         x = tmp;
     }
 
-#if 0
+    // get maps from all processes and combine them
+
     int *lstid = (int *)malloc(map_size * sizeof(int));
     for (i = 0; i < map_size; i++) {
-        lstid[i] = A.lindices[i + (A.nnz) * (A.trash_pix)];
+        lstid[i] = A.lindices[i + Nnz * A.trash_pix];
     }
 
     if (rank != 0) {
@@ -519,7 +517,6 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
                    "not be stored ;(\n");
         }
     }
-#endif
 
     t = MPI_Wtime();
     if (rank == 0) {
