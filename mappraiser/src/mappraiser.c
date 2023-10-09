@@ -286,6 +286,16 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
         fflush(stdout);
     }
 
+    // Guard against using ECG in some cases
+    if (P->n_extra > 0 && solver == 1) {
+        if (rank == 0) {
+            fprintf(stderr,
+                    "ECG solver does not support solving for extra pixels. "
+                    "Choose another gap strategy, or use solver=0 (PCG).\n");
+        }
+        exit(EXIT_FAILURE);
+    }
+
     //____________________________________________________________
     // Gap treatment
 
