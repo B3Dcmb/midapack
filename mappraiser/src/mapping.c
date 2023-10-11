@@ -93,7 +93,7 @@ int build_pixel_to_time_domain_mapping(Mat *A) {
     A->ll = malloc((sizeof A->ll) * A->m);
 
     if (A->id_last_pix == NULL || A->ll == NULL) {
-        printf("memory allocation of id_last_pix or ll failed\n");
+        fputs("memory allocation of id_last_pix or ll failed", stderr);
         exit(EXIT_FAILURE);
     }
 
@@ -161,7 +161,7 @@ void build_gap_struct(int64_t gif, Gap *gaps, Mat *A) {
         int gap_start = j;         // index of the first sample of the gap
 
         if (gaps->id0gap == NULL || gaps->lgap == NULL) {
-            printf("malloc of id0gap or lgap failed\n");
+            fputs("malloc of id0gap or lgap failed", stderr);
             exit(EXIT_FAILURE);
         }
 

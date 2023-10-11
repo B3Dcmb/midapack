@@ -104,13 +104,17 @@ int PCG_GLS_true(char *outpath, char *ref, Mat *A, Precond *P, Tpltz *Nm1,
         res_rel = sqrt(res) / sqrt(res0);
         printf("k = %d, res = %e, g2pix = %e, res_rel = %e, time = %lf\n", 0,
                res, g2pix, res_rel, t - st);
-        char filename[256];
+        char filename[FILENAME_MAX];
         sprintf(filename, "%s/pcg_residuals_%s.dat", outpath, ref);
         fp = fopen(filename, "wb");
-        if (fp != NULL)
+        if (fp != NULL) {
             fwrite(&res_rel, sizeof(double), 1, fp);
-        fflush(stdout);
+        } else {
+            fputs("error when opening pcg_residuals file", stderr);
+            exit(EXIT_FAILURE);
+        }
     }
+    fflush(stdout);
 
     if (res <= tol) {
         if (rank == 0)

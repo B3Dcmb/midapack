@@ -103,7 +103,7 @@ void MatSetValues(Mat *A, int m, int nnz, double *values) {
 
 //===================Part added by Sebastien Cayrols to get amount of memory
 // needed by communication algoritms
-void CommInfo(Mat *A) {
+__attribute__((unused)) void CommInfo(Mat *A) {
 #if W_MPI
     int i = 0, size, rank;
     double maxSizeR = 0.0;
@@ -339,7 +339,7 @@ void MatReset(Mat *A) {
 void MatFree(Mat *A) {
 
     // get information about communication size
-    CommInfo(A);
+    // CommInfo(A);
 
     free(A->lindices);
 #if W_MPI
