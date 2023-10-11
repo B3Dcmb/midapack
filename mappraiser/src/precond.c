@@ -650,7 +650,7 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, double *vpixBlock,
     // the nnz*nnz matrix
     double *x = (double *)calloc(nnz2, sizeof(double));
 
-    int degenerate = 0;
+    int nbr_degenerate = 0;
 
     for (int ipix = dn / nnz; ipix < n / nnz; ipix++) {
         // pixel index with nnz multiplicity
@@ -680,10 +680,9 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, double *vpixBlock,
 
         } else {
             // The pixel is not well enough observed
-            degenerate++;
-
-            // remove pixel from valid map
-            point_pixel_to_trash(A, ipix);
+            // Remove it from the valid map
+            point_pixel_to_trash(A, ipix + nbr_degenerate);
+            nbr_degenerate++;
 
             // Remove degenerate pixel from vpixBlock, lhits, and cond
             memmove(vpixBlock + innz2, vpixBlock + innz2 + nnz2,
@@ -705,7 +704,7 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, double *vpixBlock,
 
     // Reallocate memory for preconditioner blocks
     // in case of the presence of degenerate pixels
-    if (degenerate > 0) {
+    if (nbr_degenerate > 0) {
         // Reallocate memory of vpixBlock by shrinking its memory size to its
         // effective size (no degenerate pixel)
 
@@ -730,7 +729,7 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, double *vpixBlock,
         }
     }
 
-    return degenerate;
+    return nbr_degenerate;
 }
 
 int precondjacobilike_avg(Mat A, Tpltz Nm1, double *c) {

@@ -319,15 +319,10 @@ void point_pixel_to_trash(Mat *A, int ipix) {
     int j = A->id_last_pix[ipix];
     int nnz = A->nnz;
 
-    // point last sample to trash pixel
-    for (int k = 0; k < nnz; k++) {
-        A->indices[j * nnz + k] = k - nnz;
-    }
-
-    // point all the preceding samples to trash pixel
-    while (A->ll[j] != -1) {
+    while (j != -1) {
+        // point sample to trash pixel
         for (int k = 0; k < nnz; k++) {
-            A->indices[A->ll[j] * nnz + k] = k - nnz;
+            A->indices[j * nnz + k] = k - nnz;
         }
         j = A->ll[j];
     }
