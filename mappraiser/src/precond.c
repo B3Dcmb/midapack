@@ -1402,7 +1402,7 @@ void build_BJinv(Mat *A, Tpltz *Nm1, Mat *BJ_inv, double *cond, int *lhits,
                  GapStrategy gs, Gap *Gaps, int64_t gif,
                  int *local_blocks_sizes) {
     // MPI info
-    int rank, size;
+    int rank;
     MPI_Comm_rank(A->comm, &rank);
 
     // map size
@@ -1423,14 +1423,36 @@ void build_BJinv(Mat *A, Tpltz *Nm1, Mat *BJ_inv, double *cond, int *lhits,
     int nd =
         precondblockjacobilike(A, Nm1, vpixBlock, vpixBlock_inv, cond, lhits);
 
+    // did any of the processes encounter a degenerate pixel
+    MPI_Allreduce(MPI_IN_PLACE, &nd, 1, MPI_INT, MPI_MAX, A->comm);
+
+    MPI_Barrier(A->comm);
+    if (rank == 0) {
+        printf("after precondblockjacobi: detected max %d degenerate pixels\n",
+               nd);
+    }
+    fflush(stdout);
+
     if (nd > 0) {
         // some pixels were degenerate, so we have to rebuild the mapping
+        if (rank == 0) {
+            printf("Rebuild mapping after detection of degenerate pixels...");
+        }
+        fflush(stdout);
+
+        MPI_Barrier(A->comm);
+        double t = MPI_Wtime();
 
         // switch back to global indexation scheme
+        int extra_indices = A->trash_pix * A->nnz;
         for (int i = 0; i < A->m * nnz; i++) {
             // exclude degenerate pixels, which have index < 0
-            if (A->indices[i] >= 0)
-                A->indices[i] = A->lindices[A->indices[i]];
+            if (A->indices[i] >= 0) {
+                A->indices[i] = A->lindices[A->indices[i] + extra_indices];
+#ifndef NDEBUG
+                assert(A->indices[i] >= 0);
+#endif
+            }
         }
 
         // free memory of original pointing matrix and synchronize
@@ -1446,6 +1468,12 @@ void build_BJinv(Mat *A, Tpltz *Nm1, Mat *BJ_inv, double *cond, int *lhits,
         // rebuild the pixel to time-domain mapping
         Gaps->ngap = build_pixel_to_time_domain_mapping(A);
 
+        MPI_Barrier(A->comm);
+        if (rank == 0) {
+            printf(" %lf seconds\n", MPI_Wtime() - t);
+        }
+        fflush(stdout);
+
         if (!(A->flag_ignore_extra)) {
             // we have to recompute vpixBlock_inv because more samples are
             // pointing to extra pixels
@@ -1455,6 +1483,7 @@ void build_BJinv(Mat *A, Tpltz *Nm1, Mat *BJ_inv, double *cond, int *lhits,
             // but let's check anyway
             int np = n;
             n = get_actual_map_size(A);
+            assert(n == np);
             if (n != np) {
                 double *t1, *t2;
                 t1 = realloc(vpixBlock_inv, (sizeof *vpixBlock_inv) * n * nnz);
@@ -1467,8 +1496,9 @@ void build_BJinv(Mat *A, Tpltz *Nm1, Mat *BJ_inv, double *cond, int *lhits,
                 vpixBlock_inv = t1;
                 vpixBlock = t2;
             }
-            precondblockjacobilike(A, Nm1, vpixBlock, vpixBlock_inv, cond,
-                                   lhits);
+            int nd_bis = precondblockjacobilike(A, Nm1, vpixBlock,
+                                                vpixBlock_inv, cond, lhits);
+            assert(nd_bis == 0);
         }
     }
 
@@ -1573,6 +1603,7 @@ void build_precond(Precond **out_p, double **out_pixpond, Mat *A, Tpltz *Nm1,
     // Compute pixel share ponderation
     get_pixshare_pond(A, p->pixpond);
 
+    // TODO : check that 2-lvl preconditioners still work
 #if 0 /* 2-lvl preconditioners */
     if (precond != 0) {
         p->Qg = calloc(p->n, sizeof(double));
