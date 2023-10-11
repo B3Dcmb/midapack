@@ -279,7 +279,7 @@ class Mappraiser(Operator):
     # choosing False is only possible on simulations
     # Mappraiser will take the noise from the simulation
     # as if the noise reconstruction inside the gaps was perfect
-    do_gap_filling = Bool(True, action='store_true', help="Perform gap filling on the data")
+    do_gap_filling = Bool(True, help="Perform gap filling on the data")
 
     realization = Int(0, help="Noise realization index (for gap filling)")
 
