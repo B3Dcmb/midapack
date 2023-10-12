@@ -681,7 +681,7 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, double *vpixBlock,
         } else {
             // The pixel is not well enough observed
             // Remove it from the valid map
-            point_pixel_to_trash(A, ipix + nbr_degenerate);
+            point_pixel_to_trash(A, A->trash_pix + ipix + nbr_degenerate);
             nbr_degenerate++;
 
             // Remove degenerate pixel from vpixBlock, lhits, and cond
@@ -1444,14 +1444,11 @@ void build_BJinv(Mat *A, Tpltz *Nm1, Mat *BJ_inv, double *cond, int *lhits,
         double t = MPI_Wtime();
 
         // switch back to global indexation scheme
-        int extra_indices = A->trash_pix * A->nnz;
         for (int i = 0; i < A->m * nnz; i++) {
             // exclude degenerate pixels, which have index < 0
+            // initially flagged samples also retrieve a negative index
             if (A->indices[i] >= 0) {
-                A->indices[i] = A->lindices[A->indices[i] + extra_indices];
-#ifndef NDEBUG
-                assert(A->indices[i] >= 0);
-#endif
+                A->indices[i] = A->lindices[A->indices[i]];
             }
         }
 
