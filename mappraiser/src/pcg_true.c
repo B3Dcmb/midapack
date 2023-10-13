@@ -113,6 +113,7 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
     // initialize the SolverInfo struct
     solverinfo_init(si);
 
+    int info;
     int k = 0;                      // iteration number
     int n = get_actual_map_size(A); // map size
 
@@ -142,7 +143,12 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
     }
 
     // build rhs
-    build_rhs(A, Nm1, N, G, ws, d, x, r);
+    info = build_rhs(A, Nm1, N, G, ws, d, x, r);
+    if (info != 0) {
+        fprintf(stderr, "build_rhs routine returned a non-zero code (%d)",
+                info);
+        exit(EXIT_FAILURE);
+    }
 
     // compute initial residual
     res = scalar_prod_reduce(A->comm, M->n, M->n_extra, M->pixpond, r, r, NULL);
@@ -198,7 +204,11 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
         k++;
 
         // apply system matrix
-        opmm(A, Nm1, N, G, ws, p, _p);
+        info = opmm(A, Nm1, N, G, ws, p, _p);
+        if (info != 0) {
+            fprintf(stderr, "opmm routine returned a non-zero code (%d)", info);
+            exit(EXIT_FAILURE);
+        }
 
         // compute (r,z) and (p,_p)
         coef_1 = scalar_prod_reduce(A->comm, M->n, M->n_extra, M->pixpond, r, z,

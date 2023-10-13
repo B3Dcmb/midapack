@@ -92,7 +92,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     MPI_Allreduce(&nb_blocks_loc, &Nb_t_Intervals, 1, MPI_INT, MPI_SUM, comm);
     if (rank == 0) {
         printf("[Data] global M = %ld (%d intervals)\n", M, Nb_t_Intervals);
-        printf("[Data] local m = %d (%d intervals)\n", m, Nb_t_Intervals_loc);
+        printf("[Data] local  m = %d (%d intervals)\n", m, Nb_t_Intervals_loc);
         fflush(stdout);
     }
 
@@ -318,6 +318,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
 
         // print stuff
         // TODO
+
     } else if (solver == 1) {
 #ifdef WITH_ECG
         ECG_GLS(outpath, ref, &A, &Nm1, &(P->BJ_inv), P->pixpond, x, signal,
@@ -329,9 +330,14 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
                     "file has not been compiled.\n");
         exit(EXIT_FAILURE);
 #endif
+
     } else {
-        printf("Incorrect solver parameter.\n");
-        printf("Reminder: solver = 0 -> PCG, solver = 1 -> ECG\n");
+        if (rank == 0) {
+            char msg[] =
+                "Incorrect solver parameter. Reminder: solver=0 -> PCG, "
+                "solver=1 -> ECG.";
+            fputs(msg, stderr);
+        }
         exit(EXIT_FAILURE);
     }
 
