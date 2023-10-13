@@ -557,9 +557,9 @@ void perform_gap_filling(MPI_Comm comm, Tpltz *N, Tpltz *Nm1, double *noise,
     MPI_Comm_rank(comm, &rank);
     MPI_Comm_size(comm, &size);
 
-    if (rank == 0)
-        std::cout << "[rank " << rank << "] starting gap filling routine"
-                  << std::endl;
+    if (rank == 0) {
+        std::cout << "[Gap filling] begin routine" << std::endl;
+    }
 
     double st = MPI_Wtime();
 
@@ -572,7 +572,7 @@ void perform_gap_filling(MPI_Comm comm, Tpltz *N, Tpltz *Nm1, double *noise,
     double t = MPI_Wtime();
 
     if (rank == 0) {
-        std::cout << "[rank " << rank << "] performed gap filling in " << t - st
+        std::cout << "[Gap filling] finished in " << t - st
                   << " seconds (all procs)" << std::endl;
     }
 
@@ -584,7 +584,7 @@ void perform_gap_filling(MPI_Comm comm, Tpltz *N, Tpltz *Nm1, double *noise,
             gf_recap.send(comm, 0);
         } else {
             // let proc 0 do the printing
-            std::cout << "--- gap filling recap ---" << std::endl;
+            std::cout << "[Gap filling] recap from all processes" << std::endl;
             for (int i = 0; i < size; ++i) {
                 if (i != 0) {
                     // reveice informations from proc i
@@ -593,6 +593,7 @@ void perform_gap_filling(MPI_Comm comm, Tpltz *N, Tpltz *Nm1, double *noise,
                 // print proc i recap
                 std::cout << "[proc " << i << "] " << gf_recap;
             }
+            std::cout << std::endl;
         }
     }
 }

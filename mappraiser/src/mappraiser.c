@@ -14,6 +14,7 @@
 #include "mappraiser/mapping.h"
 #include "mappraiser/noise_weighting.h"
 #include "mappraiser/pcg_true.h"
+#include "solver_info.h"
 
 #ifdef WITH_ECG
 #include "mappraiser/ecg.h"
@@ -47,7 +48,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     int m, Nb_t_Intervals; // local number of rows of the pointing matrix A, nbr
                            // of stationary intervals
     int64_t gif;           // global indice for the first local line
-    int i, j, k;
+    int i, j;
     Mat A;                   // pointing matrix structure
     int nbr_valid_pixels;    // nbr of valid pixel indices
     int nbr_extra_pixels;    // nbr of extra pixel indices
@@ -68,7 +69,8 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
                "EstimatoR vDev, May 2019 "
                "################\n");
         printf("Last compiled on %s at %s\n", __DATE__, __TIME__);
-        printf("rank = %d, size = %d\n", rank, size);
+        printf("[MPI info] rank = %d, size = %d\n", rank, size);
+        puts("##### Initialization ####################");
         fflush(stdout);
     }
 
@@ -76,11 +78,6 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     M = 0;
     for (i = 0; i < size; i++) {
         M += ((int *)data_size_proc)[i];
-        fflush(stdout);
-    }
-    if (rank == 0) {
-        printf("[rank %d] M=%ld\n", rank, M);
-        fflush(stdout);
     }
 
     // compute distribution indexes over the processes
@@ -93,11 +90,9 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     // Print information on data distribution
     int Nb_t_Intervals_loc = nb_blocks_loc;
     MPI_Allreduce(&nb_blocks_loc, &Nb_t_Intervals, 1, MPI_INT, MPI_SUM, comm);
-    int nb_proc_shared_one_interval = 1; // max(1, size/Nb_t_Intervals );
     if (rank == 0) {
-        printf("[rank %d] size=%d \t m=%d \t Nb_t_Intervals=%d \n", rank, size,
-               m, Nb_t_Intervals);
-        printf("[rank %d] Nb_t_Intervals_loc=%d \n", rank, Nb_t_Intervals_loc);
+        printf("[Data] global M = %ld (%d intervals)\n", M, Nb_t_Intervals);
+        printf("[Data] local m = %d (%d intervals)\n", m, Nb_t_Intervals_loc);
         fflush(stdout);
     }
 
@@ -109,46 +104,32 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     // Create extra pixels according to the chosen strategy
     create_extra_pix(pix, Nnz, nb_blocks_loc, local_blocks_sizes, gs);
 
-    // ____________________________________________________________
-    // Pointing matrix initialization
-
-    st = MPI_Wtime();
-
-    A.trash_pix = 0;
-    MatInit(&A, m, Nnz, pix, pixweights, pointing_commflag, comm);
-
-#if 0
-    printf("rank %d: %d extra pixels\n", rank, A.trash_pix);
-    fflush(stdout);
-#endif
-
-    nbr_extra_pixels = A.trash_pix * A.nnz;
-    nbr_valid_pixels = A.lcount - nbr_extra_pixels;
-
-    t = MPI_Wtime();
     if (rank == 0) {
-        printf("[rank %d] Initializing pointing matrix time = %lf\n", rank,
-               t - st);
-        printf("Treatment of gaps: ");
+        printf("[Gaps] strategy: ");
         print_gap_stgy(gs);
-        printf("  -> nbr of sky pixels = %d\n", A.lcount);
-        printf("  -> valid pixels = %d\n", nbr_valid_pixels);
-        printf("  -> extra pixels = %d\n", nbr_extra_pixels);
         fflush(stdout);
     }
 
     // ____________________________________________________________
-    // Build pixel-to-time-domain mapping
+    // Pointing matrix initialization + mapping
 
+    MPI_Barrier(comm);
     st = MPI_Wtime();
 
+    MatInit(&A, m, Nnz, pix, pixweights, pointing_commflag, comm);
     ngap = build_pixel_to_time_domain_mapping(&A);
 
+    MPI_Barrier(comm);
     t = MPI_Wtime();
+
+    nbr_extra_pixels = A.trash_pix * A.nnz;
+    nbr_valid_pixels = A.lcount - nbr_extra_pixels;
+
     if (rank == 0) {
-        printf("[rank %d] Pixel-to-time-domain mapping time = %lf s\n", rank,
-               t - st);
-        printf("  -> # of timestream gaps [local]  = %d\n", ngap);
+        printf("Initialized pointing matrix in %lf s\n", t - st);
+        printf("[proc %d] sky pixels = %d", rank, A.lcount);
+        printf(" (%d valid + %d extra)\n", nbr_valid_pixels, nbr_extra_pixels);
+        printf("[proc %d] local timestream gaps = %d\n", rank, ngap);
         fflush(stdout);
     }
 
@@ -254,13 +235,19 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
 
     // print Toeplitz parameters for information
     if (rank == 0) {
-        printf("[rank %d] Noise model: Banded block Toeplitz, half bandwidth = "
-               "%d\n",
-               rank, lambda_block_avg);
+        printf("Noise model: Banded block Toeplitz");
+        printf(" (half bandwidth = %d)\n", lambda_block_avg);
+        fflush(stdout);
     }
 
     // ____________________________________________________________
     // Compute the system preconditioner
+
+    MPI_Barrier(comm);
+    if (rank == 0) {
+        puts("##### Preconditioner ####################");
+        fflush(stdout);
+    }
 
     Precond *P = NULL;
     double *pixpond;
@@ -277,11 +264,9 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     t = MPI_Wtime();
 
     if (rank == 0) {
-        printf("[rank %d] Preconditioner computation time = %lf\n", rank,
-               t - st);
-        printf("  -> nbr of sky pixels = %d\n", P->n);
-        printf("  -> valid pixels = %d\n", P->n_valid);
-        printf("  -> extra pixels = %d\n", P->n_extra);
+        printf("Precond built for %d sky pixels (%d valid + %d extra)\n", P->n,
+               P->n_valid, P->n_extra);
+        printf("Total time = %lf s\n", t - st);
         fflush(stdout);
     }
 
@@ -298,6 +283,12 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     //____________________________________________________________
     // Gap treatment
 
+    MPI_Barrier(comm);
+    if (rank == 0) {
+        puts("##### Gap treatment ####################");
+        fflush(stdout);
+    }
+
     WeightStgy ws =
         handle_gaps(&Gaps, &A, &Nm1, &N, gs, signal, noise, do_gap_filling,
                     realization, detindxs, obsindxs, telescopes, sample_rate);
@@ -307,15 +298,26 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
 
     MPI_Barrier(comm);
     if (rank == 0) {
-        printf("##### Start PCG ####################\n");
+        puts("##### Main solver ####################");
+        fflush(stdout);
     }
-    fflush(stdout);
 
     st = MPI_Wtime();
-    // Conjugate Gradient
+
     if (solver == 0) {
-        PCG_GLS_true(outpath, ref, &A, P, &Nm1, &N, x, signal, tol, maxiter,
-                     &Gaps, ws);
+        // set up SolverInfo structure
+        SolverInfo si;
+        solverinfo_set_defaults(&si);
+        si.store_hist = true;
+        si.print = rank == 0;
+        si.rel_res_reduct = tol;
+        si.max_steps = maxiter;
+
+        // solve the equation
+        PCG_mm(&A, P, &Nm1, &N, ws, &Gaps, x, signal, &si);
+
+        // print stuff
+        // TODO
     } else if (solver == 1) {
 #ifdef WITH_ECG
         ECG_GLS(outpath, ref, &A, &Nm1, &(P->BJ_inv), P->pixpond, x, signal,
@@ -336,8 +338,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     MPI_Barrier(comm);
     t = MPI_Wtime();
     if (rank == 0) {
-        printf("##### End PCG ####################\n");
-        printf("[rank %d] Total PCG time=%lf \n", rank, t - st);
+        printf("Total PCG time = %lf seconds\n", t - st);
     }
     fflush(stdout);
 
@@ -354,6 +355,12 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
 
     // ____________________________________________________________
     // Write output to fits files
+
+    MPI_Barrier(comm);
+    if (rank == 0) {
+        puts("##### Write products ####################");
+        fflush(stdout);
+    }
 
     st = MPI_Wtime();
 
@@ -449,12 +456,12 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
             x2map_pol(mapI, mapQ, mapU, Cond, hits, x, lstid, cond, lhits,
                       map_size);
         }
-        printf("Checking output directory ... old files will be overwritten\n");
-        char Imap_name[256];
-        char Qmap_name[256];
-        char Umap_name[256];
-        char Condmap_name[256];
-        char Hitsmap_name[256];
+        puts("Checking output directory... old files will be overwritten");
+        char Imap_name[FILENAME_MAX];
+        char Qmap_name[FILENAME_MAX];
+        char Umap_name[FILENAME_MAX];
+        char Condmap_name[FILENAME_MAX];
+        char Hitsmap_name[FILENAME_MAX];
         char nest = 1;
         char *cordsys = "C";
         int ret, w = 1;
@@ -513,29 +520,22 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
             write_map(Cond, TDOUBLE, nside, Condmap_name, nest, cordsys);
             write_map(hits, TINT, nside, Hitsmap_name, nest, cordsys);
         } else {
-            printf("IO Error: Could not overwrite old files, map results will "
-                   "not be stored ;(\n");
+            fprintf(stderr, "IO Error: Could not overwrite old files, map "
+                            "results will not be stored ;(\n");
         }
     }
 
     t = MPI_Wtime();
     if (rank == 0) {
-        printf("[rank %d] Write output files time=%lf \n", rank, t - st);
+        printf("Total time = %lf seconds\n", t - st);
         fflush(stdout);
     }
-    st = MPI_Wtime();
 
     // free map domain objects
     free(x);
     free(cond);
     free(lhits);
 
-    MPI_Barrier(comm);
-    t = MPI_Wtime();
-    if (rank == 0) {
-        printf("[rank %d] Free memory time=%lf \n", rank, t - st);
-        fflush(stdout);
-    }
     // MPI_Finalize();
 }
 
@@ -555,6 +555,13 @@ WeightStgy handle_gaps(Gap *Gaps, Mat *A, Tpltz *Nm1, Tpltz *N, GapStrategy gs,
     switch (gs) {
 
     case COND:
+        // set noise weighting strategy
+        ws = BASIC;
+
+        if (my_rank == 0) {
+            puts("[Gaps/conditioning] weighting strategy = BASIC");
+        }
+
         // set signal in all gaps to zero
         reset_relevant_gaps(b, Nm1, Gaps);
 
@@ -572,20 +579,20 @@ WeightStgy handle_gaps(Gap *Gaps, Mat *A, Tpltz *Nm1, Tpltz *N, GapStrategy gs,
         } else {
             // perfect noise reconstruction
             if (my_rank == 0) {
-                puts("[gaps/conditioning] perfect noise reconstruction");
+                puts("[Gaps/conditioning] perfect noise reconstruction");
             }
-        }
-
-        // set noise weighting strategy
-        ws = BASIC;
-
-        if (my_rank == 0) {
-            puts("[gaps/conditioning] weighting strategy = BASIC");
         }
 
         break;
 
     case MARG_LOCAL_SCAN:
+        // set noise weighting strategy
+        ws = BASIC;
+
+        if (my_rank == 0) {
+            puts("[Gaps/marginalization] weighting strategy = BASIC");
+        }
+
         // recombine signal and noise
         for (int i = 0; i < A->m; ++i) {
             b[i] += noise[i];
@@ -597,35 +604,35 @@ WeightStgy handle_gaps(Gap *Gaps, Mat *A, Tpltz *Nm1, Tpltz *N, GapStrategy gs,
         } else {
             // perfect noise reconstruction
             if (my_rank == 0) {
-                puts("[gaps/marginalization] perfect noise reconstruction");
+                puts("[Gaps/marginalization] perfect noise reconstruction");
             }
-        }
-
-        // set noise weighting strategy
-        ws = BASIC;
-
-        if (my_rank == 0) {
-            puts("[gaps/marginalization] weighting strategy = BASIC");
         }
 
         break;
 
     case NESTED_PCG:
+        // set noise weighting strategy
+        ws = ITER;
+
+        if (my_rank == 0) {
+            puts("[Gaps/nested] weighting strategy = ITER");
+        }
+
         // recombine signal and noise
         for (int i = 0; i < A->m; ++i) {
             b[i] += noise[i];
         }
 
-        // set noise weighting strategy
-        ws = ITER;
-
-        if (my_rank == 0) {
-            puts("[gaps/nested] weighting strategy = ITER");
-        }
-
         break;
 
     case NESTED_PCG_NO_GAPS:
+        // set noise weighting strategy
+        ws = ITER_IGNORE;
+
+        if (my_rank == 0) {
+            puts("[Gaps/nested-ignore] weighting strategy = ITER_IGNORE");
+        }
+
         // recombine signal and noise
         for (int i = 0; i < A->m; ++i) {
             b[i] += noise[i];
@@ -637,15 +644,8 @@ WeightStgy handle_gaps(Gap *Gaps, Mat *A, Tpltz *Nm1, Tpltz *N, GapStrategy gs,
         } else {
             // perfect noise reconstruction
             if (my_rank == 0) {
-                puts("[gaps/nested-ignore] perfect noise reconstruction");
+                puts("[Gaps/nested-ignore] perfect noise reconstruction");
             }
-        }
-
-        // set noise weighting strategy
-        ws = ITER_IGNORE;
-
-        if (my_rank == 0) {
-            puts("[gaps/nested-ignore] weighting strategy = ITER_IGNORE");
         }
 
         break;

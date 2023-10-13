@@ -10,231 +10,23 @@
 
 #include "mappraiser/pcg_true.h"
 
-#include <math.h>
 #include <mpi.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-double scalar_prod_reduce(MPI_Comm comm, Precond *P, const double *p1,
-                          const double *p2, const double *p_sub);
-
-int PCG_GLS_true(char *outpath, char *ref, Mat *A, Precond *P, Tpltz *Nm1,
-                 Tpltz *N, double *x, const double *b, double tol, int K,
-                 Gap *G, WeightStgy ws) {
-    int i, j, k; // some indexes
-    int m;       // number of local time samples
-    int rank, size;
-    double st, t; // timers
-    double solve_time = 0.0;
-    double res, res0, res_rel;
-
-    double *_g, *Ah, *Nm1Ah;      // time domain vectors
-    double *g, *gp, *gt, *Cg, *h; // map domain vectors
-    double *AtNm1Ah;              // map domain
-    double ro, gamma, coeff;      // scalars
-    double g2pix, g2pix_prev, g2pix_polak;
-
-    // if we want to use the true norm to compute the residual
-    int TRUE_NORM = 1; // 0: No ; 1: Yes
-
-    FILE *fp;
-
-    MPI_Comm_rank(A->comm, &rank);
-    MPI_Comm_size(A->comm, &size);
-    m = A->m;
-
-    MPI_Barrier(A->comm);
-    if (rank == 0) {
-        printf("\n[rank %d] Start main PCG iterations\n", rank);
-        fflush(stdout);
-    }
-
-    // map domain objects memory allocation
-    h = (double *)malloc(P->n * sizeof(double));  // descent direction
-    g = (double *)malloc(P->n * sizeof(double));  // residual
-    gp = (double *)malloc(P->n * sizeof(double)); // previous residual
-    AtNm1Ah = (double *)malloc(P->n * sizeof(double));
-
-    // time domain objects memory allocation
-    Ah = (double *)malloc(m * sizeof(double));
-
-    _g = Ah;
-    Cg = AtNm1Ah;
-    Nm1Ah = Ah;
-
-    st = MPI_Wtime();
-
-    // Compute RHS - initial guess
-    MatVecProd(A, x, _g, 0);
-
-    for (i = 0; i < m; i++)
-        _g[i] = b[i] - _g[i];
-
-    apply_weights(Nm1, N, G, _g, ws,
-                  false); // _g = Nm1 (d-Ax0)  (d = signal + noise)
-
-    TrMatVecProd(A, _g, g, 0); // g = At _g
-
-    apply_precond(P, A, Nm1, g, Cg);
-
-    for (j = 0; j < P->n; j++) // h = Cg
-        h[j] = Cg[j];
-
-    // g2pix = (Cg, g)
-    g2pix = scalar_prod_reduce(A->comm, P, Cg, g, NULL);
-
-    t = MPI_Wtime();
-    solve_time += (t - st);
-
-    if (TRUE_NORM == 1) {
-        // res = (g, g)
-        res = scalar_prod_reduce(A->comm, P, g, g, NULL);
-    } else {
-        res = g2pix;
-    }
-
-    // double g2pixB = g2pix;
-    double tol2rel =
-        tol * tol * res; // tol*tol*g2pixB; //*g2pixB; //tol; //*tol*g2;
-    res0 = res;
-    // Test if already converged
-    if (rank == 0) {
-
-        res_rel = sqrt(res) / sqrt(res0);
-        printf("k = %d, res = %e, g2pix = %e, res_rel = %e, time = %lf\n", 0,
-               res, g2pix, res_rel, t - st);
-        char filename[FILENAME_MAX];
-        sprintf(filename, "%s/pcg_residuals_%s.dat", outpath, ref);
-        fp = fopen(filename, "wb");
-        if (fp != NULL) {
-            fwrite(&res_rel, sizeof(double), 1, fp);
-        } else {
-            fputs("error when opening pcg_residuals file", stderr);
-            exit(EXIT_FAILURE);
-        }
-    }
-    fflush(stdout);
-
-    if (res <= tol) {
-        if (rank == 0)
-            printf("--> converged (%e < %e)\n", res, tol);
-        k = K; // to not enter inside the loop
-    }
-
-    st = MPI_Wtime();
-    fflush(stdout);
-
-    // PCG Descent Loop *********************************************
-    for (k = 1; k < K; k++) {
-
-        // Swap g backup pointers (Ribière-Polak needs g from previous
-        // iteration)
-        gt = gp;
-        gp = g;
-        g = gt;
-
-        MatVecProd(A, h, Ah, 0); // Ah = A h
-
-        apply_weights(Nm1, N, G, Nm1Ah, ws,
-                      false); // Nm1Ah = Nm1 Ah   (Nm1Ah == Ah)
-
-        TrMatVecProd(A, Nm1Ah, AtNm1Ah, 0); // AtNm1Ah = At Nm1Ah
-
-        coeff = scalar_prod_reduce(A->comm, P, h, AtNm1Ah, NULL);
-
-        ro = g2pix / coeff;
-
-        for (j = 0; j < P->n; j++) // x = x + ro * h
-            x[j] = x[j] + ro * h[j];
-
-        for (j = 0; j < P->n; j++)          // g = g + ro * (At Nm1 A) h
-            g[j] = gp[j] - ro * AtNm1Ah[j]; // Use Ribière-Polak formula
-
-        apply_precond(P, A, Nm1, g, Cg);
-
-        g2pix_prev = g2pix; // g2p = "res"
-        g2pix = scalar_prod_reduce(A->comm, P, Cg, g, NULL);
-
-        g2pix_polak = scalar_prod_reduce(A->comm, P, Cg, g, gp);
-
-        t = MPI_Wtime();
-        solve_time += (t - st);
-
-        // Just to check with the true norm:
-        if (TRUE_NORM == 1) {
-            res = scalar_prod_reduce(A->comm, P, g, g, NULL);
-        } else {
-            res = g2pix_polak;
-        }
-
-        if (rank == 0) { // print iterate info
-            res_rel = sqrt(res) / sqrt(res0);
-            printf("k = %d, res = %e, g2pix = %e, res_rel = %e, time = %lf\n",
-                   k, res, g2pix_polak, res_rel, t - st);
-            if (fp != NULL)
-                fwrite(&res_rel, sizeof(double), 1, fp);
-        }
-
-        fflush(stdout);
-
-        if (res <= tol2rel) {
-            if (rank == 0) {
-                printf("--> converged (%e < %e) \n", res, tol2rel);
-                printf("--> i.e.      (%e < %e) \n", res_rel, tol);
-                printf("--> solve time = %lf \n", solve_time);
-                fclose(fp);
-            }
-            break;
-        }
-
-        if (g2pix_polak > g2pix_prev) {
-            if (rank == 0)
-                printf("--> g2pix > g2pixp pb (%e > %e) \n", g2pix, g2pix_prev);
-        }
-
-        st = MPI_Wtime();
-
-        // gamma = g2pix / g2pixp;
-        gamma = g2pix_polak / g2pix_prev;
-
-        for (j = 0; j < P->n; j++) // h = h * gamma + Cg
-            h[j] = h[j] * gamma + Cg[j];
-
-    } // End loop
-
-    if (k == K) { // check unconverged
-        if (rank == 0) {
-            printf("--> unconverged, max iterate reached (%le > %le)\n", res,
-                   tol2rel);
-            fclose(fp);
-        }
-    }
-
-    if (rank == 0)
-        printf("--> g2pix = %e\n", g2pix);
-
-    free(h);
-    free(g);
-    free(gp);
-    free(AtNm1Ah);
-    free(Ah);
-
-    return 0;
-}
-
-double scalar_prod_reduce(MPI_Comm comm, Precond *P, const double *p1,
+double scalar_prod_reduce(MPI_Comm comm, int n, int n_extra,
+                          const double *pixpond, const double *p1,
                           const double *p2, const double *p_sub) {
     double result;
 
     // contributions from valid pixels
     double local_sum = 0.0;
-    for (int i = P->n_extra; i < P->n_valid; i++) {
+    for (int i = n_extra; i < n; i++) {
         if (p_sub == NULL) {
-            local_sum += p1[i] * p2[i] * P->pixpond[i - P->n_extra];
+            local_sum += p1[i] * p2[i] * pixpond[i - n_extra];
         } else {
-            local_sum +=
-                p1[i] * (p2[i] - p_sub[i]) * P->pixpond[i - P->n_extra];
+            local_sum += p1[i] * (p2[i] - p_sub[i]) * pixpond[i - n_extra];
         }
     }
 
@@ -242,7 +34,7 @@ double scalar_prod_reduce(MPI_Comm comm, Precond *P, const double *p1,
     MPI_Allreduce(&local_sum, &result, 1, MPI_DOUBLE, MPI_SUM, comm);
 
     // contributions from extra pixels
-    for (int i = 0; i < P->n_extra; i++) {
+    for (int i = 0; i < n_extra; i++) {
         if (p_sub == NULL) {
             result += p1[i] * p2[i];
         } else {
@@ -251,4 +43,212 @@ double scalar_prod_reduce(MPI_Comm comm, Precond *P, const double *p1,
     }
 
     return result;
+}
+
+int build_rhs(Mat *A, Tpltz *Nm1, Tpltz *N, Gap *G, WeightStgy ws,
+              const double *d, double *x0, double *rhs) {
+    // Build the right-hand side of the equation
+    // rhs = A^t * N^{-1} * (b - A * x_0 )
+
+    int m = A->m; // number of local samples
+    double *_t;   // time domain vector
+
+    _t = malloc((sizeof *_t) * m);
+    if (_t == NULL) {
+        fprintf(stderr, "malloc of _t failed in get_rhs");
+        return 1;
+    }
+
+    MatVecProd(A, x0, _t, 0);
+    for (int i = 0; i < m; i++)
+        _t[i] = d[i] - _t[i];
+    apply_weights(Nm1, N, G, _t, ws, false);
+    TrMatVecProd(A, _t, rhs, 0);
+
+    free(_t);
+    return 0;
+}
+
+int opmm(Mat *A, Tpltz *Nm1, Tpltz *N, Gap *G, WeightStgy ws, double *x,
+         double *y) {
+    // Apply system matrix, i.e. compute
+    // y = A^t * N^{-1} * A * x
+
+    double *_t = NULL; // time domain vector
+
+    _t = malloc((sizeof *_t) * A->m);
+    if (_t == NULL) {
+        fprintf(stderr, "malloc of _t failed in opmm");
+        return 1;
+    }
+
+    MatVecProd(A, x, _t, 0);
+    apply_weights(Nm1, N, G, _t, ws, false);
+    TrMatVecProd(A, _t, y, 0);
+
+    free(_t);
+    return 0;
+}
+
+/**
+ * @brief Solve the map making equation with a preconditioned conjugate gradient
+ * algorithm.
+ *
+ * @param A pointing matrix
+ * @param M preconditioner
+ * @param Nm1 inverse noise covariance
+ * @param N noise covariance
+ * @param G timestream gaps
+ * @param x [in] starting map [out] estimated solution
+ * @param d data vector
+ * @param si SolverInfo structure
+ */
+void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
+            double *x, const double *d, SolverInfo *si) {
+    // MPI information
+    int rank, size;
+    MPI_Comm_rank(A->comm, &rank);
+    MPI_Comm_size(A->comm, &size);
+
+    // initialize the SolverInfo struct
+    solverinfo_init(si);
+
+    int k = 0;                      // iteration number
+    int n = get_actual_map_size(A); // map size
+
+    double res;            // norm of residual
+    double coef_1, coef_2; // scalars
+    double wtime;          // timing variable
+
+    bool stop = false; // stop iteration or continue
+
+    double *r = NULL; // residual
+    double *z = NULL; // M^{-1} * r
+    double *p = NULL; // search direction
+    double *_p = NULL;
+    double *zp = NULL; // previous z
+    double *zt = NULL; // backup pointer for zp
+
+    // store starting time
+    si->start_time = MPI_Wtime();
+
+    // allocate first buffer
+    r = malloc((sizeof *r) * n);
+    if (r == NULL) {
+        si->has_failed = true;
+        fprintf(stderr, "[proc %d] malloc of r failed", rank);
+        solverinfo_finalize(si);
+        return;
+    }
+
+    // build rhs
+    build_rhs(A, Nm1, N, G, ws, d, x, r);
+
+    // compute initial residual
+    res = scalar_prod_reduce(A->comm, M->n, M->n_extra, M->pixpond, r, r, NULL);
+
+    // update SolverInfo
+    MPI_Barrier(A->comm);
+    wtime = MPI_Wtime();
+    solverinfo_update(si, &stop, k, res, wtime);
+
+    if (stop) {
+        // one stop condition already met, no iteration
+        solverinfo_finalize(si);
+        free(r);
+        return;
+    }
+
+    // iterate to solve the system
+
+    // allocate buffers needed for the iteration
+    p = malloc((sizeof *p) * n);
+    _p = malloc((sizeof *_p) * n);
+    z = malloc((sizeof *z) * n);
+    zp = malloc((sizeof *zp) * n);
+
+    if (p == NULL || _p == NULL || z == NULL || zp == NULL) {
+        // free memory if possible
+        if (p)
+            free(p);
+        if (_p)
+            free(_p);
+        if (z)
+            free(z);
+        if (zp)
+            free(zp);
+
+        si->has_failed = true;
+        fprintf(stderr, "[proc %d] malloc of p, _p, z or zp failed", rank);
+        solverinfo_finalize(si);
+        return;
+    }
+
+    // apply preconditioner (z0 = M^{-1} * r0)
+    apply_precond(M, A, r, z);
+
+    // set initial search direction (p0 = z0)
+    for (int i = 0; i < n; i++) {
+        p[i] = z[i];
+    }
+
+    // iteration loop
+    while (!stop) {
+        // we are doing one more iteration step
+        k++;
+
+        // apply system matrix
+        opmm(A, Nm1, N, G, ws, p, _p);
+
+        // compute (r,z) and (p,_p)
+        coef_1 = scalar_prod_reduce(A->comm, M->n, M->n_extra, M->pixpond, r, z,
+                                    NULL);
+        coef_2 = scalar_prod_reduce(A->comm, M->n, M->n_extra, M->pixpond, p,
+                                    _p, NULL);
+
+        // swap pointers to store previous z before updating
+        zt = zp;
+        zp = z;
+        z = zt;
+
+        // update current vector (x = x + alpha * p)
+        // update residual (r = r - alpha * _p)
+        for (int i = 0; i < n; i++) {
+            x[i] = x[i] + (coef_1 / coef_2) * p[i];
+            r[i] = r[i] - (coef_1 / coef_2) * _p[i];
+            z[i] = r[i];
+        }
+
+        // apply preconditioner (z = M^{-1} * r)
+        apply_precond(M, A, r, z);
+
+        // compute new (r,z)
+        // use Polak-Ribière formula
+        coef_2 =
+            scalar_prod_reduce(A->comm, M->n, M->n_extra, M->pixpond, r, z, zp);
+
+        // update search direction
+        for (int i = 0; i < n; i++) {
+            p[i] = z[i] + (coef_2 / coef_1) * p[i];
+        }
+
+        // compute residual
+        res = scalar_prod_reduce(A->comm, M->n, M->n_extra, M->pixpond, r, r,
+                                 NULL);
+
+        // update SolverInfo structure
+        // and check stop conditions
+        MPI_Barrier(A->comm);
+        wtime = MPI_Wtime();
+        solverinfo_update(si, &stop, k, res, wtime);
+    }
+
+    // free memory after the iteration
+    free(r);
+    free(p);
+    free(_p);
+    free(z);
+    free(zp);
+
+    solverinfo_finalize(si);
 }

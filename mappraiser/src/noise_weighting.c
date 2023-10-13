@@ -298,33 +298,85 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps,
         // free the allocated memory
         free(_r);
         free(r);
+        solverinfo_finalize(si);
+        return;
+    }
+
+    // iterate to solve the system
+
+    // allocate buffers needed for the iteration
+    p = malloc((sizeof *p) * m);
+    z = malloc((sizeof *z) * m);
+    zp = malloc((sizeof *zp) * m);
+
+    if (p == NULL || z == NULL || zp == NULL) {
+        // free memory if possible
+        if (p)
+            free(p);
+        if (z)
+            free(z);
+        if (zp)
+            free(zp);
+
+        si->has_failed = true;
+        solverinfo_finalize(si);
+
+        return;
+    }
+
+    // apply preconditioner (z0 = M^{-1} * r0)
+    for (int i = 0; i < m; ++i)
+        z[i] = r[i];
+
+    if (ignore_gaps) {
+        stbmmProd(Nm1_block, z);
     } else {
-        // iterate to solve the system
+        // gstbmmProd(Nm1_block, z, Gaps);
+        gappy_tpltz_mult(Nm1_block, z, Gaps);
+    }
 
-        // allocate buffers needed for the iteration
-        p = malloc((sizeof *p) * m);
-        z = malloc((sizeof *z) * m);
-        zp = malloc((sizeof *zp) * m);
+    // set initial search direction (p0 = z0)
+    for (int i = 0; i < m; ++i)
+        p[i] = z[i];
 
-        if (p == NULL || z == NULL || zp == NULL) {
-            // free memory if possible
-            if (p)
-                free(p);
-            if (z)
-                free(z);
-            if (zp)
-                free(zp);
+    // iteration loop
+    while (!stop) {
+        // we are doing one more iteration step
+        ++k;
 
-            si->has_failed = true;
-            solverinfo_finalize(si);
+        // apply system matrix (_r = Np)
+        for (int i = 0; i < m; ++i)
+            _r[i] = p[i];
 
-            return;
+        if (ignore_gaps)
+            stbmmProd(N_block, _r);
+        else {
+            // gstbmmProd(N_block, _r, Gaps);
+            gappy_tpltz_mult(N_block, _r, Gaps);
         }
 
-        // apply preconditioner (z0 = M^{-1} * r0)
-        for (int i = 0; i < m; ++i)
-            z[i] = r[i];
+        // compute alpha = (r,z)/(p,Np)
+        coef_1 = 0.0; // (r,z)
+        coef_2 = 0.0; // (p,Np)
+        for (int i = 0; i < m; ++i) {
+            coef_1 += r[i] * z[i];
+            coef_2 += p[i] * _r[i];
+        }
 
+        // swap pointers to store previous z before updating
+        zt = zp;
+        zp = z;
+        z = zt;
+
+        // update current vector (x = x + alpha * p)
+        // update residual (r = r - alpha * Np)
+        for (int i = 0; i < m; ++i) {
+            tod_block[i] = tod_block[i] + (coef_1 / coef_2) * p[i];
+            r[i] = r[i] - (coef_1 / coef_2) * _r[i];
+            z[i] = r[i];
+        }
+
+        // apply preconditioner (z = M^{-1} r)
         if (ignore_gaps) {
             stbmmProd(Nm1_block, z);
         } else {
@@ -332,275 +384,35 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps,
             gappy_tpltz_mult(Nm1_block, z, Gaps);
         }
 
-        // set initial search direction (p0 = z0)
-        for (int i = 0; i < m; ++i)
-            p[i] = z[i];
+        // compute coeff for new search direction
+        coef_2 = 0.0; // new (r,z)
+        for (int i = 0; i < m; ++i) {
+            // Fletcher-Reeves
+            // coef_2 += r[i] * z[i];
 
-        // iteration loop
-        while (!stop) {
-            // we are doing one more iteration step
-            ++k;
-
-            // apply system matrix (_r = Np)
-            for (int i = 0; i < m; ++i)
-                _r[i] = p[i];
-
-            if (ignore_gaps)
-                stbmmProd(N_block, _r);
-            else {
-                // gstbmmProd(N_block, _r, Gaps);
-                gappy_tpltz_mult(N_block, _r, Gaps);
-            }
-
-            // compute alpha = (r,z)/(p,Np)
-            coef_1 = 0.0; // (r,z)
-            coef_2 = 0.0; // (p,Np)
-            for (int i = 0; i < m; ++i) {
-                coef_1 += r[i] * z[i];
-                coef_2 += p[i] * _r[i];
-            }
-
-            // swap pointers to store previous z before updating
-            zt = zp;
-            zp = z;
-            z = zt;
-
-            // update current vector (x = x + alpha * p)
-            // update residual (r = r - alpha * Np)
-            for (int i = 0; i < m; ++i) {
-                tod_block[i] = tod_block[i] + (coef_1 / coef_2) * p[i];
-                r[i] = r[i] - (coef_1 / coef_2) * _r[i];
-                z[i] = r[i];
-            }
-
-            // apply preconditioner (z = M^{-1} r)
-            if (ignore_gaps) {
-                stbmmProd(Nm1_block, z);
-            } else {
-                // gstbmmProd(Nm1_block, z, Gaps);
-                gappy_tpltz_mult(Nm1_block, z, Gaps);
-            }
-
-            // compute coeff for new search direction
-            coef_2 = 0.0; // new (r,z)
-            for (int i = 0; i < m; ++i) {
-                // Fletcher-Reeves
-                // coef_2 += r[i] * z[i];
-
-                // Polak-Ribière
-                coef_2 += r[i] * (z[i] - zp[i]);
-            }
-
-            // update search direction
-            res = 0.0; // (r,r)
-            for (int i = 0; i < m; ++i) {
-                p[i] = z[i] + (coef_2 / coef_1) * p[i];
-                res += r[i] * r[i];
-            }
-
-            // update SolverInfo structure
-            // and check stop conditions
-            wtime = MPI_Wtime();
-            solverinfo_update(si, &stop, k, res, wtime);
+            // Polak-Ribière
+            coef_2 += r[i] * (z[i] - zp[i]);
         }
 
-        // free memory after the iteration
-        free(p);
-        free(_r);
-        free(r);
-        free(z);
-        free(zp);
+        // update search direction
+        res = 0.0; // (r,r)
+        for (int i = 0; i < m; ++i) {
+            p[i] = z[i] + (coef_2 / coef_1) * p[i];
+            res += r[i] * r[i];
+        }
+
+        // update SolverInfo structure
+        // and check stop conditions
+        wtime = MPI_Wtime();
+        solverinfo_update(si, &stop, k, res, wtime);
     }
+
+    // free memory after the iteration
+    free(p);
+    free(_r);
+    free(r);
+    free(z);
+    free(zp);
 
     solverinfo_finalize(si);
 }
-
-/*
-void PCG_global ( Tpltz *N, Tpltz *Nm1, Gap *Gaps, double *tod, int m, int rank,
-int verbose ) { const double tol       = 1e-6; const int    kmax      = 100;
-
-    int    k  = 0;               // iteration number
-    double r0, res, tol2rel; // residuals
-    double coef_1, coef_2;   // scalars
-    double lval_1, lval_2;   // local variables before reduce
-    double st, t;            // timing variables
-    bool         converged = false;  // convergence state
-    int    ng = Gaps->ngap;
-    int    i;
-
-    double *p = NULL, *_r = NULL, *r = NULL, *z = NULL; // time-domain objects
-
-    st = MPI_Wtime ();
-
-    // reset gaps of the rhs
-    if (ng > 0)
-        reset_tod_gaps ( tod, N, Gaps );
-
-    _r = malloc ((sizeof *_r) * m );
-    r  = malloc ((sizeof *r) * m );
-
-    if (_r == NULL || r == NULL) {
-        puts ( "out of memory: allocation of time-domain vectors for tod
-weighting failed" ); fflush ( stdout ); exit ( EXIT_FAILURE );
-    }
-
-    for (i = 0; i < m; ++i) {
-        // set initial guess
-        // _r[i] = 0.;
-        _r[i] = tod[i];
-
-        // need rhs to compute first residual
-        r[i]   = tod[i];
-        tod[i] = _r[i];
-    }
-
-    // apply system matrix (_r = Nx0)
-    if (ng > 0)
-        gstbmmProd ( N, _r, Gaps );
-    else
-        stbmmProd ( N, _r );
-
-    // compute initial residual (r = b - Nx0)
-    // check for instant convergence
-    lval_1 = 0.0;
-    for (i = 0; i < m; ++i) {
-        r[i] = r[i] - _r[i];
-        lval_1 += r[i] * r[i];
-    }
-
-    res = 0.0;
-    MPI_Allreduce ( &lval_1, &res, 1, MPI_DOUBLE, MPI_SUM, N->comm );
-    r0      = res;
-    tol2rel = tol * tol * res;
-
-    t = MPI_Wtime ();
-
-    if ((rank == 0) && (verbose > 0)) {
-        printf ( "  apply_weights: k = %d, r0 = %e, time=%lf\n", k, r0, t - st
-); fflush ( stdout );
-    }
-
-    if (res < tol * tol) {
-        // print info on screen
-        if ((rank == 0) && (verbose > 0)) {
-            printf ( "  -> converged (%e < %e)\n", res, tol * tol );
-            fflush ( stdout );
-        }
-
-        // return immediately
-        free ( _r );
-        free ( r );
-        return;
-    }
-
-    p = malloc ((sizeof *p) * m );
-    z = malloc ((sizeof *z) * m );
-    if (p == NULL || z == NULL) {
-        puts ( "out of memory: allocation of time-domain vectors for tod
-weighting failed" ); fflush ( stdout ); exit ( EXIT_FAILURE );
-    }
-
-    // apply preconditioner (z0 = M^{-1} * r0)
-    for (i = 0; i < m; ++i)
-        z[i] = r[i];
-
-    if (ng > 0)
-        gstbmmProd ( Nm1, z, Gaps );
-    else
-        stbmmProd ( Nm1, z );
-
-    // set initial search direction (p0 = z0)
-    for (i = 0; i < m; ++i)
-        p[i] = z[i];
-
-    for (k = 1; k < kmax + 1; ++k) {
-        // apply system matrix (_r = Np)
-        for (i = 0; i < m; ++i)
-            _r[i] = p[i];
-
-        if (ng > 0)
-            gstbmmProd ( N, _r, Gaps );
-        else
-            stbmmProd ( N, _r );
-
-        // compute alpha = (r,z)/(p,Np)
-        lval_1 = 0.0;
-        lval_2 = 0.0;
-        for (i = 0; i < m; ++i) {
-            lval_1 += r[i] * z[i];
-            lval_2 += p[i] * _r[i];
-        }
-
-        coef_1 = 0.0; // (r,z)
-        coef_2 = 0.0; // (p,Np)
-        MPI_Allreduce ( &lval_1, &coef_1, 1, MPI_DOUBLE, MPI_SUM, N->comm );
-        MPI_Allreduce ( &lval_2, &coef_2, 1, MPI_DOUBLE, MPI_SUM, N->comm );
-
-        // update current vector (x = x + alpha * p)
-        // update residual (r = r - alpha * Np)
-        for (i = 0; i < m; ++i) {
-            tod[i] = tod[i] + (coef_1 / coef_2) * p[i];
-            r[i]   = r[i] - (coef_1 / coef_2) * _r[i];
-            z[i]   = r[i];
-        }
-
-        // apply preconditioner (z = M^{-1} r)
-        if (ng > 0)
-            gstbmmProd ( Nm1, z, Gaps );
-        else
-            stbmmProd ( Nm1, z );
-
-        // compute coeff for new search direction
-        lval_2 = 0.0;
-        for (i = 0; i < m; ++i)
-            lval_2 += r[i] * z[i];
-
-        coef_2 = 0.0; // new (r,z)
-        MPI_Allreduce ( &lval_2, &coef_2, 1, MPI_DOUBLE, MPI_SUM, N->comm );
-
-        // update search direction
-        lval_1 = 0.0;
-        for (i = 0; i < m; ++i) {
-            p[i] = z[i] + (coef_2 / coef_1) * p[i];
-            lval_1 += r[i] * r[i];
-        }
-
-        res = 0.0;
-        MPI_Allreduce ( &lval_1, &res, 1, MPI_DOUBLE, MPI_SUM, N->comm );
-
-        if ((rank == 0) && (verbose > 0)) {
-            printf ( "  -> k = %d, res = %e, relative = %e\n", k, res, sqrt (
-res / r0 )); fflush ( stdout );
-        }
-
-        if (res < tol2rel) {
-            t         = MPI_Wtime ();
-            converged = true;
-            if (rank == 0) {
-                if (verbose > 0) {
-                    printf ( "  -> converged (%e < %e)\n", res, tol2rel );
-                    printf ( "  -> i.e.      (%e < %e)\n", sqrt ( res / r0 ),
-tol ); printf ( "  -> n_iter = %d, solve time = %lf s\n", k, t - st ); } else {
-                    printf ( "  -> applied noise weights in %d iterations (%lf
-s)\n", k - 1, t - st );
-                }
-            }
-            break;
-        }
-    }
-
-    if (!converged && rank == 0) {
-        t = MPI_Wtime ();
-        printf ( "  -> did not converge in %d iterations (%lf s)\n", k - 1, t -
-st );
-    }
-
-    fflush ( stdout );
-
-    // free memory
-    free ( p );
-    free ( _r );
-    free ( r );
-    free ( z );
-}
-*/

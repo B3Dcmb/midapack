@@ -41,7 +41,7 @@ void build_BJinv(Mat *A, Tpltz *Nm1, Mat *BJ_inv, double *cond, int *lhits,
                  int *local_blocks_sizes);
 
 // Product of the preconditioner with a map vector
-void apply_precond(Precond *p, const Mat *A, Tpltz *Nm1, double *g, double *Cg);
+void apply_precond(Precond *p, const Mat *A, double *g, double *Cg);
 
 // Free memory of the preconditioner
 void free_precond(Precond **in_out_p);

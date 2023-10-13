@@ -69,7 +69,6 @@ void compute_block(const Mat *A, int64_t ipix, int *lhits, double *vpixBlock,
  * @param lhits vector counting hits on pixels (size = Npixels)
  */
 void getlocalW(const Mat *A, Tpltz *Nm1, double *vpixBlock, int *lhits) {
-    int m = Nm1->local_V_size;      // number of local time samples
     int nnz = A->nnz;               // number of non-zero entries
     int n = get_actual_map_size(A); // actual size of local map
 
@@ -165,10 +164,6 @@ void getlocalW(const Mat *A, Tpltz *Nm1, double *vpixBlock, int *lhits) {
 // do the local diag( At diag(Nm1) A ) with as output a vector in the pixel
 // domain This is an old deprecated routine
 int getlocDiagN(Mat *A, Tpltz Nm1, double *vpixDiag) {
-    int m = Nm1.local_V_size; // number of local time samples
-
-    //  int nnz=(A->nnz);
-
     // Define the indices for each process
     int idv0,
         idvn; // indice of the first and the last block of V for each processes
@@ -267,8 +262,8 @@ int getlocDiagN(Mat *A, Tpltz Nm1, double *vpixDiag) {
 
 // communication scheme in the pixel domain for the vector vpixDiag
 // extract from a Madmap routine
-int commScheme(Mat *A, double *vpixDiag, int pflag) {
-    int i, j, k;
+int commScheme(Mat *A, double *vpixDiag) {
+    int i, k;
     int nSmax, nRmax, nStot, nRtot;
     double *lvalues, *com_val, *out_val;
 
@@ -414,7 +409,7 @@ int commScheme(Mat *A, double *vpixDiag, int pflag) {
 
 /** @brief Compute Diag(A' diag(Nm1) A). This an old deprecated routine
         @param out_values local output array of doubles*/
-int DiagAtA(Mat *A, double *diag, int pflag) {
+int DiagAtA(Mat *A, double *diag) {
     int i, j, k;
     int nSmax, nRmax;
     double *lvalues;
@@ -505,7 +500,7 @@ void get_pixshare_pond(Mat *A, double *pixpond) {
         pixpond[i] = 1.;
 
     // communicate with the others processes to have the global reduce
-    commScheme(A, pixpond, 2);
+    commScheme(A, pixpond);
 
     // compute the inverse vector
     for (int i = 0; i < n; i++)
@@ -615,7 +610,7 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, double *vpixBlock,
             hits_proc[q + i] = lhits[(int)((q + dn) / nnz)];
         }
     }
-    commScheme(A, hits_proc, 2);
+    commScheme(A, hits_proc);
     for (int q = 0; q < nv; q += nnz) {
         lhits[(int)((q + dn) / nnz)] = (int)hits_proc[q];
     }
@@ -629,7 +624,7 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, double *vpixBlock,
                 vpixBlock_loc[(i - q) / nnz + j] = vpixBlock[nnz * dn + i + j];
             }
         }
-        commScheme(A, vpixBlock_loc, 2);
+        commScheme(A, vpixBlock_loc);
         for (int i = q; i < nv * nnz; i += nnz2) {
             for (int j = 0; j < nnz; j++) {
                 vpixBlock[nnz * dn + i + j] = vpixBlock_loc[(i - q) / nnz + j];
@@ -653,8 +648,7 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, double *vpixBlock,
     int nbr_degenerate = 0;
 
     for (int ipix = dn / nnz; ipix < n / nnz; ipix++) {
-        // pixel index with nnz multiplicity
-        int innz = ipix * nnz;
+        // pixel index with nnz*nnz multiplicity
         int innz2 = ipix * nnz2;
 
         // initialize block of size nnz * nnz
@@ -732,66 +726,44 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, double *vpixBlock,
     return nbr_degenerate;
 }
 
-int precondjacobilike_avg(Mat A, Tpltz Nm1, double *c) {
-
-    int i, j, k; // some indexes
-    int m, n, rank, size;
-    double localreduce; // reduce buffer
-    double st, t;       // timers
-
-    m = A.m;                      // number of local time samples
-    n = A.lcount;                 // number of local pixels
-    MPI_Comm_rank(A.comm, &rank); //
-    MPI_Comm_size(A.comm, &size); //
-
+void precondjacobilike_avg(Mat A, Tpltz Nm1, double *c) {
+    int n = A.lcount; // number of local pixels
     double diagNm1;
 
     // Compute diag( AtA )
-    DiagAtA(&A, c, 2);
+    DiagAtA(&A, c);
 
     // multiply by the diagonal Toeplitz
     diagNm1 = Nm1.tpltzblocks[0].T_block[0];
 
     printf("diagNm1 = %f \n", diagNm1);
-    for (j = 0; j < n; j++)
-        c[j] = diagNm1 * c[j];
+    for (int i = 0; i < n; i++)
+        c[i] = diagNm1 * c[i];
 
     // compute c inverse vector
-    for (j = 0; j < n; j++)
-        c[j] = 1. / c[j];
-
-    return 0;
+    for (int i = 0; i < n; i++)
+        c[i] = 1. / c[i];
 }
 
-int precondjacobilike(Mat A, Tpltz Nm1, int *lhits, double *cond,
-                      double *vpixDiag) {
-
-    int i, j, k; // some indexes
-    int m, n, rank, size;
-    double localreduce; // reduce buffer
-    double st, t;       // timers
-
-    MPI_Comm_rank(A.comm, &rank); //
-    MPI_Comm_size(A.comm, &size); //
-
-    m = A.m;      // number of local time samples
-    n = A.lcount; // number of local pixels
+void precondjacobilike(Mat A, Tpltz Nm1, int *lhits, double *cond,
+                       double *vpixDiag) {
+    // number of local pixels
+    int n = A.lcount;
 
     // Compute local diag( At diag(N^1) A )
     getlocDiagN(&A, Nm1, vpixDiag);
 
     // communicate with the other processes to have the global reduce
-    commScheme(&A, vpixDiag, 2);
+    commScheme(&A, vpixDiag);
 
     // compute the inverse vector
-    for (i = 0; i < n; i++) {
+    for (int i = 0; i < n; i++) {
         if (i % 3 == 0) {
             lhits[(int)i / 3] = (int)vpixDiag[i];
             cond[(int)i / 3] = vpixDiag[i + 1] + vpixDiag[i + 2];
         }
         vpixDiag[i] = 1. / vpixDiag[i];
     }
-    return 0;
 }
 
 // low-level routine: to be moved somwhere else
@@ -832,7 +804,7 @@ void inverse_svd(int m, int n, int lda, double *a) {
 
 // Deflation subspace matrix constructor
 void build_Z(const Mat *A, int Zn, double ***out_Z) {
-    int i, j, g, e, k, rank, size, group;
+    int i, j, g, k, rank, size, group;
     int p, rp, sp, tag = 0;
     MPI_Request s_request, r_request;
     MPI_Status status;
@@ -1064,7 +1036,7 @@ void build_Em1(const Mat *A, double **Z, double **AZ, const double *pixpond,
 void build_AZ(Mat *A, Tpltz *Nm1, double **Z, int Zn, int n, double ***out_AZ) {
     double **AZ;
     double *v;
-    int i, j, k;
+    int i, k;
 
     v = calloc(A->m, sizeof(double)); // P * Zi
 
@@ -1405,6 +1377,9 @@ void build_BJinv(Mat *A, Tpltz *Nm1, Mat *BJ_inv, double *cond, int *lhits,
     int rank;
     MPI_Comm_rank(A->comm, &rank);
 
+    // timing
+    double t;
+
     // map size
     int n = get_actual_map_size(A);
     int nnz = A->nnz;
@@ -1428,20 +1403,13 @@ void build_BJinv(Mat *A, Tpltz *Nm1, Mat *BJ_inv, double *cond, int *lhits,
 
     MPI_Barrier(A->comm);
     if (rank == 0) {
-        printf("after precondblockjacobi: detected max %d degenerate pixels\n",
-               nd);
+        printf("[BJ] detected %d degenerate pixels (maximum)\n", nd);
     }
     fflush(stdout);
 
     if (nd > 0) {
         // some pixels were degenerate, so we have to rebuild the mapping
-        if (rank == 0) {
-            printf("Rebuild mapping after detection of degenerate pixels...");
-        }
-        fflush(stdout);
-
-        MPI_Barrier(A->comm);
-        double t = MPI_Wtime();
+        t = MPI_Wtime();
 
         // switch back to global indexation scheme
         for (int i = 0; i < A->m * nnz; i++) {
@@ -1467,14 +1435,18 @@ void build_BJinv(Mat *A, Tpltz *Nm1, Mat *BJ_inv, double *cond, int *lhits,
 
         MPI_Barrier(A->comm);
         if (rank == 0) {
-            printf(" %lf seconds\n", MPI_Wtime() - t);
+            printf("[BJ] rebuilt mapping in %lf seconds\n", MPI_Wtime() - t);
+            fflush(stdout);
         }
-        fflush(stdout);
 
         if (!(A->flag_ignore_extra)) {
             // we have to recompute vpixBlock_inv because more samples are
             // pointing to extra pixels
             // TODO : optimize so that valid blocks are not recomputed
+
+            if (rank == 0) {
+                puts("[BJ] recompute blocks for extra pixels");
+            }
 
             // it should not be necessary to resize the buffers
             // but let's check anyway
@@ -1499,16 +1471,19 @@ void build_BJinv(Mat *A, Tpltz *Nm1, Mat *BJ_inv, double *cond, int *lhits,
         }
     }
 
+    MPI_Barrier(A->comm);
+    t = MPI_Wtime();
+
     // build definitive Gap structure
     build_gap_struct(gif, Gaps, A);
 
     int global_gap_count = compute_global_gap_count(A->comm, Gaps);
 
+    MPI_Barrier(A->comm);
     if (rank == 0) {
-        printf("[rank %d] after BJ preconditioner\n", rank);
-        printf("  -> # of degenerate pixels = %d\n", nd);
-        printf("  -> # of timestream gaps [local]  = %d\n", Gaps->ngap);
-        printf("  -> # of timestream gaps [global] = %d\n", global_gap_count);
+        printf("[BJ] built Gap struct in %lf seconds\n", MPI_Wtime() - t);
+        printf("-> # of timestream gaps [local]  = %d\n", Gaps->ngap);
+        printf("-> # of timestream gaps [global] = %d\n", global_gap_count);
 #if 0
         print_gap_info(Gaps);
 #endif
@@ -1518,6 +1493,9 @@ void build_BJinv(Mat *A, Tpltz *Nm1, Mat *BJ_inv, double *cond, int *lhits,
     // free memory
     free(A->id_last_pix);
     free(A->ll);
+
+    // update map size
+    n = get_actual_map_size(A);
 
     // Define Block-Jacobi preconditioner indices
     int *indices_new = malloc((sizeof *indices_new) * n * nnz);
@@ -1540,9 +1518,9 @@ void build_BJinv(Mat *A, Tpltz *Nm1, Mat *BJ_inv, double *cond, int *lhits,
     // Init Block-Jacobi inv preconditioner
     MatSetIndices(BJ_inv, n, nnz, indices_new);
     MatSetValues(BJ_inv, n, nnz, vpixBlock_inv);
-    BJ_inv->trash_pix = A->trash_pix;
-    BJ_inv->flag_ignore_extra = A->flag_ignore_extra;
     MatLocalShape(BJ_inv, 3);
+    BJ_inv->trash_pix = 0;
+    BJ_inv->flag_ignore_extra = false;
 
 #if 0
     // Init Block-Jacobi preconditioner
@@ -1666,10 +1644,7 @@ void build_precond(Precond **out_p, double **out_pixpond, Mat *A, Tpltz *Nm1,
 }
 
 // General routine for applying the preconditioner to a map vector
-void apply_precond(Precond *p, const Mat *A, Tpltz *Nm1, double *g,
-                   double *Cg) {
-    int i;
-
+void apply_precond(Precond *p, const Mat *A, double *g, double *Cg) {
     // BJ
     if (p->precond == 0) {
         MatVecProd(&(p->BJ_inv), g, Cg, 0);
@@ -1681,13 +1656,13 @@ void apply_precond(Precond *p, const Mat *A, Tpltz *Nm1, double *g,
         mul_ZQtx(p->Z, p->Qtx, p->Qg, p->Zn, p->n);
         mul_ZQtx(p->AZ, p->Qtx, p->AQg, p->Zn, p->n);
 
-        for (i = 0; i < p->n; ++i) {
+        for (int i = 0; i < p->n; ++i) {
             p->AQg[i] = g[i] - p->AQg[i];
         }
 
         MatVecProd(&(p->BJ_inv), p->AQg, Cg, 0);
 
-        for (i = 0; i < p->n; ++i) {
+        for (int i = 0; i < p->n; ++i) {
             Cg[i] += p->Qg[i];
         }
     }

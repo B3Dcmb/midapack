@@ -9,11 +9,11 @@ extern "C" {
 
 #include <noise_weighting.h>
 #include <precond.h>
+#include <solver_info.h>
 
 // PCG routine
-int PCG_GLS_true(char *outpath, char *ref, Mat *A, Precond *P, Tpltz *Nm1,
-                 Tpltz *N, double *x, const double *b, double tol, int K,
-                 Gap *G, WeightStgy ws);
+void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
+            double *x, const double *b, SolverInfo *si);
 
 #ifdef __cplusplus
 }
