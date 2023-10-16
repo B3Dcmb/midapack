@@ -687,7 +687,15 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, double *vpixBlock,
         } else {
             // The pixel is not well enough observed
             // Remove it from the valid map
-            point_pixel_to_trash(A, A->trash_pix + ipix + nbr_degenerate);
+
+#if 0 // debug prints for pixels pointed to trash
+            if (rank == 0) {
+                printf("[proc %d] point pixel %d to trash (rcond: %lf)\n", rank,
+                       ipix + nbr_degenerate, rcond);
+                fflush(stdout);
+            }
+#endif
+            point_pixel_to_trash(A, ipix + nbr_degenerate);
             nbr_degenerate++;
 
             // Remove degenerate pixel from vpixBlock, lhits, and cond
@@ -777,10 +785,10 @@ int precond_bj_like_extra(Mat *A, Tpltz *Nm1, double *vpixBlock,
             fflush(stdout);
         }
 
-#if 1 // some debug printing
+#ifdef DEBUG
         if (rank == 0) {
-            printf("[proc %d] extra pixel %d -> rcond = %lf\n", rank, ipix,
-                   rcond);
+            printf("[proc %d] extra pixel %d -> rcond = %lf (hits: %d)\n", rank,
+                   ipix, rcond, lhits[ipix]);
             fflush(stdout);
         }
 #endif
