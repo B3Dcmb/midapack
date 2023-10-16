@@ -118,21 +118,24 @@ int build_pixel_to_time_domain_mapping(Mat *A) {
             A->id_last_pix[ipix] = i;
         }
 
-        // compute the number of gaps in the timestream
-        if (A->trash_pix > 0) {
-            if (A->indices[i * A->nnz] >= A->trash_pix * A->nnz) {
-                // valid sample: reset gap length
-                lengap = 0;
-            } else {
-                // flagged sample -> gap
-                if (lengap == 0) {
-                    // new gap: increment gap count
-                    ++ngap;
-                }
+        if (A->trash_pix == 0) {
+            // skip the computation of ngap
+            continue;
+        }
 
-                // increment current gap size
-                ++lengap;
+        // compute the number of gaps in the timestream
+        if (A->indices[i * A->nnz] >= A->trash_pix * A->nnz) {
+            // valid sample: reset gap length
+            lengap = 0;
+        } else {
+            // flagged sample -> gap
+            if (lengap == 0) {
+                // new gap: increment gap count
+                ++ngap;
             }
+
+            // increment current gap size
+            ++lengap;
         }
     }
     return ngap;
