@@ -76,12 +76,12 @@ int main(int argc, char *argv[]) {
     int Z_2lvl = 0;
     int pointing_commflag = 6;
     double tol = 1e-6;
-    int maxiter = 3000;
+    int maxiter = 100;
     int enlFac = 1;
     int ortho_alg = 1;
     int bs_red = 0;
     int nside = 512;
-    int gap_stgy = 0; // conditioning
+    int gap_stgy = 1;
     bool do_gap_filling = false;
     uint64_t realization = 0;
     const int Nnz = 3;
