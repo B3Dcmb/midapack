@@ -658,6 +658,7 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, double *vpixBlock,
     double *x = (double *)calloc(nnz2, sizeof(double));
 
     int nbr_degenerate = 0;
+    int off = A->flag_ignore_extra ? A->trash_pix : 0;
 
     for (int ipix = dn / nnz; ipix < n / nnz; ipix++) {
         // pixel index with nnz*nnz multiplicity
@@ -691,11 +692,11 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, double *vpixBlock,
 #if 0 // debug prints for pixels pointed to trash
             if (rank == 0) {
                 printf("[proc %d] point pixel %d to trash (rcond: %lf)\n", rank,
-                       ipix + nbr_degenerate, rcond);
+                       off + ipix + nbr_degenerate, rcond);
                 fflush(stdout);
             }
 #endif
-            point_pixel_to_trash(A, ipix + nbr_degenerate);
+            point_pixel_to_trash(A, off + ipix + nbr_degenerate);
             nbr_degenerate++;
 
             // Remove degenerate pixel from vpixBlock, lhits, and cond
