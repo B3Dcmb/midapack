@@ -196,51 +196,52 @@ bool gap_overlaps_with_block(Gap *gaps, int i_gap, Block *block) {
 }
 
 void compute_gaps_per_block(Gap *gaps, int nb_blocks, Block *blocks) {
-    int i_gap;       // index to go through the gaps
-    int first, last; // indexes of first and last relevant gaps
-    Block *b;        // pointer to the current block
+    // number of local gaps
+    int ng = gaps->ngap;
 
-    if (gaps->ngap > 0) {
-        i_gap = 0;
-        for (int i = 0; i < nb_blocks; ++i) {
-            b = &(blocks[i]);
+    // initialize everything to -1
+    for (int i = 0; i < nb_blocks; ++i) {
+        blocks[i].first_gap = -1;
+        blocks[i].last_gap = -1;
+    }
 
-            // find the first relevant gap
-            while (!gap_overlaps_with_block(gaps, i_gap, b)) {
-                ++i_gap;
-#ifndef NDEBUG
-                assert(i_gap < gaps->ngap);
-#endif
-            }
+    if (ng == 0) {
+        // no local gaps, nothing to do
+        return;
+    }
 
-            // store its index
-            first = i_gap;
-            // printf("first = %d\n", first);
+    int ig;           // gap index
+    int ig_reset = 0; // index of last gap matched with a block
 
-            if (first == -1) {
-                // no relevant gaps found for this block
-                last = -1;
-            } else {
-                // go through relevant gaps
-                while (gap_overlaps_with_block(gaps, i_gap, b)) {
-                    ++i_gap;
-                }
+    for (int i = 0; i < nb_blocks; ++i) {
+        // reset gap index
+        ig = ig_reset;
 
-                // store the index of the last relevant gap
-                last = i_gap - 1;
-            }
-            // printf("last = %d\n", last);
+        // current block
+        Block *b = &(blocks[i]);
 
-            // store the information for this block
-            b->first_gap = first;
-            b->last_gap = last;
+        // find the first relevant gap
+        while (ig < ng && !gap_overlaps_with_block(gaps, ig, b)) {
+            ++ig;
         }
-    } else {
-        // no local gaps: set everything to -1
-        for (int i = 0; i < nb_blocks; ++i) {
-            blocks[i].first_gap = -1;
-            blocks[i].last_gap = -1;
+
+        if (ig == ng) {
+            // no relevant gaps found for this block
+            // leave first_gap and last_gap fields untouched
+            continue;
         }
+
+        // store the first relevant gap
+        b->first_gap = ig;
+
+        // go through next gaps
+        while (gap_overlaps_with_block(gaps, ig + 1, b)) {
+            ++ig;
+        }
+
+        // store the index of the last relevant gap
+        b->last_gap = ig;
+        ig_reset = ig;
     }
 }
 
@@ -285,6 +286,11 @@ void reset_relevant_gaps(double *tod, Tpltz *tmat, Gap *gaps) {
     int pos = 0;
     for (int i = 0; i < tmat->nb_blocks_loc; ++i) {
         b = &(tmat->tpltzblocks[i]);
+        // if there are no relevant gaps, skip this block
+        if (b->first_gap < 0) {
+            continue;
+        }
+
         tod_block = (tod + pos);
         // loop over the relevant gaps for this block
         for (int j = b->first_gap; j <= b->last_gap; ++j) {

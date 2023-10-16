@@ -556,6 +556,19 @@ WeightStgy handle_gaps(Gap *Gaps, Mat *A, Tpltz *Nm1, Tpltz *N, GapStrategy gs,
     compute_gaps_per_block(Gaps, Nm1->nb_blocks_loc, Nm1->tpltzblocks);
     copy_gap_info(Nm1->nb_blocks_loc, Nm1->tpltzblocks, N->tpltzblocks);
 
+#if 0
+    if (my_rank == 0) {
+        puts("gap informations");
+        for (int i = 0; i < Nm1->nb_blocks_loc; ++i) {
+            printf("block %d: first %d last %d\n", i,
+                   Nm1->tpltzblocks[i].first_gap, Nm1->tpltzblocks[i].last_gap);
+        }
+        fflush(stdout);
+    }
+
+    MPI_Barrier(A->comm);
+#endif
+
     WeightStgy ws;
 
     switch (gs) {
