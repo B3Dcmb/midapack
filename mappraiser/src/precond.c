@@ -575,7 +575,19 @@ void invert_block(double *x, int nb, int lda, int *ipiv) {
     }
 }
 
-// Block diagonal jacobi preconditioner with degenerate pixels pre-processing
+/**
+ * @brief Block diagonal jacobi preconditioner with degenerate pixels
+ * pre-processing. This routine only computes the preconditioner blocks for the
+ * valid pixels.
+ *
+ * @param A pointing matrix
+ * @param Nm1 inverse noise covariance matrix
+ * @param vpixBlock buffer of size nnz * nnz * #pixels (preconditioner blocks)
+ * @param vpixBlock_inv buffer of the same size as vpixBlock (inverse blocks)
+ * @param cond buffer of the size of the map (for condition numbers)
+ * @param lhits buffer of the size of the map (for hit counts)
+ * @return int: amount of degenerate pixels found
+ */
 int precondblockjacobilike(Mat *A, Tpltz *Nm1, double *vpixBlock,
                            double *vpixBlock_inv, double *cond, int *lhits) {
     // MPI info
@@ -696,34 +708,98 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, double *vpixBlock,
     free(ipiv);
     free(x);
 
-    // Reallocate memory for preconditioner blocks
-    // in case of the presence of degenerate pixels
-    if (nbr_degenerate > 0) {
-        // Reallocate memory of vpixBlock by shrinking its memory size to its
-        // effective size (no degenerate pixel)
+    return nbr_degenerate;
+}
 
-        int *tmp1;
-        double *tmp2, *tmp3, *tmp4;
+// Complementary BJ routine for extra pixels
+int precond_bj_like_extra(Mat *A, Tpltz *Nm1, double *vpixBlock,
+                          double *vpixBlock_inv, double *cond, int *lhits) {
+    // MPI info
+    int rank, size;
+    MPI_Comm_rank(A->comm, &rank);
+    MPI_Comm_size(A->comm, &size);
 
-        tmp2 = (double *)realloc(vpixBlock, n * nnz * sizeof(double));
-        tmp4 = (double *)realloc(vpixBlock_inv, n * nnz * sizeof(double));
-        tmp1 = (int *)realloc(lhits, (n / nnz) * sizeof(int));
-        tmp3 = (double *)realloc(cond, (n / nnz) * sizeof(double));
-        if (tmp1 == NULL || tmp2 == NULL || tmp3 == NULL || tmp4 == NULL) {
-            fprintf(stderr,
-                    "[rank %d] Out of memory: reallocation of preconditioner "
-                    "blocks, hits or rcond maps failed",
-                    rank);
-            exit(1);
-        } else {
-            vpixBlock = tmp2;
-            vpixBlock_inv = tmp4;
-            lhits = tmp1;
-            cond = tmp3;
-        }
+    int nnz = A->nnz;
+    int nnz2 = nnz * nnz;
+
+    int n = get_actual_map_size(A); // actual map size
+    int nv = get_valid_map_size(A); // valid map size
+    int dn = n - nv;                // size diff between actual and valid maps
+
+    // Backup of the valid preconditioner blocks, which have already been
+    // communicated between all processes
+    double *tmp = NULL;
+    tmp = malloc((sizeof *tmp) * nv * nnz);
+    if (tmp == NULL) {
+        fprintf(stderr,
+                "[rank %d] allocation of tmp buffer failed in "
+                "precond_bj_like_extra",
+                rank);
+        exit(EXIT_FAILURE);
     }
 
-    return nbr_degenerate;
+    memcpy(tmp, vpixBlock + dn, (sizeof *tmp) * nv * nnz);
+
+    // Compute local Atdiag(N^1)A
+    // This also computes the blocks for the extra pixels
+    getlocalW(A, Nm1, vpixBlock, lhits);
+
+    // Copy back the valid blocks
+    memcpy(vpixBlock + dn, tmp, (sizeof *tmp) * nv * nnz);
+
+    // Now compute the inverse of the extra blocks
+
+    int nb = nnz;
+    int lda = nnz;
+
+    // pivot indices of LU factorization
+    int *ipiv = (int *)calloc(nnz, sizeof(int));
+
+    // the nnz*nnz matrix
+    double *x = (double *)calloc(nnz2, sizeof(double));
+
+    int n_ill = 0;
+
+    for (int ipix = 0; ipix < dn / nnz; ipix++) {
+        // pixel index with nnz*nnz multiplicity
+        int innz2 = ipix * nnz2;
+
+        // initialize block of size nnz * nnz
+        memcpy(x, vpixBlock + innz2, nb * nb * sizeof(double));
+
+        // reciprocal condition number of the block
+        double rcond = compute_rcond_block(x, nb, lda, ipiv);
+
+        if (rcond < 1e-1) {
+            ++n_ill;
+            printf("[rank %d] extra pixel with index %d is ill-conditioned\n",
+                   rank, ipix);
+            fflush(stdout);
+        }
+
+#if 1 // some debug printing
+        if (rank == 0) {
+            printf("[proc %d] extra pixel %d -> rcond = %lf\n", rank, ipix,
+                   rcond);
+            fflush(stdout);
+        }
+#endif
+
+        // store rcond value
+        cond[ipix] = rcond;
+
+        // invert the block using the previous LU decomposition
+        invert_block(x, nb, lda, ipiv);
+
+        // copy inverse block into vpixBlock_inv
+        memcpy(vpixBlock_inv + innz2, x, nb * nb * sizeof(double));
+    }
+
+    // free buffers allocated for lapacke
+    free(ipiv);
+    free(x);
+
+    return n_ill;
 }
 
 void precondjacobilike_avg(Mat A, Tpltz Nm1, double *c) {
@@ -1439,36 +1515,44 @@ void build_BJinv(Mat *A, Tpltz *Nm1, Mat *BJ_inv, double *cond, int *lhits,
             fflush(stdout);
         }
 
-        if (!(A->flag_ignore_extra)) {
-            // we have to recompute vpixBlock_inv because more samples are
-            // pointing to extra pixels
-            // TODO : optimize so that valid blocks are not recomputed
+        // update map size
+        n = get_actual_map_size(A);
 
-            if (rank == 0) {
-                puts("[BJ] recompute blocks for extra pixels");
-            }
+        // reallocate memory for preconditioner blocks and other buffers
+        int *tmp1 = NULL;
+        double *tmp2 = NULL, *tmp3 = NULL, *tmp4 = NULL;
 
-            // it should not be necessary to resize the buffers
-            // but let's check anyway
-            int np = n;
-            n = get_actual_map_size(A);
-            assert(n == np);
-            if (n != np) {
-                double *t1, *t2;
-                t1 = realloc(vpixBlock_inv, (sizeof *vpixBlock_inv) * n * nnz);
-                t2 = realloc(vpixBlock, (sizeof *vpixBlock_inv) * n * nnz);
-                if (t1 == NULL || t2 == NULL) {
-                    fprintf(stderr, "Reallocation of vpixBlock "
-                                    "or vpixBlock_inv failed");
-                    exit(1);
-                }
-                vpixBlock_inv = t1;
-                vpixBlock = t2;
-            }
-            int nd_bis = precondblockjacobilike(A, Nm1, vpixBlock,
-                                                vpixBlock_inv, cond, lhits);
-            assert(nd_bis == 0);
+        tmp2 = realloc(vpixBlock, (sizeof *tmp2) * n * nnz);
+        tmp4 = realloc(vpixBlock_inv, (sizeof *tmp4) * n * nnz);
+        tmp1 = realloc(lhits, (sizeof *tmp1) * n / nnz);
+        tmp3 = realloc(cond, (sizeof *tmp3) * n / nnz);
+        if (tmp1 == NULL || tmp2 == NULL || tmp3 == NULL || tmp4 == NULL) {
+            fprintf(stderr,
+                    "[rank %d] Out of memory: reallocation of preconditioner "
+                    "blocks, hits or rcond maps failed",
+                    rank);
+            exit(1);
         }
+        vpixBlock = tmp2;
+        vpixBlock_inv = tmp4;
+        lhits = tmp1;
+        cond = tmp3;
+    }
+
+    // now compute preconditioner blocks for the extra pixels
+    if (!(A->flag_ignore_extra)) {
+        // we have to recompute vpixBlock_inv because more samples are
+        // pointing to extra pixels
+        // TODO : optimize so that valid blocks are not recomputed
+
+        if (rank == 0) {
+            puts("[BJ] recompute blocks for extra pixels");
+            fflush(stdout);
+        }
+
+        int n_ill = precond_bj_like_extra(A, Nm1, vpixBlock, vpixBlock_inv,
+                                          cond, lhits);
+        // FIXME decide what to do with this n_ill information
     }
 
     MPI_Barrier(A->comm);
