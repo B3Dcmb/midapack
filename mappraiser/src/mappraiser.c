@@ -127,8 +127,9 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
 
     if (rank == 0) {
         printf("Initialized pointing matrix in %lf s\n", t - st);
-        printf("[proc %d] sky pixels = %d", rank, A.lcount);
-        printf(" (%d valid + %d extra)\n", nbr_valid_pixels, nbr_extra_pixels);
+        printf("[proc %d] sky pixels = %d", rank, A.lcount / A.nnz);
+        printf(" (%d valid + %d extra)\n", nbr_valid_pixels / A.nnz,
+               nbr_extra_pixels / A.nnz);
         printf("[proc %d] local timestream gaps = %d\n", rank, ngap);
         fflush(stdout);
     }
@@ -264,8 +265,8 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     t = MPI_Wtime();
 
     if (rank == 0) {
-        printf("Precond built for %d sky pixels (%d valid + %d extra)\n", P->n,
-               P->n_valid, P->n_extra);
+        printf("Precond built for %d sky pixels (%d valid + %d extra)\n",
+               P->n / A.nnz, P->n_valid / A.nnz, P->n_extra / A.nnz);
         printf("Total time = %lf s\n", t - st);
         fflush(stdout);
     }
