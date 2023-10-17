@@ -14,7 +14,6 @@
 #include "mappraiser/mapping.h"
 #include "mappraiser/noise_weighting.h"
 #include "mappraiser/pcg_true.h"
-#include "solver_info.h"
 
 #ifdef WITH_ECG
 #include "mappraiser/ecg.h"

@@ -40,20 +40,31 @@
         _a < _b ? _a : _b;                                                     \
     })
 
-void compute_block(const Mat *A, int64_t ipix, int *lhits, double *vpixBlock,
-                   double diagNm1) {
+void accumulate_sample(const Mat *A, int64_t t, int *lhits, double *vpixBlock,
+                       double diagNm1) {
+    // number of non zero values
     int nnz = A->nnz;
-    int extra = nnz * A->trash_pix;
-    int off_extra = A->flag_ignore_extra ? extra : 0;
-    int64_t innz = ipix * nnz;
-    if (!(A->flag_ignore_extra) || A->indices[innz] >= extra) {
-        lhits[(A->indices[innz] - off_extra) / nnz] += 1;
-        for (int j = 0; j < nnz; j++) {
-            for (int k = 0; k < nnz; k++) {
-                int idx_j = A->indices[innz + j] - off_extra;
-                // coeff (j, k) of the nnz * nnz block
-                vpixBlock[nnz * idx_j + k] +=
-                    A->values[innz + j] * A->values[innz + k] * diagNm1;
+
+    // offset to remove when ignoring extra pixels
+    int off_extra = A->flag_ignore_extra ? nnz * A->trash_pix : 0;
+
+    // sample index with nnz multiplicity
+    int64_t tnnz = t * nnz;
+
+    // index of the pixel observed by this sample
+    int pix = A->indices[tnnz] - off_extra;
+
+    // increment hit count for the pixel
+    lhits[pix / nnz] += 1;
+
+    // accumulate contributions in the preconditioner block
+    if (!(A->flag_ignore_extra) || pix >= 0) {
+        for (int i = 0; i < nnz; i++) {
+            for (int j = 0; j < nnz; j++) {
+                pix = A->indices[tnnz + i] - off_extra;
+                // coeff (i, j) of the nnz * nnz block
+                vpixBlock[nnz * pix + j] +=
+                    A->values[tnnz + i] * A->values[tnnz + j] * diagNm1;
             }
         }
     }
@@ -103,7 +114,7 @@ void getlocalW(const Mat *A, Tpltz *Nm1, double *vpixBlock, int *lhits) {
 
     // go to the first piecewise stationary period
     for (int i = 0; i < vShft; i++) {
-        compute_block(A, (int64_t)i, lhits, vpixBlock, 1.0);
+        accumulate_sample(A, (int64_t)i, lhits, vpixBlock, 1.0);
     }
 
     // temporary buffer for one diag value of Nm1
@@ -150,12 +161,12 @@ void getlocalW(const Mat *A, Tpltz *Nm1, double *vpixBlock, int *lhits) {
 
             // a piecewise stationary period
             for (int64_t q = istart; q < istart + il; q++) {
-                compute_block(A, q, lhits, vpixBlock, diagNm1);
+                accumulate_sample(A, q, lhits, vpixBlock, diagNm1);
             }
 
             // continue until the next period if exist or to the last line of V
             for (int64_t i = istart + il; i < istartn; i++) {
-                compute_block(A, i, lhits, vpixBlock, 1.0);
+                accumulate_sample(A, i, lhits, vpixBlock, 1.0);
             }
         }
     } // end of the loop over the blocks
@@ -507,14 +518,15 @@ void get_pixshare_pond(Mat *A, double *pixpond) {
         pixpond[i] = 1. / pixpond[i];
 }
 
-// void print_matrix(char *desc, int m, int n, double *a, int lda) {
-//     int i, j;
-//     printf("\n %s\n", desc);
-//     for (i = 0; i < m; i++) {
-//         for (j = 0; j < n; j++) printf(" %e", a[i + j * lda]);
-//         printf("\n");
-//     }
-// }
+void print_matrix(char *desc, int m, int n, double *a, int lda) {
+    int i, j;
+    printf("\n %s\n", desc);
+    for (i = 0; i < m; i++) {
+        for (j = 0; j < n; j++)
+            printf(" %e", a[lda * i + j]);
+        printf("\n");
+    }
+}
 
 /**
  * Compute the reciprocal condition number of a square matrix block.
@@ -600,6 +612,12 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, double *vpixBlock,
 
     // Compute local Atdiag(N^1)A
     getlocalW(A, Nm1, vpixBlock, lhits);
+
+#if 1 // DEBUG anti diagonal blocks
+    char desc[64];
+    sprintf(desc, "[proc %d] 1st block of local W", rank);
+    print_matrix(desc, nnz, nnz, vpixBlock, nnz);
+#endif
 
     int n = get_actual_map_size(A); // actual map size
     int nv = get_valid_map_size(A); // valid map size

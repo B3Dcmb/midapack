@@ -226,14 +226,13 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
         for (int i = 0; i < n; i++) {
             x[i] = x[i] + (coef_1 / coef_2) * p[i];
             r[i] = r[i] - (coef_1 / coef_2) * _p[i];
-            z[i] = r[i];
         }
 
         // apply preconditioner (z = M^{-1} * r)
         apply_precond(M, A, r, z);
 
-        // compute new (r,z)
-        // use Polak-Ribière formula
+        // compute updated (r,z)
+        // use Polak-Ribière formula (r,z-zp)
         coef_2 =
             scalar_prod_reduce(A->comm, M->n, M->n_extra, M->pixpond, r, z, zp);
 
