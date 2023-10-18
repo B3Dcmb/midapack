@@ -54,11 +54,11 @@ void accumulate_sample(const Mat *A, int64_t t, int *lhits, double *vpixBlock,
     // index of the pixel observed by this sample
     int pix = A->indices[tnnz] - off_extra;
 
-    // increment hit count for the pixel
-    lhits[pix / nnz] += 1;
-
-    // accumulate contributions in the preconditioner block
     if (!(A->flag_ignore_extra) || pix >= 0) {
+        // increment hit count for the pixel
+        lhits[pix / nnz] += 1;
+
+        // accumulate contributions in the preconditioner block
         for (int i = 0; i < nnz; i++) {
             for (int j = 0; j < nnz; j++) {
                 pix = A->indices[tnnz + i] - off_extra;
