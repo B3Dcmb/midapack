@@ -139,9 +139,9 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     // Size of map that will be estimated by the solver
     int solver_map_size = get_actual_map_size(&A);
 
-    x = (double *)malloc(solver_map_size * sizeof(double));
-    cond = (double *)malloc((int)(solver_map_size / A.nnz) * sizeof(double));
-    lhits = (int *)malloc((int)(solver_map_size / A.nnz) * sizeof(int));
+    x = malloc((sizeof *x) * solver_map_size);
+    cond = malloc((sizeof *cond) * solver_map_size / A.nnz);
+    lhits = malloc((sizeof *lhits) * solver_map_size / A.nnz);
     if (x == NULL || cond == NULL || lhits == NULL) {
         printf("memory allocation failed");
         exit(1);
@@ -150,8 +150,8 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     for (j = 0; j < solver_map_size; j++) {
         x[j] = 0.;
         if (j % A.nnz == 0) {
-            lhits[(int)(j / A.nnz)] = 0;
-            cond[(int)(j / A.nnz)] = 0.;
+            lhits[j / A.nnz] = 0;
+            cond[j / A.nnz] = 0.;
         }
     }
 
@@ -257,7 +257,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     if (Z_2lvl == 0)
         Z_2lvl = size;
 
-    build_precond(&P, &pixpond, &A, &Nm1, &x, signal, noise, cond, lhits, tol,
+    build_precond(&P, &pixpond, &A, &Nm1, &x, signal, noise, &cond, &lhits, tol,
                   Z_2lvl, precond, gs, &Gaps, gif, local_blocks_sizes);
 
     MPI_Barrier(A.comm);

@@ -28,15 +28,15 @@ typedef struct precond_t {
 
 // Block-Jacobi preconditioner
 int precondblockjacobilike(Mat *A, Tpltz *Nm1, double *vpixBlock,
-                           double *vpixBlock_inv, double *cond, int *lhits);
+                           double *vpixBlock_inv, double **cond, int **lhits);
 
 // Preconditioner constructor
 void build_precond(Precond **out_p, double **out_pixpond, Mat *A, Tpltz *Nm1,
-                   double **in_out_x, double *b, double *noise, double *cond,
-                   int *lhits, double tol, int Zn, int precond, GapStrategy gs,
+                   double **in_out_x, double *b, double *noise, double **cond,
+                   int **lhits, double tol, int Zn, int precond, GapStrategy gs,
                    Gap *Gaps, int64_t gif, int *local_blocks_sizes);
 
-void build_BJinv(Mat *A, Tpltz *Nm1, Mat *BJ_inv, double *cond, int *lhits,
+void build_BJinv(Mat *A, Tpltz *Nm1, Mat *BJ_inv, double **cond, int **lhits,
                  GapStrategy gs, Gap *Gaps, int64_t gif,
                  int *local_blocks_sizes);
 
