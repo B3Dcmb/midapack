@@ -613,12 +613,6 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, double *vpixBlock,
     // Compute local Atdiag(N^1)A
     getlocalW(A, Nm1, vpixBlock, *lhits);
 
-#if 1 // DEBUG anti diagonal blocks
-    char desc[64];
-    sprintf(desc, "[proc %d] 1st block of local W", rank);
-    print_matrix(desc, nnz, nnz, vpixBlock, nnz);
-#endif
-
     int n = get_actual_map_size(A); // actual map size
     int nv = get_valid_map_size(A); // valid map size
     int dn = n - nv;                // size diff between actual and valid maps

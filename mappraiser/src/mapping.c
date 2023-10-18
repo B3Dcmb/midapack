@@ -46,22 +46,23 @@ int create_extra_pix(int *indices, int nnz, int nb_blocks_loc,
                      const int *local_blocks_sizes, GapStrategy gs) {
     switch (gs) {
     case MARG_LOCAL_SCAN: {
-        // position in the data
-        int offset = 0;
+        int offset = 0; // position in the data
+        int lsize;      // size of data block
 
         // loop through local blocks
         for (int i = 0; i < nb_blocks_loc; ++i) {
-            int local_size = local_blocks_sizes[i];
-            for (int j = 0; j < local_size * nnz; j += nnz) {
-                if (indices[offset + j] < 0) {
+            lsize = local_blocks_sizes[i];
+            for (int j = offset; j < offset + lsize; j++) {
+                int jnnz = j * nnz;
+                if (indices[jnnz] < 0) {
                     // set a negative index corresponding to local scan number
                     // don't forget the nnz multiplicity of the indices
                     for (int k = 0; k < nnz; ++k) {
-                        indices[offset + j + k] = -(i * nnz + k + 1);
+                        indices[jnnz + k] = -(i + 1) * nnz + k;
                     }
                 }
             }
-            offset += local_size;
+            offset += lsize;
         }
         break;
     }
