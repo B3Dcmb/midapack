@@ -144,21 +144,21 @@ void solverinfo_finalize(SolverInfo *si) {
     if (si->print) {
         if (si->has_converged) {
             if (si->res_norm <= si->abs_res_reduct * si->abs_res_reduct)
-                printf("  -> converged (|r| <= %e)\n", si->abs_res_reduct);
+                printf("-> converged (|r| <= %e)\n", si->abs_res_reduct);
 
             if (si->res_norm <=
                 si->rel_res_reduct * si->rel_res_reduct * si->r0)
-                printf("  -> converged (|r|/|r0| <= %e)\n", si->rel_res_reduct);
+                printf("-> converged (|r|/|r0| <= %e)\n", si->rel_res_reduct);
         } else if (si->has_diverged) {
-            printf("  -> diverged (|r|/|r0| >= %e)\n", si->rel_res_growth);
+            printf("-> diverged (|r|/|r0| >= %e)\n", si->rel_res_growth);
         } else if (si->has_failed) {
-            puts("  -> failed (possible cause: memory issue)");
+            puts("-> failed (possible cause: memory issue)");
         } else {
             // no convergence nor divergence
-            printf("  -> maximal iteration number reached (%d)\n",
+            printf("-> maximal iteration number reached (%d)\n",
                    si->max_steps);
         }
-        printf("  -> n_iter = %d, time = %lf s\n", si->n_iter, si->solve_time);
+        printf("-> n_iter = %d, time = %lf s\n", si->n_iter, si->solve_time);
         fflush(stdout);
     }
 }

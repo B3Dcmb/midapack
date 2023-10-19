@@ -302,8 +302,6 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
         fflush(stdout);
     }
 
-    st = MPI_Wtime();
-
     if (solver == 0) {
         // set up SolverInfo structure
         SolverInfo si;
@@ -315,9 +313,6 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
 
         // solve the equation
         PCG_mm(&A, P, &Nm1, &N, ws, &Gaps, x, signal, &si);
-
-        // print stuff
-        // TODO
 
     } else if (solver == 1) {
 #ifdef WITH_ECG
@@ -340,13 +335,6 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
         }
         exit(EXIT_FAILURE);
     }
-
-    MPI_Barrier(comm);
-    t = MPI_Wtime();
-    if (rank == 0) {
-        printf("Total PCG time = %lf seconds\n", t - st);
-    }
-    fflush(stdout);
 
     // free tpltz blocks
     free(tpltzblocks);

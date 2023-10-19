@@ -113,6 +113,10 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
     // initialize the SolverInfo struct
     solverinfo_init(si);
 
+    // store starting time
+    MPI_Barrier(A->comm);
+    si->start_time = MPI_Wtime();
+
     int info;
     int k = 0;                      // iteration number
     int n = get_actual_map_size(A); // map size
@@ -129,9 +133,6 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
     double *_p = NULL;
     double *zp = NULL; // previous z
     double *zt = NULL; // backup pointer for zp
-
-    // store starting time
-    si->start_time = MPI_Wtime();
 
     // allocate first buffer
     r = malloc((sizeof *r) * n);
