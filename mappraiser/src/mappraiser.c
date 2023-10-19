@@ -283,6 +283,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     //____________________________________________________________
     // Gap treatment
 
+#if 0
     MPI_Barrier(comm);
     if (rank == 0) {
         puts("##### Gap treatment ####################");
@@ -292,10 +293,12 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     WeightStgy ws =
         handle_gaps(&Gaps, &A, &Nm1, &N, gs, signal, noise, do_gap_filling,
                     realization, detindxs, obsindxs, telescopes, sample_rate);
+#endif
 
     // ____________________________________________________________
     // Solve the system
 
+#if 0
     MPI_Barrier(comm);
     if (rank == 0) {
         puts("##### Main solver ####################");
@@ -335,6 +338,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
         }
         exit(EXIT_FAILURE);
     }
+#endif
 
     // free tpltz blocks
     free(tpltzblocks);
@@ -379,17 +383,29 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
 #endif
         // valid map
         memmove(x, (x + extra), map_size * sizeof(double));
-        double *tmp = realloc(x, map_size * sizeof(double));
-        if (tmp == NULL) {
-            fprintf(stderr, "Map reallocation failed");
+        memmove(lhits, lhits + extra / Nnz, (map_size / Nnz) * sizeof(double));
+        memmove(cond, cond + extra / Nnz, (map_size / Nnz) * sizeof(double));
+        double *tmp_x = realloc(x, (sizeof tmp_x) * map_size);
+        int *tmp_hits = realloc(lhits, (sizeof tmp_hits) * map_size / Nnz);
+        double *tmp_cond = realloc(cond, (sizeof tmp_cond) * map_size / Nnz);
+        if (tmp_x == NULL || tmp_hits == NULL || tmp_cond == NULL) {
+            fprintf(stderr, "[proc %d] realloc of x, lhits or cond failed",
+                    rank);
             exit(EXIT_FAILURE);
         }
-        x = tmp;
+        x = tmp_x;
+        lhits = tmp_hits;
+        cond = tmp_cond;
     }
 
     // get maps from all processes and combine them
 
-    int *lstid = (int *)malloc(map_size * sizeof(int));
+    int *lstid = malloc((sizeof lstid) * map_size);
+    if (lstid == NULL) {
+        fprintf(stderr, "[proc %d] memory allocation of lstid failed", rank);
+        exit(EXIT_FAILURE);
+    }
+
     for (i = 0; i < map_size; i++) {
         lstid[i] = A.lindices[i + Nnz * A.trash_pix];
     }
@@ -662,6 +678,7 @@ WeightStgy handle_gaps(Gap *Gaps, Mat *A, Tpltz *Nm1, Tpltz *N, GapStrategy gs,
     return ws;
 }
 
+// FIXME handle nnz != 3
 void x2map_pol(double *mapI, double *mapQ, double *mapU, double *Cond,
                int *hits, const double *x, const int *lstid, const double *cond,
                const int *lhits, int xsize) {

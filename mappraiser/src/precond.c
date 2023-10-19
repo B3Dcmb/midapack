@@ -701,10 +701,11 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, double *vpixBlock,
             // The pixel is not well enough observed
             // Remove it from the valid map
 
-#if 0
+#if 1
             if (rank == 0) {
-                printf("[proc %d] point pixel %d to trash (rcond: %lf)\n", rank,
-                       off + ipix + nbr_degenerate, rcond);
+                printf("[proc %d] point pixel %d to trash (rcond: %lf, hits: "
+                       "%d)\n",
+                       rank, off + ipix + nbr_degenerate, rcond, *lhits[ipix]);
                 fflush(stdout);
             }
 #endif
@@ -1670,7 +1671,7 @@ void build_precond(Precond **out_p, double **out_pixpond, Mat *A, Tpltz *Nm1,
     p->n_valid = A->lcount - A->nnz * A->trash_pix;
     p->n = p->n_extra + p->n_valid;
 
-#if 1
+#if 0
     if (rank == 0) {
         int nnz = A->nnz;
         char desc[64];
