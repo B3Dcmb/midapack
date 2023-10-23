@@ -139,7 +139,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     // Size of map that will be estimated by the solver
     int solver_map_size = get_actual_map_size(&A);
 
-    x = malloc((sizeof *x) * solver_map_size);
+    x = calloc(solver_map_size, sizeof *x);
     cond = malloc((sizeof *cond) * solver_map_size / A.nnz);
     lhits = malloc((sizeof *lhits) * solver_map_size / A.nnz);
 
@@ -147,14 +147,6 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
         fprintf(stderr, "[rank %d] memory allocation of map objects failed",
                 rank);
         exit(1);
-    }
-
-    for (j = 0; j < solver_map_size; j++) {
-        x[j] = 0.;
-        if (j % A.nnz == 0) {
-            lhits[j / A.nnz] = 0;
-            cond[j / A.nnz] = 0.;
-        }
     }
 
 #if 0
