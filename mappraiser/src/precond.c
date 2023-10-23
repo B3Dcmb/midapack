@@ -170,6 +170,8 @@ void getlocalW(const Mat *A, Tpltz *Nm1, double *vpixBlock, int *lhits) {
             }
         }
     } // end of the loop over the blocks
+
+    free(nnew);
 }
 
 // do the local diag( At diag(Nm1) A ) with as output a vector in the pixel

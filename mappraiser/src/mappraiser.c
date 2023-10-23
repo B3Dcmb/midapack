@@ -317,6 +317,8 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
         // solve the equation
         PCG_mm(&A, P, &Nm1, &N, ws, &Gaps, x, signal, &si);
 
+        solverinfo_free(&si);
+
     } else if (solver == 1) {
 #ifdef WITH_ECG
         ECG_GLS(outpath, ref, &A, &Nm1, &(P->BJ_inv), P->pixpond, x, signal,
@@ -533,6 +535,12 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
             fprintf(stderr, "IO Error: Could not overwrite old files, map "
                             "results will not be stored ;(\n");
         }
+
+        free(mapI);
+        free(mapQ);
+        free(mapU);
+        free(Cond);
+        free(hits);
     }
 
     t = MPI_Wtime();
@@ -545,6 +553,8 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     free(x);
     free(cond);
     free(lhits);
+
+    free(lstid);
 
     // MPI_Finalize();
 }
