@@ -47,7 +47,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     int m, Nb_t_Intervals; // local number of rows of the pointing matrix A, nbr
                            // of stationary intervals
     int64_t gif;           // global indice for the first local line
-    int i, j;
+    int i;
     Mat A;                   // pointing matrix structure
     int nbr_valid_pixels;    // nbr of valid pixel indices
     int nbr_extra_pixels;    // nbr of extra pixel indices

@@ -9,6 +9,7 @@
  */
 
 #include "mappraiser/pcg_true.h"
+#include "mappraiser/iofiles.h"
 
 #include <mpi.h>
 #include <stdbool.h>
@@ -88,26 +89,6 @@ int opmm(Mat *A, Tpltz *Nm1, Tpltz *N, Gap *G, WeightStgy ws, double *x,
 
     free(_t);
     return 0;
-}
-
-void saveArrayToFile(const void *array, size_t elementSize, size_t length,
-                     const char *filename) {
-    FILE *file = fopen(filename, "wb");
-
-    if (file == NULL) {
-        perror("Failed to open the file");
-        return;
-    }
-
-    size_t elements_written = fwrite(array, elementSize, length, file);
-
-    if (elements_written != length) {
-        fprintf(stderr, "Error writing to file\n");
-    } else {
-        printf("Array saved to %s\n", filename);
-    }
-
-    fclose(file);
 }
 
 /**
@@ -224,11 +205,11 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
         // we are doing one more iteration step
         k++;
 
-#if 0
+#if 1
         if (rank == 0) {
             char filename[FILENAME_MAX];
-            sprintf(filename, "/home/sbiquard/test/data/cond/x_%d", k);
-            saveArrayToFile(x, sizeof *x, n, filename);
+            sprintf(filename, "/home/sbiquard/test/data/marg/x_%02d", k);
+            saveArrayToFile(filename, x, n, sizeof *x);
         }
 #endif
 
