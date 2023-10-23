@@ -99,6 +99,10 @@ void getlocalW(const Mat *A, Tpltz *Nm1, double *vpixBlock, int *lhits) {
         vpixBlock[i] = 0.0;
     }
 
+    for (int i = 0; i < n / nnz; i++) {
+        lhits[i] = 0;
+    }
+
     int64_t vShft = idpnew - Nm1->idp;
     // in principle == Nm1->tpltzblocks[idv0].idv-Nm1->idp
 
@@ -707,7 +711,8 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, double *vpixBlock,
             if (rank == 0) {
                 printf("[proc %d] point pixel %d to trash (rcond: %lf, hits: "
                        "%d)\n",
-                       rank, off + ipix + nbr_degenerate, rcond, *lhits[ipix]);
+                       rank, off + ipix + nbr_degenerate, rcond,
+                       *(*lhits + ipix));
                 fflush(stdout);
             }
 #endif
@@ -752,9 +757,11 @@ int precond_bj_like_extra(Mat *A, Tpltz *Nm1, double *vpixBlock,
 
     // Backup of the valid preconditioner blocks, which have already been
     // communicated between all processes
-    double *tmp = NULL;
-    tmp = malloc((sizeof *tmp) * nv * nnz);
-    if (tmp == NULL) {
+    double *tmp_blocks = NULL;
+    int *tmp_hits = NULL;
+    tmp_blocks = malloc((sizeof *tmp_blocks) * nv * nnz);
+    tmp_hits = malloc((sizeof *tmp_hits) * nv / nnz);
+    if (tmp_blocks == NULL || tmp_hits == NULL) {
         fprintf(stderr,
                 "[rank %d] allocation of tmp buffer failed in "
                 "precond_bj_like_extra",
@@ -762,14 +769,16 @@ int precond_bj_like_extra(Mat *A, Tpltz *Nm1, double *vpixBlock,
         exit(EXIT_FAILURE);
     }
 
-    memcpy(tmp, vpixBlock + dn, (sizeof *tmp) * nv * nnz);
+    memcpy(tmp_blocks, vpixBlock + dn * nnz, (sizeof *tmp_blocks) * nv * nnz);
+    memcpy(tmp_hits, *lhits + dn / nnz, (sizeof *tmp_hits) * nv / nnz);
 
     // Compute local Atdiag(N^1)A
     // This also computes the blocks for the extra pixels
     getlocalW(A, Nm1, vpixBlock, *lhits);
 
     // Copy back the valid blocks
-    memcpy(vpixBlock + dn, tmp, (sizeof *tmp) * nv * nnz);
+    memcpy(vpixBlock + dn * nnz, tmp_blocks, (sizeof *tmp_blocks) * nv * nnz);
+    memcpy(*lhits + dn / nnz, tmp_hits, (sizeof *tmp_hits) * nv / nnz);
 
     // Now compute the inverse of the extra blocks
 

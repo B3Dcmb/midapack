@@ -142,8 +142,10 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     x = malloc((sizeof *x) * solver_map_size);
     cond = malloc((sizeof *cond) * solver_map_size / A.nnz);
     lhits = malloc((sizeof *lhits) * solver_map_size / A.nnz);
+
     if (x == NULL || cond == NULL || lhits == NULL) {
-        printf("memory allocation failed");
+        fprintf(stderr, "[rank %d] memory allocation of map objects failed",
+                rank);
         exit(1);
     }
 
