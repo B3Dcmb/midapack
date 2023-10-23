@@ -124,7 +124,7 @@ void mappraiser::GapFillInfo::print_curr_block() const {
     std::cout << "[id " << id << "] block = " << current_block << "/"
               << n_blocks - 1 << "; ";
     std::cout << "size = " << current_size << "; ";
-    std::cout << "time = " << block_times[current_block] << " seconds; ";
+    std::cout << "time = " << block_times[current_block] << " s; ";
     std::cout << "iterations = " << nb_iterations[current_block];
     std::cout << " (" << pcg_times[current_block] / nb_iterations[current_block]
               << " s / iter); ";
@@ -572,8 +572,8 @@ void perform_gap_filling(MPI_Comm comm, Tpltz *N, Tpltz *Nm1, double *noise,
     double t = MPI_Wtime();
 
     if (rank == 0) {
-        std::cout << "[Gap filling] finished in " << t - st
-                  << " seconds (all procs)" << std::endl;
+        std::cout << "[Gap filling] finished in " << t - st << " s (all procs)"
+                  << std::endl;
     }
 
     if (verbose) {
@@ -724,7 +724,7 @@ void gap_filling(MPI_Comm comm, const int *data_size_proc, int nb_blocks_loc,
     double end = MPI_Wtime();
 
     if (rank == 0) {
-        printf("Performed gap-filling in %lf seconds\n\n", end - start);
+        printf("Performed gap-filling in %lf s\n\n", end - start);
         fflush(stdout);
     }
 

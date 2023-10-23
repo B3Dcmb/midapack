@@ -1535,7 +1535,7 @@ void build_BJinv(Mat *A, Tpltz *Nm1, Mat *BJ_inv, double **cond, int **lhits,
 
         MPI_Barrier(A->comm);
         if (rank == 0) {
-            printf("[BJ] rebuilt mapping in %lf seconds\n", MPI_Wtime() - t);
+            printf("[BJ] rebuilt mapping in %lf s\n", MPI_Wtime() - t);
             fflush(stdout);
         }
 
@@ -1586,7 +1586,7 @@ void build_BJinv(Mat *A, Tpltz *Nm1, Mat *BJ_inv, double **cond, int **lhits,
 
     MPI_Barrier(A->comm);
     if (rank == 0) {
-        printf("[BJ] built Gap struct in %lf seconds\n", MPI_Wtime() - t);
+        printf("[BJ] built Gap struct in %lf s\n", MPI_Wtime() - t);
         printf("-> # of timestream gaps [local]  = %d\n", Gaps->ngap);
         printf("-> # of timestream gaps [global] = %d\n", global_gap_count);
 #if 0

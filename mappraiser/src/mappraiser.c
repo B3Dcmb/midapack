@@ -545,7 +545,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
 
     t = MPI_Wtime();
     if (rank == 0) {
-        printf("Total time = %lf seconds\n", t - st);
+        printf("Total time = %lf s\n", t - st);
         fflush(stdout);
     }
 

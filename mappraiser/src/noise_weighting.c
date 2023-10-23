@@ -173,8 +173,7 @@ __attribute__((unused)) void reset_tod_gaps(double *tod, Tpltz *N, Gap *Gaps) {
                Gaps->id0gap, Gaps->lgap, Gaps->ngap);
 #ifdef DEBUG
     double duration = MPI_Wtime() - start;
-    printf(" reset_tod_gaps (size=%d) in %lf seconds\n", N->local_V_size,
-           duration);
+    printf(" reset_tod_gaps (size=%d) in %lf s\n", N->local_V_size, duration);
     fflush(stdout);
 #endif
 }
