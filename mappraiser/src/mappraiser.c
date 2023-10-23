@@ -277,7 +277,6 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     //____________________________________________________________
     // Gap treatment
 
-#if 0
     MPI_Barrier(comm);
     if (rank == 0) {
         puts("##### Gap treatment ####################");
@@ -287,12 +286,10 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     WeightStgy ws =
         handle_gaps(&Gaps, &A, &Nm1, &N, gs, signal, noise, do_gap_filling,
                     realization, detindxs, obsindxs, telescopes, sample_rate);
-#endif
 
     // ____________________________________________________________
     // Solve the system
 
-#if 0
     MPI_Barrier(comm);
     if (rank == 0) {
         puts("##### Main solver ####################");
@@ -334,7 +331,6 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
         }
         exit(EXIT_FAILURE);
     }
-#endif
 
     // free tpltz blocks
     free(tpltzblocks);
@@ -543,11 +539,14 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
         fflush(stdout);
     }
 
-    // free map domain objects
+    // free memory
     free(x);
     free(cond);
     free(lhits);
 
+    MatFree(&A);
+    A.indices = NULL;
+    A.values = NULL;
     free(lstid);
 
     // MPI_Finalize();

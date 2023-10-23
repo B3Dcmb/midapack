@@ -780,6 +780,9 @@ int precond_bj_like_extra(Mat *A, Tpltz *Nm1, double *vpixBlock,
     memcpy(vpixBlock + dn * nnz, tmp_blocks, (sizeof *tmp_blocks) * nv * nnz);
     memcpy(*lhits + dn / nnz, tmp_hits, (sizeof *tmp_hits) * nv / nnz);
 
+    free(tmp_blocks);
+    free(tmp_hits);
+
     // Now compute the inverse of the extra blocks
 
     int nb = nnz;
@@ -1540,6 +1543,8 @@ void build_BJinv(Mat *A, Tpltz *Nm1, Mat *BJ_inv, double **cond, int **lhits,
         MatInit(A, A->m, nnz, A->indices, A->values, A->flag, MPI_COMM_WORLD);
 
         // rebuild the pixel to time-domain mapping
+        free(A->ll);
+        free(A->id_last_pix);
         Gaps->ngap = build_pixel_to_time_domain_mapping(A);
 
         MPI_Barrier(A->comm);
