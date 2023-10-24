@@ -510,23 +510,25 @@ int DiagAtA(Mat *A, double *diag) {
 
 void get_pixshare_pond(Mat *A, double *pixpond) {
     // number of local pixels
-    int n = A->lcount - (A->nnz) * (A->trash_pix);
+    int n = get_actual_map_size(A);
+    int n_extra = n - get_valid_map_size(A);
 
     // create an eyes local vector
     for (int i = 0; i < n; i++)
         pixpond[i] = 1.;
 
     // communicate with the others processes to have the global reduce
-    commScheme(A, pixpond);
+    // only communicate shared pixels (i.e. valid)
+    commScheme(A, pixpond + n_extra);
 
     // compute the inverse vector
-    for (int i = 0; i < n; i++)
+    for (int i = n_extra; i < n; i++)
         pixpond[i] = 1. / pixpond[i];
 }
 
 void print_matrix(char *desc, int m, int n, double *a, int lda) {
     int i, j;
-    printf("\n %s\n", desc);
+    printf("%s\n", desc);
     for (i = 0; i < m; i++) {
         for (j = 0; j < n; j++)
             printf(" %e", a[lda * i + j]);
@@ -808,8 +810,12 @@ int precond_bj_like_extra(Mat *A, Tpltz *Nm1, double *vpixBlock,
 
         if (rcond < 1e-1) {
             ++n_ill;
-            printf("[rank %d] extra pixel with index %d is ill-conditioned\n",
-                   rank, ipix);
+            printf("[proc %d] extra pixel %d is ill-conditioned\n", rank, ipix);
+#ifdef DEBUG
+            char desc[64];
+            sprintf(desc, "[proc %d] ill-conditioned block:", rank);
+            print_matrix(desc, nb, nb, vpixBlock + innz2, lda);
+#endif
             fflush(stdout);
         }
 
@@ -1713,7 +1719,7 @@ void build_precond(Precond **out_p, double **out_pixpond, Mat *A, Tpltz *Nm1,
         exit(1);
     }
 
-    p->pixpond = (double *)malloc(p->n_valid * sizeof(double));
+    p->pixpond = (double *)malloc(p->n * sizeof(double));
 
     // Compute pixel share ponderation
     get_pixshare_pond(A, p->pixpond);

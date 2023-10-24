@@ -84,13 +84,29 @@ int main(int argc, char *argv[]) {
     int gap_stgy = 1;
     bool do_gap_filling = false;
     uint64_t realization = 0;
-    const int Nnz = 3;
-    const int lambda = 8192;
-    const double sample_rate = 200;
+    int Nnz = 3;
+    int lambda = 8192;
+    double sample_rate = 200;
+
+    char *outpath = (char *)output_path.c_str();
+    char *ref = (gap_stgy == 0) ? (char *)"cond" : (char *)"marg";
 
     // bool to fill noise vector with zeros
     // (--> noiseless run but solver will still iterate)
-    bool noiseless_run = false;
+    bool fill_noise_zero = false;
+
+    // bool to trigger true noiseless mode
+    // (--> set noise to zero + set lambda to 1)
+    bool noiseless = true;
+
+    // modify input indices to mimic the observation of a single sky pixel
+    bool single_pixel = false;
+
+    // noiseless mode activate
+    if (noiseless) {
+        fill_noise_zero = true;
+        lambda = 1;
+    }
 
     //____________________________________________________________
     // Load data
@@ -126,6 +142,15 @@ int main(int argc, char *argv[]) {
     fname = data_path + "/pixels_" + std::to_string(rank) + ".bin";
     fillArrayFromFile(fname.c_str(), pix.data(), pix.size(), sizeof(pix[0]));
 
+    if (single_pixel) {
+        for (int i = 0; i < nb_samp; i++) {
+            int innz = i * Nnz;
+            for (int j = 0; j < Nnz; j++) {
+                pix[innz + j] = pix[j];
+            }
+        }
+    }
+
     //    MPI_Barrier(MPI_COMM_WORLD);
     //    if (rank == 0) std::cout << "  loaded pixels" << std::endl;
 
@@ -156,7 +181,7 @@ int main(int argc, char *argv[]) {
     fillArrayFromFile(fname.c_str(), noise.data(), noise.size(),
                       sizeof(noise[0]));
 
-    if (noiseless_run) {
+    if (fill_noise_zero) {
         std::fill(noise.begin(), noise.end(), 0);
     }
 
@@ -166,9 +191,13 @@ int main(int argc, char *argv[]) {
     // invtt
 
     std::vector<double> inv_tt(lambda * nb_blocks_loc);
-    fname = data_path + "/invtt_" + std::to_string(rank) + ".bin";
-    fillArrayFromFile(fname.c_str(), inv_tt.data(), inv_tt.size(),
-                      sizeof(inv_tt[0]));
+    if (!noiseless) {
+        fname = data_path + "/invtt_" + std::to_string(rank) + ".bin";
+        fillArrayFromFile(fname.c_str(), inv_tt.data(), inv_tt.size(),
+                          sizeof(inv_tt[0]));
+    } else {
+        std::fill(inv_tt.begin(), inv_tt.end(), 1);
+    }
 
     //    MPI_Barrier(MPI_COMM_WORLD);
     //    if (rank == 0) std::cout << "  loaded inv_tt" << std::endl;
@@ -176,8 +205,12 @@ int main(int argc, char *argv[]) {
     // tt
 
     std::vector<double> tt(lambda * nb_blocks_loc);
-    fname = data_path + "/tt_" + std::to_string(rank) + ".bin";
-    fillArrayFromFile(fname.c_str(), tt.data(), tt.size(), sizeof(tt[0]));
+    if (!noiseless) {
+        fname = data_path + "/tt_" + std::to_string(rank) + ".bin";
+        fillArrayFromFile(fname.c_str(), tt.data(), tt.size(), sizeof(tt[0]));
+    } else {
+        std::fill(tt.begin(), tt.end(), 1);
+    }
 
     //    MPI_Barrier(MPI_COMM_WORLD);
     //    if (rank == 0) std::cout << "  loaded tt" << std::endl;
@@ -214,9 +247,6 @@ int main(int argc, char *argv[]) {
 
     //____________________________________________________________
     // Call MLmap
-
-    char *outpath = (char *)output_path.c_str();
-    char *ref = (char *)"run0";
 
     MPI_Barrier(MPI_COMM_WORLD);
 

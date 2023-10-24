@@ -16,32 +16,23 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-double scalar_prod_reduce(MPI_Comm comm, int n, int n_extra,
-                          const double *pixpond, const double *p1,
-                          const double *p2, const double *p_sub) {
+double scalar_prod_reduce(MPI_Comm comm, int n, const double *pixpond,
+                          const double *p1, const double *p2,
+                          const double *p_sub) {
     double result;
 
     // contributions from valid pixels
     double local_sum = 0.0;
-    for (int i = n_extra; i < n; i++) {
+    for (int i = 0; i < n; i++) {
         if (p_sub == NULL) {
-            local_sum += p1[i] * p2[i] * pixpond[i - n_extra];
+            local_sum += p1[i] * p2[i] * pixpond[i];
         } else {
-            local_sum += p1[i] * (p2[i] - p_sub[i]) * pixpond[i - n_extra];
+            local_sum += p1[i] * (p2[i] - p_sub[i]) * pixpond[i];
         }
     }
 
-    // reduce the results for valid pixels
+    // reduce the results for ALL pixels
     MPI_Allreduce(&local_sum, &result, 1, MPI_DOUBLE, MPI_SUM, comm);
-
-    // contributions from extra pixels
-    for (int i = 0; i < n_extra; i++) {
-        if (p_sub == NULL) {
-            result += p1[i] * p2[i];
-        } else {
-            result = p1[i] * (p2[i] - p_sub[i]);
-        }
-    }
 
     return result;
 }
@@ -49,7 +40,7 @@ double scalar_prod_reduce(MPI_Comm comm, int n, int n_extra,
 int build_rhs(Mat *A, Tpltz *Nm1, Tpltz *N, Gap *G, WeightStgy ws,
               const double *d, double *x0, double *rhs) {
     // Build the right-hand side of the equation
-    // rhs = A^t * N^{-1} * (b - A * x_0 )
+    // rhs = A^t * N^{-1} * (b - A * x_0)
 
     int m = A->m; // number of local samples
     double *_t;   // time domain vector
@@ -153,7 +144,7 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
     }
 
     // compute initial residual
-    res = scalar_prod_reduce(A->comm, M->n, M->n_extra, M->pixpond, r, r, NULL);
+    res = scalar_prod_reduce(A->comm, M->n, M->pixpond, r, r, NULL);
 
     // update SolverInfo
     MPI_Barrier(A->comm);
@@ -205,7 +196,7 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
         // we are doing one more iteration step
         k++;
 
-#if 1
+#if 0
         if (rank == 0) {
             char filename[FILENAME_MAX];
             sprintf(filename, "/home/sbiquard/test/data/marg/x_%02d", k);
@@ -221,16 +212,21 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
         }
 
         // compute (r,z) and (p,_p)
-        coef_1 = scalar_prod_reduce(A->comm, M->n, M->n_extra, M->pixpond, r, z,
-                                    NULL);
-        coef_2 = scalar_prod_reduce(A->comm, M->n, M->n_extra, M->pixpond, p,
-                                    _p, NULL);
+        coef_1 = scalar_prod_reduce(A->comm, M->n, M->pixpond, r, z, NULL);
+        coef_2 = scalar_prod_reduce(A->comm, M->n, M->pixpond, p, _p, NULL);
 
         // swap pointers to store previous z before updating
         zt = zp;
         zp = z;
         z = zt;
 
+#if 1
+        if (rank == 0) {
+            printf("[iter %d] (r,z) = %lf; (p,Ap) = %lf; alpha = %lf\n", k,
+                   coef_1, coef_2, coef_1 / coef_2);
+            fflush(stdout);
+        }
+#endif
         // update current vector (x = x + alpha * p)
         // update residual (r = r - alpha * _p)
         for (int i = 0; i < n; i++) {
@@ -243,17 +239,22 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
 
         // compute updated (r,z)
         // use Polak-Ribière formula (r,z-zp)
-        coef_2 =
-            scalar_prod_reduce(A->comm, M->n, M->n_extra, M->pixpond, r, z, zp);
+        coef_2 = scalar_prod_reduce(A->comm, M->n, M->pixpond, r, z, zp);
 
+#if 1
+        if (rank == 0) {
+            printf("[iter %d] (r,z-zp) = %lf; beta = %lf\n", k, coef_2,
+                   coef_2 / coef_1);
+            fflush(stdout);
+        }
+#endif
         // update search direction
         for (int i = 0; i < n; i++) {
             p[i] = z[i] + (coef_2 / coef_1) * p[i];
         }
 
         // compute residual
-        res = scalar_prod_reduce(A->comm, M->n, M->n_extra, M->pixpond, r, r,
-                                 NULL);
+        res = scalar_prod_reduce(A->comm, M->n, M->pixpond, r, r, NULL);
 
         // update SolverInfo structure
         // and check stop conditions
