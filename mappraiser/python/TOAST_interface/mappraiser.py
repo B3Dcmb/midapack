@@ -1163,10 +1163,13 @@ class Mappraiser(Operator):
                 save_dir=os.path.join(params["path_output"], "psd"),
             )
         else:
+            self._mappraiser_noise[:] = 0.0
             self._mappraiser_invtt[:] = 1.0
             self._mappraiser_tt[:] = 1.0
 
         if self.fill_noise_zero:
+            # just set the noise to zero
+            # that way we can make the mapmaker iterate but on signal-only data
             self._mappraiser_noise[:] = 0.0
 
         log_time_memory(
