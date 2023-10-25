@@ -138,8 +138,6 @@ class Mappraiser(Operator):
         help="Observation detdata key for noise data (if None, triggers noiseless mode)",
     )
 
-    noiseless = Bool(False, help="Activate noiseless mode")
-
     det_flags = Unicode(
         defaults.det_flags,
         allow_none=True,
@@ -225,6 +223,8 @@ class Mappraiser(Operator):
         False, help="Print system memory use while staging/unstaging data"
     )
 
+    # Some traits for noise estimation
+
     save_psd = Bool(False, help="Save noise PSD information during inv_tt computation")
 
     apod_window_type = Unicode(
@@ -238,16 +238,25 @@ class Mappraiser(Operator):
 
     bandwidth = Int(16384, help="Half-bandwidth for the noise model")
 
-    downscale = Int(
-        1,
-        help="Scale down the noise by the sqrt of this number to artifically increase S/N ratio",
-    )
+    # Some useful traits for debugging
+
+    noiseless = Bool(False, help="Activate noiseless mode")
 
     fill_noise_zero = Bool(
         False, help="Fill the noise vector with zeros just before calling Mappraiser"
     )
 
+    downscale = Int(
+        1,
+        help="Scale down the noise by the sqrt of this number to artifically increase S/N ratio",
+    )
+
     signal_fraction = Float(1.0, help="Fraction of the sky signal to keep")
+
+    single_det = Bool(
+        False,
+        help="Cut all detectors except one. Useful to map a single data interval.",
+    )
 
     # Additional parameters for the C library
 
@@ -722,6 +731,11 @@ class Mappraiser(Operator):
         for ob in data.obs:
             # Get the detectors we are using for this observation
             dets = ob.select_local_detectors(detectors)
+
+            if self.single_det:
+                # cut all detectors but one
+                dets = set(list(dets)[:1])
+
             all_dets.update(dets)
 
             # Check that the timestamps exist.
