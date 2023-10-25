@@ -707,17 +707,8 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, double *vpixBlock,
 
         } else {
             // The pixel is not well enough observed
-            // Remove it from the valid map
 
-#if 1
-            if (rank == 0) {
-                printf("[proc %d] point pixel %d to trash (rcond: %lf, hits: "
-                       "%d)\n",
-                       rank, off + ipix + nbr_degenerate, rcond,
-                       *(*lhits + ipix));
-                fflush(stdout);
-            }
-#endif
+            // Remove it from the valid map
             point_pixel_to_trash(A, off + ipix + nbr_degenerate);
             nbr_degenerate++;
 
@@ -811,11 +802,7 @@ int precond_bj_like_extra(Mat *A, Tpltz *Nm1, double *vpixBlock,
         if (rcond < 1e-1) {
             ++n_ill;
             printf("[proc %d] extra pixel %d is ill-conditioned\n", rank, ipix);
-#ifdef DEBUG
-            char desc[64];
-            sprintf(desc, "[proc %d] ill-conditioned block:", rank);
-            print_matrix(desc, nb, nb, vpixBlock + innz2, lda);
-#endif
+            // FIXME what to do in this case?
             fflush(stdout);
         }
 
@@ -1692,25 +1679,6 @@ void build_precond(Precond **out_p, double **out_pixpond, Mat *A, Tpltz *Nm1,
 
     p->n_valid = A->lcount - A->nnz * A->trash_pix;
     p->n = p->n_extra + p->n_valid;
-
-#if 0
-    if (rank == 0) {
-        int nnz = A->nnz;
-        char desc[64];
-        puts("\npreconditioner blocks (extra)");
-        for (int i = 0; i < p->n_extra; i += nnz) {
-            sprintf(desc, "block %d", i / nnz);
-            print_matrix(desc, nnz, nnz, p->BJ_inv.values + i * nnz, nnz);
-        }
-        puts("\npreconditioner blocks (valid)");
-        for (int i = p->n_extra; i < p->n_extra + 5 * nnz; i += nnz) {
-            sprintf(desc, "block %d", i / nnz);
-            print_matrix(desc, nnz, nnz, p->BJ_inv.values + i * nnz, nnz);
-        }
-        puts("");
-        fflush(stdout);
-    }
-#endif
 
     // Reallocate memory for well-conditioned map
     x = realloc(*in_out_x, p->n * sizeof(double));

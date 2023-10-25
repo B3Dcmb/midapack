@@ -149,41 +149,6 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
         exit(1);
     }
 
-#if 0
-    /* test pointing operations */
-
-    // time-domain vector
-    double *y = (double *)malloc(m * sizeof(double));
-    if (y == NULL) {
-        fprintf(stderr, "memory allocation error");
-        exit(EXIT_FAILURE);
-    }
-
-    // un-pointing operation
-    MatVecProd(&A, x, y, 0);
-
-    if (rank == 0) {
-        printf("MatVecProd -> [ ");
-        for (i = 0; i < 100; i++) {
-            printf("%lf ", y[i]);
-        }
-        puts("] ");
-    }
-
-    // pointing operation
-    TrMatVecProd(&A, y, x, 0);
-
-    if (rank == 0) {
-        printf("TrMatVecProd -> [ ");
-        for (j = 0; j < 100; j++) {
-            printf("%lf ", x[j]);
-        }
-        puts("] ");
-    }
-
-    fflush(stdout);
-#endif
-
     // ____________________________________________________________
     // Create piecewise Toeplitz matrix
 

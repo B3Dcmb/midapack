@@ -196,14 +196,6 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
         // we are doing one more iteration step
         k++;
 
-#if 0
-        if (rank == 0) {
-            char filename[FILENAME_MAX];
-            sprintf(filename, "/home/sbiquard/test/data/marg/x_%02d", k);
-            saveArrayToFile(filename, x, n, sizeof *x);
-        }
-#endif
-
         // apply system matrix
         info = opmm(A, Nm1, N, G, ws, p, _p);
         if (info != 0) {
@@ -220,13 +212,6 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
         zp = z;
         z = zt;
 
-#if 1
-        if (rank == 0) {
-            printf("[iter %d] (r,z) = %lf; (p,Ap) = %lf; alpha = %lf\n", k,
-                   coef_1, coef_2, coef_1 / coef_2);
-            fflush(stdout);
-        }
-#endif
         // update current vector (x = x + alpha * p)
         // update residual (r = r - alpha * _p)
         for (int i = 0; i < n; i++) {
@@ -241,13 +226,6 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
         // use Polak-Ribière formula (r,z-zp)
         coef_2 = scalar_prod_reduce(A->comm, M->n, M->pixpond, r, z, zp);
 
-#if 1
-        if (rank == 0) {
-            printf("[iter %d] (r,z-zp) = %lf; beta = %lf\n", k, coef_2,
-                   coef_2 / coef_1);
-            fflush(stdout);
-        }
-#endif
         // update search direction
         for (int i = 0; i < n; i++) {
             p[i] = z[i] + (coef_2 / coef_1) * p[i];
