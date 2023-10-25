@@ -51,7 +51,6 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     Mat A;                   // pointing matrix structure
     int nbr_valid_pixels;    // nbr of valid pixel indices
     int nbr_extra_pixels;    // nbr of extra pixel indices
-    int ngap;                // nbr of timestream gaps
     Gap Gaps;                // timestream gaps structure
     double *x, *cond = NULL; // pixel domain vectors
     int *lhits = NULL;
@@ -116,7 +115,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     st = MPI_Wtime();
 
     MatInit(&A, m, Nnz, pix, pixweights, pointing_commflag, comm);
-    ngap = build_pixel_to_time_domain_mapping(&A);
+    Gaps.ngap = build_pixel_to_time_domain_mapping(&A);
 
     MPI_Barrier(comm);
     t = MPI_Wtime();
@@ -129,7 +128,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
         printf("[proc %d] sky pixels = %d", rank, A.lcount / A.nnz);
         printf(" (%d valid + %d extra)\n", nbr_valid_pixels / A.nnz,
                nbr_extra_pixels / A.nnz);
-        printf("[proc %d] local timestream gaps = %d\n", rank, ngap);
+        printf("[proc %d] local timestream gaps = %d\n", rank, Gaps.ngap);
         fflush(stdout);
     }
 
