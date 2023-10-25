@@ -854,8 +854,8 @@ int TrMatVecProd(Mat *A, double *y, double *x, int pflag) {
     }
 
 #ifdef W_MPI
-    // perform global reduce
-    greedyreduce(A, x);
+    // perform global reduce on valid pixels
+    greedyreduce(A, x + (A->flag_ignore_extra ? 0 : extra));
 #endif
     return 0;
 }
@@ -1007,13 +1007,21 @@ __attribute__((unused)) int MatInfo(Mat *mat, int verbose, char *filename) {
 int greedyreduce(Mat *A, double *x) {
     int i, j, k;
     int nSmax, nRmax, nStot, nRtot;
-    double *lvalues;
-    lvalues = (double *)malloc(
-        (A->lcount - (A->nnz) * (A->trash_pix)) *
-        sizeof(double)); // allocate and set to 0.0 local values
-    memcpy(lvalues, x,
-           (A->lcount - (A->nnz) * (A->trash_pix)) *
-               sizeof(double)); // copy local values into result values
+
+    // allocate buffer that will be reduced
+    double *lvalues = NULL;
+    lvalues = malloc((sizeof *lvalues) * (A->lcount - A->nnz * A->trash_pix));
+    if (lvalues == NULL) {
+        int rank;
+        MPI_Comm_rank(A->comm, &rank);
+        fprintf(stderr, "[proc %d] malloc of lvalues failed in greedyreduce",
+                rank);
+        exit(EXIT_FAILURE);
+    }
+
+    // copy local values into result values
+    memcpy(lvalues, x, (sizeof *x) * (A->lcount - A->nnz * A->trash_pix));
+
     double *com_val;
     double *out_val;
     int ne = 0;
@@ -1117,17 +1125,20 @@ int greedyreduce(Mat *A, double *x) {
         }
         s2m(com_val, lvalues, A->com_indices,
             A->lcount - (A->nnz) * (A->trash_pix));
-        /*for(i=0; i < A->com_count; i++){
-         printf("%lf ", com_val[i]);
-    } */
+#if 0
+        for (i = 0; i < A->com_count; i++) {
+            printf("%lf ", com_val[i]);
+        }
+#endif
         MPI_Allreduce(com_val, out_val, A->com_count, MPI_DOUBLE, MPI_SUM,
                       A->comm); // maximum index
-        /*for(i=0; i < A->com_count; i++){
-         printf("%lf ", out_val[i]);
-    } */
-        m2s(out_val, x, A->com_indices,
-            A->lcount - (A->nnz) * (A->trash_pix)); // sum receive buffer
-                                                    // into values
+#if 0
+        for (i = 0; i < A->com_count; i++) {
+            printf("%lf ", out_val[i]);
+        }
+#endif
+        // sum receive buffer into values
+        m2s(out_val, x, A->com_indices, A->lcount - (A->nnz) * (A->trash_pix));
         free(com_val);
         free(out_val);
         break;
