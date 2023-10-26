@@ -583,6 +583,9 @@ WeightStgy handle_gaps(Gap *Gaps, Mat *A, Tpltz *Nm1, Tpltz *N, GapStrategy gs,
             puts("[Gaps/marginalization] weighting strategy = BASIC");
         }
 
+        // set signal in all gaps to zero
+        reset_relevant_gaps(b, Nm1, Gaps);
+
         // recombine signal and noise
         for (int i = 0; i < A->m; ++i) {
             b[i] += noise[i];
@@ -622,6 +625,9 @@ WeightStgy handle_gaps(Gap *Gaps, Mat *A, Tpltz *Nm1, Tpltz *N, GapStrategy gs,
         if (my_rank == 0) {
             puts("[Gaps/nested-ignore] weighting strategy = ITER_IGNORE");
         }
+
+        // set signal in all gaps to zero
+        reset_relevant_gaps(b, Nm1, Gaps);
 
         // recombine signal and noise
         for (int i = 0; i < A->m; ++i) {
