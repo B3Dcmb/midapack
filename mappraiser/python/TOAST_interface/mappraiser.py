@@ -253,9 +253,10 @@ class Mappraiser(Operator):
 
     signal_fraction = Float(1.0, help="Fraction of the sky signal to keep")
 
-    single_det = Bool(
-        False,
-        help="Cut all detectors except one. Useful to map a single data interval.",
+    limit_det = Int(
+        None,
+        allow_none=True,
+        help="Limit the number of local detectors to this number.",
     )
 
     # Additional parameters for the C library
@@ -395,7 +396,9 @@ class Mappraiser(Operator):
         if check not in (0, 1, 2, 3):
             msg = "Invalid gap_stgy - accepted values are:\n"
             msg += "0 -> condition on gaps having zero signal\n"
-            msg += "1 -> marginalize on gap contents using 1 extra pixel/scan/detector\n"
+            msg += (
+                "1 -> marginalize on gap contents using 1 extra pixel/scan/detector\n"
+            )
             msg += "2 -> iterative noise weighting 'nested PCG' (completely ignore the gaps)\n"
             msg += "3 -> iterative noise weighting without gaps"
             raise traitlets.TraitError(msg)
@@ -554,8 +557,8 @@ class Mappraiser(Operator):
         # Log the libmappraiser parameters that were used.
         if data.comm.world_rank == 0:
             with open(
-                    os.path.join(params["path_output"], "mappraiser_args_log.toml"),
-                    "w",
+                os.path.join(params["path_output"], "mappraiser_args_log.toml"),
+                "w",
             ) as f:
                 toml.dump(params, f)
 
@@ -732,9 +735,9 @@ class Mappraiser(Operator):
             # Get the detectors we are using for this observation
             dets = ob.select_local_detectors(detectors)
 
-            if self.single_det:
+            if self.limit_det is not None:
                 # cut all detectors but one
-                dets = set(list(dets)[:1])
+                dets = set(list(dets)[:self.limit_det])
 
             all_dets.update(dets)
 
@@ -842,16 +845,16 @@ class Mappraiser(Operator):
 
     @function_timer
     def _stage_data(
-            self,
-            params,
-            data,
-            all_dets,
-            nsamp,
-            nnz,
-            nnz_full,
-            nnz_stride,
-            interval_starts,
-            psd_freqs,
+        self,
+        params,
+        data,
+        all_dets,
+        nsamp,
+        nnz,
+        nnz_full,
+        nnz_stride,
+        interval_starts,
+        psd_freqs,
     ):
         """Create mappraiser-compatible buffers.
         Collect the data into Mappraiser buffers.  If we are purging TOAST data to save
@@ -1325,15 +1328,15 @@ class Mappraiser(Operator):
 
     @function_timer
     def _unstage_data(
-            self,
-            params,
-            data,
-            all_dets,
-            nsamp,
-            nnz,
-            nnz_full,
-            interval_starts,
-            signal_dtype,
+        self,
+        params,
+        data,
+        all_dets,
+        nsamp,
+        nnz,
+        nnz_full,
+        interval_starts,
+        signal_dtype,
     ):
         """
         Restore data to TOAST observations.
