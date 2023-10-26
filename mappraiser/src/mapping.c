@@ -59,6 +59,7 @@ int create_extra_pix(int *indices, int nnz, int nb_blocks_loc,
                     // don't forget the nnz multiplicity of the indices
                     for (int k = 0; k < nnz; ++k) {
                         indices[jnnz + k] = -(i + 1) * nnz + k;
+                        // indices[jnnz + k] = -nnz + k;
                     }
                 }
             }

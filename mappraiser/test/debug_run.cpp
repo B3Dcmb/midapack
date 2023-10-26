@@ -93,7 +93,7 @@ int main(int argc, char *argv[]) {
 
     // bool to fill noise vector with zeros
     // (--> noiseless run but solver will still iterate)
-    bool fill_noise_zero = false;
+    bool fill_noise_zero = true;
 
     // bool to trigger true noiseless mode
     // (--> set noise to zero + set lambda to 1)
@@ -102,10 +102,26 @@ int main(int argc, char *argv[]) {
     // modify input indices to mimic the observation of a single sky pixel
     bool single_pixel = false;
 
+    // only run mapmaker on a single data block
+    // note: only possible with 1 MPI process
+    bool single_block = true;
+
+    //____________________________________________________________
+    // Process options
+
     // noiseless mode activate
     if (noiseless) {
         fill_noise_zero = true;
         lambda = 1;
+    }
+
+    // force single process if single_det is activated
+    if (single_block && size > 1) {
+        if (rank == 0)
+            std::cerr
+                << "single_block mode only works with a single MPI process"
+                << std::endl;
+        exit(EXIT_FAILURE);
     }
 
     //____________________________________________________________
@@ -120,10 +136,21 @@ int main(int argc, char *argv[]) {
 
     // data distribution
 
-    const std::array<int, 4> nb_blocks_proc = {4, 2, 4, 4};
-    std::array<int, 4> data_size_proc = {412920, 206460, 412920, 412920};
-    const int nb_blocks_loc = nb_blocks_proc[rank];
-    const int nb_samp = data_size_proc[rank];
+    int nb_blocks_loc;
+    int nb_samp;
+    std::vector<int> data_size_proc;
+
+    if (!single_block) {
+        const std::array<int, 4> nb_blocks_proc = {4, 2, 4, 4};
+        data_size_proc = {412920, 206460, 412920, 412920};
+        nb_blocks_loc = nb_blocks_proc[rank];
+        nb_samp = data_size_proc[rank];
+    } else {
+        // we have a single MPI process
+        data_size_proc = {103230};
+        nb_blocks_loc = 1;
+        nb_samp = data_size_proc[rank];
+    }
 
     // local_blocks_sizes
 
@@ -146,7 +173,10 @@ int main(int argc, char *argv[]) {
         for (int i = 0; i < nb_samp; i++) {
             int innz = i * Nnz;
             for (int j = 0; j < Nnz; j++) {
-                pix[innz + j] = pix[j];
+                // don't remove the gaps
+                if (pix[innz + j] >= 0) {
+                    pix[innz + j] = pix[j];
+                }
             }
         }
     }
