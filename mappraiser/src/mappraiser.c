@@ -339,7 +339,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
 #endif
         // valid map
         memmove(x, (x + extra), map_size * sizeof(double));
-        memmove(lhits, lhits + extra / Nnz, (map_size / Nnz) * sizeof(double));
+        memmove(lhits, lhits + extra / Nnz, (map_size / Nnz) * sizeof(int));
         memmove(cond, cond + extra / Nnz, (map_size / Nnz) * sizeof(double));
         double *tmp_x = realloc(x, (sizeof tmp_x) * map_size);
         int *tmp_hits = realloc(lhits, (sizeof tmp_hits) * map_size / Nnz);
