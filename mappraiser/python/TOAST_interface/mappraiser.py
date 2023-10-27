@@ -283,6 +283,7 @@ class Mappraiser(Operator):
     # 1 -> Marginalize on gap contents using 1 extra pixel/scan/detector
     # 2 -> Iterative noise weighting (nested PCG)
     # 3 -> Iterative noise weighting without gaps
+    # 4 -> Marginalize on gap contents using 1 extra pixel/proc
     gap_stgy = Int(0, help="Strategy for handling timestream gaps")
 
     # Gap filling
@@ -393,14 +394,15 @@ class Mappraiser(Operator):
     @traitlets.validate("gap_stgy")
     def _check_gap_stgy(self, proposal):
         check = proposal["value"]
-        if check not in (0, 1, 2, 3):
+        if check not in (0, 1, 2, 3, 4):
             msg = "Invalid gap_stgy - accepted values are:\n"
             msg += "0 -> condition on gaps having zero signal\n"
             msg += (
                 "1 -> marginalize on gap contents using 1 extra pixel/scan/detector\n"
             )
             msg += "2 -> iterative noise weighting 'nested PCG' (completely ignore the gaps)\n"
-            msg += "3 -> iterative noise weighting without gaps"
+            msg += "3 -> iterative noise weighting without gaps\n"
+            msg += "4 -> marginalize on gap contents using 1 extra pixel/proc"
             raise traitlets.TraitError(msg)
         return check
 
@@ -737,7 +739,7 @@ class Mappraiser(Operator):
 
             if self.limit_det is not None:
                 # cut all detectors but one
-                dets = set(list(dets)[:self.limit_det])
+                dets = set(list(dets)[: self.limit_det])
 
             all_dets.update(dets)
 

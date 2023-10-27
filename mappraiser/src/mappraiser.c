@@ -97,7 +97,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     GapStrategy gs = gap_stgy;
 
     // Set flag to ignore extra pixels when not marginalizing
-    A.flag_ignore_extra = gs != MARG_LOCAL_SCAN;
+    A.flag_ignore_extra = !(gs == MARG_LOCAL_SCAN || gs == MARG_PROC);
 
     // Create extra pixels according to the chosen strategy
     create_extra_pix(pix, pixweights, Nnz, nb_blocks_loc, local_blocks_sizes,
@@ -325,16 +325,15 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     int extra = get_actual_map_size(&A) - map_size;
 
     if (extra > 0) {
-#if 0 /* code to recover extra map */
+#ifdef DEBUG
         double *extra_map = (double *)malloc(extra * sizeof(double));
         memcpy(extra_map, x, extra * sizeof(double));
-
         if (rank == 0) {
-            printf("extra map with %d pixels\nI component = {", extra);
-            for (j = 0; j < extra; j += A.nnz) {
-                printf("%lf ", extra_map[j]);
+            printf("extra map with %d pixels (T only)\n {", extra / Nnz);
+            for (int j = 0; j < extra; j += A.nnz) {
+                printf(" %e", extra_map[j]);
             }
-            puts("}");
+            puts(" }");
         }
         fflush(stdout);
 #endif
@@ -642,6 +641,34 @@ WeightStgy handle_gaps(Gap *Gaps, Mat *A, Tpltz *Nm1, Tpltz *N, GapStrategy gs,
             // perfect noise reconstruction
             if (my_rank == 0) {
                 puts("[Gaps/nested-ignore] perfect noise reconstruction");
+            }
+        }
+
+        break;
+
+    case MARG_PROC:
+        // set noise weighting strategy
+        ws = BASIC;
+
+        if (my_rank == 0) {
+            puts("[Gaps/marginalization] weighting strategy = BASIC");
+        }
+
+        // set signal in all gaps to zero
+        reset_relevant_gaps(b, Nm1, Gaps);
+
+        // recombine signal and noise
+        for (int i = 0; i < A->m; ++i) {
+            b[i] += noise[i];
+        }
+
+        if (do_gap_filling) {
+            perform_gap_filling(A->comm, N, Nm1, b, Gaps, realization, detindxs,
+                                obsindxs, telescopes, sample_rate, true);
+        } else {
+            // perfect noise reconstruction
+            if (my_rank == 0) {
+                puts("[Gaps/marginalization] perfect noise reconstruction");
             }
         }
 

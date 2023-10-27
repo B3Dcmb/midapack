@@ -1586,6 +1586,13 @@ void build_BJinv(Mat *A, Tpltz *Nm1, Mat *BJ_inv, double **cond, int **lhits,
 
         int n_ill = precond_bj_like_extra(A, Nm1, vpixBlock, vpixBlock_inv,
                                           cond, lhits);
+#if 0
+        if (rank == 0) {
+            print_matrix("first extra block (inverse)", A->nnz, A->nnz,
+                         vpixBlock_inv, A->nnz);
+            fflush(stdout);
+        }
+#endif
         // FIXME decide what to do with this n_ill information
     }
 

@@ -28,6 +28,10 @@ void print_gap_stgy(GapStrategy gs) {
         break;
     case NESTED_PCG_NO_GAPS:
         puts("nested PCG ignoring gaps");
+        break;
+    case MARG_PROC:
+        puts("marginalization (1 extra pixel/proc)");
+        break;
     }
 }
 
@@ -59,8 +63,33 @@ int create_extra_pix(int *indices, double *weights, int nnz, int nb_blocks_loc,
                     // don't forget the nnz multiplicity of the indices
                     for (int k = 0; k < nnz; ++k) {
                         indices[jnnz + k] = -(i + 1) * nnz + k;
-                        // indices[jnnz + k] = -nnz + k;
-#endif
+
+                        // make the extra pixels not polarized
+                        if (k > 0) {
+                            weights[jnnz + k] = 0.0;
+                        }
+                    }
+                }
+            }
+            offset += lsize;
+        }
+        break;
+    }
+
+    case MARG_PROC: {
+        int offset = 0; // position in the data
+        int lsize;      // size of data block
+
+        // loop through local blocks
+        for (int i = 0; i < nb_blocks_loc; ++i) {
+            lsize = local_blocks_sizes[i];
+            for (int j = offset; j < offset + lsize; j++) {
+                int jnnz = j * nnz;
+                if (indices[jnnz] < 0) {
+                    for (int k = 0; k < nnz; ++k) {
+                        // no dependence on the block index
+                        indices[jnnz + k] = -nnz + k;
+
                         // make the extra pixels not polarized
                         if (k > 0) {
                             weights[jnnz + k] = 0.0;

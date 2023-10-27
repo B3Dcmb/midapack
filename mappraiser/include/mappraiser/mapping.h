@@ -27,6 +27,10 @@ typedef enum gap_strategy_t {
     // this will only correct the Toeplitz approximation
     // near the timestream edges
     NESTED_PCG_NO_GAPS,
+
+    // marginalize on extra pixels
+    // introduce just 1 extra pixel per proc
+    MARG_PROC,
 } GapStrategy;
 
 void print_gap_stgy(GapStrategy gs);
