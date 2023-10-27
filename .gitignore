@@ -35,7 +35,7 @@
 # Python
 *.pyc
 
-#Cmake build
+# Cmake build
 build
 cmake-build-*
 
@@ -44,8 +44,9 @@ cmake-build-*
 
 # VSCode stuff
 .vscode/*
-*.code-workspace
+.cache
+.idea
 
 # Directories to ignore
-mappraiser/src/test
 algebra/test
+mappraiser/test/debug_out

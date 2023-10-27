@@ -630,7 +630,7 @@ int mpi_stbmm(double **V, int64_t nrow, int m, int m_rowwise,
         } // end of if(nnew[id]>0)
     }     // end of loop over the blocks
 
-
+    free(nnew);
     free(LambdaIn);
 
 

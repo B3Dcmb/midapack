@@ -138,8 +138,6 @@ class Mappraiser(Operator):
         help="Observation detdata key for noise data (if None, triggers noiseless mode)",
     )
 
-    noiseless = Bool(False, help="Activate noiseless mode")
-
     det_flags = Unicode(
         defaults.det_flags,
         allow_none=True,
@@ -225,6 +223,8 @@ class Mappraiser(Operator):
         False, help="Print system memory use while staging/unstaging data"
     )
 
+    # Some traits for noise estimation
+
     save_psd = Bool(False, help="Save noise PSD information during inv_tt computation")
 
     apod_window_type = Unicode(
@@ -238,16 +238,26 @@ class Mappraiser(Operator):
 
     bandwidth = Int(16384, help="Half-bandwidth for the noise model")
 
-    downscale = Int(
-        1,
-        help="Scale down the noise by the sqrt of this number to artifically increase S/N ratio",
-    )
+    # Some useful traits for debugging
+
+    noiseless = Bool(False, help="Activate noiseless mode")
 
     fill_noise_zero = Bool(
         False, help="Fill the noise vector with zeros just before calling Mappraiser"
     )
 
+    downscale = Int(
+        1,
+        help="Scale down the noise by the sqrt of this number to artifically increase S/N ratio",
+    )
+
     signal_fraction = Float(1.0, help="Fraction of the sky signal to keep")
+
+    limit_det = Int(
+        None,
+        allow_none=True,
+        help="Limit the number of local detectors to this number.",
+    )
 
     # Additional parameters for the C library
 
@@ -269,13 +279,20 @@ class Mappraiser(Operator):
     ptcomm_flag = Int(6, help="Choose collective communication scheme")
 
     # gap treatment strategy
-    # 0 -> perfect noise reconstruction (only possible on simulations)
-    # 1 -> gap filling with a constrained noise realization
-    # 2 -> "nested PCG" i.e. invert the noise covariance matrix with a PCG at each noise weighting operation
-    # 3 -> 0 + nested PCG (to correct for non-Toeplitz character of the inverse noise covariance)
-    # 4 -> 1 + nested PCG (to correct for non-Toeplitz character of the inverse noise covariance)
+    # 0 -> Condition on gaps having zero signal
+    # 1 -> Marginalize on gap contents using 1 extra pixel/scan/detector
+    # 2 -> Iterative noise weighting (nested PCG)
+    # 3 -> Iterative noise weighting without gaps
+    # 4 -> Marginalize on gap contents using 1 extra pixel/proc
     gap_stgy = Int(0, help="Strategy for handling timestream gaps")
-    realization = Int(0, help="Noise realization index (for gap-filling)")
+
+    # Gap filling
+    # choosing False is only possible on simulations
+    # Mappraiser will take the noise from the simulation
+    # as if the noise reconstruction inside the gaps was perfect
+    do_gap_filling = Bool(True, help="Perform gap filling on the data")
+
+    realization = Int(0, help="Noise realization index (for gap filling)")
 
     @traitlets.validate("shared_flag_mask")
     def _check_shared_flag_mask(self, proposal):
@@ -379,14 +396,13 @@ class Mappraiser(Operator):
         check = proposal["value"]
         if check not in (0, 1, 2, 3, 4):
             msg = "Invalid gap_stgy - accepted values are:\n"
-            msg += "0 -> perfect noise reconstruction (use original simulated noise)\n"
-            msg += "1 -> gap filling with a constrained noise realization\n"
+            msg += "0 -> condition on gaps having zero signal\n"
             msg += (
-                "2 -> 'nested PCG' i.e. invert the noise covariance matrix with a PCG at each noise weighting "
-                "operation (completely ignore the gaps)\n"
+                "1 -> marginalize on gap contents using 1 extra pixel/scan/detector\n"
             )
-            msg += "3 -> perfect noise reconstruction + nested PCG\n"
-            msg += "4 -> gap filling + nested PCG"
+            msg += "2 -> iterative noise weighting 'nested PCG' (completely ignore the gaps)\n"
+            msg += "3 -> iterative noise weighting without gaps\n"
+            msg += "4 -> marginalize on gap contents using 1 extra pixel/proc"
             raise traitlets.TraitError(msg)
         return check
 
@@ -501,6 +517,7 @@ class Mappraiser(Operator):
                 "ortho_alg": self.ortho_alg,
                 "bs_red": self.bs_red,
                 "gap_stgy": self.gap_stgy,
+                "do_gap_filling": self.do_gap_filling,
                 "realization": self.realization,
             }
         )
@@ -719,6 +736,11 @@ class Mappraiser(Operator):
         for ob in data.obs:
             # Get the detectors we are using for this observation
             dets = ob.select_local_detectors(detectors)
+
+            if self.limit_det is not None:
+                # cut all detectors but one
+                dets = set(list(dets)[: self.limit_det])
+
             all_dets.update(dets)
 
             # Check that the timestamps exist.
@@ -1160,10 +1182,13 @@ class Mappraiser(Operator):
                 save_dir=os.path.join(params["path_output"], "psd"),
             )
         else:
+            self._mappraiser_noise[:] = 0.0
             self._mappraiser_invtt[:] = 1.0
             self._mappraiser_tt[:] = 1.0
 
         if self.fill_noise_zero:
+            # just set the noise to zero
+            # that way we can make the mapmaker iterate but on signal-only data
             self._mappraiser_noise[:] = 0.0
 
         log_time_memory(

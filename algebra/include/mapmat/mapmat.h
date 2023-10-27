@@ -30,18 +30,20 @@
 extern "C" {
 #endif
 
-#define NONE        0
-#define RING        1
-#define BUTTERFLY   2
+#include <stdbool.h>
+
+#define NONE 0
+#define RING 1
+#define BUTTERFLY 2
 #define NONBLOCKING 3
-#define NOEMPTY     4
-#define ALLTOALLV   5
-#define ALLREDUCE   6
+#define NOEMPTY 4
+#define ALLTOALLV 5
+#define ALLREDUCE 6
 //================Modification introduced by Sebastien Cayrols : 01/09/2015 ;
 // Berkeley
 #define BUTTERFLY_BLOCKING_1 7
 #define BUTTERFLY_BLOCKING_2 8
-#define NOEMPTYSTEPRING      9
+#define NOEMPTYSTEPRING 9
 //================End modification
 #define SEQ 0
 #define OMP 1
@@ -51,24 +53,29 @@ extern "C" {
     @n A* = (A0* | A1* | ... | Ap-1* )
     */
 typedef struct mat_t {
-    int     flag;        // flag for communication scheme (NONE, RING, BUTTERFLY ...)
-    int     m;           // number local rows
-    int     nnz;         // number non-zero per rows
-    int     trash_pix;   // flag for presence of trash pixel
-    int    *indices;     // column indices tab; size = m * nnz; can be a global or local numbering
-    double *values;      // non-zero values tab; size = m * nnz
-    int    *id_last_pix; // index of the last time sample pointing to each pixel (no nnz repeat factor)
-    int    *ll;          // linked list of time samples indexes linked by pixels
+    int flag;      // flag for communication scheme (NONE, RING, BUTTERFLY ...)
+    int m;         // number local rows
+    int nnz;       // number non-zero per rows
+    int trash_pix; // amount of extra pixels
+    bool flag_ignore_extra; // if true, do not include extra pixels in estimated
+                            // map
+    int *indices;     // column indices tab; size = m * nnz; can be a global or
+                      // local numbering
+    double *values;   // non-zero values tab; size = m * nnz
+    int *id_last_pix; // index of the last time sample pointing to each pixel
+                      // (no nnz repeat factor)
+    int *ll;          // linked list of time samples indexes linked by pixels
     //--------local shaping---------------
-    int  lcount;
-    int *lindices; // local indices tab (monotony with global numbering); size = lcount
+    int lcount;
+    int *lindices; // local indices tab (monotony with global numbering); size =
+                   // lcount
 #ifdef W_MPI
     MPI_Comm comm; // MPI communicator
     //--------com shaping-----------------
-    int  *com_indices, com_count; // communicated indices tab, and size
-    int   steps;                  // number of steps in the communication scheme
-    int  *nS, *nR;                // number of indices (to send and to receive); size = steps
-    int **R, **S;                 // sending or receiving indices tab
+    int *com_indices, com_count; // communicated indices tab, and size
+    int steps;                   // number of steps in the communication scheme
+    int *nS, *nR; // number of indices (to send and to receive); size = steps
+    int **R, **S; // sending or receiving indices tab
 #endif
 } Mat;
 
@@ -99,17 +106,18 @@ int TrMatVecProd(Mat *A, double *y, double *x, int pflag);
 
 #if W_MPI
 
-int TrMatVecProd_Naive(Mat *A, double *y, double *x, int pflag);
+__attribute__((unused)) int TrMatVecProd_Naive(Mat *A, double *y, double *x,
+                                               int pflag);
 
 #endif
 
-int MatLoad(Mat *A, char *filename);
+__attribute__((unused)) int MatLoad(Mat *A, char *filename);
 
-int MatSave(Mat *A, char *filename);
+__attribute__((unused)) int MatSave(Mat *A, char *filename);
 
 #if W_MPI
 
-int MatInfo(Mat *A, int master, char *filename);
+__attribute__((unused)) int MatInfo(Mat *A, int master, char *filename);
 
 #endif
 
