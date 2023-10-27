@@ -795,7 +795,7 @@ int precond_bj_like_extra(Mat *A, Tpltz *Nm1, double *vpixBlock,
 
         // initialize block of size nnz * nnz
         memcpy(x, vpixBlock + innz2, nb * nb * sizeof(double));
-
+#if 0
         // reciprocal condition number of the block
         double rcond = compute_rcond_block(x, nb, lda, ipiv);
 
@@ -819,7 +819,13 @@ int precond_bj_like_extra(Mat *A, Tpltz *Nm1, double *vpixBlock,
 
         // invert the block using the previous LU decomposition
         invert_block(x, nb, lda, ipiv);
-
+#else
+        // extra pixels are not polarized
+        x[0] = 1 / x[0];
+        for (int j = 1; j < nnz2; j++) {
+            x[j] = 0.0;
+        }
+#endif
         // copy inverse block into vpixBlock_inv
         memcpy(vpixBlock_inv + innz2, x, nb * nb * sizeof(double));
     }
@@ -1529,7 +1535,7 @@ void build_BJinv(Mat *A, Tpltz *Nm1, Mat *BJ_inv, double **cond, int **lhits,
         MatFree(A);
 
         // create extra pixels according to the chosen strategy
-        create_extra_pix(A->indices, nnz, Nm1->nb_blocks_loc,
+        create_extra_pix(A->indices, A->values, nnz, Nm1->nb_blocks_loc,
                          local_blocks_sizes, gs);
 
         // define new pointing matrix

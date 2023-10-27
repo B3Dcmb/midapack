@@ -35,7 +35,7 @@ int get_actual_map_size(const Mat *A);
 
 int get_valid_map_size(const Mat *A);
 
-int create_extra_pix(int *indices, int nnz, int nb_blocks_loc,
+int create_extra_pix(int *indices, double *weights, int nnz, int nb_blocks_loc,
                      const int *local_blocks_sizes, GapStrategy gs);
 
 int build_pixel_to_time_domain_mapping(Mat *A);

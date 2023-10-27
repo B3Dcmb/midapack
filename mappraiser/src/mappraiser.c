@@ -100,7 +100,8 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     A.flag_ignore_extra = gs != MARG_LOCAL_SCAN;
 
     // Create extra pixels according to the chosen strategy
-    create_extra_pix(pix, Nnz, nb_blocks_loc, local_blocks_sizes, gs);
+    create_extra_pix(pix, pixweights, Nnz, nb_blocks_loc, local_blocks_sizes,
+                     gs);
 
     if (rank == 0) {
         printf("[Gaps] strategy: ");
