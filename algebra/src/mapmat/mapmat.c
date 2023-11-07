@@ -1005,6 +1005,12 @@ __attribute__((unused)) int MatInfo(Mat *mat, int verbose, char *filename) {
 
 #if W_MPI
 int greedyreduce(Mat *A, double *x) {
+    int size;
+    MPI_Comm_size(A->comm, &size);
+    if (size == 1) {
+        return 0;
+    }
+
     int i, j, k;
     int nSmax, nRmax, nStot, nRtot;
 
