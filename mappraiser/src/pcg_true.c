@@ -191,6 +191,8 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
         p[i] = z[i];
     }
 
+    double alpha, beta;
+
     // iteration loop
     while (!stop) {
         // we are doing one more iteration step
@@ -207,6 +209,8 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
         coef_1 = scalar_prod_reduce(A->comm, M->n, M->pixpond, r, z, NULL);
         coef_2 = scalar_prod_reduce(A->comm, M->n, M->pixpond, p, Sp, NULL);
 
+        alpha = coef_1 / coef_2;
+
         // swap pointers to store previous z before updating
         zt = zp;
         zp = z;
@@ -215,6 +219,8 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
         // update current vector (x = x + alpha * p)
         // update residual (r = r - alpha * _p)
         for (int i = 0; i < n; i++) {
+            x[i] = x[i] + alpha * p[i];
+            r[i] = r[i] - alpha * Sp[i];
             x[i] = x[i] + (coef_1 / coef_2) * p[i];
             r[i] = r[i] - (coef_1 / coef_2) * Sp[i];
         }
@@ -226,9 +232,16 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
         // use Polak-Ribière formula (r,z-zp)
         coef_2 = scalar_prod_reduce(A->comm, M->n, M->pixpond, r, z, zp);
 
+        beta = coef_2 / coef_1;
+
+        // take beta = max(beta, 0)
+        if (beta < 0) {
+            beta = 0;
+        }
+
         // update search direction
         for (int i = 0; i < n; i++) {
-            p[i] = z[i] + (coef_2 / coef_1) * p[i];
+            p[i] = z[i] + beta * p[i];
         }
 
         // compute residual
