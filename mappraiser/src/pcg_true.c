@@ -38,9 +38,9 @@ double scalar_prod_reduce(MPI_Comm comm, int n, const double *pixpond,
 }
 
 int build_rhs(Mat *A, Tpltz *Nm1, Tpltz *N, Gap *G, WeightStgy ws,
-              const double *d, double *x0, double *rhs) {
+              const double *d, double *rhs) {
     // Build the right-hand side of the equation
-    // rhs = A^t * N^{-1} * (b - A * x_0)
+    // rhs = A^t * N^{-1} * d
 
     int m = A->m; // number of local samples
     double *_t;   // time domain vector
@@ -51,10 +51,12 @@ int build_rhs(Mat *A, Tpltz *Nm1, Tpltz *N, Gap *G, WeightStgy ws,
         return 1;
     }
 
-    MatVecProd(A, x0, _t, 0);
+    // multiply by N^{-1}
     for (int i = 0; i < m; i++)
-        _t[i] = d[i] - _t[i];
+        _t[i] = d[i];
     apply_weights(Nm1, N, G, _t, ws, false);
+
+    // multiply by A^t
     TrMatVecProd(A, _t, rhs, 0);
 
     free(_t);
@@ -119,24 +121,25 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
 
     bool stop = false; // stop iteration or continue
 
-    double *r = NULL;  // residual
-    double *z = NULL;  // M^{-1} * r
-    double *p = NULL;  // search direction
-    double *Sp = NULL; // [system matrix] * p
-    double *zp = NULL; // previous z
-    double *zt = NULL; // backup pointer for zp
+    double *rhs = NULL; // right-hand side
+    double *r = NULL;   // residual
+    double *z = NULL;   // M^{-1} * r
+    double *p = NULL;   // search direction
+    double *Sp = NULL;  // [system matrix] * p
+    double *zp = NULL;  // previous z
+    double *zt = NULL;  // backup pointer for zp
 
-    // allocate first buffer
+    rhs = malloc((sizeof *rhs) * n);
     r = malloc((sizeof *r) * n);
-    if (r == NULL) {
+    if (rhs == NULL || r == NULL) {
         si->has_failed = true;
-        fprintf(stderr, "[proc %d] malloc of r failed", rank);
+        fprintf(stderr, "[proc %d] malloc of rhs or r failed", rank);
         solverinfo_finalize(si);
         return;
     }
 
     // build rhs
-    info = build_rhs(A, Nm1, N, G, ws, d, x, r);
+    info = build_rhs(A, Nm1, N, G, ws, d, rhs);
     if (info != 0) {
         fprintf(stderr, "build_rhs routine returned a non-zero code (%d)",
                 info);
@@ -144,6 +147,10 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
     }
 
     // compute initial residual
+    opmm(A, Nm1, N, G, ws, x, r);
+    for (int i = 0; i < n; i++) {
+        r[i] = rhs[i] - r[i]; // r = b - A * x0
+    }
     res = scalar_prod_reduce(A->comm, M->n, M->pixpond, r, r, NULL);
 
     // update SolverInfo
@@ -154,6 +161,7 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
     if (stop) {
         // one stop condition already met, no iteration
         solverinfo_finalize(si);
+        free(rhs);
         free(r);
         return;
     }
@@ -221,8 +229,14 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
         for (int i = 0; i < n; i++) {
             x[i] = x[i] + alpha * p[i];
             r[i] = r[i] - alpha * Sp[i];
-            x[i] = x[i] + (coef_1 / coef_2) * p[i];
-            r[i] = r[i] - (coef_1 / coef_2) * Sp[i];
+        }
+
+        if (si->use_exact_residual) {
+            // compute explicit residual
+            opmm(A, Nm1, N, G, ws, x, r);
+            for (int i = 0; i < n; i++) {
+                r[i] = rhs[i] - r[i]; // r = b - A * x_k
+            }
         }
 
         // apply preconditioner (z = M^{-1} * r)
@@ -255,6 +269,7 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
     }
 
     // free memory after the iteration
+    free(rhs);
     free(r);
     free(p);
     free(Sp);
@@ -301,21 +316,22 @@ void CG_mm(Mat *A, double *pixpond, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
 
     bool stop = false; // stop iteration or continue
 
-    double *r = NULL;  // residual
-    double *p = NULL;  // search direction
-    double *Sp = NULL; // [system matrix] * p
+    double *rhs = NULL; // right-hand side
+    double *r = NULL;   // residual
+    double *p = NULL;   // search direction
+    double *Sp = NULL;  // [system matrix] * p
 
-    // allocate first buffer
+    rhs = malloc((sizeof *rhs) * n);
     r = malloc((sizeof *r) * n);
-    if (r == NULL) {
+    if (rhs == NULL || r == NULL) {
         si->has_failed = true;
-        fprintf(stderr, "[proc %d] malloc of r failed", rank);
+        fprintf(stderr, "[proc %d] malloc of rhs or r failed", rank);
         solverinfo_finalize(si);
         return;
     }
 
     // build rhs
-    info = build_rhs(A, Nm1, N, G, ws, d, x, r);
+    info = build_rhs(A, Nm1, N, G, ws, d, r);
     if (info != 0) {
         fprintf(stderr, "build_rhs routine returned a non-zero code (%d)",
                 info);
@@ -323,6 +339,10 @@ void CG_mm(Mat *A, double *pixpond, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
     }
 
     // compute initial residual
+    opmm(A, Nm1, N, G, ws, x, r);
+    for (int i = 0; i < n; i++) {
+        r[i] = rhs[i] - r[i]; // r = b - A * x0
+    }
     res = scalar_prod_reduce(A->comm, n, pixpond, r, r, NULL);
 
     // update SolverInfo
@@ -333,6 +353,7 @@ void CG_mm(Mat *A, double *pixpond, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
     if (stop) {
         // one stop condition already met, no iteration
         solverinfo_finalize(si);
+        free(rhs);
         free(r);
         return;
     }
@@ -384,6 +405,14 @@ void CG_mm(Mat *A, double *pixpond, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
             r[i] = r[i] - (coef_1 / coef_2) * Sp[i];
         }
 
+        if (si->use_exact_residual) {
+            // compute explicit residual
+            opmm(A, Nm1, N, G, ws, x, r);
+            for (int i = 0; i < n; i++) {
+                r[i] = rhs[i] - r[i]; // r = b - A * x_k
+            }
+        }
+
         // compute updated (r,r)
         coef_2 = scalar_prod_reduce(A->comm, n, pixpond, r, r, NULL);
 
@@ -403,6 +432,7 @@ void CG_mm(Mat *A, double *pixpond, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
     }
 
     // free memory after the iteration
+    free(rhs);
     free(r);
     free(p);
     free(Sp);
