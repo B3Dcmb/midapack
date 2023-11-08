@@ -216,6 +216,15 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     if (Z_2lvl == 0)
         Z_2lvl = size;
 
+    bool use_precond;
+    if (precond < 0) {
+        // we won't be using preconditioning in the solver
+        use_precond = false;
+        precond = 0;
+    } else {
+        use_precond = true;
+    }
+
     build_precond(&P, &pixpond, &A, &Nm1, &x, signal, noise, &cond, &lhits, tol,
                   Z_2lvl, precond, gs, &Gaps, gif, local_blocks_sizes);
 
@@ -271,7 +280,24 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
         si.max_steps = maxiter;
 
         // solve the equation
-        PCG_mm(&A, P, &Nm1, &N, ws, &Gaps, x, signal, &si);
+        if (use_precond) {
+#ifdef DEBUG
+            if (rank == 0) {
+                puts("call PCG routine (with preconditioning)");
+                fflush(stdout);
+            }
+#endif
+
+            PCG_mm(&A, P, &Nm1, &N, ws, &Gaps, x, signal, &si);
+        } else {
+#ifdef DEBUG
+            if (rank == 0) {
+                puts("call CG routine (no preconditioning)");
+                fflush(stdout);
+            }
+#endif
+            CG_mm(&A, P->pixpond, &Nm1, &N, ws, &Gaps, x, signal, &si);
+        }
 
         solverinfo_free(&si);
 

@@ -15,6 +15,10 @@ extern "C" {
 void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
             double *x, const double *b, SolverInfo *si);
 
+// without preconditioning
+void CG_mm(Mat *A, double *pixpond, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
+           double *x, const double *d, SolverInfo *si);
+
 #ifdef __cplusplus
 }
 #endif

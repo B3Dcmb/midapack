@@ -119,10 +119,10 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
 
     bool stop = false; // stop iteration or continue
 
-    double *r = NULL; // residual
-    double *z = NULL; // M^{-1} * r
-    double *p = NULL; // search direction
-    double *_p = NULL;
+    double *r = NULL;  // residual
+    double *z = NULL;  // M^{-1} * r
+    double *p = NULL;  // search direction
+    double *Sp = NULL; // [system matrix] * p
     double *zp = NULL; // previous z
     double *zt = NULL; // backup pointer for zp
 
@@ -162,23 +162,23 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
 
     // allocate buffers needed for the iteration
     p = malloc((sizeof *p) * n);
-    _p = malloc((sizeof *_p) * n);
+    Sp = malloc((sizeof *Sp) * n);
     z = malloc((sizeof *z) * n);
     zp = malloc((sizeof *zp) * n);
 
-    if (p == NULL || _p == NULL || z == NULL || zp == NULL) {
+    if (p == NULL || Sp == NULL || z == NULL || zp == NULL) {
         // free memory if possible
         if (p)
             free(p);
-        if (_p)
-            free(_p);
+        if (Sp)
+            free(Sp);
         if (z)
             free(z);
         if (zp)
             free(zp);
 
         si->has_failed = true;
-        fprintf(stderr, "[proc %d] malloc of p, _p, z or zp failed", rank);
+        fprintf(stderr, "[proc %d] malloc of p, Sp, z or zp failed", rank);
         solverinfo_finalize(si);
         return;
     }
@@ -197,7 +197,7 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
         k++;
 
         // apply system matrix
-        info = opmm(A, Nm1, N, G, ws, p, _p);
+        info = opmm(A, Nm1, N, G, ws, p, Sp);
         if (info != 0) {
             fprintf(stderr, "opmm routine returned a non-zero code (%d)", info);
             exit(EXIT_FAILURE);
@@ -205,7 +205,7 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
 
         // compute (r,z) and (p,_p)
         coef_1 = scalar_prod_reduce(A->comm, M->n, M->pixpond, r, z, NULL);
-        coef_2 = scalar_prod_reduce(A->comm, M->n, M->pixpond, p, _p, NULL);
+        coef_2 = scalar_prod_reduce(A->comm, M->n, M->pixpond, p, Sp, NULL);
 
         // swap pointers to store previous z before updating
         zt = zp;
@@ -216,7 +216,7 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
         // update residual (r = r - alpha * _p)
         for (int i = 0; i < n; i++) {
             x[i] = x[i] + (coef_1 / coef_2) * p[i];
-            r[i] = r[i] - (coef_1 / coef_2) * _p[i];
+            r[i] = r[i] - (coef_1 / coef_2) * Sp[i];
         }
 
         // apply preconditioner (z = M^{-1} * r)
@@ -244,9 +244,155 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
     // free memory after the iteration
     free(r);
     free(p);
-    free(_p);
+    free(Sp);
     free(z);
     free(zp);
+
+    solverinfo_finalize(si);
+}
+
+/**
+ * @brief Solve the map making equation with a simple conjugate gradient
+ * algorithm.
+ *
+ * @param A pointing matrix
+ * @param pixpond pixel share ponderation
+ * @param Nm1 inverse noise covariance
+ * @param N noise covariance
+ * @param G timestream gaps
+ * @param x [in] starting map [out] estimated solution
+ * @param d data vector
+ * @param si SolverInfo structure
+ */
+void CG_mm(Mat *A, double *pixpond, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
+           double *x, const double *d, SolverInfo *si) {
+    // MPI information
+    int rank, size;
+    MPI_Comm_rank(A->comm, &rank);
+    MPI_Comm_size(A->comm, &size);
+
+    // initialize the SolverInfo struct
+    solverinfo_init(si);
+
+    // store starting time
+    MPI_Barrier(A->comm);
+    si->start_time = MPI_Wtime();
+
+    int info;
+    int k = 0;                      // iteration number
+    int n = get_actual_map_size(A); // map size
+
+    double res;            // norm of residual
+    double coef_1, coef_2; // scalars
+    double wtime;          // timing variable
+
+    bool stop = false; // stop iteration or continue
+
+    double *r = NULL;  // residual
+    double *p = NULL;  // search direction
+    double *Sp = NULL; // [system matrix] * p
+
+    // allocate first buffer
+    r = malloc((sizeof *r) * n);
+    if (r == NULL) {
+        si->has_failed = true;
+        fprintf(stderr, "[proc %d] malloc of r failed", rank);
+        solverinfo_finalize(si);
+        return;
+    }
+
+    // build rhs
+    info = build_rhs(A, Nm1, N, G, ws, d, x, r);
+    if (info != 0) {
+        fprintf(stderr, "build_rhs routine returned a non-zero code (%d)",
+                info);
+        exit(EXIT_FAILURE);
+    }
+
+    // compute initial residual
+    res = scalar_prod_reduce(A->comm, n, pixpond, r, r, NULL);
+
+    // update SolverInfo
+    MPI_Barrier(A->comm);
+    wtime = MPI_Wtime();
+    solverinfo_update(si, &stop, k, res, wtime);
+
+    if (stop) {
+        // one stop condition already met, no iteration
+        solverinfo_finalize(si);
+        free(r);
+        return;
+    }
+
+    // iterate to solve the system
+
+    // allocate buffers needed for the iteration
+    p = malloc((sizeof *p) * n);
+    Sp = malloc((sizeof *Sp) * n);
+
+    if (p == NULL || Sp == NULL) {
+        // free memory if possible
+        if (p)
+            free(p);
+        if (Sp)
+            free(Sp);
+
+        si->has_failed = true;
+        fprintf(stderr, "[proc %d] malloc of p or Sp failed", rank);
+        solverinfo_finalize(si);
+        return;
+    }
+
+    // set initial search direction (p0 = r0)
+    for (int i = 0; i < n; i++) {
+        p[i] = r[i];
+    }
+
+    // iteration loop
+    while (!stop) {
+        // we are doing one more iteration step
+        k++;
+
+        // apply system matrix
+        info = opmm(A, Nm1, N, G, ws, p, Sp);
+        if (info != 0) {
+            fprintf(stderr, "opmm routine returned a non-zero code (%d)", info);
+            exit(EXIT_FAILURE);
+        }
+
+        // compute (r,r) and (p,_p)
+        coef_1 = scalar_prod_reduce(A->comm, n, pixpond, r, r, NULL);
+        coef_2 = scalar_prod_reduce(A->comm, n, pixpond, p, Sp, NULL);
+
+        // update current vector (x = x + alpha * p)
+        // update residual (r = r - alpha * _p)
+        for (int i = 0; i < n; i++) {
+            x[i] = x[i] + (coef_1 / coef_2) * p[i];
+            r[i] = r[i] - (coef_1 / coef_2) * Sp[i];
+        }
+
+        // compute updated (r,r)
+        coef_2 = scalar_prod_reduce(A->comm, n, pixpond, r, r, NULL);
+
+        // update search direction
+        for (int i = 0; i < n; i++) {
+            p[i] = r[i] + (coef_2 / coef_1) * p[i];
+        }
+
+        // compute residual
+        res = scalar_prod_reduce(A->comm, n, pixpond, r, r, NULL);
+
+        // update SolverInfo structure
+        // and check stop conditions
+        MPI_Barrier(A->comm);
+        wtime = MPI_Wtime();
+        solverinfo_update(si, &stop, k, res, wtime);
+    }
+
+    // free memory after the iteration
+    free(r);
+    free(p);
+    free(Sp);
 
     solverinfo_finalize(si);
 }
