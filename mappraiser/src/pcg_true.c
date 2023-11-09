@@ -11,6 +11,7 @@
 #include "mappraiser/pcg_true.h"
 #include "mappraiser/iofiles.h"
 
+#include <math.h>
 #include <mpi.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -82,6 +83,22 @@ int opmm(Mat *A, Tpltz *Nm1, Tpltz *N, Gap *G, WeightStgy ws, double *x,
 
     free(_t);
     return 0;
+}
+
+double maxabs(double *x, int n) {
+    double r;
+    double fmax = fabs(x[0]);
+    for (int j = 1; j < n; j++) {
+        r = fabs(x[j]);
+        if (r > fmax)
+            fmax = r;
+    }
+    return fmax;
+}
+
+void print_residual_max(double *x, int n_extra, int n_valid) {
+    printf("  extra: max = %lf\n", maxabs(x, n_extra));
+    printf("  valid: max = %lf\n", maxabs(x + n_extra, n_valid));
 }
 
 /**
@@ -233,10 +250,18 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
 
         if (si->use_exact_residual) {
             // compute explicit residual
+#if 0
+            printf("\nimplicit r_%d\n", k);
+            print_residual_max(r, M->n_extra, M->n_valid);
+#endif
             opmm(A, Nm1, N, G, ws, x, r);
             for (int i = 0; i < n; i++) {
                 r[i] = rhs[i] - r[i]; // r = b - A * x_k
             }
+#if 1
+            printf("explicit r_%d\n", k);
+            print_residual_max(r, M->n_extra, M->n_valid);
+#endif
         }
 
         // apply preconditioner (z = M^{-1} * r)

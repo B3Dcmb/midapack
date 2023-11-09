@@ -278,7 +278,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
         si.print = rank == 0;
         si.rel_res_reduct = tol;
         si.max_steps = maxiter;
-        si.use_exact_residual = false;
+        si.use_exact_residual = true;
 
         // solve the equation
         if (use_precond) {

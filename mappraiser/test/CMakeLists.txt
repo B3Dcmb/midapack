@@ -7,7 +7,7 @@ target_include_directories(debug_run PRIVATE
         "../include"
         "../include/mappraiser"
         "${CMAKE_SOURCE_DIR}/algebra/include"
-        )
+)
 
 # MPI compile flag for midapack algebra modules
 target_compile_definitions(debug_run PRIVATE W_MPI)
@@ -23,7 +23,22 @@ add_executable(baseline baseline.cpp)
 target_include_directories(baseline PRIVATE
         "../include"
         "../include/mappraiser"
-        )
+)
 
 # libraries
 target_link_libraries(baseline PRIVATE mappraiser OpenMP::OpenMP_CXX)
+
+# ____________________________________________________
+# Test executable for mapmat testing
+
+add_executable(mapmat mapmat.cpp)
+
+target_include_directories(mapmat PRIVATE
+        "../include"
+        "../include/mappraiser"
+        "../../algebra/include"
+        "../../algebra/include/mapmat"
+)
+
+target_compile_definitions(mapmat PRIVATE W_MPI)
+target_link_libraries(mapmat PRIVATE midapack)
