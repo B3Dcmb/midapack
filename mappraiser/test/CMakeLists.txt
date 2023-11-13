@@ -41,4 +41,4 @@ target_include_directories(mapmat PRIVATE
 )
 
 target_compile_definitions(mapmat PRIVATE W_MPI)
-target_link_libraries(mapmat PRIVATE midapack)
+target_link_libraries(mapmat PRIVATE midapack MPI::MPI_CXX)
