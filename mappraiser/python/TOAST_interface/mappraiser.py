@@ -548,13 +548,11 @@ class Mappraiser(Operator):
         #     params["write_tod"] = False
 
         # Check if noiseless mode is activated
-        if self.noiseless:
-            self.noise_name = None
-
-        # No noise: half bandwidth of noise model must be set to 1
-        if self.noise_name is None:
-            params["Lambda"] = 1
+        if self.noiseless or (self.noise_name is None):
             self.noiseless = True
+            self.noise_name = None
+            # diagonal noise covariance
+            params["Lambda"] = 1
 
         # Log the libmappraiser parameters that were used.
         if data.comm.world_rank == 0:
@@ -1181,15 +1179,15 @@ class Mappraiser(Operator):
                 save_psd=(self.save_psd and data.comm.world_rank == 0),
                 save_dir=os.path.join(params["path_output"], "psd"),
             )
+
+            if self.fill_noise_zero:
+                # just set the noise to zero
+                # that way we can make the mapmaker iterate but on signal-only data
+                self._mappraiser_noise[:] = 0.0
         else:
             self._mappraiser_noise[:] = 0.0
             self._mappraiser_invtt[:] = 1.0
             self._mappraiser_tt[:] = 1.0
-
-        if self.fill_noise_zero:
-            # just set the noise to zero
-            # that way we can make the mapmaker iterate but on signal-only data
-            self._mappraiser_noise[:] = 0.0
 
         log_time_memory(
             data,

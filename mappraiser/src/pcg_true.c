@@ -85,6 +85,7 @@ int opmm(Mat *A, Tpltz *Nm1, Tpltz *N, Gap *G, WeightStgy ws, double *x,
     return 0;
 }
 
+#if 0
 double maxabs(double *x, int n) {
     double r;
     double fmax = fabs(x[0]);
@@ -100,6 +101,7 @@ void print_residual_max(double *x, int n_extra, int n_valid) {
     printf("  extra: max = %lf\n", maxabs(x, n_extra));
     printf("  valid: max = %lf\n", maxabs(x + n_extra, n_valid));
 }
+#endif
 
 /**
  * @brief Solve the map making equation with a preconditioned conjugate gradient
@@ -258,7 +260,7 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
             for (int i = 0; i < n; i++) {
                 r[i] = rhs[i] - r[i]; // r = b - A * x_k
             }
-#if 1
+#if 0
             printf("explicit r_%d\n", k);
             print_residual_max(r, M->n_extra, M->n_valid);
 #endif

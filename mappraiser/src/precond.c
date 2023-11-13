@@ -677,6 +677,12 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, double *vpixBlock,
     // the nnz*nnz matrix
     double *x = (double *)calloc(nnz2, sizeof(double));
 
+    // go through all valid pixels to check condition numbers and invert
+    // preconditioner blocks (when possible)
+
+    // > start from 0      if map contains only valid pixels
+    // > start from dn/nnz if map contains also extra pixels
+
     int nbr_degenerate = 0;
     int off = A->flag_ignore_extra ? A->trash_pix : 0;
 
@@ -1573,6 +1579,18 @@ void build_BJinv(Mat *A, Tpltz *Nm1, Mat *BJ_inv, double **cond, int **lhits,
         *cond = tmp3;
     }
 
+#if 0
+    int acc = 0;
+    for (int b = 0; b < Nm1->nb_blocks_loc; b++) {
+        printf("block %d\n", b);
+        for (int l = 0; l < 3000; l++) {
+            printf("%d ", A->indices[acc + l]);
+        }
+        acc += local_blocks_sizes[b] * A->nnz;
+        printf("\n\n");
+    }
+    fflush(stdout);
+#endif
     // now compute preconditioner blocks for the extra pixels
     if (!(A->flag_ignore_extra)) {
         // we have to recompute vpixBlock_inv because more samples are

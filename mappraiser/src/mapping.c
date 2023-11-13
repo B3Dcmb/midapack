@@ -63,6 +63,7 @@ int create_extra_pix(int *indices, double *weights, int nnz, int nb_blocks_loc,
                     // don't forget the nnz multiplicity of the indices
                     for (int k = 0; k < nnz; ++k) {
                         indices[jnnz + k] = -(i + 1) * nnz + k;
+                        // indices[jnnz + k] = -(nb_blocks_loc - i) * nnz + k;
 
                         // make the extra pixels not polarized
                         if (k > 0) {
