@@ -376,15 +376,18 @@ void point_pixel_to_trash(Mat *A, int ipix) {
 
 __attribute__((unused)) void print_gap_info(Gap *gaps) {
     printf("Local Gap structure\n");
-    printf("  { ngap: %d\n", gaps->ngap);
-    printf("    lgap: ");
-    for (int i = 0; i < gaps->ngap; ++i) {
-        printf("%d ", gaps->lgap[i]);
+    printf("  ngap   = %d\n", gaps->ngap);
+    printf("  lgap   = ");
+    int n = gaps->ngap;
+    printf("[");
+    for (int i = 0; i < n; ++i) {
+        printf((i + 1 < n) ? "%d, " : "%d]", gaps->lgap[i]);
     }
     printf("\n");
-    printf("    id0gap: ");
-    for (int i = 0; i < gaps->ngap; ++i) {
-        printf("%ld ", gaps->id0gap[i]);
+    printf("  id0gap = ");
+    printf("[");
+    for (int i = 0; i < n; ++i) {
+        printf((i + 1 < n) ? "%ld, " : "%ld]", gaps->id0gap[i]);
     }
-    printf("}\n");
+    printf("\n");
 }
