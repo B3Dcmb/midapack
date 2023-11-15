@@ -70,7 +70,7 @@ void init_fake_mat(Mat *P, MPI_Comm comm) {
     assert(P->lcount == NP);
 }
 
-int my_test(bool verbose = false) {
+int test_time_domain_mapping(bool verbose = false) {
     //____________________________________________________________
     // MPI initialization
 
@@ -84,7 +84,7 @@ int my_test(bool verbose = false) {
         return 1;
     }
 
-    std::cout << "Running my_test" << std::endl;
+    std::cout << "Running test_time_domain_mapping" << std::endl;
 
     //____________________________________________________________
     // Create fake pointing matrix P and gaps G
@@ -103,6 +103,19 @@ int my_test(bool verbose = false) {
     if (verbose)
         print_gap_info(&G);
 
+    //____________________________________________________________
+    // assert that the results are correct
+
+    const int true_ngap = 10;
+    int true_lgap[true_ngap] = {3, 1, 3, 2, 1, 1, 2, 2, 1, 2};
+    int64_t true_id0gap[true_ngap] = {0, 4, 9, 13, 16, 19, 21, 25, 28, 30};
+
+    assert(G.ngap == true_ngap);
+    for (int i = 0; i < true_ngap; i++) {
+        assert(G.lgap[i] == true_lgap[i]);
+        assert(G.id0gap[i] == true_id0gap[i]);
+    }
+
     // free memory
     free(P.ll);
     free(P.id_last_pix);
@@ -116,7 +129,7 @@ int my_test(bool verbose = false) {
 int main(int argc, char *argv[]) {
     MPI_Init(&argc, &argv);
 
-    int info = my_test(true);
+    int info = test_time_domain_mapping();
     MPI_Barrier(MPI_COMM_WORLD);
     if (info != 0)
         std::cout << "test failed with status " << info << std::endl;
