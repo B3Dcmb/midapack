@@ -178,6 +178,18 @@ int build_pixel_to_time_domain_mapping(Mat *A) {
     return ngap;
 }
 
+int argmax(const int *array, int size) {
+    int max = array[0];
+    int argmax = 0;
+    for (int i = 1; i < size; ++i) {
+        if (array[i] > max) {
+            max = array[i];
+            argmax = i;
+        }
+    }
+    return argmax;
+}
+
 /**
  * @brief Build the gap structure for the local samples.
  * @param gif global row index offset of the local data
@@ -186,29 +198,44 @@ int build_pixel_to_time_domain_mapping(Mat *A) {
  */
 void build_gap_struct(int64_t gif, Gap *gaps, Mat *A) {
     // allocate the arrays
-
-    // only test correct allocation if ngap > 0 because
-    // behaviour of malloc(0) is implementation-defined
-    // free(NULL) produces no error
-
     gaps->id0gap = malloc((sizeof gaps->id0gap) * gaps->ngap);
     gaps->lgap = malloc((sizeof gaps->lgap) * gaps->ngap);
 
     if (gaps->ngap > 0) {
-        int i = gaps->ngap - 1;    // index of the gap being computed
-        int lengap = 1;            // length of the current gap
-        int j = A->id_last_pix[0]; // index to go through linked time samples
-        int gap_start = j;         // index of the first sample of the gap
-
+        // only test correct allocation if ngap > 0 because
+        // behaviour of malloc(0) is implementation-defined
+        // free(NULL) produces no error
         if (gaps->id0gap == NULL || gaps->lgap == NULL) {
             fputs("malloc of id0gap or lgap failed", stderr);
             exit(EXIT_FAILURE);
         }
 
+        // follow linked time samples for all extra pixels simultaneously
+        int *tab_j = malloc((sizeof tab_j) * A->trash_pix);
+        if (tab_j == NULL) {
+            fputs("malloc of tab_j failed", stderr);
+            exit(EXIT_FAILURE);
+        }
+
+        // initialize with the last sample pointing to each extra pixel
+        for (int p = 0; p < A->trash_pix; p++) {
+            tab_j[p] = A->id_last_pix[p];
+        }
+
+        // current index in the tab_j array
+        int pj = argmax(tab_j, A->trash_pix);
+
+        int i = gaps->ngap - 1; // index of the gap being computed
+        int lengap = 1;         // length of the current gap
+        int j = tab_j[pj];      // index to go through linked time samples
+        int gap_start = j;      // index of the first sample of the gap
+
         // go through the time samples
         while (j != -1) {
             // go to previous flagged sample
-            j = A->ll[j];
+            tab_j[pj] = A->ll[tab_j[pj]];
+            pj = argmax(tab_j, A->trash_pix);
+            j = tab_j[pj];
 
             if (j != -1 && gap_start - j == 1) {
                 // same gap, and there are flagged samples left

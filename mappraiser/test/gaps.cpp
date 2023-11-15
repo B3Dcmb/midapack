@@ -38,6 +38,19 @@ void mat_print(Mat *A, const std::string &name = "") {
     std::cout << "]" << std::endl;
 }
 
+template <typename T>
+void print_array(T *arr, int n, const std::string &name = "") {
+    if (!name.empty())
+        std::cout << name << " =" << std::endl;
+    std::cout << "[";
+    for (int i = 0; i < n; i++) {
+        std::cout << arr[i];
+        if (i + 1 < n)
+            std::cout << ", ";
+    }
+    std::cout << "]" << std::endl;
+}
+
 void init_fake_mat(Mat *P, MPI_Comm comm) {
     const int m = NS;
 
@@ -45,7 +58,6 @@ void init_fake_mat(Mat *P, MPI_Comm comm) {
     std::array<int, m> base_indices = {
         -2, -1, -2, 0,  -2, 1,  0,  0, 1, -1, -2, -2, 1,  -1, -1, 0,
         -2, 0,  1,  -2, 0,  -2, -1, 0, 1, -2, -1, 1,  -1, 0,  -2, -2};
-
     auto indices = static_cast<int *>(malloc(sizeof(int) * m));
     auto values = static_cast<double *>(malloc(sizeof(double) * m));
 
@@ -55,7 +67,6 @@ void init_fake_mat(Mat *P, MPI_Comm comm) {
     }
 
     MatInit(P, m, 1, indices, values, 0, comm);
-
     assert(P->lcount == NP);
 }
 
@@ -80,8 +91,9 @@ int my_test(bool verbose = false) {
 
     Mat P;
     init_fake_mat(&P, MPI_COMM_WORLD);
-
+#if 0
     mat_print(&P, "pointing matrix");
+#endif
 
     Gap G;
     G.ngap = build_pixel_to_time_domain_mapping(&P);
