@@ -64,6 +64,7 @@ _mappraiser.MLmap.argtypes = [
     ct.c_int,  # bs_red
     ct.c_int,  # nside
     ct.c_int,  # gap_stgy
+    ct.c_bool,  # do_gap_filling
     ct.c_uint64,  # realization
     npc.ndpointer(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"),  # data_size_proc
     ct.c_int,  # nb_blocks_loc
@@ -144,6 +145,7 @@ def MLmap(
         params["bs_red"],
         params["nside"],
         params["gap_stgy"],
+        params["do_gap_filling"],
         params["realization"],
         data_size_proc,
         nb_blocks_loc,
