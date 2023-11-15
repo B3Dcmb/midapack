@@ -77,9 +77,6 @@ def stage_local(
     do_flags = False
     if shared_flags is not None or det_flags is not None:
         do_flags = True
-        # Flagging should only be enabled when we are processing the pixel indices
-        # (which is how mappraiser effectively implements flagging).  So we will set
-        # all flagged samples to "-1" below.
 
     for ob in data.obs:
         views = ob.view[view]
@@ -112,6 +109,7 @@ def stage_local(
                     (idet * nsamp + offset + view_samples) * nnz,
                     1,
                 )
+                #FIXME: just set the slice to zero when handling flags
                 if detdata_name is not None:
                     if nnz > 1:
                         mappraiser_buffer[slc] = np.repeat(
@@ -134,9 +132,8 @@ def stage_local(
                     else:
                         detflags = np.copy(flags)
                         detflags |= views.detdata[det_flags][ivw][det] & det_mask
-                    # mappraiser's pixels buffer has nnz=3, not nnz=1
-                    repeated_flags = np.repeat(detflags, n_repeat)
-                    mappraiser_buffer[slc][repeated_flags != 0] = -1
+                    mappraiser_buffer[slc][detflags != 0] = 1
+                    mappraiser_buffer[slc][detflags == 0] = 0
         if do_purge:
             del ob.detdata[detdata_name]
         interval_offset += len(views)

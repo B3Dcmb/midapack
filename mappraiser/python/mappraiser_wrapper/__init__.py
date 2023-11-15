@@ -17,6 +17,7 @@ WEIGHT_TYPE = np.float64
 INVTT_TYPE = np.float64
 TIMESTAMP_TYPE = np.float64
 PSD_TYPE = np.float64
+FLAG_TYPE = np.uint8
 
 try:
     _mappraiser = ct.CDLL("libmappraiser.so")
@@ -76,6 +77,7 @@ _mappraiser.MLmap.argtypes = [
     ct.c_int,  # Nnz
     npc.ndpointer(dtype=PIXEL_TYPE, ndim=1, flags="C_CONTIGUOUS"),  # pixels
     npc.ndpointer(dtype=WEIGHT_TYPE, ndim=1, flags="C_CONTIGUOUS"),  # pixweights
+    npc.ndpointer(dtype=FLAG_TYPE, ndim=1, flags="C_CONTIGUOUS"),  # flags
     npc.ndpointer(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"),  # signal
     npc.ndpointer(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"),  # noise
     ct.c_int,  # lambda
@@ -96,6 +98,7 @@ def MLmap(
         nnz,
         pixels,
         pixweights,
+        flags,
         signal,
         noise,
         inv_tt,
@@ -116,6 +119,7 @@ def MLmap(
     * `nnz`: Number of non-zero elements per row
     * `pixels`: Pixel indices of non-zero values
     * `pixweights`: Corresponding matrix values
+    * `flags`: Flag buffer (1=flagged, 0=unflagged)
     * `signal`: Signal buffer
     * `noise`: Noise buffer
     * `inv_tt`: Inverse noise correlation
@@ -157,6 +161,7 @@ def MLmap(
         nnz,
         pixels,
         pixweights,
+        flags,
         signal,
         noise,
         params["Lambda"],

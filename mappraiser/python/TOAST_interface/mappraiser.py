@@ -433,6 +433,7 @@ class Mappraiser(Operator):
             "invtt",
             "pixels",
             "pixweights",
+            "flags",
         ]:
             atrname = "_mappraiser_{}".format(atr)
             rawname = "{}_raw".format(atrname)
@@ -1220,10 +1221,10 @@ class Mappraiser(Operator):
                 interval_starts,
                 nnz,
                 1,
-                self.shared_flags,
-                self.shared_flag_mask,
-                self.det_flags,
-                self.det_flag_mask,
+                None,
+                None,
+                None,
+                None,
                 operator=self.pixel_pointing,
                 n_repeat=nnz,
             )
@@ -1268,6 +1269,37 @@ class Mappraiser(Operator):
             # Any existing pixel numbers are in the wrong ordering
             Delete(detdata=[self.pixel_pointing.pixels]).apply(data)
             self.pixel_pointing.nest = False
+
+        # Copy the flags
+
+        if not self._cached:
+            # We do not have the flags yet.
+            self._mappraiser_flags_raw, self._mappraiser_flags = stage_in_turns(
+                data,
+                nodecomm,
+                n_copy_groups,
+                nsamp,
+                self.view,
+                all_dets,
+                self.det_flags,
+                mappraiser.FLAG_TYPE,
+                interval_starts,
+                1,
+                1,
+                self.shared_flags,
+                self.shared_flag_mask,
+                self.det_flags,
+                self.det_flag_mask,
+            )
+
+            log_time_memory(
+                data,
+                timer=timer,
+                timer_msg="Copy flags",
+                prefix=self._logprefix,
+                mem_msg="After flags staging",
+                full_mem=self.mem_report,
+            )
 
         # The following is basically useless for Mappraiser.
 
@@ -1463,6 +1495,8 @@ class Mappraiser(Operator):
             del self._mappraiser_pixels_raw
             del self._mappraiser_pixweights
             del self._mappraiser_pixweights_raw
+            del self._mappraiser_flags
+            del self._mappraiser_flags_raw
         return
 
     @function_timer
@@ -1507,6 +1541,7 @@ class Mappraiser(Operator):
             nnz,
             self._mappraiser_pixels,
             self._mappraiser_pixweights,
+            self._mappraiser_flags,
             self._mappraiser_signal,
             self._mappraiser_noise,
             self._mappraiser_invtt,
