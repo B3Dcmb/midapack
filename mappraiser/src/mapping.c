@@ -124,10 +124,10 @@ int build_pixel_to_time_domain_mapping(Mat *A) {
     int ngap, lengap;
 
     // index of last sample pointing to each pixel
-    A->id_last_pix = malloc((sizeof A->id_last_pix) * A->lcount / A->nnz);
+    A->id_last_pix = malloc((sizeof *A->id_last_pix) * A->lcount / A->nnz);
 
     // linked list of time samples indexes
-    A->ll = malloc((sizeof A->ll) * A->m);
+    A->ll = malloc(sizeof *A->ll * A->m);
 
     if (A->id_last_pix == NULL || A->ll == NULL) {
         fputs("memory allocation of id_last_pix or ll failed", stderr);
@@ -198,8 +198,8 @@ int argmax(const int *array, int size) {
  */
 void build_gap_struct(int64_t gif, Gap *gaps, Mat *A) {
     // allocate the arrays
-    gaps->id0gap = malloc((sizeof gaps->id0gap) * gaps->ngap);
-    gaps->lgap = malloc((sizeof gaps->lgap) * gaps->ngap);
+    gaps->id0gap = malloc((sizeof *gaps->id0gap) * gaps->ngap);
+    gaps->lgap = malloc((sizeof *gaps->lgap) * gaps->ngap);
 
     if (gaps->ngap > 0) {
         // only test correct allocation if ngap > 0 because
@@ -211,7 +211,7 @@ void build_gap_struct(int64_t gif, Gap *gaps, Mat *A) {
         }
 
         // follow linked time samples for all extra pixels simultaneously
-        int *tab_j = malloc((sizeof tab_j) * A->trash_pix);
+        int *tab_j = malloc((sizeof *tab_j) * A->trash_pix);
         if (tab_j == NULL) {
             fputs("malloc of tab_j failed", stderr);
             exit(EXIT_FAILURE);
@@ -249,6 +249,7 @@ void build_gap_struct(int64_t gif, Gap *gaps, Mat *A) {
             }
             gap_start = j;
         }
+        free(tab_j);
     }
 }
 

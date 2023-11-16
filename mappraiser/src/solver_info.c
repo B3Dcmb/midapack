@@ -69,7 +69,7 @@ void solverinfo_init(SolverInfo *si) {
     si->res_hist = NULL;
 
     if (si->store_hist)
-        si->res_hist = malloc((sizeof si->res_hist) * si->max_steps);
+        si->res_hist = malloc((sizeof *si->res_hist) * si->max_steps);
 
     if (si->print) {
         printf("PCG solver running with kmax = %d\n", si->max_steps);
@@ -135,7 +135,7 @@ void solverinfo_finalize(SolverInfo *si) {
     if ((si->n_iter < si->max_steps) && (si->store_hist)) {
         // res_history has size n_iter + 1 !!!
         double *tmp;
-        tmp = realloc(si->res_hist, (sizeof si->res_hist) * (si->n_iter + 1));
+        tmp = realloc(si->res_hist, (sizeof *si->res_hist) * (si->n_iter + 1));
         if (tmp != NULL) {
             si->res_hist = tmp;
         }

@@ -1562,10 +1562,10 @@ void build_BJinv(Mat *A, Tpltz *Nm1, Mat *BJ_inv, double **cond, int **lhits,
         n = get_actual_map_size(A);
 
         // reallocate memory for preconditioner blocks and other buffers
-        double *tmp2 = realloc(vpixBlock, (sizeof tmp2) * n * nnz);
-        double *tmp4 = realloc(vpixBlock_inv, (sizeof tmp4) * n * nnz);
-        int *tmp1 = realloc(*lhits, (sizeof tmp1) * n / nnz);
-        double *tmp3 = realloc(*cond, (sizeof tmp3) * n / nnz);
+        double *tmp2 = realloc(vpixBlock, (sizeof *tmp2) * n * nnz);
+        double *tmp4 = realloc(vpixBlock_inv, (sizeof *tmp4) * n * nnz);
+        int *tmp1 = realloc(*lhits, (sizeof *tmp1) * n / nnz);
+        double *tmp3 = realloc(*cond, (sizeof *tmp3) * n / nnz);
         if (tmp1 == NULL || tmp2 == NULL || tmp3 == NULL || tmp4 == NULL) {
             fprintf(stderr,
                     "[rank %d] Out of memory: reallocation of preconditioner "

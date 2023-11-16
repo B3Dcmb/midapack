@@ -363,14 +363,15 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
             puts(" }");
         }
         fflush(stdout);
+        free(extra_map);
 #endif
         // valid map
         memmove(x, (x + extra), map_size * sizeof(double));
         memmove(lhits, lhits + extra / Nnz, (map_size / Nnz) * sizeof(int));
         memmove(cond, cond + extra / Nnz, (map_size / Nnz) * sizeof(double));
-        double *tmp_x = realloc(x, (sizeof tmp_x) * map_size);
-        int *tmp_hits = realloc(lhits, (sizeof tmp_hits) * map_size / Nnz);
-        double *tmp_cond = realloc(cond, (sizeof tmp_cond) * map_size / Nnz);
+        double *tmp_x = realloc(x, (sizeof *tmp_x) * map_size);
+        int *tmp_hits = realloc(lhits, (sizeof *tmp_hits) * map_size / Nnz);
+        double *tmp_cond = realloc(cond, (sizeof *tmp_cond) * map_size / Nnz);
         if (tmp_x == NULL || tmp_hits == NULL || tmp_cond == NULL) {
             fprintf(stderr, "[proc %d] realloc of x, lhits or cond failed",
                     rank);
@@ -383,7 +384,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
 
     // get maps from all processes and combine them
 
-    int *lstid = malloc((sizeof lstid) * map_size);
+    int *lstid = malloc((sizeof *lstid) * map_size);
     if (lstid == NULL) {
         fprintf(stderr, "[proc %d] memory allocation of lstid failed", rank);
         exit(EXIT_FAILURE);
