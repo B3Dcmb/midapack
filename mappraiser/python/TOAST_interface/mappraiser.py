@@ -1185,7 +1185,7 @@ class Mappraiser(Operator):
                 self.pixel_pointing.pixels,
                 mappraiser.PIXEL_TYPE,
                 interval_starts,
-                nnz,
+                1,
                 1,
                 # FIXME: uncomment this when mappraiser handles flags accordingly
                 self.shared_flags,  # None,
