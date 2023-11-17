@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
     int ortho_alg = 1;
     int bs_red = 0;
     int nside = 512;
-    int gap_stgy = 0;
+    int gap_stgy = 1;
     bool do_gap_filling = false;
     uint64_t realization = 0;
     int Nnz = 3;
@@ -103,7 +103,7 @@ int main(int argc, char *argv[]) {
 
     // only run mapmaker on a single data block
     // note: only possible with 1 MPI process
-    bool single_block = true;
+    bool single_block = false;
 
     //____________________________________________________________
     // Process options

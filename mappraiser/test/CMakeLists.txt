@@ -18,7 +18,7 @@ target_link_libraries(debug_run PRIVATE mappraiser MPI::MPI_CXX)
 # ____________________________________________________
 # Test executable for mapmat testing
 
-add_executable(mapmat mapmat.cpp)
+add_executable(mapmat mapmat.cpp new_utils.cpp)
 
 target_include_directories(mapmat PRIVATE
         "../include"
@@ -33,7 +33,7 @@ target_link_libraries(mapmat PRIVATE midapack MPI::MPI_CXX)
 # ____________________________________________________
 # Test executable for Gap testing
 
-add_executable(gaps mapping_gaps.cpp)
+add_executable(gaps mapping_gaps.cpp new_utils.cpp)
 
 target_include_directories(gaps PRIVATE
         "../include"

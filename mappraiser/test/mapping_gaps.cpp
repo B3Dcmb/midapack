@@ -2,6 +2,8 @@
 // Created by sbiquard on 14/11/23.
 //
 
+#include "new_utils.h"
+
 #include <array>
 #include <cassert>
 #include <iostream>
@@ -10,46 +12,6 @@
 
 #define NS 32
 #define NP 4
-
-void mat_print(Mat *A, const std::string &name = "") {
-    if (!name.empty())
-        std::cout << name << " =" << std::endl;
-    std::cout << "[";
-    // loop over rows
-    for (int t = 0; t < A->m; t++) {
-        std::cout << ((t == 0) ? "[" : " [");
-        int tnnz = t * A->nnz;
-        int c = 0;
-        // loop over columns
-        for (int j = 0; j < A->lcount; j++) {
-            if (c < A->nnz && j == A->indices[tnnz + c]) {
-                std::cout << A->values[tnnz + c];
-                c++;
-            } else {
-                std::cout << 0;
-            }
-            if (j + 1 < A->lcount)
-                std::cout << ", ";
-        }
-        std::cout << "]";
-        if (t + 1 < A->m)
-            std::cout << "," << std::endl;
-    }
-    std::cout << "]" << std::endl;
-}
-
-template <typename T>
-void print_array(T *arr, int n, const std::string &name = "") {
-    if (!name.empty())
-        std::cout << name << " =" << std::endl;
-    std::cout << "[";
-    for (int i = 0; i < n; i++) {
-        std::cout << arr[i];
-        if (i + 1 < n)
-            std::cout << ", ";
-    }
-    std::cout << "]" << std::endl;
-}
 
 void init_fake_mat(Mat *P, MPI_Comm comm) {
     const int m = NS;
@@ -66,7 +28,7 @@ void init_fake_mat(Mat *P, MPI_Comm comm) {
         values[i] = 1;
     }
 
-    MatInit(P, m, 1, indices, values, 0, comm);
+    MatInit(P, m, 1, indices, values, nullptr, comm);
     assert(P->lcount == NP);
 }
 

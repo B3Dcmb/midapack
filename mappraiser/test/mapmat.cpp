@@ -2,57 +2,17 @@
 // Created by sbiquard on 09/11/23.
 //
 
+#include "new_utils.h"
+
 #include <array>
 #include <cassert>
 #include <cmath>
 #include <iostream>
-#include <midapack.h>
 #include <mpi.h>
 #include <vector>
 
 #define NS 32
 #define NP 4
-
-void mat_print(Mat *A, const std::string &name = "") {
-    if (!name.empty())
-        std::cout << name << " =" << std::endl;
-    std::cout << "[";
-    // loop over rows
-    for (int t = 0; t < A->m; t++) {
-        std::cout << ((t == 0) ? "[" : " [");
-        int tnnz = t * A->nnz;
-        int c = 0;
-        // loop over columns
-        for (int j = 0; j < A->lcount; j++) {
-            if (c < A->nnz && j == A->indices[tnnz + c]) {
-                std::cout << A->values[tnnz + c];
-                c++;
-            } else {
-                std::cout << 0;
-            }
-            if (j + 1 < A->lcount)
-                std::cout << ", ";
-        }
-        std::cout << "]";
-        if (t + 1 < A->m)
-            std::cout << "," << std::endl;
-    }
-    std::cout << "]" << std::endl;
-}
-
-template <typename T>
-void vec_print(std::vector<T> &v, const std::string &name = "") {
-    if (!name.empty())
-        std::cout << name << " = ";
-    std::cout << "[";
-    ulong n = v.size();
-    for (ulong i = 0; i < n; i++) {
-        std::cout << v[i];
-        if (i + 1 < n)
-            std::cout << ", ";
-    }
-    std::cout << "]" << std::endl;
-}
 
 void Px(Mat *P, std::vector<double> &x, std::vector<double> &y) {
     MatVecProd(P, x.data(), y.data());
@@ -79,21 +39,19 @@ int test_MatVecProd(const int nnz = 3, bool verbose = false) {
     const int m = NS;
 
     // 4 pixels (2 extra)
-    std::array<int, m> base_indices = {
-        -2, -1, -2, 0,  -2, 1,  0,  0, 1, -1, -2, -2, 1,  -1, -1, 0,
-        -2, 0,  1,  -2, 0,  -2, -1, 0, 1, -2, -1, 1,  -1, 0,  -2, -2};
-    std::vector<int> indices(m * nnz);
+    std::vector<int> indices = {-2, -1, -2, 0,  -2, 1,  0,  0, 1,  -1, -2,
+                                -2, 1,  -1, -1, 0,  -2, 0,  1, -2, 0,  -2,
+                                -1, 0,  1,  -2, -1, 1,  -1, 0, -2, -2};
     std::vector<double> values(m * nnz);
 
     for (int i = 0; i < m; i++) {
         for (int j = 0; j < nnz; j++) {
-            indices[i * nnz + j] = base_indices[i] * nnz + j;
             values[i * nnz + j] = j == 0 ? 1 : 0.5;
         }
     }
 
     P.ignore_extra = false;
-    MatInit(&P, m, nnz, indices.data(), values.data(), 0, MPI_COMM_WORLD);
+    MatInit(&P, m, nnz, indices.data(), values.data(), nullptr, MPI_COMM_WORLD);
 
     if (verbose)
         mat_print(&P, "P");
@@ -162,21 +120,19 @@ int test_TrMatVecProd(const int nnz = 3, bool verbose = false) {
     const int m = NS;
 
     // 4 pixels (2 extra)
-    std::array<int, m> base_indices = {
-        -2, -1, -2, 0,  -2, 1,  0,  0, 1, -1, -2, -2, 1,  -1, -1, 0,
-        -2, 0,  1,  -2, 0,  -2, -1, 0, 1, -2, -1, 1,  -1, 0,  -2, -2};
-    std::vector<int> indices(m * nnz);
+    std::vector<int> indices = {-2, -1, -2, 0,  -2, 1,  0,  0, 1,  -1, -2,
+                                -2, 1,  -1, -1, 0,  -2, 0,  1, -2, 0,  -2,
+                                -1, 0,  1,  -2, -1, 1,  -1, 0, -2, -2};
     std::vector<double> values(m * nnz);
 
     for (int i = 0; i < m; i++) {
         for (int j = 0; j < nnz; j++) {
-            indices[i * nnz + j] = base_indices[i] * nnz + j;
             values[i * nnz + j] = j == 0 ? 1 : 0.5;
         }
     }
 
     P.ignore_extra = false;
-    MatInit(&P, m, nnz, indices.data(), values.data(), 0, MPI_COMM_WORLD);
+    MatInit(&P, m, nnz, indices.data(), values.data(), nullptr, MPI_COMM_WORLD);
 
     if (verbose)
         mat_print(&P, "P");
