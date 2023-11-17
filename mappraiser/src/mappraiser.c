@@ -121,14 +121,10 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     MPI_Barrier(comm);
     t = MPI_Wtime();
 
-    nbr_extra_pixels = A.trash_pix * A.nnz;
-    nbr_valid_pixels = A.lcount - nbr_extra_pixels;
-
     if (rank == 0) {
         printf("Initialized pointing matrix in %lf s\n", t - st);
-        printf("[proc %d] sky pixels = %d", rank, A.lcount / A.nnz);
-        printf(" (%d valid + %d extra)\n", nbr_valid_pixels / A.nnz,
-               nbr_extra_pixels / A.nnz);
+        printf("[proc %d] sky pixels = %d", rank, A.lcount);
+        printf(" (%d valid + %d extra)\n", A.lcount - A.trash_pix, A.trash_pix);
         printf("[proc %d] local timestream gaps = %d\n", rank, Gaps.ngap);
         fflush(stdout);
     }

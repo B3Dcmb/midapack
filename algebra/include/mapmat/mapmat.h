@@ -37,8 +37,8 @@ typedef struct mat_t {
                        // local numbering
     double *values;    // non-zero values tab; size = m * nnz
     uint8_t *flags;    // array indicating flagged samples (0=valid, 1=flagged)
-    int *id_last_pix;  // index of the last sample pointing to each pixel
-    int *ll;           // linked list of time samples indexes linked by pixels
+    int *pix_to_last_samp; // index of the last sample pointing to each pixel
+    int *ll; // linked list of time samples indexes linked by pixels
     //--------local shaping---------------
     int lcount;    // number of local pixels (including extra)
     int *lindices; // local indices tab (monotony with global numbering)

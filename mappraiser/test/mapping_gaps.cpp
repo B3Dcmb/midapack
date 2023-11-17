@@ -118,7 +118,7 @@ int test_time_domain_mapping(bool verbose = false) {
 
     // free memory
     free(P.ll);
-    free(P.id_last_pix);
+    free(P.pix_to_last_samp);
     MatFree(&P);
     free(G.id0gap);
     free(G.lgap);

@@ -109,7 +109,6 @@ def stage_local(
                     (idet * nsamp + offset + view_samples) * nnz,
                     1,
                 )
-                #FIXME: just set the slice to zero when handling flags
                 if detdata_name is not None:
                     if nnz > 1:
                         mappraiser_buffer[slc] = np.repeat(
@@ -132,8 +131,10 @@ def stage_local(
                     else:
                         detflags = np.copy(flags)
                         detflags |= views.detdata[det_flags][ivw][det] & det_mask
-                    mappraiser_buffer[slc][detflags != 0] = 1
-                    mappraiser_buffer[slc][detflags == 0] = 0
+                    # FIXME: uncomment this when mappraiser handles flags accordingly
+                    # mappraiser_buffer[slc][detflags != 0] = 1
+                    # mappraiser_buffer[slc][detflags == 0] = 0
+                    mappraiser_buffer[slc][detflags != 0] = -1
         if do_purge:
             del ob.detdata[detdata_name]
         interval_offset += len(views)

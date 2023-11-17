@@ -46,25 +46,25 @@ void accumulate_sample(const Mat *A, int64_t t, int *lhits, double *vpixBlock,
     // number of non zero values
     int nnz = A->nnz;
 
-    // offset to remove when ignoring extra pixels
-    int off_extra = A->ignore_extra ? nnz * A->trash_pix : 0;
+    // number of extra pixels to ignore
+    int n_ignore = A->ignore_extra ? A->trash_pix : 0;
 
     // sample index with nnz multiplicity
     int64_t tnnz = t * nnz;
 
     // index of the pixel observed by this sample
-    int pix = A->indices[tnnz] - off_extra;
+    int pix = A->indices[t] - n_ignore;
 
     if (!(A->ignore_extra) || pix >= 0) {
         // increment hit count for the pixel
-        lhits[pix / nnz] += 1;
+        lhits[pix] += 1;
 
         // accumulate contributions in the preconditioner block
         for (int i = 0; i < nnz; i++) {
             for (int j = 0; j < nnz; j++) {
-                pix = A->indices[tnnz + i] - off_extra;
                 // coeff (i, j) of the nnz * nnz block
-                vpixBlock[nnz * pix + j] +=
+                int ij = nnz * (nnz * pix + i) + j;
+                vpixBlock[ij] +=
                     A->values[tnnz + i] * A->values[tnnz + j] * diagNm1;
             }
         }
@@ -1147,7 +1147,7 @@ void build_BJinv(Mat *A, Tpltz *Nm1, Mat *BJ_inv, double **cond, int **lhits,
         t = MPI_Wtime();
 
         // switch back to global indexation scheme
-        for (int i = 0; i < A->m * nnz; i++) {
+        for (int i = 0; i < A->m; i++) {
             // exclude degenerate pixels, which have index < 0
             // initially flagged samples also retrieve a negative index
             if (A->indices[i] >= 0) {
@@ -1167,7 +1167,7 @@ void build_BJinv(Mat *A, Tpltz *Nm1, Mat *BJ_inv, double **cond, int **lhits,
 
         // rebuild the pixel to time-domain mapping
         free(A->ll);
-        free(A->id_last_pix);
+        free(A->pix_to_last_samp);
         Gaps->ngap = build_pixel_to_time_domain_mapping(A);
 
         MPI_Barrier(A->comm);
@@ -1252,7 +1252,7 @@ void build_BJinv(Mat *A, Tpltz *Nm1, Mat *BJ_inv, double **cond, int **lhits,
     }
 
     // free memory
-    free(A->id_last_pix);
+    free(A->pix_to_last_samp);
     free(A->ll);
 
     // update map size
@@ -1309,6 +1309,8 @@ void build_precond(Precond **out_p, double **out_pixpond, Mat *A, Tpltz *Nm1,
     build_BJinv(A, Nm1, &(p->BJ_inv), cond, lhits, gs, Gaps, gif,
                 local_blocks_sizes);
 
+    p->n_valid = get_valid_map_size(A);
+
     if (A->ignore_extra) {
         // preconditioner not computed for the extra pixels
         p->n_extra = 0;
@@ -1317,7 +1319,6 @@ void build_precond(Precond **out_p, double **out_pixpond, Mat *A, Tpltz *Nm1,
         p->n_extra = A->nnz * A->trash_pix;
     }
 
-    p->n_valid = A->lcount - A->nnz * A->trash_pix;
     p->n = p->n_extra + p->n_valid;
 
     // Reallocate memory for well-conditioned map
@@ -1332,7 +1333,7 @@ void build_precond(Precond **out_p, double **out_pixpond, Mat *A, Tpltz *Nm1,
     // Compute pixel share ponderation
     get_pixshare_pond(A, p->pixpond);
 
-    // TODO : check that 2-lvl preconditioners still work
+    // FIXME: 2-lvl preconditioners probably broken
 #if 0 /* 2-lvl preconditioners */
     if (precond != 0) {
         p->Qg = calloc(p->n, sizeof(double));
@@ -1431,12 +1432,6 @@ void free_precond(Precond **in_out_p) {
     free(p->BJ_inv.indices);
     free(p->BJ_inv.values);
     MatFree(&(p->BJ_inv));
-
-#if 0
-    // free(p->BJ.indices); // Shared with p->BJ_inv.indices
-    free(p->BJ.values);
-    MatFree(&(p->BJ));
-#endif
 
     if (p->precond != 0) {
         for (i = 0; i < p->Zn; i++)

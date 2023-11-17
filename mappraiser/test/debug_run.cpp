@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
     int ortho_alg = 1;
     int bs_red = 0;
     int nside = 512;
-    int gap_stgy = 1;
+    int gap_stgy = 0;
     bool do_gap_filling = false;
     uint64_t realization = 0;
     int Nnz = 3;
@@ -164,21 +164,29 @@ int main(int argc, char *argv[]) {
 
     // pixels
 
-    std::vector<int> pix(nb_samp * Nnz);
+    std::vector<int> old_pix(nb_samp * Nnz);
     fname = data_path + "/pixels_" + std::to_string(rank) + ".bin";
-    fillArrayFromFile(fname.c_str(), pix.data(), pix.size(), sizeof(pix[0]));
+    fillArrayFromFile(fname.c_str(), old_pix.data(), old_pix.size(),
+                      sizeof(old_pix[0]));
+
+    std::vector<int> pix(nb_samp);
+    for (int i = 0; i < nb_samp; i++) {
+        pix[i] = old_pix[i * Nnz] / Nnz;
+    }
 
     if (single_pixel) {
         for (int i = 0; i < nb_samp; i++) {
-            int innz = i * Nnz;
-            for (int j = 0; j < Nnz; j++) {
-                // don't remove the gaps
-                if (pix[innz + j] >= 0) {
-                    pix[innz + j] = pix[j];
-                }
+            // don't remove the gaps
+            if (pix[i] >= 0) {
+                pix[i] = pix[0];
             }
         }
     }
+
+    // flags
+
+    std::vector<uint8_t> flags(nb_samp);
+    std::fill(flags.begin(), flags.end(), 0);
 
     //    MPI_Barrier(MPI_COMM_WORLD);
     //    if (rank == 0) std::cout << "  loaded pixels" << std::endl;
@@ -279,19 +287,13 @@ int main(int argc, char *argv[]) {
 
     MPI_Barrier(MPI_COMM_WORLD);
 
-#if 1
     MLmap(MPI_COMM_WORLD, outpath, ref, solver, precond, Z_2lvl, tol, maxiter,
-          enlFac, ortho_alg, bs_red, nside, gap_stgy, do_gap_filling, realization, data_size_proc.data(),
-          nb_blocks_loc, local_blocks_sizes.data(), sample_rate,
-          detindxs.data(), obsindxs.data(), telescopes.data(), Nnz, pix.data(),
-          pixweights.data(), signal.data(), noise.data(), lambda, inv_tt.data(),
-          tt.data());
-#else
-    gap_filling(MPI_COMM_WORLD, data_size_proc.data(), nb_blocks_loc,
-                local_blocks_sizes.data(), Nnz, tt.data(), inv_tt.data(),
-                lambda, noise.data(), pix.data(), realization, detindxs.data(),
-                obsindxs.data(), telescopes.data(), sample_rate);
-#endif
+          enlFac, ortho_alg, bs_red, nside, gap_stgy, do_gap_filling,
+          realization, data_size_proc.data(), nb_blocks_loc,
+          local_blocks_sizes.data(), sample_rate, detindxs.data(),
+          obsindxs.data(), telescopes.data(), Nnz, pix.data(),
+          pixweights.data(), flags.data(), signal.data(), noise.data(), lambda,
+          inv_tt.data(), tt.data());
 
     MPI_Finalize();
     return 0;

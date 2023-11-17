@@ -206,7 +206,7 @@ void greedyreduce(Mat *A, double *x) {
 
     // allocate buffer that will be reduced
     double *lvalues = NULL;
-    lvalues = malloc((sizeof *lvalues) * (A->lcount - A->nnz * A->trash_pix));
+    lvalues = malloc((sizeof *lvalues) * A->nnz * (A->lcount - A->trash_pix));
     if (lvalues == NULL) {
         int rank;
         MPI_Comm_rank(A->comm, &rank);
@@ -216,7 +216,7 @@ void greedyreduce(Mat *A, double *x) {
     }
 
     // copy local values into result values
-    memcpy(lvalues, x, (sizeof *x) * (A->lcount - A->nnz * A->trash_pix));
+    memcpy(lvalues, x, (sizeof *x) * A->nnz * (A->lcount - A->trash_pix));
 
     double *com_val = calloc(A->nnz * A->com_count, sizeof(double));
     double *out_val = calloc(A->nnz * A->com_count, sizeof(double));
@@ -253,15 +253,14 @@ void MatVecProd(Mat *A, const double *x, double *y) {
         y[j] = 0.0;
 
     // elements not present in input vector (potentially zero)
-    int extra = A->trash_pix * A->nnz;
-    int off_extra = A->ignore_extra ? extra : 0;
+    int n_ignore = A->ignore_extra ? A->trash_pix : 0;
 
+    int nnz = A->nnz;
     for (int j = 0; j < A->m; j++) {
-        int jnnz = j * A->nnz;
-        if (!(A->ignore_extra) || A->indices[jnnz] >= extra) {
-            for (int k = 0; k < A->nnz; k++) {
-                int map_index = A->indices[jnnz + k] - off_extra;
-                y[j] += A->values[jnnz + k] * x[map_index];
+        if (!(A->ignore_extra) || A->indices[j] >= A->trash_pix) {
+            for (int k = 0; k < nnz; k++) {
+                int map_index = nnz * (A->indices[j] - n_ignore) + k;
+                y[j] += A->values[nnz * j + k] * x[map_index];
             }
         }
     }
@@ -283,26 +282,27 @@ void MatVecProd(Mat *A, const double *x, double *y) {
     @ingroup matmap_group11 */
 void TrMatVecProd(Mat *A, const double *y, double *x) {
     // elements not present in output vector (potentially zero)
-    int extra = A->trash_pix * A->nnz;
-    int off_extra = A->ignore_extra ? extra : 0;
+    int n_ignore = A->ignore_extra ? A->trash_pix : 0;
 
+    int nnz = A->nnz;
     // refresh output vector
-    for (int i = 0; i < A->lcount - off_extra; i++) {
-        x[i] = 0.0;
+    for (int i = 0; i < A->lcount - n_ignore; i++) {
+        for (int k = 0; k < nnz; k++) {
+            x[nnz * i + k] = 0.0;
+        }
     }
 
     for (int j = 0; j < A->m; j++) {
-        int jnnz = j * A->nnz;
-        if (!(A->ignore_extra) || A->indices[jnnz] >= extra) {
+        if (!(A->ignore_extra) || A->indices[j] >= A->trash_pix) {
             for (int k = 0; k < A->nnz; k++) {
-                int map_index = A->indices[jnnz + k] - off_extra;
-                x[map_index] += A->values[jnnz + k] * y[j];
+                int map_index = nnz * (A->indices[j] - n_ignore) + k;
+                x[map_index] += A->values[nnz * j + k] * y[j];
             }
         }
     }
 
 #ifdef W_MPI
     // perform global reduce on valid pixels
-    greedyreduce(A, x + (A->ignore_extra ? 0 : extra));
+    greedyreduce(A, x + (A->ignore_extra ? 0 : nnz * A->trash_pix));
 #endif
 }

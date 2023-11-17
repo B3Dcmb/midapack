@@ -37,13 +37,13 @@ void print_gap_stgy(GapStrategy gs) {
 
 int get_actual_map_size(const Mat *A) {
     if (A->ignore_extra)
-        return A->lcount - A->trash_pix * A->nnz;
+        return A->nnz * (A->lcount - A->trash_pix);
     else
-        return A->lcount;
+        return A->nnz * A->lcount;
 }
 
 int get_valid_map_size(const Mat *A) {
-    return A->lcount - A->trash_pix * A->nnz;
+    return A->nnz * (A->lcount - A->trash_pix);
 }
 
 int create_extra_pix(int *indices, double *weights, int nnz, int nb_blocks_loc,
@@ -57,18 +57,12 @@ int create_extra_pix(int *indices, double *weights, int nnz, int nb_blocks_loc,
         for (int i = 0; i < nb_blocks_loc; ++i) {
             lsize = local_blocks_sizes[i];
             for (int j = offset; j < offset + lsize; j++) {
-                int jnnz = j * nnz;
-                if (indices[jnnz] < 0) {
+                if (indices[j] < 0) {
                     // set a negative index corresponding to local scan number
-                    // don't forget the nnz multiplicity of the indices
-                    for (int k = 0; k < nnz; ++k) {
-                        indices[jnnz + k] = -(i + 1) * nnz + k;
-                        // indices[jnnz + k] = -(nb_blocks_loc - i) * nnz + k;
-
-                        // make the extra pixels not polarized
-                        if (k > 0) {
-                            weights[jnnz + k] = 0.0;
-                        }
+                    indices[j] = -(i + 1);
+                    // make the extra pixels not polarized
+                    for (int k = 1; k < nnz; ++k) {
+                        weights[nnz * j + k] = 0.0;
                     }
                 }
             }
@@ -85,16 +79,12 @@ int create_extra_pix(int *indices, double *weights, int nnz, int nb_blocks_loc,
         for (int i = 0; i < nb_blocks_loc; ++i) {
             lsize = local_blocks_sizes[i];
             for (int j = offset; j < offset + lsize; j++) {
-                int jnnz = j * nnz;
-                if (indices[jnnz] < 0) {
-                    for (int k = 0; k < nnz; ++k) {
-                        // no dependence on the block index
-                        indices[jnnz + k] = -nnz + k;
-
-                        // make the extra pixels not polarized
-                        if (k > 0) {
-                            weights[jnnz + k] = 0.0;
-                        }
+                if (indices[j] < 0) {
+                    // no dependence on the block index
+                    indices[j] = -1;
+                    // make the extra pixels not polarized
+                    for (int k = 1; k < nnz; ++k) {
+                        weights[nnz * j + k] = 0.0;
                     }
                 }
             }
@@ -120,17 +110,16 @@ int create_extra_pix(int *indices, double *weights, int nnz, int nb_blocks_loc,
  */
 int build_pixel_to_time_domain_mapping(Mat *A) {
     int i, j;
-    int ipix;
     int ngap, lengap;
 
     // index of last sample pointing to each pixel
-    A->id_last_pix = malloc((sizeof *A->id_last_pix) * A->lcount / A->nnz);
+    A->pix_to_last_samp = malloc((sizeof *A->pix_to_last_samp) * A->lcount);
 
     // linked list of time samples indexes
     A->ll = malloc(sizeof *A->ll * A->m);
 
-    if (A->id_last_pix == NULL || A->ll == NULL) {
-        fputs("memory allocation of id_last_pix or ll failed", stderr);
+    if (A->pix_to_last_samp == NULL || A->ll == NULL) {
+        fputs("memory allocation of pix_to_last_samp or ll failed", stderr);
         exit(EXIT_FAILURE);
     }
 
@@ -138,8 +127,8 @@ int build_pixel_to_time_domain_mapping(Mat *A) {
     for (i = 0; i < A->m; i++) {
         A->ll[i] = -1;
     }
-    for (j = 0; j < A->lcount / A->nnz; j++) {
-        A->id_last_pix[j] = -1;
+    for (j = 0; j < A->lcount; j++) {
+        A->pix_to_last_samp[j] = -1;
     }
 
     // build the linked list chain of time samples corresponding to each pixel
@@ -147,13 +136,16 @@ int build_pixel_to_time_domain_mapping(Mat *A) {
     ngap = 0;
     lengap = 0;
     for (i = 0; i < A->m; i++) {
-        ipix = A->indices[i * A->nnz] / A->nnz;
-        if (A->id_last_pix[ipix] == -1) {
-            A->id_last_pix[ipix] = i;
-        } else {
-            A->ll[i] = A->id_last_pix[ipix];
-            A->id_last_pix[ipix] = i;
+        // current last_samp value for pixel observed by sample i
+        int *last_samp = &(A->pix_to_last_samp[A->indices[i]]);
+
+        // add value to the linked list of samples
+        if (*last_samp != -1) {
+            A->ll[i] = *last_samp;
         }
+
+        // update last_samp value
+        *last_samp = i;
 
         if (A->trash_pix == 0) {
             // skip the computation of ngap
@@ -161,7 +153,7 @@ int build_pixel_to_time_domain_mapping(Mat *A) {
         }
 
         // compute the number of gaps in the timestream
-        if (A->indices[i * A->nnz] >= A->trash_pix * A->nnz) {
+        if (A->indices[i] >= A->trash_pix) {
             // valid sample: reset gap length
             lengap = 0;
         } else {
@@ -219,7 +211,7 @@ void build_gap_struct(int64_t gif, Gap *gaps, Mat *A) {
 
         // initialize with the last sample pointing to each extra pixel
         for (int p = 0; p < A->trash_pix; p++) {
-            tab_j[p] = A->id_last_pix[p];
+            tab_j[p] = A->pix_to_last_samp[p];
         }
 
         // current index in the tab_j array
@@ -370,19 +362,15 @@ void reset_relevant_gaps(double *tod, Tpltz *tmat, Gap *gaps) {
 }
 
 void condition_extra_pix_zero(Mat *A) {
-    // number of extra pixels in the pointing matrix
-    int extra = A->trash_pix * A->nnz;
-    int nnz = A->nnz;
-
     // if no extra pixels, there is nothing to do
-    if (extra == 0)
+    if (A->trash_pix == 0)
         return;
 
     // set pointing weights for extra pixels to zero
-    for (int i = 0; i < A->m * nnz; i += nnz) {
-        if (A->indices[i] < extra) {
-            for (int j = 0; j < nnz; ++j) {
-                A->values[i + j] = 0;
+    for (int i = 0; i < A->m; i++) {
+        if (A->indices[i] < A->trash_pix) {
+            for (int j = 0; j < A->nnz; ++j) {
+                A->values[A->nnz * i + j] = 0;
             }
         }
     }
@@ -390,14 +378,11 @@ void condition_extra_pix_zero(Mat *A) {
 
 void point_pixel_to_trash(Mat *A, int ipix) {
     // last index of time sample pointing to pixel
-    int j = A->id_last_pix[ipix];
-    int nnz = A->nnz;
+    int j = A->pix_to_last_samp[ipix];
 
     while (j != -1) {
         // point sample to trash pixel
-        for (int k = 0; k < nnz; k++) {
-            A->indices[j * nnz + k] = k - nnz;
-        }
+        A->indices[j] = -1;
         j = A->ll[j];
     }
 }

@@ -205,7 +205,7 @@ double Opmmpreconditioner(Mat *A, Mat *BJ_inv, double *X, double *Y, int ncol) {
     int n;
     double *x, *Cg; // map domain vector
 
-    n = A->lcount - (A->nnz) * (A->trash_pix); // number of local pixels
+    n = A->nnz * (A->lcount - A->trash_pix); // number of local pixels
 
     Cg = (double *)malloc(n * sizeof(double));
 
@@ -231,8 +231,8 @@ double Opmmmatrix(Mat *A, Tpltz *Nm1, double *X, double *Y,
     double *_g;    // time domain vector
     double *x, *g; // map domain vector
 
-    m = A->m;                                  // number of local time samples
-    n = A->lcount - (A->nnz) * (A->trash_pix); // number of local pixels
+    m = A->m;                                // number of local time samples
+    n = A->nnz * (A->lcount - A->trash_pix); // number of local pixels
 
     _g = (double *)malloc(m * sizeof(double));
     g = (double *)malloc(n * sizeof(double));

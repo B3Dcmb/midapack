@@ -1187,18 +1187,13 @@ class Mappraiser(Operator):
                 interval_starts,
                 nnz,
                 1,
-                None,
-                None,
-                None,
-                None,
+                # FIXME: uncomment this when mappraiser handles flags accordingly
+                self.shared_flags,  # None,
+                self.shared_flag_mask,  # None,
+                self.det_flags,  # None,
+                self.det_flag_mask,  # None,
                 operator=self.pixel_pointing,
-                n_repeat=nnz,
             )
-
-            # Arrange pixel indices for MAPPRAISER
-            self._mappraiser_pixels *= nnz
-            for i in range(nnz):
-                self._mappraiser_pixels[i::nnz] += i
 
             (
                 self._mappraiser_pixweights_raw,
@@ -1238,34 +1233,42 @@ class Mappraiser(Operator):
 
         # Copy the flags
 
-        if not self._cached:
-            # We do not have the flags yet.
-            self._mappraiser_flags_raw, self._mappraiser_flags = stage_in_turns(
-                data,
-                nodecomm,
-                n_copy_groups,
-                nsamp,
-                self.view,
-                all_dets,
-                self.det_flags,
-                mappraiser.FLAG_TYPE,
-                interval_starts,
-                1,
-                1,
-                self.shared_flags,
-                self.shared_flag_mask,
-                self.det_flags,
-                self.det_flag_mask,
-            )
+        # Create buffer for invtt and tt
+        storage, _ = dtype_to_aligned(mappraiser.FLAG_TYPE)
+        self._mappraiser_flags_raw = storage.zeros(
+            nsamp * len(all_dets)
+        )
+        self._mappraiser_flags = self._mappraiser_flags_raw.array()
 
-            log_time_memory(
-                data,
-                timer=timer,
-                timer_msg="Copy flags",
-                prefix=self._logprefix,
-                mem_msg="After flags staging",
-                full_mem=self.mem_report,
-            )
+        # FIXME: uncomment this when mappraiser handles flags accordingly
+        # if not self._cached:
+        #     # We do not have the flags yet.
+        #     self._mappraiser_flags_raw, self._mappraiser_flags = stage_in_turns(
+        #         data,
+        #         nodecomm,
+        #         n_copy_groups,
+        #         nsamp,
+        #         self.view,
+        #         all_dets,
+        #         self.det_flags,
+        #         mappraiser.FLAG_TYPE,
+        #         interval_starts,
+        #         1,
+        #         1,
+        #         self.shared_flags,
+        #         self.shared_flag_mask,
+        #         self.det_flags,
+        #         self.det_flag_mask,
+        #     )
+        #
+        #     log_time_memory(
+        #         data,
+        #         timer=timer,
+        #         timer_msg="Copy flags",
+        #         prefix=self._logprefix,
+        #         mem_msg="After flags staging",
+        #         full_mem=self.mem_report,
+        #     )
 
         # The following is basically useless for Mappraiser.
 
