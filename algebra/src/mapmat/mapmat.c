@@ -68,7 +68,6 @@ void MatInit(Mat *A, int m, int nnz, int *indices, double *values,
 
     // compute lindices (local indexation)
     MatLocalShape(A, 3 /* counting sort */);
-    A->trash_pix = 0;
 
 #ifdef W_MPI
     // build communication scheme
@@ -153,6 +152,12 @@ void MatLocalShape(Mat *A, int sflag) {
 
     // re-index A->indices according to lindices
     sindex(A->lindices, A->lcount, A->indices, A->m);
+
+    // compute number of extra pixels
+    A->trash_pix = 0;
+    while (A->lindices[A->trash_pix] < 0) {
+        A->trash_pix++;
+    }
 }
 
 #if W_MPI
