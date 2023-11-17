@@ -55,7 +55,7 @@ void vec_print(std::vector<T> &v, const std::string &name = "") {
 }
 
 void Px(Mat *P, std::vector<double> &x, std::vector<double> &y) {
-    MatVecProd(P, x.data(), y.data(), 0);
+    MatVecProd(P, x.data(), y.data());
 }
 
 int test_MatVecProd(const int nnz = 3, bool verbose = false) {
@@ -92,7 +92,7 @@ int test_MatVecProd(const int nnz = 3, bool verbose = false) {
         }
     }
 
-    P.flag_ignore_extra = false;
+    P.ignore_extra = false;
     MatInit(&P, m, nnz, indices.data(), values.data(), 0, MPI_COMM_WORLD);
 
     if (verbose)
@@ -138,7 +138,7 @@ int test_MatVecProd(const int nnz = 3, bool verbose = false) {
 }
 
 void Ptx(Mat *P, std::vector<double> &y, std::vector<double> &x) {
-    TrMatVecProd(P, y.data(), x.data(), 0);
+    TrMatVecProd(P, y.data(), x.data());
 }
 
 int test_TrMatVecProd(const int nnz = 3, bool verbose = false) {
@@ -175,7 +175,7 @@ int test_TrMatVecProd(const int nnz = 3, bool verbose = false) {
         }
     }
 
-    P.flag_ignore_extra = false;
+    P.ignore_extra = false;
     MatInit(&P, m, nnz, indices.data(), values.data(), 0, MPI_COMM_WORLD);
 
     if (verbose)

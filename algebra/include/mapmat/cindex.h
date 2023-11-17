@@ -7,8 +7,6 @@
 
 int sindex(int *array1, int nb1, int *array2, int nb2);
 
-#if OPENMP
-int omp_pindex(int *array1, int nb1, int *array2, int nb2);
-#endif
+int dichotomy(int nT, const int *T, int e);
 
 #endif // MAPMAT_CINDEX_H

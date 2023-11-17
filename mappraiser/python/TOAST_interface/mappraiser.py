@@ -2,7 +2,6 @@ import os
 import re
 
 import numpy as np
-import toast.ops
 import traitlets
 from astropy import units as u
 
@@ -275,9 +274,6 @@ class Mappraiser(Operator):
     z_2lvl = Int(0, help="Size of 2lvl deflation space")
     ortho_alg = Int(1, help="Orthogonalization scheme for ECG (O->odir, 1->omin)")
 
-    # communication algorithm
-    ptcomm_flag = Int(6, help="Choose collective communication scheme")
-
     # gap treatment strategy
     # 0 -> Condition on gaps having zero signal
     # 1 -> Marginalize on gap contents using 1 extra pixel/scan/detector
@@ -511,7 +507,6 @@ class Mappraiser(Operator):
                 "solver": self.solver,
                 "precond": self.precond,
                 "Z_2lvl": self.z_2lvl,
-                "ptcomm_flag": self.ptcomm_flag,
                 "tol": np.double(self.tol),
                 "maxiter": self.maxiter,
                 "enlFac": self.enlFac,
@@ -558,8 +553,8 @@ class Mappraiser(Operator):
         # Log the libmappraiser parameters that were used.
         if data.comm.world_rank == 0:
             with open(
-                os.path.join(params["path_output"], "mappraiser_args_log.toml"),
-                "w",
+                    os.path.join(params["path_output"], "mappraiser_args_log.toml"),
+                    "w",
             ) as f:
                 toml.dump(params, f)
 
@@ -607,45 +602,16 @@ class Mappraiser(Operator):
         )
 
         # Compute the ML map
-        if not kwargs.get("test_gap_fill"):
-            if data.comm.world_rank == 0:
-                msg = "{} Computing the ML map".format(self._logprefix)
-                log.info(msg)
-            self._MLmap(
-                params,
-                data,
-                data_size_proc,
-                len(data.obs) * len(all_dets),
-                nnz,
-            )
-        else:
-            # merge signal and noise
-            self._mappraiser_signal += self._mappraiser_noise
-
-            # save a copy of the original TOD (since it will be modified by gap-filling procedure)
-            original_tod = np.copy(self._mappraiser_signal)
-
-            # identify the gaps (1 -> gap, 0 -> valid)
-            tgaps = np.zeros_like(self._mappraiser_pixels[::nnz], dtype=np.uint8)
-            tgaps[self._mappraiser_pixels[::nnz] < 0] = 1
-
-            # perform gap-filling
-            self._gap_filling(
-                params,
-                data,
-                data_size_proc,
-                len(data.obs) * len(all_dets),
-                nnz,
-            )
-
-            if data.comm.world_rank == 0:
-                # save results
-                np.savez_compressed(
-                    os.path.join(params["path_output"], f"data/gf_{params['ref']}"),
-                    tod=original_tod,
-                    gaps=tgaps,
-                    gf=self._mappraiser_signal,
-                )
+        if data.comm.world_rank == 0:
+            msg = "{} Computing the ML map".format(self._logprefix)
+            log.info(msg)
+        self._MLmap(
+            params,
+            data,
+            data_size_proc,
+            len(data.obs) * len(all_dets),
+            nnz,
+        )
 
         log.info_rank(
             f"{self._logprefix} Processed time data in",
@@ -846,16 +812,16 @@ class Mappraiser(Operator):
 
     @function_timer
     def _stage_data(
-        self,
-        params,
-        data,
-        all_dets,
-        nsamp,
-        nnz,
-        nnz_full,
-        nnz_stride,
-        interval_starts,
-        psd_freqs,
+            self,
+            params,
+            data,
+            all_dets,
+            nsamp,
+            nnz,
+            nnz_full,
+            nnz_stride,
+            interval_starts,
+            psd_freqs,
     ):
         """Create mappraiser-compatible buffers.
         Collect the data into Mappraiser buffers.  If we are purging TOAST data to save
@@ -1360,15 +1326,15 @@ class Mappraiser(Operator):
 
     @function_timer
     def _unstage_data(
-        self,
-        params,
-        data,
-        all_dets,
-        nsamp,
-        nnz,
-        nnz_full,
-        interval_starts,
-        signal_dtype,
+            self,
+            params,
+            data,
+            all_dets,
+            nsamp,
+            nnz,
+            nnz_full,
+            interval_starts,
+            signal_dtype,
     ):
         """
         Restore data to TOAST observations.
@@ -1549,25 +1515,6 @@ class Mappraiser(Operator):
         )
 
         return
-
-    @function_timer
-    def _gap_filling(self, params, data, data_size_proc, nb_blocks_loc, nnz):
-        """Perform gap-filling on the data (signal + noise)"""
-        mappraiser.gap_filling(
-            data.comm.comm_world,
-            data_size_proc,
-            nb_blocks_loc,
-            self._mappraiser_blocksizes,
-            params,
-            self._mappraiser_detindxs,
-            self._mappraiser_obsindxs,
-            self._mappraiser_telescopes,
-            nnz,
-            self._mappraiser_pixels,
-            self._mappraiser_signal,
-            self._mappraiser_invtt,
-            self._mappraiser_tt,
-        )
 
     def _requires(self):
         req = self.pixel_pointing.requires()

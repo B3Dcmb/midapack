@@ -20,16 +20,18 @@
     @author Pierre Cargemel
     @date April 2012*/
 
+#include "als.h"
+
 /** Compute cardinal(A)
     Perform a loop onto elements of a set, counting different elements.
     The array should be in ascending order with possible redundancy.
     @param n number of elemnets in A
     @param A set of indices
     @return number of elements in A*/
-int card(int *A, int nA) {
+__attribute__((unused)) int card(const int *A, int nA) {
     int i;
     int tmp = A[0];
-    int c   = 1;
+    int c = 1;
     for (i = 1; i < nA; i++) {
         if (A[i] != tmp) {
             c++;
@@ -39,7 +41,6 @@ int card(int *A, int nA) {
     return c;
 }
 
-
 /** Merge redundant elements.
     Fill a new array containing elements of A, merging redundant elements.
     The array A should be in ascending order with possible redundancy.
@@ -48,17 +49,16 @@ int card(int *A, int nA) {
     @param A set of indices
     @param B output array
     @return void*/
-void merge(int *A, int nA, int *B) {
-    int i = 0, j = 0;
+__attribute__((unused)) void merge(const int *A, int nA, int *B) {
+    int j = 0;
     B[0] = A[0];
-    for (i = 1; i < nA; i++) {
+    for (int i = 1; i < nA; i++) {
         if (A[i] != B[j]) {
             j++;
             B[j] = A[i];
         }
     }
 }
-
 
 /** Compute \f$ card(A_1 \cup A_2) \f$
     A1 and A2 should be two ascending ordered monotmony sets.
@@ -69,7 +69,8 @@ void merge(int *A, int nA, int *B) {
     @param A2 set of indices
     @return size of the union
     @ingroup matmap_group22*/
-int card_or(int *A1, int n1, int *A2, int n2) {
+__attribute__((unused)) int card_or(const int *A1, int n1, const int *A2,
+                                    int n2) {
     int i = 0, j = 0, k = 0;
     while (i < n1 || j < n2) {
         if (A1[i] < A2[j]) {
@@ -85,8 +86,12 @@ int card_or(int *A1, int n1, int *A2, int n2) {
                 i++;
             }
         } else {
-            if (i < n1) { i++; }
-            if (j < n2) { j++; }
+            if (i < n1) {
+                i++;
+            }
+            if (j < n2) {
+                j++;
+            }
         }
         k++;
     }
@@ -102,7 +107,8 @@ int card_or(int *A1, int n1, int *A2, int n2) {
     @param A2 set of indices
     @return size of the intersection
     @ingroup matmap_group22*/
-int card_and(int *A1, int n1, int *A2, int n2) {
+__attribute__((unused)) int card_and(const int *A1, int n1, const int *A2,
+                                     int n2) {
     int i = 0, j = 0, k = 0;
     while (i < n1 && j < n2) {
         if (A1[i] < A2[j]) {
@@ -129,7 +135,8 @@ int card_and(int *A1, int n1, int *A2, int n2) {
     @param address to the set A1orA2
     @return number of elements in A1orA2
     @ingroup matmap_group22*/
-int set_or(int *A1, int n1, int *A2, int n2, int *A1orA2) {
+__attribute__((unused)) int set_or(const int *A1, int n1, const int *A2, int n2,
+                                   int *A1orA2) {
     int i = 0, j = 0, k = 0;
     while (i < n1 || j < n2) {
         if (A1[i] < A2[j]) {
@@ -169,7 +176,8 @@ int set_or(int *A1, int n1, int *A2, int n2, int *A1orA2) {
     @param address to the set A1andA2
     @return number of elements in A1andA2
     @ingroup matmap_group22*/
-int set_and(int *A1, int n1, int *A2, int n2, int *A1andA2) {
+__attribute__((unused)) int set_and(const int *A1, int n1, const int *A2,
+                                    int n2, int *A1andA2) {
     int i = 0, j = 0, k = 0;
     while (i < n1 && j < n2) {
         if (A1[i] < A2[j]) {
@@ -193,7 +201,8 @@ int set_and(int *A1, int n1, int *A2, int n2, int *A1andA2) {
     @param A2 set of indices
     @param address to the set A1andA2
     @return number of elements in A1andA2*/
-int map_and(int *A1, int n1, int *A2, int n2, int *mapA1andA2) {
+__attribute__((unused)) int map_and(const int *A1, int n1, const int *A2,
+                                    int n2, int *mapA1andA2) {
     int i = 0, j = 0, k = 0;
     while (i < n1 && j < n2) {
         if (A1[i] < A2[j]) {
@@ -210,7 +219,6 @@ int map_and(int *A1, int n1, int *A2, int n2, int *mapA1andA2) {
     return k;
 }
 
-
 /** Transform a subset into a mapper array
     Parse a subset and replace element by his index in the larger set.
     A and subA should be two monotony sets in ascending ordered.
@@ -220,7 +228,8 @@ int map_and(int *A1, int n1, int *A2, int n2, int *mapA1andA2) {
     @param subA a subset of A(monotony)
     @param nsubA number of elemnets in A
     @return void*/
-void subset2map(int *A, int nA, int *subA, int nsubA) {
+__attribute__((unused)) void subset2map(const int *A, int nA, int *subA,
+                                        int nsubA) {
     int i = 0, j = 0;
     while (i < nA && j < nsubA) {
         if (A[i] < subA[j]) {

@@ -13,37 +13,22 @@
     @author Pierre Cargemel
     @date April 2012*/
 
-/** @brief <b>Set some map values into a submap values array </b>
-    @param mapval array of values
-    @param submapval  array of values
-    @return array of indices*/
-
 #ifndef MAPMAT_ALM_H
 #define MAPMAT_ALM_H
 
-void m2s(double *mapval, double *submapval, int *subset, int count);
+void m2s(const double *mapval, double *submapval, const int *subset, int count,
+         int mult);
 
-void s2m_sum(double *mapval, double *submapval, int *subset, int count);
+void s2m(double *mapval, const double *submapval, const int *subset, int count,
+         int mult);
 
-void s2m(double *mapval, double *submapval, int *subset, int count);
+__attribute__((unused)) int m2m(const double *vA1, const int *A1, int n1,
+                                double *vA2, const int *A2, int n2);
 
-void cnt_nnz_dot_prod(double *out, double *in, int cnt, int *ind, double *val,
-                      int nnz);
+__attribute__((unused)) int m2m_sum(const double *vA1, const int *A1, int n1,
+                                    double *vA2, const int *A2, int n2);
 
-void lmatvecprod(int *ind, double *val, int m, int nnz, double *in,
-                 double *out);
-
-#if OPENMP
-void omp_cnt_nnz_dot_prod(double *out, double *in, int cnt, int *ind,
-                          double *val, int nnz);
-void omp_lmatvecprod(int *ind, double *val, int m, int nnz, double *in,
-                     double *out);
-#endif
-
-int m2m(double *vA1, int *A1, int n1, double *vA2, int *A2, int n2);
-
-int m2m_sum(double *vA1, int *A1, int n1, double *vA2, int *A2, int n2);
-
-int m2m_sum_i(int *vA1, int *A1, int n1, int *vA2, int *A2, int n2);
+__attribute__((unused)) int m2m_sum_i(const int *vA1, const int *A1, int n1,
+                                      int *vA2, const int *A2, int n2);
 
 #endif // MAPMAT_ALM_H

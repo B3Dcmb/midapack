@@ -10,10 +10,11 @@ more details. You should have received a copy of the GNU General Public License
 along with this program; if not, see http://www.gnu.org/licenses/lgpl.html
 **/
 
-int is_pow_2(int n) { return ((n & -n) ^ n); }
+#include "bitop.h"
 
+__attribute__((unused)) int is_pow_2(int n) { return ((n & -n) ^ n); }
 
-int pow_2(int k) {
+__attribute__((unused)) int pow_2(int k) {
     int n = 1;
     while (k != 0) {
         n = n << 1;
@@ -22,8 +23,7 @@ int pow_2(int k) {
     return n;
 }
 
-
-int log_2(int n) {
+__attribute__((unused)) int log_2(int n) {
     int k = 0;
     while (n != 1 && k < 32) {
         n = n >> 1;

@@ -36,13 +36,13 @@ void x2map_pol(double *mapI, double *mapQ, double *mapU, double *Cond,
                const int *lhits, int xsize);
 
 void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
-           int Z_2lvl, int pointing_commflag, double tol, int maxiter,
-           int enlFac, int ortho_alg, int bs_red, int nside, int gap_stgy,
-           bool do_gap_filling, uint64_t realization, void *data_size_proc,
-           int nb_blocks_loc, void *local_blocks_sizes, double sample_rate,
-           uint64_t *detindxs, uint64_t *obsindxs, uint64_t *telescopes,
-           int Nnz, void *pix, void *pixweights, uint8_t *flags, void *signal,
-           double *noise, int lambda, double *inv_tt, double *tt) {
+           int Z_2lvl, double tol, int maxiter, int enlFac, int ortho_alg,
+           int bs_red, int nside, int gap_stgy, bool do_gap_filling,
+           uint64_t realization, void *data_size_proc, int nb_blocks_loc,
+           void *local_blocks_sizes, double sample_rate, uint64_t *detindxs,
+           uint64_t *obsindxs, uint64_t *telescopes, int Nnz, void *pix,
+           void *pixweights, uint8_t *flags, void *signal, double *noise,
+           int lambda, double *inv_tt, double *tt) {
     int64_t M;             // Global number of rows
     int m, Nb_t_Intervals; // local number of rows of the pointing matrix A, nbr
                            // of stationary intervals
@@ -97,7 +97,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     GapStrategy gs = gap_stgy;
 
     // Set flag to ignore extra pixels when not marginalizing
-    A.flag_ignore_extra = !(gs == MARG_LOCAL_SCAN || gs == MARG_PROC);
+    A.ignore_extra = !(gs == MARG_LOCAL_SCAN || gs == MARG_PROC);
 
     // Create extra pixels according to the chosen strategy
     create_extra_pix(pix, pixweights, Nnz, nb_blocks_loc, local_blocks_sizes,
@@ -115,7 +115,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     MPI_Barrier(comm);
     st = MPI_Wtime();
 
-    MatInit(&A, m, Nnz, pix, pixweights, pointing_commflag, comm);
+    MatInit(&A, m, Nnz, pix, pixweights, flags, comm);
     Gaps.ngap = build_pixel_to_time_domain_mapping(&A);
 
     MPI_Barrier(comm);

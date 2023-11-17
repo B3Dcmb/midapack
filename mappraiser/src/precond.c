@@ -8,6 +8,7 @@
  */
 
 #include "mappraiser/precond.h"
+#include "mapmat/alm.h"
 
 #include <assert.h>
 #include <math.h>
@@ -46,7 +47,7 @@ void accumulate_sample(const Mat *A, int64_t t, int *lhits, double *vpixBlock,
     int nnz = A->nnz;
 
     // offset to remove when ignoring extra pixels
-    int off_extra = A->flag_ignore_extra ? nnz * A->trash_pix : 0;
+    int off_extra = A->ignore_extra ? nnz * A->trash_pix : 0;
 
     // sample index with nnz multiplicity
     int64_t tnnz = t * nnz;
@@ -54,7 +55,7 @@ void accumulate_sample(const Mat *A, int64_t t, int *lhits, double *vpixBlock,
     // index of the pixel observed by this sample
     int pix = A->indices[tnnz] - off_extra;
 
-    if (!(A->flag_ignore_extra) || pix >= 0) {
+    if (!(A->ignore_extra) || pix >= 0) {
         // increment hit count for the pixel
         lhits[pix / nnz] += 1;
 
@@ -178,336 +179,6 @@ void getlocalW(const Mat *A, Tpltz *Nm1, double *vpixBlock, int *lhits) {
     free(nnew);
 }
 
-// do the local diag( At diag(Nm1) A ) with as output a vector in the pixel
-// domain This is an old deprecated routine
-int getlocDiagN(Mat *A, Tpltz Nm1, double *vpixDiag) {
-    // Define the indices for each process
-    int idv0,
-        idvn; // indice of the first and the last block of V for each processes
-    int *nnew;
-    nnew = (int *)calloc(Nm1.nb_blocks_loc, sizeof(int));
-    int64_t idpnew;
-    int local_V_size_new;
-    // get idv0 and idvn
-    get_overlapping_blocks_params(Nm1.nb_blocks_loc, Nm1.tpltzblocks,
-                                  Nm1.local_V_size, Nm1.nrow, Nm1.idp, &idpnew,
-                                  &local_V_size_new, nnew, &idv0, &idvn);
-    // double *vpixDiag;
-    // vpixDiag = (double *) malloc(A->lcount *sizeof(double));
-
-    int64_t istart, il, istartn;
-    for (int i = 0; i < A->lcount; i++)
-        vpixDiag[i] = 0.0; // 0.0;
-
-    int64_t vShft =
-        idpnew - Nm1.idp; //=Nm1.tpltzblocks[idv0].idv-Nm1.idp in principle
-    /*
-        printf("Nm1.idp=%d, idpnew=%d, vShft=%d\n", Nm1.idp, idpnew, vShft);
-        printf("idv0=%d, idvn=%d\n", idv0, idvn);
-        printf("Nm1.nb_blocks_loc=%d, Nm1.local_V_size=%d\n", Nm1.nb_blocks_loc,
-       Nm1.local_V_size);
-
-        for(i=0; i < Nm1.nb_blocks_loc; i++)
-        printf("Nm1.tpltzblocks[%d].idv=%d\n", i, Nm1.tpltzblocks[i].idv);
-    */
-
-    // go until the first piecewise stationary period
-    for (int i = 0; i < vShft; i++) {
-        for (int j = 0; j < (A->nnz); j++)
-            vpixDiag[A->indices[i * (A->nnz) + j]] +=
-                (A->values[i * (A->nnz) + j] * A->values[i * (A->nnz) + j]);
-    }
-
-    // temporary buffer for one diag value of Nm1
-    double diagNm1;
-    // loop on the blocks
-    for (int k = idv0; k < (idv0 + Nm1.nb_blocks_loc); k++) {
-        if (nnew[idv0] > 0) { // if nnew==0, this is a wrong defined block
-
-            if (k + 1 <
-                idv0 + Nm1.nb_blocks_loc) // if there is a next block, compute
-                                          // his next first indice
-                istartn = Nm1.tpltzblocks[k + 1].idv - Nm1.idp;
-            else
-                istartn = 0;
-
-            istart = max(0, Nm1.tpltzblocks[k].idv - Nm1.idp);
-
-            // if block cut from the left:
-            if (k == idv0)
-                il = min(Nm1.tpltzblocks[k].n, Nm1.tpltzblocks[k].idv +
-                                                   Nm1.tpltzblocks[k].n -
-                                                   Nm1.idp);
-            // if block cut from the right:
-            if (k == idv0 + Nm1.nb_blocks_loc - 1)
-                il = min(il,
-                         (Nm1.idp + Nm1.local_V_size) - Nm1.tpltzblocks[k].idv);
-            // if block alone in the middle, and cut from both sides
-            if (Nm1.nb_blocks_loc == 1)
-                il = min(il, Nm1.local_V_size);
-
-            // get the diagonal value of the Toeplitz
-            diagNm1 = Nm1.tpltzblocks[k].T_block[0];
-
-            /*
-            printf("istart=%d, il=%d, istartn=%d\n", istart, il, istartn);
-            printf("Nm1.tpltzblocks[k].idv=%d, Nm1.tpltzblocks[k].n=%d,
-            Nm1.idp=%d\n", Nm1.tpltzblocks[k].idv, Nm1.tpltzblocks[k].n,
-            Nm1.idp);
-            */
-            // a piecewise stationary period
-            for (int64_t i = istart; i < istart + il; i++) {
-                for (int j = 0; j < (A->nnz); j++)
-                    vpixDiag[A->indices[i * (A->nnz) + j]] +=
-                        (A->values[i * (A->nnz) + j] *
-                         A->values[i * (A->nnz) + j]) *
-                        diagNm1;
-            }
-
-            // continue until the next period if exist
-            for (int64_t i = istart + il; i < istartn; i++) {
-                for (int j = 0; j < (A->nnz); j++)
-                    vpixDiag[A->indices[i * (A->nnz) + j]] +=
-                        (A->values[i * (A->nnz) + j] *
-                         A->values[i * (A->nnz) + j]);
-            }
-        }
-    } // end of the loop over the blocks
-
-    return 0;
-}
-
-// communication scheme in the pixel domain for the vector vpixDiag
-// extract from a Madmap routine
-int commScheme(Mat *A, double *vpixDiag) {
-    int i, k;
-    int nSmax, nRmax, nStot, nRtot;
-    double *lvalues, *com_val, *out_val;
-
-    int nbr_values = A->lcount - (A->nnz) * (A->trash_pix);
-
-#if W_MPI
-    lvalues = (double *)malloc(
-        nbr_values * sizeof(double)); /*<allocate and set to 0.0 local values*/
-    memcpy(lvalues, vpixDiag,
-           nbr_values *
-               sizeof(double)); /*<copy local values into result values*/
-
-    nRmax = 0;
-    nSmax = 0;
-
-    if (A->flag == BUTTERFLY) { /*<branch butterfly*/
-        // memcpy(out_values, lvalues, (A->lcount) *sizeof(double)); /*<copy
-        // local values into result values*/
-        for (k = 0; k < A->steps; k++) /*compute max communication buffer size*/
-            if (A->nR[k] > nRmax)
-                nRmax = A->nR[k];
-        for (k = 0; k < A->steps; k++)
-            if (A->nS[k] > nSmax)
-                nSmax = A->nS[k];
-
-        com_val = (double *)malloc(A->com_count * sizeof(double));
-        for (i = 0; i < A->com_count; i++) {
-            com_val[i] = 0.0;
-        }
-        // already done    memcpy(vpixDiag, lvalues, (A->lcount)
-        // *sizeof(double)); /*<copy local values into result values*/
-        m2m(lvalues, A->lindices + (A->nnz) * (A->trash_pix), nbr_values,
-            com_val, A->com_indices, A->com_count);
-        butterfly_reduce(A->R, A->nR, nRmax, A->S, A->nS, nSmax, com_val,
-                         A->steps, A->comm);
-        m2m(com_val, A->com_indices, A->com_count, vpixDiag,
-            A->lindices + (A->nnz) * (A->trash_pix), nbr_values);
-        free(com_val);
-    } else if (A->flag == BUTTERFLY_BLOCKING_1) {
-        for (k = 0; k < A->steps; k++) // compute max communication buffer size
-            if (A->nR[k] > nRmax)
-                nRmax = A->nR[k];
-        for (k = 0; k < A->steps; k++)
-            if (A->nS[k] > nSmax)
-                nSmax = A->nS[k];
-        com_val = (double *)malloc(A->com_count * sizeof(double));
-        for (i = 0; i < A->com_count; i++)
-            com_val[i] = 0.0;
-        m2m(lvalues, A->lindices + (A->nnz) * (A->trash_pix), nbr_values,
-            com_val, A->com_indices, A->com_count);
-        butterfly_blocking_1instr_reduce(A->R, A->nR, nRmax, A->S, A->nS, nSmax,
-                                         com_val, A->steps, A->comm);
-        m2m(com_val, A->com_indices, A->com_count, vpixDiag,
-            A->lindices + (A->nnz) * (A->trash_pix), nbr_values);
-        free(com_val);
-    } else if (A->flag == BUTTERFLY_BLOCKING_2) {
-        for (k = 0; k < A->steps; k++) // compute max communication buffer size
-            if (A->nR[k] > nRmax)
-                nRmax = A->nR[k];
-        for (k = 0; k < A->steps; k++)
-            if (A->nS[k] > nSmax)
-                nSmax = A->nS[k];
-        com_val = (double *)malloc(A->com_count * sizeof(double));
-        for (i = 0; i < A->com_count; i++)
-            com_val[i] = 0.0;
-        m2m(lvalues, A->lindices + (A->nnz) * (A->trash_pix), nbr_values,
-            com_val, A->com_indices, A->com_count);
-        butterfly_blocking_1instr_reduce(A->R, A->nR, nRmax, A->S, A->nS, nSmax,
-                                         com_val, A->steps, A->comm);
-        m2m(com_val, A->com_indices, A->com_count, vpixDiag,
-            A->lindices + (A->nnz) * (A->trash_pix), nbr_values);
-        free(com_val);
-    } else if (A->flag == NOEMPTYSTEPRING) {
-        for (k = 1; k < A->steps; k++) // compute max communication buffer size
-            if (A->nR[k] > nRmax)
-                nRmax = A->nR[k];
-        nSmax = nRmax;
-        ring_noempty_step_reduce(A->R, A->nR, nRmax, A->S, A->nS, nSmax,
-                                 lvalues, vpixDiag, A->steps, A->comm);
-    } else if (A->flag == RING) {
-        // already done    memcpy(vpixDiag, lvalues, (A->lcount)
-        // *sizeof(double)); /*<copy local values into result values*/
-        for (k = 1; k < A->steps; k++) /*compute max communication buffer size*/
-            if (A->nR[k] > nRmax)
-                nRmax = A->nR[k];
-
-        nSmax = nRmax;
-        ring_reduce(A->R, A->nR, nRmax, A->S, A->nS, nSmax, lvalues, vpixDiag,
-                    A->steps, A->comm);
-    } else if (A->flag == NONBLOCKING) {
-        // already done    memcpy(vpixDiag, lvalues, (A->lcount)
-        // *sizeof(double)); /*<copy local values into result values*/
-        ring_nonblocking_reduce(A->R, A->nR, A->S, A->nS, lvalues, vpixDiag,
-                                A->steps, A->comm);
-    } else if (A->flag == NOEMPTY) {
-        // already done    memcpy(vpixDiag, lvalues, (A->lcount)
-        // *sizeof(double)); /*<copy local values into result values*/
-        int ne = 0;
-        for (k = 1; k < A->steps; k++)
-            if (A->nR[k] != 0)
-                ne++;
-
-        ring_noempty_reduce(A->R, A->nR, ne, A->S, A->nS, ne, lvalues, vpixDiag,
-                            A->steps, A->comm);
-    } else if (A->flag == ALLREDUCE) {
-        com_val = (double *)malloc(A->com_count * sizeof(double));
-        out_val = (double *)malloc(A->com_count * sizeof(double));
-        for (i = 0; i < A->com_count; i++) {
-            com_val[i] = 0.0;
-            out_val[i] = 0.0;
-        }
-        s2m(com_val, lvalues, A->com_indices, nbr_values);
-        /*for(i=0; i < A->com_count; i++){
-            printf("%lf ", com_val[i]);
-            } */
-        MPI_Allreduce(com_val, out_val, A->com_count, MPI_DOUBLE, MPI_SUM,
-                      A->comm); // maximum index
-        /*for(i=0; i < A->com_count; i++){
-            printf("%lf ", out_val[i]);
-            } */
-        m2s(out_val, vpixDiag, A->com_indices,
-            nbr_values); // sum receive buffer into values
-        free(com_val);
-        free(out_val);
-    } else if (A->flag == ALLTOALLV) {
-        nRtot = nStot = 0;
-        for (k = 0; k < A->steps; k++) { // compute buffer sizes
-            nRtot += A->nR[k];           // to receive
-            nStot += A->nS[k];           // to send
-        }
-        alltoallv_reduce(A->R, A->nR, nRtot, A->S, A->nS, nStot, lvalues,
-                         vpixDiag, A->steps, A->comm);
-    } else {
-        fprintf(
-            stderr,
-            "\n\n####### ERROR! : Incorrect communication scheme #######\n\n");
-        exit(1);
-    }
-#endif
-    free(lvalues);
-    return 0;
-}
-
-/** @brief Compute Diag(A' diag(Nm1) A). This an old deprecated routine
-        @param out_values local output array of doubles*/
-int DiagAtA(Mat *A, double *diag) {
-    int i, j, k;
-    int nSmax, nRmax;
-    double *lvalues;
-
-    lvalues = (double *)malloc(A->lcount * sizeof(double)); /*<allocate and set
-                                   to 0.0 local va lues*/
-    for (i = 0; i < A->lcount; i++)
-        lvalues[i] = 0.0;
-
-    // Naive computation with a full defined diag(Nm1):
-    for (i = 0; i < A->m; i++)
-        for (j = 0; j < A->nnz; j++) /*<dot products */
-            lvalues[A->indices[i * (A->nnz) + j]] +=
-                (A->values[i * (A->nnz) + j] *
-                 A->values[i * (A->nnz) + j]); //*vdiagNm1[i];
-
-#if W_MPI
-    nRmax = 0;
-    nSmax = 0;
-
-    if (A->flag == BUTTERFLY) { /*<branch butterfly*/
-        // memcpy(out_values, lvalues, (A->lcount) *sizeof(double)); /*<copy
-        // local values into result values*/
-        for (k = 0; k < A->steps; k++) /*compute max communication buffer size*/
-            if (A->nR[k] > nRmax)
-                nRmax = A->nR[k];
-        for (k = 0; k < A->steps; k++)
-            if (A->nS[k] > nSmax)
-                nSmax = A->nS[k];
-
-        double *com_val;
-        com_val = (double *)malloc(A->com_count * sizeof(double));
-        for (i = 0; i < A->com_count; i++) {
-            com_val[i] = 0.0;
-        }
-        memcpy(diag, lvalues,
-               (A->lcount) * sizeof(double)); /*<copy local values into result
-                                                 values*/
-        m2m(lvalues, A->lindices, A->lcount, com_val, A->com_indices,
-            A->com_count);
-        butterfly_reduce(A->R, A->nR, nRmax, A->S, A->nS, nSmax, com_val,
-                         A->steps, A->comm);
-        m2m(com_val, A->com_indices, A->com_count, diag, A->lindices,
-            A->lcount);
-        free(com_val);
-    } else if (A->flag == RING) {
-        memcpy(diag, lvalues,
-               (A->lcount) * sizeof(double)); /*<copy local values into result
-                                                 values*/
-        for (k = 1; k < A->steps; k++) /*compute max communication buffer size*/
-            if (A->nR[k] > nRmax)
-                nRmax = A->nR[k];
-
-        nSmax = nRmax;
-        ring_reduce(A->R, A->nR, nRmax, A->S, A->nS, nSmax, lvalues, diag,
-                    A->steps, A->comm);
-    } else if (A->flag == NONBLOCKING) {
-        memcpy(diag, lvalues,
-               (A->lcount) * sizeof(double)); /*<copy local values into result
-                                                 values*/
-        ring_nonblocking_reduce(A->R, A->nR, A->S, A->nS, lvalues, diag,
-                                A->steps, A->comm);
-    } else if (A->flag == NOEMPTY) {
-        memcpy(diag, lvalues,
-               (A->lcount) * sizeof(double)); /*<copy local values into result
-                                                 values*/
-        int ne = 0;
-        for (k = 1; k < A->steps; k++)
-            if (A->nR[k] != 0)
-                ne++;
-
-        ring_noempty_reduce(A->R, A->nR, ne, A->S, A->nS, ne, lvalues, diag,
-                            A->steps, A->comm);
-    } else {
-        return 1;
-    }
-#endif
-    free(lvalues);
-    return 0;
-}
-
 void get_pixshare_pond(Mat *A, double *pixpond) {
     // number of local pixels
     int n = get_actual_map_size(A);
@@ -519,7 +190,7 @@ void get_pixshare_pond(Mat *A, double *pixpond) {
 
     // communicate with the others processes to have the global reduce
     // only communicate shared pixels (i.e. valid)
-    commScheme(A, pixpond + n_extra);
+    greedyreduce(A, pixpond + n_extra);
 
     // compute the inverse vector
     for (int i = n_extra; i < n; i++)
@@ -642,7 +313,7 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, double *vpixBlock,
             hits_proc[q + i] = *(*lhits + (int)((q + dn) / nnz));
         }
     }
-    commScheme(A, hits_proc);
+    greedyreduce(A, hits_proc);
     for (int q = 0; q < nv; q += nnz) {
         *(*lhits + (int)((q + dn) / nnz)) = (int)hits_proc[q];
     }
@@ -656,7 +327,7 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, double *vpixBlock,
                 vpixBlock_loc[(i - q) / nnz + j] = vpixBlock[nnz * dn + i + j];
             }
         }
-        commScheme(A, vpixBlock_loc);
+        greedyreduce(A, vpixBlock_loc);
         for (int i = q; i < nv * nnz; i += nnz2) {
             for (int j = 0; j < nnz; j++) {
                 vpixBlock[nnz * dn + i + j] = vpixBlock_loc[(i - q) / nnz + j];
@@ -684,7 +355,7 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, double *vpixBlock,
     // > start from dn/nnz if map contains also extra pixels
 
     int nbr_degenerate = 0;
-    int off = A->flag_ignore_extra ? A->trash_pix : 0;
+    int off = A->ignore_extra ? A->trash_pix : 0;
 
     for (int ipix = dn / nnz; ipix < n / nnz; ipix++) {
         // pixel index with nnz*nnz multiplicity
@@ -841,59 +512,6 @@ int precond_bj_like_extra(Mat *A, Tpltz *Nm1, double *vpixBlock,
     free(x);
 
     return n_ill;
-}
-
-void precondjacobilike_avg(Mat A, Tpltz Nm1, double *c) {
-    int n = A.lcount; // number of local pixels
-    double diagNm1;
-
-    // Compute diag( AtA )
-    DiagAtA(&A, c);
-
-    // multiply by the diagonal Toeplitz
-    diagNm1 = Nm1.tpltzblocks[0].T_block[0];
-
-    printf("diagNm1 = %f \n", diagNm1);
-    for (int i = 0; i < n; i++)
-        c[i] = diagNm1 * c[i];
-
-    // compute c inverse vector
-    for (int i = 0; i < n; i++)
-        c[i] = 1. / c[i];
-}
-
-void precondjacobilike(Mat A, Tpltz Nm1, int *lhits, double *cond,
-                       double *vpixDiag) {
-    // number of local pixels
-    int n = A.lcount;
-
-    // Compute local diag( At diag(N^1) A )
-    getlocDiagN(&A, Nm1, vpixDiag);
-
-    // communicate with the other processes to have the global reduce
-    commScheme(&A, vpixDiag);
-
-    // compute the inverse vector
-    for (int i = 0; i < n; i++) {
-        if (i % 3 == 0) {
-            lhits[(int)i / 3] = (int)vpixDiag[i];
-            cond[(int)i / 3] = vpixDiag[i + 1] + vpixDiag[i + 2];
-        }
-        vpixDiag[i] = 1. / vpixDiag[i];
-    }
-}
-
-// low-level routine: to be moved somwhere else
-void transpose_nn(double *A, int n) {
-    int i, j;
-    double temp;
-
-    for (i = 0; i < n - 1; i++)
-        for (j = i + 1; j < n; j++) {
-            temp = A[i * n + j];
-            A[i * n + j] = A[j * n + i];
-            A[j * n + i] = temp;
-        }
 }
 
 void inverse_svd(int m, int n, int lda, double *a) {
@@ -1164,9 +782,9 @@ void build_AZ(Mat *A, Tpltz *Nm1, double **Z, int Zn, int n, double ***out_AZ) {
 
     for (i = 0; i < Zn; i++) {
         // AZ[i] = Pt N^{-1} P * Z[i]
-        MatVecProd(A, Z[i], v, 0);
+        MatVecProd(A, Z[i], v);
         stbmmProd(Nm1, v); // In-place
-        TrMatVecProd(A, v, AZ[i], 0);
+        TrMatVecProd(A, v, AZ[i]);
     }
 
     free(v);
@@ -1287,14 +905,14 @@ void Lanczos_eig(Mat *A, Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ,
     for (i = 0; i < n; ++i)
         w[i] = 0.0;
 
-    MatVecProd(A, x, _g, 0);
+    MatVecProd(A, x, _g);
 
     for (i = 0; i < m; i++)
         _g[i] = b[i] + noise[i] - _g[i];
 
     stbmmProd(Nm1, _g);
 
-    TrMatVecProd(A, _g, w, 0);
+    TrMatVecProd(A, _g, w);
 
     // beta = sqrt(dot(w, w))
     dot = 0.0;
@@ -1311,9 +929,9 @@ void Lanczos_eig(Mat *A, Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ,
     }
 
     // Av = A * v = Pt N P * v
-    MatVecProd(A, v, _g, 0);
+    MatVecProd(A, v, _g);
     stbmmProd(Nm1, _g);
-    TrMatVecProd(A, _g, Av, 0);
+    TrMatVecProd(A, _g, Av);
 
     memcpy(w, Av, n * sizeof(double));
 
@@ -1363,9 +981,9 @@ void Lanczos_eig(Mat *A, Tpltz *Nm1, const Mat *BJ_inv, const Mat *BJ,
         T[((i + 1) * (K + 1)) + i] = beta;
 
         // Av = A * v = Pt N P * v
-        MatVecProd(A, v, _g, 0);
+        MatVecProd(A, v, _g);
         stbmmProd(Nm1, _g);
-        TrMatVecProd(A, _g, Av, 0);
+        TrMatVecProd(A, _g, Av);
 
         memcpy(w, Av, n * sizeof(double));
 
@@ -1545,7 +1163,7 @@ void build_BJinv(Mat *A, Tpltz *Nm1, Mat *BJ_inv, double **cond, int **lhits,
                          local_blocks_sizes, gs);
 
         // define new pointing matrix
-        MatInit(A, A->m, nnz, A->indices, A->values, A->flag, MPI_COMM_WORLD);
+        MatInit(A, A->m, nnz, A->indices, A->values, A->flags, MPI_COMM_WORLD);
 
         // rebuild the pixel to time-domain mapping
         free(A->ll);
@@ -1592,7 +1210,7 @@ void build_BJinv(Mat *A, Tpltz *Nm1, Mat *BJ_inv, double **cond, int **lhits,
     fflush(stdout);
 #endif
     // now compute preconditioner blocks for the extra pixels
-    if (!(A->flag_ignore_extra)) {
+    if (!(A->ignore_extra)) {
         // we have to recompute vpixBlock_inv because more samples are
         // pointing to extra pixels
         // TODO : optimize so that valid blocks are not recomputed
@@ -1650,7 +1268,7 @@ void build_BJinv(Mat *A, Tpltz *Nm1, Mat *BJ_inv, double **cond, int **lhits,
     }
 
     // only include relevant indices in the Mat structs for preconditioners
-    int off_extra = A->flag_ignore_extra ? A->trash_pix * nnz : 0;
+    int off_extra = A->ignore_extra ? A->trash_pix * nnz : 0;
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < nnz; j++) {
             indices_new[i * nnz + j] =
@@ -1659,22 +1277,13 @@ void build_BJinv(Mat *A, Tpltz *Nm1, Mat *BJ_inv, double **cond, int **lhits,
     }
 
     // Init Block-Jacobi inv preconditioner
-    MatSetIndices(BJ_inv, n, nnz, indices_new);
+    MatSetIndices(BJ_inv, n, indices_new);
     MatSetValues(BJ_inv, n, nnz, vpixBlock_inv);
     MatLocalShape(BJ_inv, 3);
     BJ_inv->trash_pix = 0;
-    BJ_inv->flag_ignore_extra = false;
+    BJ_inv->ignore_extra = false;
 
-#if 0
-    // Init Block-Jacobi preconditioner
-    MatSetIndices(BJ, n, nnz, indices_new);
-    MatSetValues(BJ, n, nnz, vpixBlock);
-    BJ->trash_pix = A->trash_pix;
-    BJ->flag_ignore_extra = A->flag_ignore_extra;
-    MatLocalShape(BJ, 3);
-#else
     free(vpixBlock);
-#endif
 }
 
 // General routine for constructing a preconditioner
@@ -1700,7 +1309,7 @@ void build_precond(Precond **out_p, double **out_pixpond, Mat *A, Tpltz *Nm1,
     build_BJinv(A, Nm1, &(p->BJ_inv), cond, lhits, gs, Gaps, gif,
                 local_blocks_sizes);
 
-    if (A->flag_ignore_extra) {
+    if (A->ignore_extra) {
         // preconditioner not computed for the extra pixels
         p->n_extra = 0;
     } else {
@@ -1792,7 +1401,7 @@ void build_precond(Precond **out_p, double **out_pixpond, Mat *A, Tpltz *Nm1,
 void apply_precond(Precond *p, const Mat *A, double *g, double *Cg) {
     // BJ
     if (p->precond == 0) {
-        MatVecProd(&(p->BJ_inv), g, Cg, 0);
+        MatVecProd(&(p->BJ_inv), g, Cg);
     }
 
     // 2lvl
@@ -1805,7 +1414,7 @@ void apply_precond(Precond *p, const Mat *A, double *g, double *Cg) {
             p->AQg[i] = g[i] - p->AQg[i];
         }
 
-        MatVecProd(&(p->BJ_inv), p->AQg, Cg, 0);
+        MatVecProd(&(p->BJ_inv), p->AQg, Cg);
 
         for (int i = 0; i < p->n; ++i) {
             Cg[i] += p->Qg[i];

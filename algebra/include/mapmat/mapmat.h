@@ -14,14 +14,6 @@
 #ifndef MAPMAT_H
 #define MAPMAT_H
 
-#include "alm.h"
-#include "als.h"
-#include "bitop.h"
-#include "butterfly.h"
-#include "cindex.h"
-#include "csort.h"
-#include "ring.h"
-
 #ifdef W_MPI
 #include <mpi.h>
 #endif
@@ -30,98 +22,53 @@
 extern "C" {
 #endif
 
+#include <bits/stdint-uintn.h>
 #include <stdbool.h>
-
-#define NONE 0
-#define RING 1
-#define BUTTERFLY 2
-#define NONBLOCKING 3
-#define NOEMPTY 4
-#define ALLTOALLV 5
-#define ALLREDUCE 6
-//================Modification introduced by Sebastien Cayrols : 01/09/2015 ;
-// Berkeley
-#define BUTTERFLY_BLOCKING_1 7
-#define BUTTERFLY_BLOCKING_2 8
-#define NOEMPTYSTEPRING 9
-//================End modification
-#define SEQ 0
-#define OMP 1
-#define GPU 2
 
 /** @brief Matrix structure
     @n A* = (A0* | A1* | ... | Ap-1* )
     */
 typedef struct mat_t {
-    int flag;      // flag for communication scheme (NONE, RING, BUTTERFLY ...)
-    int m;         // number local rows
-    int nnz;       // number non-zero per rows
-    int trash_pix; // amount of extra pixels
-    bool flag_ignore_extra; // if true, do not include extra pixels in estimated
-                            // map
-    int *indices;     // column indices tab; size = m * nnz; can be a global or
-                      // local numbering
-    double *values;   // non-zero values tab; size = m * nnz
-    int *id_last_pix; // index of the last time sample pointing to each pixel
-                      // (no nnz repeat factor)
-    int *ll;          // linked list of time samples indexes linked by pixels
+    int m;             // number of local rows
+    int nnz;           // number of non-zero values per row
+    int trash_pix;     // number of extra pixels
+    bool ignore_extra; // if true, do not include extra pixels in estimated map
+    int *indices;      // column indices tab; size = m; can be a global or
+                       // local numbering
+    double *values;    // non-zero values tab; size = m * nnz
+    uint8_t *flags;    // array indicating flagged samples (0=valid, 1=flagged)
+    int *id_last_pix;  // index of the last sample pointing to each pixel
+    int *ll;           // linked list of time samples indexes linked by pixels
     //--------local shaping---------------
-    int lcount;
-    int *lindices; // local indices tab (monotony with global numbering); size =
-                   // lcount
+    int lcount;    // number of local pixels (including extra)
+    int *lindices; // local indices tab (monotony with global numbering)
 #ifdef W_MPI
-    MPI_Comm comm; // MPI communicator
-    //--------com shaping-----------------
+    MPI_Comm comm;               // MPI communicator
     int *com_indices, com_count; // communicated indices tab, and size
-    int steps;                   // number of steps in the communication scheme
-    int *nS, *nR; // number of indices (to send and to receive); size = steps
-    int **R, **S; // sending or receiving indices tab
 #endif
 } Mat;
 
-int MatInit(Mat *A, int m, int nnz, int *indices, double *values, int flag
+void MatInit(Mat *A, int m, int nnz, int *indices, double *values,
+             uint8_t *flags
 #ifdef W_MPI
-            ,
-            MPI_Comm comm
+             ,
+             MPI_Comm comm
 #endif
 );
-
-void MatSetIndices(Mat *A, int m, int nnz, int *indices);
-
+void MatSetIndices(Mat *A, int m, int *indices);
 void MatSetValues(Mat *A, int m, int nnz, double *values);
-
 void MatFree(Mat *A);
+void MatLocalShape(Mat *A, int sflag);
 
-int MatLocalShape(Mat *A, int sflag);
-
+// communication between processes
 #if W_MPI
-
-int MatComShape(Mat *A, int flag, MPI_Comm comm);
-
+void MatComShape(Mat *A, MPI_Comm comm);
+void greedyreduce(Mat *A, double *x);
 #endif
 
-int MatVecProd(Mat *A, double *x, double *y, int pflag);
-
-int TrMatVecProd(Mat *A, double *y, double *x, int pflag);
-
-#if W_MPI
-
-__attribute__((unused)) int TrMatVecProd_Naive(Mat *A, double *y, double *x,
-                                               int pflag);
-
-#endif
-
-__attribute__((unused)) int MatLoad(Mat *A, char *filename);
-
-__attribute__((unused)) int MatSave(Mat *A, char *filename);
-
-#if W_MPI
-
-__attribute__((unused)) int MatInfo(Mat *A, int master, char *filename);
-
-#endif
-
-int greedyreduce(Mat *A, double *x);
+// matrix-vector operations
+void MatVecProd(Mat *A, const double *x, double *y);
+void TrMatVecProd(Mat *A, const double *y, double *x);
 
 #ifdef __cplusplus
 }

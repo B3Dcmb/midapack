@@ -58,7 +58,7 @@ int build_rhs(Mat *A, Tpltz *Nm1, Tpltz *N, Gap *G, WeightStgy ws,
     apply_weights(Nm1, N, G, _t, ws, false);
 
     // multiply by A^t
-    TrMatVecProd(A, _t, rhs, 0);
+    TrMatVecProd(A, _t, rhs);
 
     free(_t);
     return 0;
@@ -77,9 +77,9 @@ int opmm(Mat *A, Tpltz *Nm1, Tpltz *N, Gap *G, WeightStgy ws, double *x,
         return 1;
     }
 
-    MatVecProd(A, x, _t, 0);
+    MatVecProd(A, x, _t);
     apply_weights(Nm1, N, G, _t, ws, false);
-    TrMatVecProd(A, _t, y, 0);
+    TrMatVecProd(A, _t, y);
 
     free(_t);
     return 0;

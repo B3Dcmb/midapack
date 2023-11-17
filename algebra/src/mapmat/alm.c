@@ -20,73 +20,33 @@
     @author Pierre Cargemel
     @date April 2012*/
 
+#include "alm.h"
+
 /** Set some map values into a submap values array
     @param mapval array of values
-    @param submapval  array of values
+    @param submapval array of values
     @return array of indices*/
-void m2s(double *mapval, double *submapval, int *subset, int count) {
-    int i;
-
-    // #pragma omp parallel for
-    for (i = 0; i < count; i++) { submapval[i] = mapval[subset[i]]; }
-}
-
-/** @brief Local mat vec prod
-    @param indm table of integers apval array of values
-    @param submapval  array of values
-    @return void*/
-void lmatvecprod(int *ind, double *val, int m, int nnz, double *in,
-                 double *out) {
-    int i, j, k;
-    k = 0;
-    for (i = 0; i < m; i++) { /*<local transform reduce*/
-        for (j = 0; j < nnz; j++) {
-            out[i] += val[k] * in[ind[k]];
-            k++;
+void m2s(const double *mapval, double *submapval, const int *subset, int count,
+         int mult) {
+    for (int i = 0; i < count; i++) {
+        for (int j = 0; j < mult; j++) {
+            submapval[mult * i + j] = mapval[mult * subset[i] + j];
         }
     }
-}
-
-/** @brief Sum  submap values the submap values array
-    @param mapval array of values
-    @param submapval  array of values
-    @return array of indices*/
-void s2m_sum(double *mapval, double *submapval, int *subset, int count) {
-    int i;
-    // #pragma omp parallel for
-    for (i = 0; i < count; i++) { mapval[subset[i]] += submapval[i]; }
 }
 
 /** @brief assign submap values the submap values array
     @param mapval array of values
     @param submapval  array of values
     @return array of indices*/
-void s2m(double *mapval, double *submapval, int *subset, int count) {
-    int i;
-    for (i = 0; i < count; i++) { mapval[subset[i]] = submapval[i]; }
+void s2m(double *mapval, const double *submapval, const int *subset, int count,
+         int mult) {
+    for (int i = 0; i < count; i++) {
+        for (int j = 0; j < mult; j++) {
+            mapval[mult * subset[i] + j] = submapval[mult * i + j];
+        }
+    }
 }
-
-/** @brief Sum  submap values the submap values array
-    @return void*/
-void cnt_nnz_dot_prod(double *out, double *in, int cnt, int *ind, double *val,
-                      int nnz) {
-    int i, j, k;
-    k = 0;
-    for (i = 0; i < cnt; i++) /*<local transform reduce*/
-        for (j = 0; j < nnz; j++) out[ind[k]] += val[k] * in[i];
-}
-
-#if OPENMP
-/** @brief Sum  submap values the submap values array
-    @return void */
-void omp_cnt_nnz_dot_prod(double *out, double *in, int cnt, int *ind,
-                          double *val, int nnz) {
-    int i, j, k;
-    k = 0;
-    for (i = 0; i < cnt; i++) /*<local transform reduce*/
-        for (j = 0; j < nnz; j++) out[ind[k]] += val[k] * in[i];
-}
-#endif
 
 /** Function m2m for "map to map"
     Extract values from one map (A1, vA1), and for each pixel shared with an
@@ -94,7 +54,8 @@ void omp_cnt_nnz_dot_prod(double *out, double *in, int cnt, int *ind,
     @return a number of elements shared between A1 and A2
     @sa m2m_sum
     @ingroup matmap_group22*/
-int m2m(double *vA1, int *A1, int n1, double *vA2, int *A2, int n2) {
+__attribute__((unused)) int m2m(const double *vA1, const int *A1, int n1,
+                                double *vA2, const int *A2, int n2) {
     int i = 0, j = 0, k = 0;
     while (i < n1 && j < n2) {
         if (A1[i] < A2[j]) {
@@ -117,7 +78,8 @@ int m2m(double *vA1, int *A1, int n1, double *vA2, int *A2, int n2) {
     @return a number of elements shared between A1 and A2
     @sa m2m
     @ingroup matmap_group22*/
-int m2m_sum(double *vA1, int *A1, int n1, double *vA2, int *A2, int n2) {
+__attribute__((unused)) int m2m_sum(const double *vA1, const int *A1, int n1,
+                                    double *vA2, const int *A2, int n2) {
     int i = 0, j = 0, k = 0;
     while (i < n1 && j < n2) {
         if (A1[i] < A2[j]) {
@@ -141,7 +103,8 @@ int m2m_sum(double *vA1, int *A1, int n1, double *vA2, int *A2, int n2) {
     @return a number of elements shared between A1 and A2
     @sa m2m
     @ingroup matmap_group22*/
-int m2m_sum_i(int *vA1, int *A1, int n1, int *vA2, int *A2, int n2) {
+__attribute__((unused)) int m2m_sum_i(const int *vA1, const int *A1, int n1,
+                                      int *vA2, const int *A2, int n2) {
     int i = 0, j = 0, k = 0;
     while (i < n1 && j < n2) {
         if (A1[i] < A2[j]) {

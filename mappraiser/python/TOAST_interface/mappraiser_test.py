@@ -211,7 +211,6 @@ class MappraiserTest(MPITestCase):
             "solver": 0,
             "precond": 0,
             "Z_2lvl": 0,
-            "ptcomm_flag": 6,
             "tol": 1e-6,
             "maxiter": 50,
             "enlFac": 1,

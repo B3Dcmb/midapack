@@ -16,20 +16,26 @@
 #ifndef MAPMAT_ALS_H
 #define MAPMAT_ALS_H
 
-int card(int *A, int nA);
+__attribute__((unused)) int card(const int *A, int nA);
 
-void merge(int *A, int nA, int *B);
+__attribute__((unused)) void merge(const int *A, int nA, int *B);
 
-int card_or(int *A1, int n1, int *A2, int n2);
+__attribute__((unused)) int card_or(const int *A1, int n1, const int *A2,
+                                    int n2);
 
-int card_and(int *A1, int n1, int *A2, int n2);
+__attribute__((unused)) int card_and(const int *A1, int n1, const int *A2,
+                                     int n2);
 
-int map_and(int *A1, int n1, int *A2, int n2, int *mapA1andA2);
+__attribute__((unused)) int map_and(const int *A1, int n1, const int *A2,
+                                    int n2, int *mapA1andA2);
 
-int set_or(int *A1, int n1, int *A2, int n2, int *A1orA2);
+__attribute__((unused)) int set_or(const int *A1, int n1, const int *A2, int n2,
+                                   int *A1orA2);
 
-int set_and(int *A1, int n1, int *A2, int n2, int *A1andA2);
+__attribute__((unused)) int set_and(const int *A1, int n1, const int *A2,
+                                    int n2, int *A1andA2);
 
-void subset2map(int *A, int nA, int *subA, int nsubA);
+__attribute__((unused)) void subset2map(const int *A, int nA, int *subA,
+                                        int nsubA);
 
 #endif // MAPMAT_ALS_H

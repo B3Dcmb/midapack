@@ -187,11 +187,11 @@ int get_rhs(Mat *A, Tpltz *Nm1, const double *b, const double *noise, double *x,
 
     _g = (double *)malloc(A->m * sizeof(double));
 
-    MatVecProd(A, x, _g, 0);
+    MatVecProd(A, x, _g);
     for (int i = 0; i < m; i++)
         _g[i] = b[i] + noise[i] - _g[i];
     stbmmProd(Nm1, _g);
-    TrMatVecProd(A, _g, rhs, 0);
+    TrMatVecProd(A, _g, rhs);
 
     return 0;
 }
@@ -212,7 +212,7 @@ double Opmmpreconditioner(Mat *A, Mat *BJ_inv, double *X, double *Y, int ncol) {
     for (i = 0; i < ncol; i++) {
         // get column vector x
         x = X + i * n;
-        MatVecProd(BJ_inv, x, Cg, 0);
+        MatVecProd(BJ_inv, x, Cg);
         for (j = 0; j < n; j++) {
             Y[i * n + j] = Cg[j];
         }
@@ -240,9 +240,9 @@ double Opmmmatrix(Mat *A, Tpltz *Nm1, double *X, double *Y,
     for (i = 0; i < ncol; i++) {
         // get column vector x
         x = X + i * n;
-        MatVecProd(A, x, _g, 0);
+        MatVecProd(A, x, _g);
         stbmmProd(Nm1, _g);
-        TrMatVecProd(A, _g, g, 0);
+        TrMatVecProd(A, _g, g);
         for (j = 0; j < n; j++) {
             Y[i * n + j] = g[j];
         }

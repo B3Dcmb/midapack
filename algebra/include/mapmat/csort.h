@@ -16,12 +16,8 @@
 
 int ssort(int *indices, int count, int flag);
 
-#if OPENMP
-int omp_psort(int *indices, int count, int flag);
-#endif
+__attribute__((unused)) int sorted(const int *indices, int count);
 
-int sorted(int *indices, int count);
-
-int monotony(int *indices, int count);
+__attribute__((unused)) int monotony(const int *indices, int count);
 
 #endif // MAPMAT_CSORT_H

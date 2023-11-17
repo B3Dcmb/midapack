@@ -16,19 +16,6 @@ target_compile_definitions(debug_run PRIVATE W_MPI)
 target_link_libraries(debug_run PRIVATE mappraiser MPI::MPI_CXX)
 
 # ____________________________________________________
-# Test executable for baseline computation performance
-
-add_executable(baseline baseline.cpp)
-
-target_include_directories(baseline PRIVATE
-        "../include"
-        "../include/mappraiser"
-)
-
-# libraries
-target_link_libraries(baseline PRIVATE mappraiser OpenMP::OpenMP_CXX)
-
-# ____________________________________________________
 # Test executable for mapmat testing
 
 add_executable(mapmat mapmat.cpp)

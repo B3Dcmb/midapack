@@ -18,11 +18,7 @@
     @author Pierre Cargemel
     @date   May 2012*/
 
-
-#include <stdlib.h>
-
-/* Prototype binary search function */
-int dichotomy(int nT, int *T, int e);
+#include "cindex.h"
 
 /** Sequential reindexing
     @param T monotony array
@@ -33,76 +29,22 @@ int dichotomy(int nT, int *T, int e);
     @ingroup matmap_group22*/
 int sindex(int *T, int nT, int *A, int nA) {
     int i, tmp;
-    i = 0;
     for (i = 0; i < nA; i++) {
-        tmp  = A[i];
+        tmp = A[i];
         A[i] = dichotomy(nT, T, tmp);
     }
     return 0;
 }
-
-
-#ifdef W_OPENMP
-#include <omp.h>
-/** Multithread (OpenMP) reindexing
-    @param T monotony array
-    @param nT number of index
-    @param A tab to reindex
-    @param nA inumber of element to reindex
-    @return array of indices
-    @ingroup matmap_group22*/
-int omp_pindex(int *T, int nT, int *A, int nA) {
-    //  printf("\nomp_pindex");
-    int  i;
-    int *count, *disp;
-    int  q, r;
-    int  tid, nths;
-
-#pragma omp parallel private(tid) shared(nths)
-    { //---fork---just to get the number of threads
-        nths = omp_get_num_threads();
-        tid  = omp_get_thread_num();
-        //    printf("\ntid %d nths %d", tid, nths);
-    } //---join---
-
-    q = nA / nths;
-    r = nA % nths;
-
-    count = (int *) malloc(nths * sizeof(int));
-    disp  = (int *) malloc(nths * sizeof(int));
-
-    for (i = 0; i < nths; i++) {
-        if (i < r) {
-            count[i] = q + 1;
-        } else {
-            count[i] = q;
-        }
-    }
-
-    disp[0] = 0;
-    for (i = 0; i < nths - 1; i++) { disp[i + 1] = disp[i] + count[i]; }
-
-#pragma omp parallel private(tid) shared(T, nT, A, disp, count)
-    { //---fork---1st step, sort on local chunk
-        tid = omp_get_thread_num();
-        sindex(T, nT, A + disp[tid], count[tid]);
-    } //---join---
-    free(count);
-    free(disp);
-    return 0;
-}
-#endif
-
 
 /** dichotmic search of an integer in a monotony array
     @param number elemnent array of values
     @param monotony array
     @param element to search
     @return index of searched element*/
-int dichotomy(int nT, int *T, int e) {
+int dichotomy(int nT, const int *T, int e) {
     int min, max, pivot;
-    min   = 0;
-    max   = nT - 1;
+    min = 0;
+    max = nT - 1;
     pivot = (max - min) / 2;
     while (e != T[pivot] && max > min) {
         if (T[pivot] < e) {

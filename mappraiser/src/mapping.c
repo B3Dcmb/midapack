@@ -36,7 +36,7 @@ void print_gap_stgy(GapStrategy gs) {
 }
 
 int get_actual_map_size(const Mat *A) {
-    if (A->flag_ignore_extra)
+    if (A->ignore_extra)
         return A->lcount - A->trash_pix * A->nnz;
     else
         return A->lcount;

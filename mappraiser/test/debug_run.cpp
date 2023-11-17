@@ -74,7 +74,6 @@ int main(int argc, char *argv[]) {
     int solver = 0;
     int precond = 0;
     int Z_2lvl = 0;
-    int pointing_commflag = 6;
     double tol = 1e-6;
     int maxiter = 100;
     int enlFac = 1;
@@ -281,9 +280,8 @@ int main(int argc, char *argv[]) {
     MPI_Barrier(MPI_COMM_WORLD);
 
 #if 1
-    MLmap(MPI_COMM_WORLD, outpath, ref, solver, precond, Z_2lvl,
-          pointing_commflag, tol, maxiter, enlFac, ortho_alg, bs_red, nside,
-          gap_stgy, do_gap_filling, realization, data_size_proc.data(),
+    MLmap(MPI_COMM_WORLD, outpath, ref, solver, precond, Z_2lvl, tol, maxiter,
+          enlFac, ortho_alg, bs_red, nside, gap_stgy, do_gap_filling, realization, data_size_proc.data(),
           nb_blocks_loc, local_blocks_sizes.data(), sample_rate,
           detindxs.data(), obsindxs.data(), telescopes.data(), Nnz, pix.data(),
           pixweights.data(), signal.data(), noise.data(), lambda, inv_tt.data(),
