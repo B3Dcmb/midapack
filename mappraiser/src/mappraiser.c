@@ -569,6 +569,8 @@ WeightStgy handle_gaps(Gap *Gaps, Mat *A, Tpltz *Nm1, Tpltz *N, GapStrategy gs,
 
     WeightStgy ws;
 
+    bool reset_signal_marg = false;
+
     switch (gs) {
 
     case COND:
@@ -611,7 +613,9 @@ WeightStgy handle_gaps(Gap *Gaps, Mat *A, Tpltz *Nm1, Tpltz *N, GapStrategy gs,
         }
 
         // set signal in all gaps to zero
-        reset_relevant_gaps(b, Nm1, Gaps);
+        if (reset_signal_marg) {
+            reset_relevant_gaps(b, Nm1, Gaps);
+        }
 
         // recombine signal and noise
         for (int i = 0; i < A->m; ++i) {
@@ -682,7 +686,9 @@ WeightStgy handle_gaps(Gap *Gaps, Mat *A, Tpltz *Nm1, Tpltz *N, GapStrategy gs,
         }
 
         // set signal in all gaps to zero
-        reset_relevant_gaps(b, Nm1, Gaps);
+        if (reset_signal_marg) {
+            reset_relevant_gaps(b, Nm1, Gaps);
+        }
 
         // recombine signal and noise
         for (int i = 0; i < A->m; ++i) {
