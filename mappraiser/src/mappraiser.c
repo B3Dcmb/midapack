@@ -569,7 +569,7 @@ WeightStgy handle_gaps(Gap *Gaps, Mat *A, Tpltz *Nm1, Tpltz *N, GapStrategy gs,
 
     WeightStgy ws;
 
-    bool reset_signal_marg = false;
+    bool reset_signal_in_gaps = false;
 
     switch (gs) {
 
@@ -582,7 +582,9 @@ WeightStgy handle_gaps(Gap *Gaps, Mat *A, Tpltz *Nm1, Tpltz *N, GapStrategy gs,
         }
 
         // set signal in all gaps to zero
-        reset_relevant_gaps(b, Nm1, Gaps);
+        if (reset_signal_in_gaps) {
+            reset_relevant_gaps(b, Nm1, Gaps);
+        }
 
         // this is not needed any more
         // condition_extra_pix_zero(A);
@@ -613,7 +615,7 @@ WeightStgy handle_gaps(Gap *Gaps, Mat *A, Tpltz *Nm1, Tpltz *N, GapStrategy gs,
         }
 
         // set signal in all gaps to zero
-        if (reset_signal_marg) {
+        if (reset_signal_in_gaps) {
             reset_relevant_gaps(b, Nm1, Gaps);
         }
 
@@ -658,7 +660,9 @@ WeightStgy handle_gaps(Gap *Gaps, Mat *A, Tpltz *Nm1, Tpltz *N, GapStrategy gs,
         }
 
         // set signal in all gaps to zero
-        reset_relevant_gaps(b, Nm1, Gaps);
+        if (reset_signal_in_gaps) {
+            reset_relevant_gaps(b, Nm1, Gaps);
+        }
 
         // recombine signal and noise
         for (int i = 0; i < A->m; ++i) {
@@ -686,7 +690,7 @@ WeightStgy handle_gaps(Gap *Gaps, Mat *A, Tpltz *Nm1, Tpltz *N, GapStrategy gs,
         }
 
         // set signal in all gaps to zero
-        if (reset_signal_marg) {
+        if (reset_signal_in_gaps) {
             reset_relevant_gaps(b, Nm1, Gaps);
         }
 
