@@ -48,6 +48,8 @@ int get_valid_map_size(const Mat *A) {
 
 int create_extra_pix(int *indices, double *weights, int nnz, int nb_blocks_loc,
                      const int *local_blocks_sizes, GapStrategy gs) {
+    bool extra_pixels_polarized = false;
+
     switch (gs) {
     case MARG_LOCAL_SCAN: {
         int offset = 0; // position in the data
@@ -65,9 +67,11 @@ int create_extra_pix(int *indices, double *weights, int nnz, int nb_blocks_loc,
                         indices[jnnz + k] = -(i + 1) * nnz + k;
                         // indices[jnnz + k] = -(nb_blocks_loc - i) * nnz + k;
 
-                        // make the extra pixels not polarized
-                        if (k > 0) {
-                            weights[jnnz + k] = 0.0;
+                        if (!extra_pixels_polarized) {
+                            // make the extra pixels not polarized
+                            if (k > 0) {
+                                weights[jnnz + k] = 0.0;
+                            }
                         }
                     }
                 }
@@ -91,9 +95,11 @@ int create_extra_pix(int *indices, double *weights, int nnz, int nb_blocks_loc,
                         // no dependence on the block index
                         indices[jnnz + k] = -nnz + k;
 
-                        // make the extra pixels not polarized
-                        if (k > 0) {
-                            weights[jnnz + k] = 0.0;
+                        if (!extra_pixels_polarized) {
+                            // make the extra pixels not polarized
+                            if (k > 0) {
+                                weights[jnnz + k] = 0.0;
+                            }
                         }
                     }
                 }
