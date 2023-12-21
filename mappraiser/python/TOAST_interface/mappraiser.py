@@ -263,7 +263,7 @@ class Mappraiser(Operator):
 
     # solver
     solver = Int(0, help="Choose mapmaking solver (0->PCG, 1->ECG)")
-    tol = Float(1e-6, help="Convergence threshold for the iterative solver")
+    tol = Float(1e-12, help="Convergence threshold for the iterative solver")
     maxiter = Int(3000, help="Maximum number of iterations allowed for the solver")
     enlFac = Int(1, help="Enlargement factor for ECG")
     bs_red = Int(0, help="Use dynamic search reduction")

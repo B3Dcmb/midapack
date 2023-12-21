@@ -569,7 +569,8 @@ WeightStgy handle_gaps(Gap *Gaps, Mat *A, Tpltz *Nm1, Tpltz *N, GapStrategy gs,
 
     WeightStgy ws;
 
-    bool reset_signal_in_gaps = false;
+    // When not doing gap-filling, set signal in the gaps to zero
+    bool reset_signal_in_gaps = !do_gap_filling;
 
     switch (gs) {
 
