@@ -118,7 +118,7 @@ class Mappraiser(Operator):
 
     API = Int(0, help="Internal interface version for this operator")
 
-    params = Dict(dict(), help="Parameters to pass to mappraiser")
+    params = Dict(default_value={}, help="Parameters to pass to mappraiser")
 
     paramfile = Unicode(
         None, allow_none=True, help="Read mappraiser parameters from this file"
@@ -136,11 +136,6 @@ class Mappraiser(Operator):
         "noise",
         allow_none=True,
         help="Observation detdata key for noise data (if None, triggers noiseless mode)",
-    )
-
-    noiseless = Bool(
-        False,
-        help="Activate noiseless mode"
     )
 
     det_flags = Unicode(
@@ -228,24 +223,62 @@ class Mappraiser(Operator):
         False, help="Print system memory use while staging/unstaging data"
     )
 
-    save_psd = Bool(False, help="Save noise PSD information during inv_tt computation.")
+    # Some traits for noise estimation
+
+    save_psd = Bool(False, help="Save noise PSD information during inv_tt computation")
 
     apod_window_type = Unicode(
-        "chebwin", help="Type of apodisation window to use during noise PSD estimation."
+        "chebwin", help="Type of apodisation window to use during noise PSD estimation"
+    )
+
+    nperseg = Int(
+        0,
+        help="If 0, set nperseg = timestream length to compute the noise periodograms. If > 0, nperseg = Lambda.",
     )
 
     bandwidth = Int(16384, help="Half-bandwidth for the noise model")
 
-    # additional parameters for the solver (C library)
+    # Some useful traits for debugging
+
+    noiseless = Bool(False, help="Activate noiseless mode")
+
+    fill_noise_zero = Bool(
+        False, help="Fill the noise vector with zeros just before calling Mappraiser"
+    )
+
+    downscale = Int(
+        1,
+        help="Scale down the noise by the sqrt of this number to artifically increase S/N ratio",
+    )
+
+    signal_fraction = Float(1.0, help="Fraction of the sky signal to keep")
+
+    limit_det = Int(
+        None,
+        allow_none=True,
+        help="Limit the number of local detectors to this number.",
+    )
+
+    # Additional parameters for the C library
+
+    # solver
     solver = Int(0, help="Choose mapmaking solver (0->PCG, 1->ECG)")
-    z_2lvl = Int(0, help="Size of 2lvl deflation space")
-    precond = Int(0, help="Choose preconditioner (0->BJ, 1->2lvl a priori, 2->2lvl a posteriori")
-    ortho_alg = Int(1, help="Orthogonalization scheme for ECG (O->odir, 1->omin)")
-    ptcomm_flag = Int(6, help="Choose collective communication scheme")
     tol = Float(1e-6, help="Convergence threshold for the iterative solver")
     maxiter = Int(3000, help="Maximum number of iterations allowed for the solver")
     enlFac = Int(1, help="Enlargement factor for ECG")
     bs_red = Int(0, help="Use dynamic search reduction")
+
+    # preconditioner
+    precond = Int(
+        0, help="Choose preconditioner (0->BJ, 1->2lvl a priori, 2->2lvl a posteriori"
+    )
+    z_2lvl = Int(0, help="Size of 2lvl deflation space")
+    ortho_alg = Int(1, help="Orthogonalization scheme for ECG (O->odir, 1->omin)")
+
+    # communication algorithm
+    ptcomm_flag = Int(6, help="Choose collective communication scheme")
+
+    realization = Int(0, help="Noise realization index (for gap filling)")
 
     @traitlets.validate("shared_flag_mask")
     def _check_shared_flag_mask(self, proposal):
@@ -477,13 +510,11 @@ class Mappraiser(Operator):
         #     params["write_tod"] = False
 
         # Check if noiseless mode is activated
-        if self.noiseless:
-            self.noise_name = None
-
-        # No noise: half bandwidth of noise model must be set to 1
-        if self.noise_name is None:
-            params["Lambda"] = 1
+        if self.noiseless or (self.noise_name is None):
             self.noiseless = True
+            self.noise_name = None
+            # diagonal noise covariance
+            params["Lambda"] = 1
 
         # Log the libmappraiser parameters that were used.
         if data.comm.world_rank == 0:
@@ -636,6 +667,11 @@ class Mappraiser(Operator):
         for ob in data.obs:
             # Get the detectors we are using for this observation
             dets = ob.select_local_detectors(detectors)
+
+            if self.limit_det is not None:
+                # cut all detectors but one
+                dets = set(list(dets)[: self.limit_det])
+
             all_dets.update(dets)
 
             # Check that the timestamps exist.
@@ -656,24 +692,25 @@ class Mappraiser(Operator):
 
             # Check that the noise model exists, and that the PSD frequencies are the
             # same across all observations (required by Mappraiser).
-            if self.noise_model not in ob:
-                msg = "Noise model '{}' not in observation '{}'".format(
-                    self.noise_model, ob.name
-                )
-                raise RuntimeError(msg)
-            if psd_freqs is None:
-                psd_freqs = np.array(
-                    ob[self.noise_model].freq(ob.local_detectors[0]).to_value(u.Hz),
-                    dtype=np.float64,
-                )
-            else:
-                check_freqs = (
-                    ob[self.noise_model].freq(ob.local_detectors[0]).to_value(u.Hz)
-                )
-                if not np.allclose(psd_freqs, check_freqs):
-                    raise RuntimeError(
-                        "All PSDs passed to Mappraiser must have the same frequency binning."
+            if not self.noiseless:
+                if self.noise_model not in ob:
+                    msg = "Noise model '{}' not in observation '{}'".format(
+                        self.noise_model, ob.name
                     )
+                    raise RuntimeError(msg)
+                if psd_freqs is None:
+                    psd_freqs = np.array(
+                        ob[self.noise_model].freq(ob.local_detectors[0]).to_value(u.Hz),
+                        dtype=np.float64,
+                    )
+                else:
+                    check_freqs = (
+                        ob[self.noise_model].freq(ob.local_detectors[0]).to_value(u.Hz)
+                    )
+                    if not np.allclose(psd_freqs, check_freqs):
+                        raise RuntimeError(
+                            "All PSDs passed to Mappraiser must have the same frequency binning."
+                        )
 
             # Are we using a view of the data?  If so, we will only be copying data in
             # those valid intervals.
@@ -921,6 +958,10 @@ class Mappraiser(Operator):
             data.comm.comm_world.allgather(len(self._mappraiser_signal)), dtype=np.int32
         )
 
+        # debug purposes
+        if self.signal_fraction < 1.0:
+            self._mappraiser_signal *= self.signal_fraction
+
         log_time_memory(
             data,
             timer=timer,
@@ -931,7 +972,8 @@ class Mappraiser(Operator):
         )
 
         # Copy the noise.
-        # For the moment, in the absence of a gap-filling procedure in MAPPRAISER, we separate signal and noise in the simulations
+        # For the moment, in the absence of a gap-filling procedure in MAPPRAISER,
+        # we separate signal and noise in the simulations
 
         # Check if the simulation contains any noise at all.
         if self.noiseless:
@@ -1007,14 +1049,18 @@ class Mappraiser(Operator):
                     do_purge=False,
                 )
             # Create buffer for invtt
-            tt_storage, _ = dtype_to_aligned(mappraiser.INVTT_TYPE)
-            self._mappraiser_invtt_raw = tt_storage.zeros(
+            storage, _ = dtype_to_aligned(mappraiser.INVTT_TYPE)
+            self._mappraiser_invtt_raw = storage.zeros(
                 len(data.obs) * len(all_dets) * params["Lambda"]
             )
             self._mappraiser_invtt = self._mappraiser_invtt_raw.array()
 
         # Compute invtt
         if not self.noiseless:
+            # Scale down the noise if we want
+            if self.downscale > 1:
+                self._mappraiser_noise /= np.sqrt(self.downscale)
+
             compute_invtt(
                 len(data.obs),
                 len(all_dets),
@@ -1029,8 +1075,14 @@ class Mappraiser(Operator):
                 save_psd=(self.save_psd and data.comm.world_rank == 0),
                 save_dir=os.path.join(params["path_output"], "psd"),
             )
+
+            if self.fill_noise_zero:
+                # just set the noise to zero
+                # that way we can make the mapmaker iterate but on signal-only data
+                self._mappraiser_noise[:] = 0.0
         else:
-            self._mappraiser_invtt[:] = 1.
+            self._mappraiser_noise[:] = 0.0
+            self._mappraiser_invtt[:] = 1.0
 
         log_time_memory(
             data,
