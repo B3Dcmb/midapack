@@ -33,7 +33,7 @@ WeightStgy handle_gaps(Gap *Gaps, Mat *A, Tpltz *Nm1, Tpltz *N, GapStrategy gs,
 
 void x2map_pol(double *mapI, double *mapQ, double *mapU, double *Cond,
                int *hits, const double *x, const int *lstid, const double *cond,
-               const int *lhits, int xsize);
+               const int *lhits, int xsize, int nnz);
 
 void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
            int Z_2lvl, int pointing_commflag, double tol, int maxiter,
@@ -357,7 +357,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
         memcpy(extra_map, x, extra * sizeof(double));
         if (rank == 0) {
             printf("extra map with %d pixels (T only)\n {", extra / Nnz);
-            for (int j = 0; j < extra; j += A.nnz) {
+            for (int j = 0; j < extra; j += Nnz) {
                 printf(" %e", extra_map[j]);
             }
             puts(" }");
@@ -405,15 +405,17 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
         int npix = 12 * nside * nside;
         int oldsize;
 
-        double *mapI;
-        mapI = (double *)calloc(npix, sizeof(double));
-        double *mapQ;
+        double *mapI = NULL;
+        if (Nnz == 3) {
+            mapI = (double *)calloc(npix, sizeof(double));
+        }
+        double *mapQ = NULL;
         mapQ = (double *)calloc(npix, sizeof(double));
-        double *mapU;
+        double *mapU = NULL;
         mapU = (double *)calloc(npix, sizeof(double));
-        int *hits;
+        int *hits = NULL;
         hits = (int *)calloc(npix, sizeof(int));
-        double *Cond;
+        double *Cond = NULL;
         Cond = (double *)calloc(npix, sizeof(double));
 
         for (i = 0; i < size; i++) {
@@ -447,7 +449,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
                 MPI_Recv(lhits, map_size / Nnz, MPI_INT, i, 4, comm, &status);
             }
             x2map_pol(mapI, mapQ, mapU, Cond, hits, x, lstid, cond, lhits,
-                      map_size);
+                      map_size, Nnz);
         }
         puts("Checking output directory... old files will be overwritten");
         char Imap_name[FILENAME_MAX];
@@ -459,19 +461,21 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
         char *cordsys = "C";
         int ret, w = 1;
 
-        sprintf(Imap_name, "%s/mapI_%s.fits", outpath, ref);
+        if (Nnz == 3) {
+            sprintf(Imap_name, "%s/mapI_%s.fits", outpath, ref);
+            if (access(Imap_name, F_OK) != -1) {
+                ret = remove(Imap_name);
+                if (ret != 0) {
+                    printf("Error: unable to delete the file %s\n", Imap_name);
+                    w = 0;
+                }
+            }
+        }
+
         sprintf(Qmap_name, "%s/mapQ_%s.fits", outpath, ref);
         sprintf(Umap_name, "%s/mapU_%s.fits", outpath, ref);
         sprintf(Condmap_name, "%s/Cond_%s.fits", outpath, ref);
         sprintf(Hitsmap_name, "%s/Hits_%s.fits", outpath, ref);
-
-        if (access(Imap_name, F_OK) != -1) {
-            ret = remove(Imap_name);
-            if (ret != 0) {
-                printf("Error: unable to delete the file %s\n", Imap_name);
-                w = 0;
-            }
-        }
 
         if (access(Qmap_name, F_OK) != -1) {
             ret = remove(Qmap_name);
@@ -507,7 +511,9 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
 
         if (w == 1) {
             printf("Writing HEALPix maps FITS files to %s...\n", outpath);
-            write_map(mapI, TDOUBLE, nside, Imap_name, nest, cordsys);
+            if (Nnz == 3) {
+                write_map(mapI, TDOUBLE, nside, Imap_name, nest, cordsys);
+            }
             write_map(mapQ, TDOUBLE, nside, Qmap_name, nest, cordsys);
             write_map(mapU, TDOUBLE, nside, Umap_name, nest, cordsys);
             write_map(Cond, TDOUBLE, nside, Condmap_name, nest, cordsys);
@@ -717,18 +723,30 @@ WeightStgy handle_gaps(Gap *Gaps, Mat *A, Tpltz *Nm1, Tpltz *N, GapStrategy gs,
     return ws;
 }
 
-// FIXME handle nnz != 3
 void x2map_pol(double *mapI, double *mapQ, double *mapU, double *Cond,
                int *hits, const double *x, const int *lstid, const double *cond,
-               const int *lhits, int xsize) {
+               const int *lhits, int xsize, int nnz) {
     for (int i = 0; i < xsize; i++) {
-        if (i % 3 == 0) {
-            mapI[(int)(lstid[i] / 3)] = x[i];
-            hits[(int)(lstid[i] / 3)] = lhits[(int)(i / 3)];
-            Cond[(int)(lstid[i] / 3)] = cond[(int)(i / 3)];
-        } else if (i % 3 == 1)
-            mapQ[(int)(lstid[i] / 3)] = x[i];
-        else
-            mapU[(int)(lstid[i] / 3)] = x[i];
+        if (nnz == 3) {
+            // I, Q and U maps
+            if (i % nnz == 0) {
+                mapI[(int)(lstid[i] / nnz)] = x[i];
+                hits[(int)(lstid[i] / nnz)] = lhits[(int)(i / nnz)];
+                Cond[(int)(lstid[i] / nnz)] = cond[(int)(i / nnz)];
+            } else if (i % nnz == 1) {
+                mapQ[(int)(lstid[i] / nnz)] = x[i];
+            } else {
+                mapU[(int)(lstid[i] / nnz)] = x[i];
+            }
+        } else {
+            // only Q and U maps are estimated
+            if (i % nnz == 0) {
+                mapQ[(int)(lstid[i] / nnz)] = x[i];
+                hits[(int)(lstid[i] / nnz)] = lhits[(int)(i / nnz)];
+                Cond[(int)(lstid[i] / nnz)] = cond[(int)(i / nnz)];
+            } else {
+                mapU[(int)(lstid[i] / nnz)] = x[i];
+            }
+        }
     }
 }

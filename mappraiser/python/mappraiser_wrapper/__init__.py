@@ -159,7 +159,7 @@ def MLmap(
         pixweights,
         signal,
         noise,
-        params["Lambda"],
+        params["lambda"],
         inv_tt,
         tt,
     )
@@ -219,7 +219,7 @@ def gap_filling(
         nnz,
         tt,
         inv_tt,
-        params["Lambda"],
+        params["lambda"],
         signal,
         pixels,
         params["realization"],
@@ -248,7 +248,7 @@ _mappraiser.psd_from_tt.argtypes = [
 
 def psd_from_tt(
         fftlen,
-        Lambda,
+        lambda_,
         psdlen,
         tt,
         psd,
@@ -258,7 +258,7 @@ def psd_from_tt(
 
     _mappraiser.psd_from_tt(
         fftlen,
-        Lambda,
+        lambda_,
         psdlen,
         tt,
         psd,
@@ -287,7 +287,7 @@ _mappraiser.sim_noise_tod.argtypes = [
 
 def sim_noise_tod(
         samples,
-        Lambda,
+        lambda_,
         tt,
         buf,
         realization,
@@ -301,7 +301,7 @@ def sim_noise_tod(
 
     _mappraiser.sim_noise_tod(
         samples,
-        Lambda,
+        lambda_,
         tt,
         buf,
         realization,
@@ -376,7 +376,7 @@ def sim_constrained_block(
         init,
         finalize,
         samples,
-        Lambda,
+        lambda_,
         w0,
         tt,
         inv_tt,
@@ -392,7 +392,7 @@ def sim_constrained_block(
         init,
         finalize,
         samples,
-        Lambda,
+        lambda_,
         w0,
         tt,
         inv_tt,

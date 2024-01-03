@@ -31,7 +31,6 @@ def log_time_memory(
         if data.comm.world_rank == 0:
             msg = "{} {}: {:0.1f} s".format(prefix, timer_msg, timer.seconds())
             log.debug(msg)
-            timer.clear()
 
     if mem_msg is not None:
         # Dump toast memory use
@@ -69,6 +68,9 @@ def stage_local(
         do_purge=False,
         operator=None,
         n_repeat=1,
+        pair_diff=False,
+        pair_skip=False,
+        select_qu=False,
 ):
     """Helper function to fill a mappraiser buffer from a local detdata key.
     (This function is taken from madam_utils.py)
@@ -80,63 +82,150 @@ def stage_local(
         # Flagging should only be enabled when we are processing the pixel indices
         # (which is how mappraiser effectively implements flagging).  So we will set
         # all flagged samples to "-1" below.
+    if pair_diff and pair_skip:
+        raise RuntimeError("pair_diff and pair_skip in stage_local are incompatible.")
 
     for ob in data.obs:
         views = ob.view[view]
-        for idet, det in enumerate(dets):
-            if det not in ob.local_detectors:
-                continue
-            if operator is not None:
-                # Synthesize data for staging
-                obs_data = data.select(obs_uid=ob.uid)
-                operator.apply(obs_data, detectors=[det])
-            # Loop over views
-            for ivw, vw in enumerate(views):
-                view_samples = None
-                if vw.start is None:
-                    # This is a view of the whole obs
-                    view_samples = ob.n_local_samples
-                else:
-                    view_samples = vw.stop - vw.start
-                offset = interval_starts[interval_offset + ivw]
-
-                flags = None
-                if do_flags:
-                    # Using flags
-                    flags = np.zeros(view_samples, dtype=np.uint8)
-                if shared_flags is not None:
-                    flags |= views.shared[shared_flags][ivw] & shared_mask
-
-                slc = slice(
-                    (idet * nsamp + offset) * nnz,
-                    (idet * nsamp + offset + view_samples) * nnz,
-                    1,
-                )
-                if detdata_name is not None:
-                    if nnz > 1:
-                        mappraiser_buffer[slc] = np.repeat(
-                            views.detdata[detdata_name][ivw][det].flatten()[::nnz_stride],
-                            n_repeat,
-                        )
+        if pair_diff or pair_skip:
+            for idet in range(0, len(dets) - 1, 2):
+                det_a = dets[idet]
+                det_b = dets[idet + 1]
+                det_0_local = det_a in ob.local_detectors
+                det_1_local = det_b in ob.local_detectors
+                if not (det_0_local and det_1_local):
+                    if det_0_local:
+                        msg = "det_b is not in local detectors\n"
                     else:
-                        mappraiser_buffer[slc] = np.repeat(
-                            views.detdata[detdata_name][ivw][det].flatten(),
-                            n_repeat,
-                        )
-                else:
-                    # Noiseless cases (noise_name=None).
-                    mappraiser_buffer[slc] = 0.0
-
-                detflags = None
-                if do_flags:
-                    if det_flags is None:
-                        detflags = flags
+                        msg = "det_a is not in local detectors\n"
+                    msg += f"ob = {ob}\n"
+                    msg += f"idet = {idet}\n"
+                    msg += f"det_a = {det_a}\n"
+                    msg += f"det_b = {det_b}"
+                    raise RuntimeError(msg)
+                if operator is not None:
+                    # Synthesize data for staging
+                    obs_data = data.select(obs_uid=ob.uid)
+                    operator.apply(obs_data, detectors=[det_a])
+                    operator.apply(obs_data, detectors=[det_b])
+                # Loop over views
+                for ivw, vw in enumerate(views):
+                    view_samples = None
+                    if vw.start is None:
+                        # This is a view of the whole obs
+                        view_samples = ob.n_local_samples
                     else:
-                        detflags = np.copy(flags)
-                        detflags |= views.detdata[det_flags][ivw][det] & det_mask
-                    # mappraiser's pixels buffer has nnz=3, not nnz=1
-                    repeated_flags = np.repeat(detflags, n_repeat)
-                    mappraiser_buffer[slc][repeated_flags != 0] = -1
+                        view_samples = vw.stop - vw.start
+                    offset = interval_starts[interval_offset + ivw]
+                    flags = None
+                    if do_flags:
+                        # Using flags
+                        flags = np.zeros(view_samples, dtype=np.uint8)
+                    if shared_flags is not None:
+                        flags |= views.shared[shared_flags][ivw] & shared_mask
+
+                    slc = slice(
+                        ((idet // 2) * nsamp + offset) * nnz,
+                        ((idet // 2) * nsamp + offset + view_samples) * nnz,
+                        1,
+                    )
+                    if detdata_name is not None:
+                        if nnz > 1:
+                            if select_qu:
+                                mappraiser_buffer[slc] = np.repeat(
+                                    views.detdata[detdata_name][ivw][det_a][..., 1:].flatten()[::nnz_stride],
+                                    n_repeat,
+                                )
+                            else:
+                                mappraiser_buffer[slc] = np.repeat(
+                                    views.detdata[detdata_name][ivw][det_a].flatten()[::nnz_stride],
+                                    n_repeat,
+                                )
+                            if pair_diff:
+                                # We are staging signal or noise
+                                # Take the half difference
+                                mappraiser_buffer[slc] = 0.5 * (mappraiser_buffer[slc] - np.repeat(
+                                    views.detdata[detdata_name][ivw][det_b].flatten()[::nnz_stride],
+                                    n_repeat,
+                                ))
+                        else:
+                            mappraiser_buffer[slc] = np.repeat(
+                                views.detdata[detdata_name][ivw][det_a].flatten(),
+                                n_repeat,
+                            )
+                            if pair_diff:
+                                mappraiser_buffer[slc] = 0.5 * (mappraiser_buffer[slc] - np.repeat(
+                                    views.detdata[detdata_name][ivw][det_b].flatten(),
+                                    n_repeat,
+                                ))
+                    else:
+                        # Noiseless cases (noise_name=None).
+                        mappraiser_buffer[slc] = 0.0
+
+                    if do_flags:
+                        if det_flags is None:
+                            detflags = flags
+                        else:
+                            detflags = np.copy(flags)
+                            detflags |= views.detdata[det_flags][ivw][det_a] & det_mask
+                            detflags |= views.detdata[det_flags][ivw][det_b] & det_mask
+                        # mappraiser's pixels buffer has nnz=3, not nnz=1
+                        repeated_flags = np.repeat(detflags, n_repeat)
+                        mappraiser_buffer[slc][repeated_flags != 0] = -1
+        else:
+            for idet, det in enumerate(dets):
+                if det not in ob.local_detectors:
+                    continue
+                if operator is not None:
+                    # Synthesize data for staging
+                    obs_data = data.select(obs_uid=ob.uid)
+                    operator.apply(obs_data, detectors=[det])
+                # Loop over views
+                for ivw, vw in enumerate(views):
+                    view_samples = None
+                    if vw.start is None:
+                        # This is a view of the whole obs
+                        view_samples = ob.n_local_samples
+                    else:
+                        view_samples = vw.stop - vw.start
+                    offset = interval_starts[interval_offset + ivw]
+
+                    flags = None
+                    if do_flags:
+                        # Using flags
+                        flags = np.zeros(view_samples, dtype=np.uint8)
+                    if shared_flags is not None:
+                        flags |= views.shared[shared_flags][ivw] & shared_mask
+
+                    slc = slice(
+                        (idet * nsamp + offset) * nnz,
+                        (idet * nsamp + offset + view_samples) * nnz,
+                        1,
+                    )
+                    if detdata_name is not None:
+                        if nnz > 1:
+                            mappraiser_buffer[slc] = np.repeat(
+                                views.detdata[detdata_name][ivw][det].flatten()[::nnz_stride],
+                                n_repeat,
+                            )
+                        else:
+                            mappraiser_buffer[slc] = np.repeat(
+                                views.detdata[detdata_name][ivw][det].flatten(),
+                                n_repeat,
+                            )
+                    else:
+                        # Noiseless cases (noise_name=None).
+                        mappraiser_buffer[slc] = 0.0
+
+                    if do_flags:
+                        if det_flags is None:
+                            detflags = flags
+                        else:
+                            detflags = np.copy(flags)
+                            detflags |= views.detdata[det_flags][ivw][det] & det_mask
+                        # mappraiser's pixels buffer has nnz=3, not nnz=1
+                        repeated_flags = np.repeat(detflags, n_repeat)
+                        mappraiser_buffer[slc][repeated_flags != 0] = -1
         if do_purge:
             del ob.detdata[detdata_name]
         interval_offset += len(views)
@@ -161,6 +250,9 @@ def stage_in_turns(
         det_mask,
         operator=None,
         n_repeat=1,
+        pair_diff=False,
+        pair_skip=False,
+        select_qu=False,
 ):
     """When purging data, take turns staging it.
     (This function is taken from madam_utils.py)
@@ -171,7 +263,10 @@ def stage_in_turns(
         if nodecomm.rank % n_copy_groups == copying:
             # Our turn to copy data
             storage, _ = dtype_to_aligned(mappraiser_dtype)
-            raw = storage.zeros(nsamp * len(dets) * nnz)
+            if pair_diff:
+                raw = storage.zeros(nsamp * (len(dets) // 2) * nnz)
+            else:
+                raw = storage.zeros(nsamp * len(dets) * nnz)
             wrapped = raw.array()
             stage_local(
                 data,
@@ -190,6 +285,9 @@ def stage_in_turns(
                 do_purge=True,
                 operator=operator,
                 n_repeat=n_repeat,
+                pair_diff=pair_diff,
+                pair_skip=pair_skip,
+                select_qu=select_qu,
             )
         nodecomm.barrier()
     return raw, wrapped
@@ -304,7 +402,7 @@ def compute_autocorrelations(
         ndet,
         mappraiser_noise,
         local_block_sizes,
-        lambd,
+        lambda_,
         fsamp,
         buffer_inv_tt,
         buffer_tt,
@@ -321,14 +419,14 @@ def compute_autocorrelations(
             blocksize = local_block_sizes[idet * nobs + iobs]
             nsetod = mappraiser_noise[offset: offset + blocksize]
             slc = slice(
-                (idet * nobs + iobs) * lambd,
-                (idet * nobs + iobs) * lambd + lambd,
+                (idet * nobs + iobs) * lambda_,
+                (idet * nobs + iobs) * lambda_ + lambda_,
                 1,
             )
             buffer_inv_tt[slc], _ = noise_autocorrelation(
                 nsetod,
                 blocksize,
-                lambd,
+                lambda_,
                 fsamp,
                 idet,
                 invtt_dtype,
@@ -337,7 +435,7 @@ def compute_autocorrelations(
                 save_psd=(save_psd and (idet == 0) and (iobs == 0)),
                 save_dir=save_dir,
             )
-            buffer_tt[slc] = compute_autocorr(1 / compute_psd_eff(buffer_inv_tt[slc], blocksize), lambd)
+            buffer_tt[slc] = compute_autocorr(1 / compute_psd_eff(buffer_inv_tt[slc], blocksize), lambda_)
             offset += blocksize
     return
 
@@ -361,7 +459,7 @@ def inverselogpsd_model(f, a, alpha, fknee, fmin):
 def noise_autocorrelation(
         nsetod,
         nn,
-        lambd,
+        lambda_,
         fsamp,
         idet,
         invtt_dtype,
@@ -424,14 +522,14 @@ def noise_autocorrelation(
 
     # Define apodization window
     # Only allow max lambda = nn//2
-    if lambd > nn // 2:
+    if lambda_ > nn // 2:
         raise RuntimeError("Bandwidth cannot be larger than timestream.")
 
-    window = apo_window(lambd, kind=apod_window_type)
+    window = apo_window(lambda_, kind=apod_window_type)
 
     # Apply window
-    inv_tt_w = np.multiply(window, inv_tt[:lambd], dtype=invtt_dtype)
-    tt_w = np.multiply(window, tt[:lambd], dtype=invtt_dtype)
+    inv_tt_w = np.multiply(window, inv_tt[:lambda_], dtype=invtt_dtype)
+    tt_w = np.multiply(window, tt[:lambda_], dtype=invtt_dtype)
 
     # Keep the same norm
     #
@@ -463,8 +561,8 @@ def noise_autocorrelation(
         # save effective PSDs
         ipsd_eff = compute_psd_eff(inv_tt_w, nn)
         psd_eff = compute_psd_eff(tt_w, nn)
-        np.save(os.path.join(save_dir, "ipsd_eff" + str(lambd) + ".npy"), ipsd_eff)
-        np.save(os.path.join(save_dir, "psd_eff" + str(lambd) + ".npy"), psd_eff)
+        np.save(os.path.join(save_dir, "ipsd_eff" + str(lambda_) + ".npy"), ipsd_eff)
+        np.save(os.path.join(save_dir, "psd_eff" + str(lambda_) + ".npy"), psd_eff)
 
     return inv_tt_w, tt_w
 
