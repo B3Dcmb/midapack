@@ -566,7 +566,7 @@ class Mappraiser(Operator):
 
         # Pair-differencing checks
         if not self.pair_diff:
-            self.estimate_spin_zero = False
+            self.estimate_spin_zero = True
 
         # Log the libmappraiser parameters that were used.
         if data.comm.world_rank == 0:
@@ -826,16 +826,20 @@ class Mappraiser(Operator):
         nnz_full = len(self.stokes_weights.mode)
         nnz_stride = None  # N.B: not used, useful for temperature-only maps
 
+        # Check that Stokes weights operator has mode "iqu"
         if nnz_full != 3:
             msg = "Mappraiser assumes that I,Q,U weights are provided\n"
             msg += f"'mode' trait of stokes_weights operator has length {nnz_full} != 3"
             raise RuntimeError(msg)
-        else:
-            if not self.pair_diff or self.estimate_spin_zero:
+
+        if self.pair_diff:
+            if self.estimate_spin_zero:
                 nnz = nnz_full
             else:
                 nnz = nnz_full - 1
-            nnz_stride = 1
+        else:
+            nnz = nnz_full
+        nnz_stride = 1
 
         if data.comm.world_rank == 0 and "path_output" in params:
             os.makedirs(params["path_output"], exist_ok=True)
@@ -1060,7 +1064,7 @@ class Mappraiser(Operator):
             for idet, key in enumerate(nse.all_keys_for_dets(dets)):
                 if self.pair_diff and (idet % 2 == 0):
                     continue
-                data_block_indx = idet * nobs + iobs
+                data_block_indx = (idet // 2) * nobs + iobs
                 self._mappraiser_detindxs[data_block_indx] = nse.index(key)
                 self._mappraiser_obsindxs[data_block_indx] = sindx
                 self._mappraiser_telescopes[data_block_indx] = telescope

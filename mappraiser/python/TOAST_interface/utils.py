@@ -106,8 +106,7 @@ def stage_local(
                 if operator is not None:
                     # Synthesize data for staging
                     obs_data = data.select(obs_uid=ob.uid)
-                    operator.apply(obs_data, detectors=[det_a])
-                    operator.apply(obs_data, detectors=[det_b])
+                    operator.apply(obs_data, detectors=[det_a, det_b])
                 # Loop over views
                 for ivw, vw in enumerate(views):
                     view_samples = None
