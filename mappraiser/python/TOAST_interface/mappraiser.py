@@ -601,7 +601,7 @@ class Mappraiser(Operator):
             msg = "{} Copying toast data to buffers".format(self._logprefix)
             log.info(msg)
 
-        signal_dtype, data_size_proc = self._stage_data(
+        signal_dtype, data_size_proc, nblock_loc = self._stage_data(
             params,
             data,
             all_dets,
@@ -628,7 +628,7 @@ class Mappraiser(Operator):
                 params,
                 data,
                 data_size_proc,
-                len(data.obs) * len(all_dets),
+                nblock_loc,
                 nnz,
             )
         else:
@@ -647,7 +647,7 @@ class Mappraiser(Operator):
                 params,
                 data,
                 data_size_proc,
-                len(data.obs) * len(all_dets),
+                nblock_loc,
                 nnz,
             )
 
@@ -962,6 +962,9 @@ class Mappraiser(Operator):
         # Number of observations
         nobs = len(data.obs)
 
+        # Number of local blocks
+        nblock_loc = ndet * nobs
+
         # Copy the signal.  We always need to do this, even if we are running MCs.
 
         signal_dtype = data.obs[0].detdata[self.det_data].dtype
@@ -1035,14 +1038,14 @@ class Mappraiser(Operator):
 
         # Create buffer for local_block_sizes
         storage, _ = dtype_to_aligned(mappraiser.PIXEL_TYPE)
-        self._mappraiser_blocksizes_raw = storage.zeros(nobs * ndet)
+        self._mappraiser_blocksizes_raw = storage.zeros(nblock_loc)
         self._mappraiser_blocksizes = self._mappraiser_blocksizes_raw.array()
 
         # Create buffers for detindx, obindx, telescope
         storage, _ = dtype_to_aligned(np.uint64)
-        self._mappraiser_detindxs_raw = storage.zeros(nobs * ndet)
-        self._mappraiser_obsindxs_raw = storage.zeros(nobs * ndet)
-        self._mappraiser_telescopes_raw = storage.zeros(nobs * ndet)
+        self._mappraiser_detindxs_raw = storage.zeros(nblock_loc)
+        self._mappraiser_obsindxs_raw = storage.zeros(nblock_loc)
+        self._mappraiser_telescopes_raw = storage.zeros(nblock_loc)
         self._mappraiser_detindxs = self._mappraiser_detindxs_raw.array()
         self._mappraiser_obsindxs = self._mappraiser_obsindxs_raw.array()
         self._mappraiser_telescopes = self._mappraiser_telescopes_raw.array()
@@ -1169,8 +1172,8 @@ class Mappraiser(Operator):
                 )
             # Create buffer for invtt and tt
             storage, _ = dtype_to_aligned(mappraiser.INVTT_TYPE)
-            self._mappraiser_invtt_raw = storage.zeros(nobs * ndet * params["lambda"])
-            self._mappraiser_tt_raw = storage.zeros(nobs * ndet * params["lambda"])
+            self._mappraiser_invtt_raw = storage.zeros(nblock_loc * params["lambda"])
+            self._mappraiser_tt_raw = storage.zeros(nblock_loc * params["lambda"])
             self._mappraiser_invtt = self._mappraiser_invtt_raw.array()
             self._mappraiser_tt = self._mappraiser_tt_raw.array()
 
@@ -1343,6 +1346,7 @@ class Mappraiser(Operator):
         return (
             signal_dtype,
             data_size_proc,
+            nblock_loc,
         )
 
     @function_timer
@@ -1501,15 +1505,11 @@ class Mappraiser(Operator):
         # -> call mappraiser in normal mode
         # -> if self.mcmode: self._cached=True
 
-        if self.pair_diff:
-            nnz_final = nnz - 1
-            nb_blocks_loc_final = int(nb_blocks_loc / 2)
-
         mappraiser.MLmap(
             data.comm.comm_world,
             params,
             data_size_proc,
-            nb_blocks_loc_final,
+            nb_blocks_loc,
             self._mappraiser_blocksizes,
             self._mappraiser_detindxs,
             self._mappraiser_obsindxs,
