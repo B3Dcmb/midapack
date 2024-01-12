@@ -51,7 +51,7 @@ import pixell.fft
 
 pixell.fft.engine = "fftw"
 
-from TOAST_interface import mappraiser, MySimNoise
+from TOAST_interface import mappraiser, MySimNoise, MyGainScrambler
 
 
 def parse_config(operators, templates, comm):
@@ -917,7 +917,7 @@ def main():
         ),
         toast.ops.SaveHDF5(name="save_hdf5", enabled=False),
         so_ops.SaveBooks(name="save_books", enabled=False),
-        toast.ops.GainScrambler(name="gainscrambler", enabled=False),
+        # toast.ops.GainScrambler(name="gainscrambler", enabled=False),
         # toast.ops.SimNoise(name="sim_noise"),
         so_ops.SimReadout(name="sim_readout", enabled=False),
         toast.ops.PixelsHealpix(name="pixels_healpix_radec"),
@@ -968,6 +968,7 @@ def main():
 
     operators.append(mappraiser.Mappraiser(name="mappraiser"))
     operators.append(MySimNoise(name="sim_noise"))
+    operators.append(MyGainScrambler(name="gainscrambler", enabled=False))
 
     # Templates we want to configure from the command line or a parameter file.
     templates = [toast.templates.Offset(name="baselines")]
