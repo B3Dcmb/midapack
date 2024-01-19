@@ -78,17 +78,17 @@ void mappraiser::GapFillRecap::receive(MPI_Comm comm, int src) {
 }
 
 void mappraiser::GapFillRecap::print(std::ostream &out) const {
-    out << "number of blocks = " << n_blocks << std::endl
-        << "  -> iter/block = " << mean_iterations << std::endl
-        << "            min = " << min_iter << " (block " << min_iter_idx << ")"
-        << std::endl
-        << "            max = " << max_iter << " (block " << max_iter_idx << ")"
-        << std::endl
-        << "  -> time/block = " << mean_time << " s" << std::endl
+    out << "number of blocks = " << n_blocks << "\n"
+        << "  -> iter/block = " << mean_iterations << "\n"
+        << "            min = " << min_iter << " (block " << min_iter_idx
+        << ")\n"
+        << "            max = " << max_iter << " (block " << max_iter_idx
+        << ")\n"
+        << "  -> time/block = " << mean_time << " s\n"
         << "            min = " << min_time << " s (block " << min_time_idx
-        << ")" << std::endl
+        << ")\n"
         << "            max = " << max_time << " s (block " << max_time_idx
-        << ")" << std::endl;
+        << ")\n";
 }
 
 std::ostream &mappraiser::operator<<(std::ostream &out,
@@ -128,8 +128,7 @@ void mappraiser::GapFillInfo::print_curr_block() const {
     std::cout << "iterations = " << nb_iterations[current_block];
     std::cout << " (" << pcg_times[current_block] / nb_iterations[current_block]
               << " s / iter); ";
-    std::cout << "valid fraction = " << valid_fracs[current_block] << " %"
-              << std::endl;
+    std::cout << "valid fraction = " << valid_fracs[current_block] << " %\n";
 }
 
 // ____________________________________________________________
@@ -270,28 +269,34 @@ void remove_baseline(int samples, double *buf, double *baseline,
     }
 }
 
-/*
- * template<typename T>
- * void printVector(const std::vector<T> &vec) {
- *     for (const auto &element: vec) { std::cout << +element << ", "; }
- *     std::cout << std::endl;
- * }
- *
- * template<typename T>
- * void printVector(const std::vector<T> &vec, size_t n_to_print, size_t offset
- * = 0) { if (offset + n_to_print > vec.size()) { offset     = 0; n_to_print =
- * vec.size();
- *     }
- *     for (size_t i = offset; i < offset + n_to_print; ++i) { std::cout <<
- * +vec[i] << ", "; } std::cout << std::endl;
- * }
- *
- * template<typename T>
- * void printCArray(const T *array, size_t size) {
- *     for (size_t i = 0; i < size; ++i) { std::cout << +array[i] << ", "; }
- *     std::cout << std::endl;
- * }
- */
+#if 0
+template <typename T> void printVector(const std::vector<T> &vec) {
+    for (const auto &element : vec) {
+        std::cout << +element << ", ";
+    }
+    std::cout << "\n";
+}
+
+template <typename T>
+void printVector(const std::vector<T> &vec, size_t n_to_print,
+                 size_t offset = 0) {
+    if (offset + n_to_print > vec.size()) {
+        offset = 0;
+        n_to_print = vec.size();
+    }
+    for (size_t i = offset; i < offset + n_to_print; ++i) {
+        std::cout << vec[i] << ", ";
+    }
+    std::cout << "\n";
+}
+
+template <typename T> void printCArray(const T *array, size_t size) {
+    for (size_t i = 0; i < size; ++i) {
+        std::cout << +array[i] << ", ";
+    }
+    std::cout << "\n";
+}
+#endif
 
 void sim_noise_tod(int samples, int lambda, const double *tt, double *buf,
                    uint64_t realization, uint64_t detindx, uint64_t obsindx,
@@ -409,18 +414,23 @@ void mappraiser::sim_constrained_noise_block(
     gfi.store_valid_frac(std::ceil(100 * n_good / samples));
 
     // remove baseline (moving average)
-    // mappraiser::system_stopwatch baseline_watch;
+#if 0
+    mappraiser::system_stopwatch baseline_watch;
+#endif
     std::vector<double> baseline(samples);
     if (w0 < 0)
         w0 = lambda / 2;
     remove_baseline(samples, rhs.data(), baseline.data(), valid.data(), w0,
                     true);
-    // if (gfi.id == 0) {
-    //     std::cout << "Baseline time (samples: " << samples << ", lambda: " <<
-    //     lambda << ") -> "
-    //               << baseline_watch.elapsed_time<double,
-    //               std::chrono::milliseconds>() * 0.001 << " s" << std::endl;
-    // }
+#if 0
+    if (gfi.id == 0) {
+        double milliseconds =
+            baseline_watch.elapsed_time<double, std::chrono::milliseconds>();
+        std::cout << "Baseline time (samples: " << samples
+                  << ", lambda: " << lambda << ") -> " << milliseconds * 0.001
+                  << " s\n";
+    }
+#endif
 
     // generate random noise realization "xi" with correlations
     std::vector<double> xi(samples);
@@ -445,18 +455,18 @@ void mappraiser::sim_constrained_noise_block(
 
     // leaving this piece of code there for the moment (you never know)
     if (nb_iterations == 0) {
-        std::cout << "[" << gfi.id << "] BLOCK WITH 0 ITER" << std::endl;
+        std::cout << "[" << gfi.id << "] BLOCK WITH 0 ITER\n";
         gfi.print_curr_block();
         std::cout << "samples = " << samples << "    id0 = " << id0
-                  << "    lambda = " << lambda << std::endl;
+                  << "    lambda = " << lambda << "\n";
         std::cout << "first gap: id0 = "
                   << gaps->id0gap[N_block->tpltzblocks[0].first_gap]
                   << "    lgap = "
-                  << gaps->lgap[N_block->tpltzblocks[0].first_gap] << std::endl;
+                  << gaps->lgap[N_block->tpltzblocks[0].first_gap] << "\n";
         std::cout << "last gap: id0 = "
                   << gaps->id0gap[N_block->tpltzblocks[0].last_gap]
                   << "    lgap = "
-                  << gaps->lgap[N_block->tpltzblocks[0].last_gap] << std::endl;
+                  << gaps->lgap[N_block->tpltzblocks[0].last_gap] << "\n";
     }
 
     // compute the constrained realization
@@ -494,7 +504,7 @@ void mappraiser::sim_constrained_noise_block(
     if (ratio > 1e-6)
         std::cout << "max sq err / sigma² = " << max_err << " / "
                   << N_block->tpltzblocks[0].T_block[0] << " = " << ratio
-                  << std::endl;
+                  << "\n";
 
     // copy final result into noise vector
     // std::copy(constrained.begin(), constrained.end(), noise);
@@ -558,7 +568,7 @@ void perform_gap_filling(MPI_Comm comm, Tpltz *N, Tpltz *Nm1, double *noise,
     MPI_Comm_size(comm, &size);
 
     if (rank == 0) {
-        std::cout << "[Gap filling] begin routine" << std::endl;
+        std::cout << "[Gap filling] begin routine\n";
     }
 
     double st = MPI_Wtime();
@@ -572,8 +582,8 @@ void perform_gap_filling(MPI_Comm comm, Tpltz *N, Tpltz *Nm1, double *noise,
     double t = MPI_Wtime();
 
     if (rank == 0) {
-        std::cout << "[Gap filling] finished in " << t - st << " s (all procs)"
-                  << std::endl;
+        std::cout << "[Gap filling] finished in " << t - st
+                  << " s (all procs)\n";
     }
 
     if (verbose) {
@@ -584,7 +594,7 @@ void perform_gap_filling(MPI_Comm comm, Tpltz *N, Tpltz *Nm1, double *noise,
             gf_recap.send(comm, 0);
         } else {
             // let proc 0 do the printing
-            std::cout << "[Gap filling] recap from all processes" << std::endl;
+            std::cout << "[Gap filling] recap from all processes\n";
             for (int i = 0; i < size; ++i) {
                 if (i != 0) {
                     // reveice informations from proc i
@@ -593,7 +603,7 @@ void perform_gap_filling(MPI_Comm comm, Tpltz *N, Tpltz *Nm1, double *noise,
                 // print proc i recap
                 std::cout << "[proc " << i << "] " << gf_recap;
             }
-            std::cout << std::endl;
+            std::cout << "\n";
         }
     }
 }

@@ -13,7 +13,7 @@
 
 void mat_print(Mat *A, const std::string &name = "") {
     if (!name.empty())
-        std::cout << name << " =" << std::endl;
+        std::cout << name << " =\n";
     std::cout << "[";
     // loop over rows
     for (int t = 0; t < A->m; t++) {
@@ -33,22 +33,22 @@ void mat_print(Mat *A, const std::string &name = "") {
         }
         std::cout << "]";
         if (t + 1 < A->m)
-            std::cout << "," << std::endl;
+            std::cout << ",\n";
     }
-    std::cout << "]" << std::endl;
+    std::cout << "]\n";
 }
 
 template <typename T>
 void print_array(T *arr, int n, const std::string &name = "") {
     if (!name.empty())
-        std::cout << name << " =" << std::endl;
+        std::cout << name << " =\n";
     std::cout << "[";
     for (int i = 0; i < n; i++) {
         std::cout << arr[i];
         if (i + 1 < n)
             std::cout << ", ";
     }
-    std::cout << "]" << std::endl;
+    std::cout << "]\n";
 }
 
 void init_fake_mat(Mat *P, MPI_Comm comm) {
@@ -84,7 +84,7 @@ int test_time_domain_mapping(bool verbose = false) {
         return 1;
     }
 
-    std::cout << "Running test_time_domain_mapping" << std::endl;
+    std::cout << "Running test_time_domain_mapping\n";
 
     //____________________________________________________________
     // Create fake pointing matrix P and gaps G
@@ -132,9 +132,9 @@ int main(int argc, char *argv[]) {
     int info = test_time_domain_mapping();
     MPI_Barrier(MPI_COMM_WORLD);
     if (info != 0)
-        std::cout << "test failed with status " << info << std::endl;
+        std::cout << "test failed with status " << info << "\n";
     else
-        std::cout << "test successful" << std::endl;
+        std::cout << "test successful\n";
 
     MPI_Finalize();
     return 0;

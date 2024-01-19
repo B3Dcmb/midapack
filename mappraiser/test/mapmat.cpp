@@ -15,7 +15,7 @@
 
 void mat_print(Mat *A, const std::string &name = "") {
     if (!name.empty())
-        std::cout << name << " =" << std::endl;
+        std::cout << name << " =\n";
     std::cout << "[";
     // loop over rows
     for (int t = 0; t < A->m; t++) {
@@ -35,9 +35,9 @@ void mat_print(Mat *A, const std::string &name = "") {
         }
         std::cout << "]";
         if (t + 1 < A->m)
-            std::cout << "," << std::endl;
+            std::cout << ",\n";
     }
-    std::cout << "]" << std::endl;
+    std::cout << "]\n";
 }
 
 template <typename T>
@@ -51,7 +51,7 @@ void vec_print(std::vector<T> &v, const std::string &name = "") {
         if (i + 1 < n)
             std::cout << ", ";
     }
-    std::cout << "]" << std::endl;
+    std::cout << "]\n";
 }
 
 void Px(Mat *P, std::vector<double> &x, std::vector<double> &y) {
@@ -217,20 +217,19 @@ int test_TrMatVecProd(const int nnz = 3, bool verbose = false) {
 int main(int argc, char *argv[]) {
     MPI_Init(&argc, &argv);
 
-    std::cout << "Testing MatVecProd" << std::endl;
+    std::cout << "Testing MatVecProd\n";
     int info = test_MatVecProd(3);
     if (info != 0)
-        std::cout << "test MatVecProd failed with status " << info << std::endl;
+        std::cout << "test MatVecProd failed with status " << info << "\n";
     else
-        std::cout << "test MatVecProd successful" << std::endl;
+        std::cout << "test MatVecProd successful\n";
 
-    std::cout << "Testing TrMatVecProd" << std::endl;
+    std::cout << "Testing TrMatVecProd\n";
     info = test_TrMatVecProd(3);
     if (info != 0)
-        std::cout << "test TrMatVecProd failed with status " << info
-                  << std::endl;
+        std::cout << "test TrMatVecProd failed with status " << info << "\n";
     else
-        std::cout << "test TrMatVecProd successful" << std::endl;
+        std::cout << "test TrMatVecProd successful\n";
 
     MPI_Finalize();
     return 0;
