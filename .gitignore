@@ -42,10 +42,11 @@ cmake-build-*
 # System files
 .DS_Store
 
-# VSCode stuff
-.vscode/*
+# Editor stuff
+.vscode
 .cache
 .idea
+.fleet
 
 # Directories to ignore
 algebra/test
