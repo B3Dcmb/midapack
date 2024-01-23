@@ -9,7 +9,7 @@ import traitlets
 from toast import rng
 from toast.observation import default_values as defaults
 from toast.timing import function_timer
-from toast.traits import Float, Int, Unicode, List, trait_docs
+from toast.traits import Bool, Float, Int, Unicode, List, trait_docs
 from toast.utils import Logger
 from toast.ops.operator import Operator
 
@@ -36,7 +36,7 @@ class MyGainScrambler(Operator):
         f".*",
         allow_none=True,
         help="Regex pattern to match against detector names. Only detectors that "
-        "match the pattern are scrambled.",
+             "match the pattern are scrambled.",
     )
     center = Float(1, allow_none=False, help="Gain distribution center")
 
@@ -45,6 +45,13 @@ class MyGainScrambler(Operator):
     realization = Int(0, allow_none=False, help="Realization index")
 
     component = Int(0, allow_none=False, help="Component index for this simulation")
+
+    coherent_gain_error = Bool(
+        False,
+        allow_none=False,
+        help="Apply same gain error (of `sigma` percent) to all detectors. Use `pattern` "
+             "to select e.g. the B detector of the detector pairs.",
+    )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -82,19 +89,25 @@ class MyGainScrambler(Operator):
             for det in dets:
                 # Test the detector pattern
                 if pat is not None and pat.match(det) is None:
+                    if rank == 0:
+                        msg = f"Skipping detector '{det}'"
+                        log.debug(msg)
                     continue
 
                 detindx = focalplane[det]["uid"]
                 counter1 = detindx
 
-                rngdata = rng.random(
-                    1,
-                    sampler="gaussian",
-                    key=(key1, key2),
-                    counter=(counter1, counter2),
-                )
+                if self.coherent_gain_error:
+                    gain = 1 + self.sigma
+                else:
+                    rngdata = rng.random(
+                        1,
+                        sampler="gaussian",
+                        key=(key1, key2),
+                        counter=(counter1, counter2),
+                    )
 
-                gain = self.center + rngdata[0] * self.sigma
+                    gain = self.center + rngdata[0] * self.sigma
 
                 # Apply scrambled gains to every detector data name
                 for name in self.det_data:
