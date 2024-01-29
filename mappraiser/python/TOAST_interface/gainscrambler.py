@@ -9,7 +9,7 @@ import traitlets
 from toast import rng
 from toast.observation import default_values as defaults
 from toast.timing import function_timer
-from toast.traits import Bool, Float, Int, Unicode, List, trait_docs
+from toast.traits import Bool, Float, Int, Unicode, trait_docs
 from toast.utils import Logger
 from toast.ops.operator import Operator
 
@@ -26,17 +26,15 @@ class MyGainScrambler(Operator):
 
     API = Int(0, help="Internal interface version for this operator")
 
-    det_data = List(
-        trait=Unicode,
-        default_value=[defaults.det_data, "noise"],
-        help="Observation detdata key to apply the gain error to",
+    det_data = Unicode(
+        defaults.det_data, help="Observation detdata key to apply the gain error to"
     )
 
     pattern = Unicode(
         f".*",
         allow_none=True,
         help="Regex pattern to match against detector names. Only detectors that "
-             "match the pattern are scrambled.",
+        "match the pattern are scrambled.",
     )
     center = Float(1, allow_none=False, help="Gain distribution center")
 
@@ -50,7 +48,7 @@ class MyGainScrambler(Operator):
         False,
         allow_none=False,
         help="Apply same gain error (of `sigma` percent) to all detectors. Use `pattern` "
-             "to select e.g. the B detector of the detector pairs.",
+        "to select e.g. the B detector of the detector pairs.",
     )
 
     def __init__(self, **kwargs):
@@ -86,6 +84,8 @@ class MyGainScrambler(Operator):
             counter1 = 0
             counter2 = 0
 
+            dets_present = set(obs.detdata[self.det_data].detectors)
+
             for det in dets:
                 # Test the detector pattern
                 if pat is not None and pat.match(det) is None:
@@ -109,9 +109,8 @@ class MyGainScrambler(Operator):
 
                     gain = self.center + rngdata[0] * self.sigma
 
-                # Apply scrambled gains to every detector data name
-                for name in self.det_data:
-                    obs.detdata[name][det] *= gain
+                if det in dets_present:
+                    obs.detdata[self.det_data][det] *= gain
 
         return
 
