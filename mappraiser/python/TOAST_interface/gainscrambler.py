@@ -9,7 +9,7 @@ import traitlets
 from toast import rng
 from toast.observation import default_values as defaults
 from toast.timing import function_timer
-from toast.traits import Bool, Float, Int, Unicode, trait_docs
+from toast.traits import Bool, Float, Int, Unicode, List, trait_docs
 from toast.utils import Logger
 from toast.ops.operator import Operator
 
@@ -26,8 +26,10 @@ class MyGainScrambler(Operator):
 
     API = Int(0, help="Internal interface version for this operator")
 
-    det_data = Unicode(
-        defaults.det_data, help="Observation detdata key to apply the gain error to"
+    det_data_names = List(
+        trait=Unicode,
+        default_value=[defaults.det_data, "noise"],
+        help="Observation detdata key to apply the gain error to",
     )
 
     pattern = Unicode(
@@ -84,7 +86,9 @@ class MyGainScrambler(Operator):
             counter1 = 0
             counter2 = 0
 
-            dets_present = set(obs.detdata[self.det_data].detectors)
+            dets_present_list = [
+                set(obs.detdata[name].detectors) for name in self.det_data_names
+            ]
 
             for det in dets:
                 # Test the detector pattern
@@ -109,8 +113,9 @@ class MyGainScrambler(Operator):
 
                     gain = self.center + rngdata[0] * self.sigma
 
-                if det in dets_present:
-                    obs.detdata[self.det_data][det] *= gain
+                for name, dets_present in zip(self.det_data_names, dets_present_list):
+                    if det in dets_present:
+                        obs.detdata[name][det] *= gain
 
         return
 
