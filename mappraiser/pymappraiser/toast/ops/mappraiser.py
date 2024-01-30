@@ -28,86 +28,18 @@ from .utils import (
     stage_local,
 )
 
-mappraiser = None
+libmappraiser = None
 if use_mpi:
     try:
-        import mappraiser_wrapper as mappraiser
+        import pymappraiser.wrapper as libmappraiser
     except ImportError:
-        mappraiser = None
+        libmappraiser = None
 
 
 def available():
     """(bool): True if libmappraiser is found in the library search path."""
-    global mappraiser
-    return (mappraiser is not None) and mappraiser.available
-
-
-def madam_params_from_mapmaker(mapmaker):
-    """Utility function that configures Madam to match the TOAST mapmaker"""
-
-    if not isinstance(mapmaker, MapMaker):
-        raise RuntimeError("Need an instance of MapMaker to configure from")
-
-    destripe_pixels = mapmaker.binning.pixel_pointing
-    map_pixels = mapmaker.map_binning.pixel_pointing
-
-    params = {
-        "nside_cross": destripe_pixels.nside,
-        "nside_map": map_pixels.nside,
-        "nside_submap": map_pixels.nside_submap,
-        "path_output": mapmaker.output_dir,
-        "write_hits": mapmaker.write_hits,
-        "write_matrix": mapmaker.write_invcov,
-        "write_wcov": mapmaker.write_cov,
-        "write_mask": mapmaker.write_rcond,
-        "info": 3,
-        "iter_max": mapmaker.iter_max,
-        "pixlim_cross": mapmaker.solve_rcond_threshold,
-        "pixlim_map": mapmaker.map_rcond_threshold,
-        "cglimit": mapmaker.convergence,
-    }
-    sync_type = mapmaker.map_binning.sync_type
-    if sync_type == "allreduce":
-        params["allreduce"] = True
-    elif sync_type == "alltoallv":
-        params["concatenate_messages"] = True
-        params["reassign_submaps"] = True
-    else:
-        msg = f"Unknown sync_type: {sync_type}"
-        raise RuntimeError(msg)
-
-    # Destriping parameters
-
-    for template in mapmaker.template_matrix.templates:
-        if isinstance(template, Offset):
-            baselines = template
-            break
-    else:
-        baselines = None
-
-    if baselines is None or not baselines.enabled:
-        params.update(
-            {
-                "write_binmap": True,
-                "write_map": False,
-                "kfirst": False,
-            }
-        )
-    else:
-        params.update(
-            {
-                "write_binmap": False,
-                "write_map": True,
-                "kfilter": baselines.use_noise_prior,
-                "kfirst": True,
-                "base_first": baselines.step_time.to_value(u.s),
-                "precond_width_min": baselines.precond_width,
-                "precond_width_max": baselines.precond_width,
-                "good_baseline_fraction": baselines.good_fraction,
-            }
-        )
-
-    return params
+    global libmappraiser
+    return (libmappraiser is not None) and libmappraiser.available
 
 
 @trait_docs
@@ -912,7 +844,7 @@ class Mappraiser(Operator):
         timer.start()
 
         # if not self._cached:
-        #     timestamp_storage, _ = dtype_to_aligned(mappraiser.TIMESTAMP_TYPE)
+        #     timestamp_storage, _ = dtype_to_aligned(libmappraiser.TIMESTAMP_TYPE)
         #     self._mappraiser_timestamps_raw = timestamp_storage.zeros(nsamp)
         #     self._mappraiser_timestamps = self_mappraiser_timestamps_raw.array()
 
@@ -1006,7 +938,7 @@ class Mappraiser(Operator):
                     self.view,
                     all_dets,
                     self.det_data,
-                    mappraiser.SIGNAL_TYPE,
+                    libmappraiser.SIGNAL_TYPE,
                     interval_starts,
                     1,
                     1,
@@ -1018,7 +950,7 @@ class Mappraiser(Operator):
                 )
             else:
                 # Allocate and copy all at once.
-                storage, _ = dtype_to_aligned(mappraiser.SIGNAL_TYPE)
+                storage, _ = dtype_to_aligned(libmappraiser.SIGNAL_TYPE)
                 self._mappraiser_signal_raw = storage.zeros(nsamp * ndet)
                 self._mappraiser_signal = self._mappraiser_signal_raw.array()
 
@@ -1041,7 +973,7 @@ class Mappraiser(Operator):
                 )
 
         # Create buffer for local_block_sizes
-        storage, _ = dtype_to_aligned(mappraiser.PIXEL_TYPE)
+        storage, _ = dtype_to_aligned(libmappraiser.PIXEL_TYPE)
         self._mappraiser_blocksizes_raw = storage.zeros(nblock_loc)
         self._mappraiser_blocksizes = self._mappraiser_blocksizes_raw.array()
 
@@ -1141,7 +1073,7 @@ class Mappraiser(Operator):
                     self.view,
                     all_dets,
                     self.noise_name,
-                    mappraiser.SIGNAL_TYPE,
+                    libmappraiser.SIGNAL_TYPE,
                     interval_starts,
                     1,
                     1,
@@ -1153,7 +1085,7 @@ class Mappraiser(Operator):
                 )
             else:
                 # Allocate and copy all at once.
-                storage, _ = dtype_to_aligned(mappraiser.SIGNAL_TYPE)
+                storage, _ = dtype_to_aligned(libmappraiser.SIGNAL_TYPE)
                 self._mappraiser_noise_raw = storage.zeros(nsamp * ndet)
                 self._mappraiser_noise = self._mappraiser_noise_raw.array()
 
@@ -1175,7 +1107,7 @@ class Mappraiser(Operator):
                     pair_diff=self.pair_diff,
                 )
             # Create buffer for invtt and tt
-            storage, _ = dtype_to_aligned(mappraiser.INVTT_TYPE)
+            storage, _ = dtype_to_aligned(libmappraiser.INVTT_TYPE)
             self._mappraiser_invtt_raw = storage.zeros(nblock_loc * params["lambda"])
             self._mappraiser_tt_raw = storage.zeros(nblock_loc * params["lambda"])
             self._mappraiser_invtt = self._mappraiser_invtt_raw.array()
@@ -1196,7 +1128,7 @@ class Mappraiser(Operator):
                 params["fsample"],
                 self._mappraiser_invtt,
                 self._mappraiser_tt,
-                mappraiser.INVTT_TYPE,
+                libmappraiser.INVTT_TYPE,
                 apod_window_type=self.apod_window_type,
                 print_info=(data.comm.world_rank == 0),
                 save_psd=(self.save_psd and data.comm.world_rank == 0),
@@ -1239,7 +1171,7 @@ class Mappraiser(Operator):
                 self.view,
                 all_dets,
                 self.pixel_pointing.pixels,
-                mappraiser.PIXEL_TYPE,
+                libmappraiser.PIXEL_TYPE,
                 interval_starts,
                 nnz,
                 1,
@@ -1268,7 +1200,7 @@ class Mappraiser(Operator):
                 self.view,
                 all_dets,
                 self.stokes_weights.weights,
-                mappraiser.WEIGHT_TYPE,
+                libmappraiser.WEIGHT_TYPE,
                 interval_starts,
                 nnz,
                 nnz_stride,
@@ -1323,7 +1255,7 @@ class Mappraiser(Operator):
         #             detweights[idet] = psdlist[0][2]
         #         npsdtot = np.sum(npsd)
         #         psdstarts = np.array(psdstarts, dtype=np.float64)
-        #         psdvals = np.hstack(psdvals).astype(mappraiser.PSD_TYPE)
+        #         psdvals = np.hstack(psdvals).astype(libmappraiser.PSD_TYPE)
         #         npsdval = psdvals.size
         #     else:
         #         # Uniform weighting
@@ -1509,7 +1441,7 @@ class Mappraiser(Operator):
         # -> call mappraiser in normal mode
         # -> if self.mcmode: self._cached=True
 
-        mappraiser.MLmap(
+        libmappraiser.MLmap(
             data.comm.comm_world,
             params,
             data_size_proc,
@@ -1532,7 +1464,7 @@ class Mappraiser(Operator):
     @function_timer
     def _gap_filling(self, params, data, data_size_proc, nb_blocks_loc, nnz):
         """Perform gap-filling on the data (signal + noise)"""
-        mappraiser.gap_filling(
+        libmappraiser.gap_filling(
             data.comm.comm_world,
             data_size_proc,
             nb_blocks_loc,

@@ -196,7 +196,3 @@ install(TARGETS mappraiser
 # install the headers
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/mappraiser/include/
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/midapack)
-
-# install the Python files
-install(DIRECTORY ${PROJECT_SOURCE_DIR}/mappraiser/python/
-        DESTINATION python)

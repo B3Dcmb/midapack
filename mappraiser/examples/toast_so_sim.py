@@ -51,7 +51,7 @@ import pixell.fft
 
 pixell.fft.engine = "fftw"
 
-from TOAST_interface import mappraiser, MySimNoise, MyGainScrambler
+from pymappraiser.toast.ops import mappraiser, MySimNoise, MyGainScrambler
 
 
 def parse_config(operators, templates, comm):
