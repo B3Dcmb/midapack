@@ -16,7 +16,7 @@ from toast.ops.memory_counter import MemoryCounter
 
 # Here are some helper functions adapted from toast/src/ops/madam_utils.py
 def log_time_memory(
-        data, timer=None, timer_msg=None, mem_msg=None, full_mem=False, prefix=""
+    data, timer=None, timer_msg=None, mem_msg=None, full_mem=False, prefix=""
 ):
     """(This function is taken from madam_utils.py)"""
     log = Logger.get()
@@ -40,7 +40,7 @@ def log_time_memory(
 
         if data.comm.group_rank == 0:
             msg = "{} {} Group {} memory = {:0.2f} GB".format(
-                prefix, mem_msg, data.comm.group, toast_bytes / 1024 ** 2
+                prefix, mem_msg, data.comm.group, toast_bytes / 1024**2
             )
             log.debug(msg)
         if full_mem:
@@ -51,26 +51,32 @@ def log_time_memory(
         timer.start()
 
 
+def pairwise(iterable):
+    """s -> (s0,s1), (s2,s3), (s4, s5), ..."""
+    a = iter(iterable)
+    return zip(a, a)
+
+
 def stage_local(
-        data,
-        nsamp,
-        view,
-        dets,
-        detdata_name,
-        mappraiser_buffer,
-        interval_starts,
-        nnz,
-        nnz_stride,
-        shared_flags,
-        shared_mask,
-        det_flags,
-        det_mask,
-        do_purge=False,
-        operator=None,
-        n_repeat=1,
-        pair_diff=False,
-        pair_skip=False,
-        select_qu=False,
+    data,
+    nsamp,
+    view,
+    dets,
+    detdata_name,
+    mappraiser_buffer,
+    interval_starts,
+    nnz,
+    nnz_stride,
+    shared_flags,
+    shared_mask,
+    det_flags,
+    det_mask,
+    do_purge=False,
+    operator=None,
+    n_repeat=1,
+    pair_diff=False,
+    pair_skip=False,
+    select_qu=False,
 ):
     """Helper function to fill a mappraiser buffer from a local detdata key.
     (This function is taken from madam_utils.py)
@@ -88,20 +94,17 @@ def stage_local(
     for ob in data.obs:
         views = ob.view[view]
         if pair_diff or pair_skip:
-            for idet in range(0, len(dets) - 1, 2):
-                det_a = dets[idet]
-                det_b = dets[idet + 1]
-                det_0_local = det_a in ob.local_detectors
-                det_1_local = det_b in ob.local_detectors
-                if not (det_0_local and det_1_local):
-                    if det_0_local:
-                        msg = "det_b is not in local detectors\n"
-                    else:
-                        msg = "det_a is not in local detectors\n"
-                    msg += f"ob = {ob}\n"
-                    msg += f"idet = {idet}\n"
-                    msg += f"det_a = {det_a}\n"
-                    msg += f"det_b = {det_b}"
+            for idet, (det_a, det_b) in enumerate(pairwise(dets)):
+                local_a = det_a in ob.local_detectors
+                local_b = det_b in ob.local_detectors
+                if (not local_a) and (not local_b):
+                    continue
+                incomplete_pair = local_a ^ local_b
+                if incomplete_pair:
+                    msg = "Incomplete pair in local detectors!\n"
+                    msg += f"{ob.telescope.detectors=}\n"
+                    msg += f"{ob.local_detectors=}\n"
+                    msg += f"{det_a=}, {det_b=}"
                     raise RuntimeError(msg)
                 if operator is not None:
                     # Synthesize data for staging
@@ -124,39 +127,53 @@ def stage_local(
                         flags |= views.shared[shared_flags][ivw] & shared_mask
 
                     slc = slice(
-                        ((idet // 2) * nsamp + offset) * nnz,
-                        ((idet // 2) * nsamp + offset + view_samples) * nnz,
+                        (idet * nsamp + offset) * nnz,
+                        (idet * nsamp + offset + view_samples) * nnz,
                         1,
                     )
                     if detdata_name is not None:
                         if nnz > 1:
                             if select_qu:
                                 mappraiser_buffer[slc] = np.repeat(
-                                    views.detdata[detdata_name][ivw][det_a][..., 1:].flatten()[::nnz_stride],
+                                    views.detdata[detdata_name][ivw][det_a][
+                                        ..., 1:
+                                    ].flatten()[::nnz_stride],
                                     n_repeat,
                                 )
                             else:
                                 mappraiser_buffer[slc] = np.repeat(
-                                    views.detdata[detdata_name][ivw][det_a].flatten()[::nnz_stride],
+                                    views.detdata[detdata_name][ivw][det_a].flatten()[
+                                        ::nnz_stride
+                                    ],
                                     n_repeat,
                                 )
                             if pair_diff:
                                 # We are staging signal or noise
                                 # Take the half difference
-                                mappraiser_buffer[slc] = 0.5 * (mappraiser_buffer[slc] - np.repeat(
-                                    views.detdata[detdata_name][ivw][det_b].flatten()[::nnz_stride],
-                                    n_repeat,
-                                ))
+                                mappraiser_buffer[slc] = 0.5 * (
+                                    mappraiser_buffer[slc]
+                                    - np.repeat(
+                                        views.detdata[detdata_name][ivw][
+                                            det_b
+                                        ].flatten()[::nnz_stride],
+                                        n_repeat,
+                                    )
+                                )
                         else:
                             mappraiser_buffer[slc] = np.repeat(
                                 views.detdata[detdata_name][ivw][det_a].flatten(),
                                 n_repeat,
                             )
                             if pair_diff:
-                                mappraiser_buffer[slc] = 0.5 * (mappraiser_buffer[slc] - np.repeat(
-                                    views.detdata[detdata_name][ivw][det_b].flatten(),
-                                    n_repeat,
-                                ))
+                                mappraiser_buffer[slc] = 0.5 * (
+                                    mappraiser_buffer[slc]
+                                    - np.repeat(
+                                        views.detdata[detdata_name][ivw][
+                                            det_b
+                                        ].flatten(),
+                                        n_repeat,
+                                    )
+                                )
                     else:
                         # Noiseless cases (noise_name=None).
                         mappraiser_buffer[slc] = 0.0
@@ -204,7 +221,9 @@ def stage_local(
                     if detdata_name is not None:
                         if nnz > 1:
                             mappraiser_buffer[slc] = np.repeat(
-                                views.detdata[detdata_name][ivw][det].flatten()[::nnz_stride],
+                                views.detdata[detdata_name][ivw][det].flatten()[
+                                    ::nnz_stride
+                                ],
                                 n_repeat,
                             )
                         else:
@@ -232,26 +251,26 @@ def stage_local(
 
 
 def stage_in_turns(
-        data,
-        nodecomm,
-        n_copy_groups,
-        nsamp,
-        view,
-        dets,
-        detdata_name,
-        mappraiser_dtype,
-        interval_starts,
-        nnz,
-        nnz_stride,
-        shared_flags,
-        shared_mask,
-        det_flags,
-        det_mask,
-        operator=None,
-        n_repeat=1,
-        pair_diff=False,
-        pair_skip=False,
-        select_qu=False,
+    data,
+    nodecomm,
+    n_copy_groups,
+    nsamp,
+    view,
+    dets,
+    detdata_name,
+    mappraiser_dtype,
+    interval_starts,
+    nnz,
+    nnz_stride,
+    shared_flags,
+    shared_mask,
+    det_flags,
+    det_mask,
+    operator=None,
+    n_repeat=1,
+    pair_diff=False,
+    pair_skip=False,
+    select_qu=False,
 ):
     """When purging data, take turns staging it.
     (This function is taken from madam_utils.py)
@@ -293,15 +312,15 @@ def stage_in_turns(
 
 
 def restore_local(
-        data,
-        nsamp,
-        view,
-        dets,
-        detdata_name,
-        detdata_dtype,
-        mappraiser_buffer,
-        interval_starts,
-        nnz,
+    data,
+    nsamp,
+    view,
+    dets,
+    detdata_name,
+    detdata_dtype,
+    mappraiser_buffer,
+    interval_starts,
+    nnz,
 ):
     """Helper function to create a detdata buffer from mappraiser data.
     (This function is taken from madam_utils.py)
@@ -345,18 +364,18 @@ def restore_local(
 
 
 def restore_in_turns(
-        data,
-        nodecomm,
-        n_copy_groups,
-        nsamp,
-        view,
-        dets,
-        detdata_name,
-        detdata_dtype,
-        mappraiser_buffer,
-        mappraiser_buffer_raw,
-        interval_starts,
-        nnz,
+    data,
+    nodecomm,
+    n_copy_groups,
+    nsamp,
+    view,
+    dets,
+    detdata_name,
+    detdata_dtype,
+    mappraiser_buffer,
+    mappraiser_buffer_raw,
+    interval_starts,
+    nnz,
 ):
     """When restoring data, take turns copying it.
     (This function is taken from madam_utils.py)
@@ -382,7 +401,9 @@ def restore_in_turns(
 
 def apo_window(lambd: int, kind="chebwin") -> np.ndarray:
     if kind == "gaussian":
-        q_apo = 3  # Apodization factor: cut happens at q_apo * sigma in the Gaussian window
+        q_apo = (
+            3  # Apodization factor: cut happens at q_apo * sigma in the Gaussian window
+        )
         window = scipy.signal.get_window(
             ("general_gaussian", 1, 1 / q_apo * lambd), 2 * lambd
         )
@@ -397,26 +418,26 @@ def apo_window(lambd: int, kind="chebwin") -> np.ndarray:
 
 
 def compute_autocorrelations(
-        nobs,
-        ndet,
-        mappraiser_noise,
-        local_block_sizes,
-        lambda_,
-        fsamp,
-        buffer_inv_tt,
-        buffer_tt,
-        invtt_dtype,
-        print_info=False,
-        save_psd=False,
-        save_dir="",
-        apod_window_type="chebwin",
+    nobs,
+    ndet,
+    mappraiser_noise,
+    local_block_sizes,
+    lambda_,
+    fsamp,
+    buffer_inv_tt,
+    buffer_tt,
+    invtt_dtype,
+    print_info=False,
+    save_psd=False,
+    save_dir="",
+    apod_window_type="chebwin",
 ):
     """Compute the first lines of the blocks of the banded noise covariance and store them in the provided buffer."""
     offset = 0
     for iobs in range(nobs):
         for idet in range(ndet):
             blocksize = local_block_sizes[idet * nobs + iobs]
-            nsetod = mappraiser_noise[offset: offset + blocksize]
+            nsetod = mappraiser_noise[offset : offset + blocksize]
             slc = slice(
                 (idet * nobs + iobs) * lambda_,
                 (idet * nobs + iobs) * lambda_ + lambda_,
@@ -434,7 +455,9 @@ def compute_autocorrelations(
                 save_psd=(save_psd and (idet == 0) and (iobs == 0)),
                 save_dir=save_dir,
             )
-            buffer_tt[slc] = compute_autocorr(1 / compute_psd_eff(buffer_inv_tt[slc], blocksize), lambda_)
+            buffer_tt[slc] = compute_autocorr(
+                1 / compute_psd_eff(buffer_inv_tt[slc], blocksize), lambda_
+            )
             offset += blocksize
     return
 
@@ -456,17 +479,17 @@ def inverselogpsd_model(f, a, alpha, fknee, fmin):
 
 
 def noise_autocorrelation(
-        nsetod,
-        nn,
-        lambda_,
-        fsamp,
-        idet,
-        invtt_dtype,
-        apod_window_type,
-        nperseg=0,
-        verbose=False,
-        save_psd=False,
-        save_dir="",
+    nsetod,
+    nn,
+    lambda_,
+    fsamp,
+    idet,
+    invtt_dtype,
+    apod_window_type,
+    nperseg=0,
+    verbose=False,
+    save_psd=False,
+    save_dir="",
 ):
     """Computes a periodogram from a noise timestream, and fits a PSD model
     to it, which is then used to build the first row of a Toeplitz block.
@@ -485,7 +508,9 @@ def noise_autocorrelation(
         nperseg = nn
 
     # Compute a periodogram with Welch's method
-    f, psd = scipy.signal.welch(nsetod, fsamp, window='hann', nperseg=nperseg, detrend='linear')
+    f, psd = scipy.signal.welch(
+        nsetod, fsamp, window="hann", nperseg=nperseg, detrend="linear"
+    )
 
     # Fit the psd model to the periodogram (in log scale)
     popt, pcov = curve_fit(
@@ -579,7 +604,7 @@ def compute_psd_eff(tt, m) -> np.ndarray:
     lag = len(tt)
     circ_t = np.pad(tt, (0, m - lag), "constant")
     if lag > 1:
-        circ_t[-lag + 1:] = np.flip(tt[1:], 0)
+        circ_t[-lag + 1 :] = np.flip(tt[1:], 0)
 
     # FFT
     psd = np.fft.rfft(circ_t, n=m)
