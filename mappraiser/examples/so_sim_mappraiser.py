@@ -40,15 +40,15 @@ import toast.ops
 from toast.mpi import MPI, Comm
 from toast.observation import default_values as defaults
 
-from sotodlib import ops as so_ops
-from sotodlib import workflows as wrk
+from sotodlib.toast import ops as so_ops
+from sotodlib.toast import workflows as wrk
 
 # Make sure pixell uses a reliable FFT engine
 import pixell.fft
 
 pixell.fft.engine = "fftw"
 
-from pymappraiser.toast.ops import Mappraiser, MySimNoise, MyGainScrambler
+import pymappraiser.toast.workflows as pwrk
 
 
 def simulate_data(job, otherargs, runargs, comm):
@@ -65,8 +65,6 @@ def simulate_data(job, otherargs, runargs, comm):
         wrk.load_data_hdf5(job, otherargs, runargs, data)
         wrk.load_data_books(job, otherargs, runargs, data)
         wrk.load_data_context(job, otherargs, runargs, data)
-        wrk.act_responsivity_sign(job, otherargs, runargs, data)
-        wrk.create_az_intervals(job, otherargs, runargs, data)
         # optionally zero out
         if otherargs.zero_loaded_data:
             toast.ops.Reset(detdata=[defaults.signal])
@@ -82,19 +80,22 @@ def simulate_data(job, otherargs, runargs, comm):
 
     wrk.simulate_sky_map_signal(job, otherargs, runargs, data)
     wrk.simulate_conviqt_signal(job, otherargs, runargs, data)
-    wrk.simulate_scan_synchronous_signal(job, otherargs, runargs, data)
-    wrk.simulate_source_signal(job, otherargs, runargs, data)
-    wrk.simulate_sso_signal(job, otherargs, runargs, data)
-    wrk.simulate_catalog_signal(job, otherargs, runargs, data)
-    wrk.simulate_wiregrid_signal(job, otherargs, runargs, data)
-    wrk.simulate_stimulator_signal(job, otherargs, runargs, data)
-    wrk.simulate_detector_timeconstant(job, otherargs, runargs, data)
-    wrk.simulate_mumux_crosstalk(job, otherargs, runargs, data)
+
+    if job_ops.sim_noise.enabled and job_ops.my_sim_noise.enabled:
+        log.warning_rank(
+            "Operators 'sim_noise' and 'my_sim_noise' are both enabled. Only the first one will be applied."
+        )
+        job_ops.my_sim_noise.enabled = False
     wrk.simulate_detector_noise(job, otherargs, runargs, data)
-    wrk.simulate_hwpss_signal(job, otherargs, runargs, data)
-    wrk.simulate_detector_yield(job, otherargs, runargs, data)
+    pwrk.simulate_detector_noise(job, otherargs, runargs, data)
+
+    if job_ops.gainscrambler.enabled and job_ops.my_gainscrambler.enabled:
+        log.warning_rank(
+            "Operators 'gainscrambler' and 'my_gainscrambler' are both enabled. Only the first one will be applied."
+        )
+        job_ops.my_gainscrambler.enabled = False
     wrk.simulate_calibration_error(job, otherargs, runargs, data)
-    wrk.simulate_readout_effects(job, otherargs, runargs, data)
+    pwrk.simulate_calibration_error(job, otherargs, runargs, data)
 
     mem = toast.utils.memreport(msg="(whole node)", comm=comm, silent=True)
     log.info_rank(f"After simulating data:  {mem}", comm)
@@ -111,25 +112,9 @@ def reduce_data(job, otherargs, runargs, data):
     log = toast.utils.Logger.get()
 
     wrk.flag_noise_outliers(job, otherargs, runargs, data)
-    wrk.filter_hwpss(job, otherargs, runargs, data)
     wrk.noise_estimation(job, otherargs, runargs, data)
-    data = wrk.demodulate(job, otherargs, runargs, data)
-    wrk.processing_mask(job, otherargs, runargs, data)
-    wrk.flag_sso(job, otherargs, runargs, data)
-    wrk.hn_map(job, otherargs, runargs, data)
-    wrk.cadence_map(job, otherargs, runargs, data)
-    wrk.crosslinking_map(job, otherargs, runargs, data)
     wrk.raw_statistics(job, otherargs, runargs, data)
-    wrk.deconvolve_detector_timeconstant(job, otherargs, runargs, data)
-    wrk.mapmaker_ml(job, otherargs, runargs, data)
-    wrk.filter_ground(job, otherargs, runargs, data)
-    wrk.filter_poly1d(job, otherargs, runargs, data)
-    wrk.filter_poly2d(job, otherargs, runargs, data)
-    wrk.filter_common_mode(job, otherargs, runargs, data)
-    wrk.mapmaker(job, otherargs, runargs, data)
-    wrk.mapmaker_filterbin(job, otherargs, runargs, data)
-    wrk.mapmaker_madam(job, otherargs, runargs, data)
-    wrk.filtered_statistics(job, otherargs, runargs, data)
+    pwrk.mapmaker_mappraiser(job, otherargs, runargs, data)
 
     mem = toast.utils.memreport(
         msg="(whole node)", comm=data.comm.comm_world, silent=True
@@ -194,60 +179,30 @@ def main():
 
     operators = list()
     templates = list()
-    
-    # TODO comment operators we typically don't use
 
     # Loading data from disk is disabled by default
     wrk.setup_load_data_hdf5(operators)
     wrk.setup_load_data_books(operators)
     wrk.setup_load_data_context(operators)
-    wrk.setup_act_responsivity_sign(operators)
 
     # Simulated observing is enabled by default
     wrk.setup_simulate_observing(parser, operators)
 
     wrk.setup_pointing(operators)
-    wrk.setup_az_intervals(operators)
     wrk.setup_simple_noise_models(operators)
     wrk.setup_simulate_atmosphere_signal(operators)
     wrk.setup_simulate_sky_map_signal(operators)
     wrk.setup_simulate_conviqt_signal(operators)
-    wrk.setup_simulate_scan_synchronous_signal(operators)
-    wrk.setup_simulate_source_signal(operators)
-    wrk.setup_simulate_sso_signal(operators)
-    wrk.setup_simulate_catalog_signal(operators)
-    wrk.setup_simulate_wiregrid_signal(operators)
-    wrk.setup_simulate_stimulator_signal(operators)
-    wrk.setup_simulate_detector_timeconstant(operators)
-    wrk.setup_simulate_mumux_crosstalk(operators)
     wrk.setup_simulate_detector_noise(operators)
-    wrk.setup_simulate_hwpss_signal(operators)
-    wrk.setup_simulate_detector_yield(operators)
+    pwrk.setup_simulate_detector_noise(operators)  # for my_sim_noise
     wrk.setup_simulate_calibration_error(operators)
-    wrk.setup_simulate_readout_effects(operators)
+    pwrk.setup_simulate_calibration_error(operators)  # for my_gainscrambler
     wrk.setup_save_data_hdf5(operators)
 
-    wrk.setup_flag_noise_outliers(operators)
-    wrk.setup_filter_hwpss(operators)
-    wrk.setup_demodulate(operators)
-    wrk.setup_noise_estimation(operators)
-    wrk.setup_processing_mask(operators)
-    wrk.setup_flag_sso(operators)
-    wrk.setup_hn_map(operators)
-    wrk.setup_cadence_map(operators)
-    wrk.setup_crosslinking_map(operators)
+    wrk.setup_flag_noise_outliers(operators)  #! to investigate
+    wrk.setup_noise_estimation(operators)  #! to investigate
     wrk.setup_raw_statistics(operators)
-    wrk.setup_deconvolve_detector_timeconstant(operators)
-    wrk.setup_mapmaker_ml(operators)
-    wrk.setup_filter_ground(operators)
-    wrk.setup_filter_poly1d(operators)
-    wrk.setup_filter_poly2d(operators)
-    wrk.setup_filter_common_mode(operators)
-    # TODO replace madam with mappraiser
-    wrk.setup_mapmaker(operators, templates)
-    wrk.setup_mapmaker_filterbin(operators)
-    wrk.setup_mapmaker_madam(operators)
-    wrk.setup_filtered_statistics(operators)
+    pwrk.setup_mapmaker_mappraiser(parser, operators)
 
     job, config, otherargs, runargs = wrk.setup_job(
         parser=parser, operators=operators, templates=templates
