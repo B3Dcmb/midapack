@@ -114,6 +114,7 @@ def reduce_data(job, otherargs, runargs, data):
     wrk.flag_noise_outliers(job, otherargs, runargs, data)
     wrk.noise_estimation(job, otherargs, runargs, data)
     wrk.raw_statistics(job, otherargs, runargs, data)
+    # wrk.mapmaker(job, otherargs, runargs, data)
     pwrk.mapmaker_mappraiser(job, otherargs, runargs, data)
 
     mem = toast.utils.memreport(
@@ -202,6 +203,7 @@ def main():
     wrk.setup_flag_noise_outliers(operators)  #! to investigate
     wrk.setup_noise_estimation(operators)  #! to investigate
     wrk.setup_raw_statistics(operators)
+    wrk.setup_mapmaker(operators, templates)
     pwrk.setup_mapmaker_mappraiser(parser, operators)
 
     job, config, otherargs, runargs = wrk.setup_job(
