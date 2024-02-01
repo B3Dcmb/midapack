@@ -49,10 +49,6 @@ class Mappraiser(Operator):
         None, allow_none=True, help="Read mappraiser parameters from this file"
     )
 
-    det_data = Unicode(
-        defaults.det_data, help="Observation detdata key for the timestream data"
-    )
-
     noise_name = Unicode(
         "noise",
         allow_none=True,
@@ -617,7 +613,6 @@ class Mappraiser(Operator):
 
         interval_starts = np.array(interval_starts, dtype=np.int64)
         all_dets = list(sorted(all_dets))[: self.limit_det]
-        ndet = len(all_dets)
 
         nnz_full = len(self.stokes_weights.mode)
 
