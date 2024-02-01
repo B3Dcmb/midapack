@@ -93,6 +93,9 @@ endif ()
 # ----------------------------------------------------------------------------------------#
 
 add_subdirectory(src)
+
+# Python
+add_subdirectory(pymappraiser)
 add_subdirectory(examples)
 
 # Enable/disable build of the tests
@@ -101,6 +104,3 @@ option(BUILD_TESTS "Build the tests" OFF)
 if (BUILD_TESTS)
     add_subdirectory(test)
 endif ()
-
-# TODO handle Python package in a dedicated CMakeLists file?
-# add_subdirectory(python)

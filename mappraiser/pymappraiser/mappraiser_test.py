@@ -20,8 +20,7 @@ from toast.tests._helpers import (
 )
 from toast.tests.mpi import MPITestCase
 
-from . import mappraiser
-
+from .toast.ops import mappraiser
 
 def create_outdir(mpicomm, subdir=None):
     """Create the top level output directory and per-test subdir.
@@ -207,7 +206,7 @@ class MappraiserTest(MPITestCase):
         pars = {
             "path_output": self.outdir,
             "ref": "run0",
-            "Lambda": 16,
+            "lambda": 16,
             "solver": 0,
             "precond": 0,
             "Z_2lvl": 0,
