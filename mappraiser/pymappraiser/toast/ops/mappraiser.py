@@ -1,29 +1,22 @@
 import os
 import re
+import tomlkit
 
 import numpy as np
-import toast.ops
 import traitlets
 from astropy import units as u
 
-from toast.mpi import use_mpi
+from toast.mpi import MPI, use_mpi
 from toast.observation import default_values as defaults
-from toast.templates import Offset
-from toast.timing import function_timer
+from toast.timing import function_timer, Timer
 from toast.traits import Bool, Dict, Instance, Int, Float, Unicode, trait_docs
-from toast.utils import Environment, Logger, Timer, dtype_to_aligned
+from toast.utils import Environment, Logger, dtype_to_aligned
 from toast.ops.delete import Delete
-from toast.ops.mapmaker import MapMaker
 from toast.ops.operator import Operator
 
-import toml
-
-# local imports
-from .utils import (
+from .mappraiser_utils import (
     compute_autocorrelations,
     log_time_memory,
-    restore_in_turns,
-    restore_local,
     stage_in_turns,
     stage_local,
 )
@@ -56,10 +49,6 @@ class Mappraiser(Operator):
         None, allow_none=True, help="Read mappraiser parameters from this file"
     )
 
-    # N.B: timestamps are not currently used in MAPPRAISER.
-    # However, that may change in the future.
-    times = Unicode(defaults.times, help="Observation shared key for timestamps")
-
     det_data = Unicode(
         defaults.det_data, help="Observation detdata key for the timestream data"
     )
@@ -70,6 +59,15 @@ class Mappraiser(Operator):
         help="Observation detdata key for noise data (if None, triggers noiseless mode)",
     )
 
+    det_data = Unicode(
+        defaults.det_data, help="Observation detdata key for the timestream data"
+    )
+
+    det_mask = Int(
+        defaults.det_mask_nonscience,
+        help="Bit mask value for per-detector flagging",
+    )
+
     det_flags = Unicode(
         defaults.det_flags,
         allow_none=True,
@@ -77,7 +75,8 @@ class Mappraiser(Operator):
     )
 
     det_flag_mask = Int(
-        defaults.det_mask_invalid, help="Bit mask value for optional detector flagging"
+        defaults.det_mask_nonscience,
+        help="Bit mask value for detector sample flagging",
     )
 
     shared_flags = Unicode(
@@ -87,7 +86,7 @@ class Mappraiser(Operator):
     )
 
     shared_flag_mask = Int(
-        defaults.shared_mask_invalid,
+        defaults.shared_mask_nonscience,
         help="Bit mask value for optional shared flagging",
     )
 
@@ -105,18 +104,6 @@ class Mappraiser(Operator):
         help="This must be an instance of a Stokes weights operator",
     )
 
-    # ! N.B: this is not supported for the moment.
-    view = Unicode(
-        None, allow_none=True, help="Use this view of the data in all observations"
-    )
-
-    # There is not tod cleaning in MAPPRAISER.
-    # det_out = Unicode(
-    #     None,
-    #     allow_none=True,
-    #     help="Observation detdata key for output destriped timestreams",
-    # )
-
     noise_model = Unicode(
         "noise_model", help="Observation key containing the noise model"
     )
@@ -124,11 +111,6 @@ class Mappraiser(Operator):
     purge_det_data = Bool(
         False,
         help="If True, clear all observation detector data after copying to mappraiser buffers",
-    )
-
-    restore_det_data = Bool(
-        False,
-        help="If True, restore detector data to observations on completion",
     )
 
     # ! N.B: not supported for the moment
@@ -142,13 +124,13 @@ class Mappraiser(Operator):
         help="The processes on each node are split into this number of groups to copy data in turns",
     )
 
-    translate_timestamps = Bool(
-        False, help="Translate timestamps to enforce monotonity"
-    )
-
     noise_scale = Unicode(
         "noise_scale",
         help="Observation key with optional scaling factor for noise PSDs",
+    )
+
+    mem_report = Bool(
+        False, help="Print system memory use while staging/unstaging data"
     )
 
     pair_diff = Bool(
@@ -159,10 +141,6 @@ class Mappraiser(Operator):
     estimate_spin_zero = Bool(
         False,
         help="When doing pair-diff, still estimate a spin-zero field (T) alongside Q and U.",
-    )
-
-    mem_report = Bool(
-        False, help="Print system memory use while staging/unstaging data"
     )
 
     # Some traits for noise estimation
@@ -236,6 +214,13 @@ class Mappraiser(Operator):
 
     realization = Int(0, help="Noise realization index (for gap filling)")
 
+    @traitlets.validate("det_mask")
+    def _check_det_mask(self, proposal):
+        check = proposal["value"]
+        if check < 0:
+            raise traitlets.TraitError("Det mask should be a positive integer")
+        return check
+
     @traitlets.validate("shared_flag_mask")
     def _check_shared_flag_mask(self, proposal):
         check = proposal["value"]
@@ -249,28 +234,6 @@ class Mappraiser(Operator):
         if check < 0:
             raise traitlets.TraitError("Det flag mask should be a positive integer")
         return check
-
-    @traitlets.validate("restore_det_data")
-    def _check_restore_det_data(self, proposal):
-        check = proposal["value"]
-        if check and not self.purge_det_data:
-            raise traitlets.TraitError(
-                "Cannot set restore_det_data since purge_det_data is False"
-            )
-        # if check and self.det_out is not None:
-        #     raise traitlets.TraitError(
-        #         "Cannot set restore_det_data since det_out is not None"
-        #     )
-        return check
-
-    # @traitlets.validate("det_out")
-    # def _check_det_out(self, proposal):
-    #     check = proposal["value"]
-    #     if check is not None and self.restore_det_data:
-    #         raise traitlets.TraitError(
-    #             "If det_out is not None, restore_det_data should be False"
-    #         )
-    #     return check
 
     @traitlets.validate("pixel_pointing")
     def _check_pixel_pointing(self, proposal):
@@ -317,14 +280,6 @@ class Mappraiser(Operator):
                 check["info"] = 1
         return check
 
-    # Check the traits that are not yet supported
-    @traitlets.validate("view")
-    def _check_view(self, proposal):
-        check = proposal["value"]
-        if check is not None:
-            raise traitlets.TraitError("Views of the data are currently not supported")
-        return check
-
     @traitlets.validate("mcmode")
     def _check_mcmode(self, proposal):
         check = proposal["value"]
@@ -360,12 +315,11 @@ class Mappraiser(Operator):
         """
 
         if self._cached:
-            # MAPPRAISER does not have caches to clear (no 'cached' mode implemented)
-            # madam.clear_caches()
+            # not implemented
+            # libmappraiser.clear_caches()
             self._cached = False
 
         for atr in [
-            "timestamps",
             "signal",
             "blocksizes",
             "detindxs",
@@ -413,8 +367,6 @@ class Mappraiser(Operator):
 
         params = dict()
 
-        # repeat_keys = ["detset", "detset_nopol", "survey"]
-
         if self.paramfile is not None:
             if data.comm.world_rank == 0:
                 line_pat = re.compile(r"(\S+)\s+=\s+(\S+)")
@@ -426,24 +378,10 @@ class Mappraiser(Operator):
                             if line_mat is not None:
                                 k = line_mat.group(1)
                                 v = line_mat.group(2)
-                                # if k in repeat_keys:
-                                #     if k not in params:
-                                #         params[k] = [v]
-                                #     else:
-                                #         params[k].append(v)
-                                # else:
-                                #     params[k] = v
                                 params[k] = v
             if data.comm.comm_world is not None:
                 params = data.comm.comm_world.bcast(params, root=0)
             for k, v in self.params.items():
-                # if k in repeat_keys:
-                #     if k not in params:
-                #         params[k] = [v]
-                #     else:
-                #         params[k].append(v)
-                # else:
-                #     params[k] = v
                 params[k] = v
 
         params.update(
@@ -484,11 +422,6 @@ class Mappraiser(Operator):
         else:
             params["mcmode"] = False
 
-        # if self.det_out is not None:
-        #     params["write_tod"] = True
-        # else:
-        #     params["write_tod"] = False
-
         # Check if noiseless mode is activated
         if self.noiseless or (self.noise_name is None):
             self.noiseless = True
@@ -503,10 +436,10 @@ class Mappraiser(Operator):
         # Log the libmappraiser parameters that were used.
         if data.comm.world_rank == 0:
             with open(
-                    os.path.join(params["path_output"], "mappraiser_args_log.toml"),
-                    "w",
+                os.path.join(params["path_output"], "mappraiser_args_log.toml"),
+                "w",
             ) as f:
-                toml.dump(params, f)
+                tomlkit.dump(params, f, sort_keys=True)
 
         # Check input parameters and compute the sizes of Mappraiser data objects
         if data.comm.world_rank == 0:
@@ -517,8 +450,6 @@ class Mappraiser(Operator):
             nsamp,
             nnz,
             nnz_full,
-            nnz_stride,
-            interval_starts,
             psd_freqs,
         ) = self._prepare(params, data, detectors)
 
@@ -540,8 +471,6 @@ class Mappraiser(Operator):
             nsamp,
             nnz,
             nnz_full,
-            nnz_stride,
-            interval_starts,
             psd_freqs,
         )
 
@@ -598,31 +527,10 @@ class Mappraiser(Operator):
             timer=timer,
         )
 
-        # Unstage data
-        if data.comm.world_rank == 0:
-            msg = "{} Copying buffers back to toast data".format(self._logprefix)
-            log.info(msg)
-        self._unstage_data(
-            params,
-            data,
-            all_dets,
-            nsamp,
-            nnz,
-            nnz_full,
-            interval_starts,
-            signal_dtype,
-        )
-
-        log.info_rank(
-            f"{self._logprefix} Unstaged data in",
-            comm=data.comm.comm_world,
-            timer=timer,
-        )
-
         return
 
     def _finalize(self, data, **kwargs):
-        return
+        self.clear()
 
     def _requires(self):
         req = {
@@ -633,8 +541,6 @@ class Mappraiser(Operator):
             "detdata": [self.det_data],
             "intervals": list(),
         }
-        if self.view is not None:
-            req["intervals"].append(self.view)
         if self.shared_flags is not None:
             req["shared"].append(self.shared_flags)
         if self.det_flags is not None:
@@ -643,8 +549,6 @@ class Mappraiser(Operator):
 
     def _provides(self):
         prov = {"detdata": list()}
-        # if self.det_out is not None:
-        #     prov["detdata"].append(self.det_out)
         return prov
 
     @function_timer
@@ -662,39 +566,14 @@ class Mappraiser(Operator):
 
         nsamp = 0
 
-        # MAPPRAISER uses monolithic data buffers and specifies contiguous data intervals
-        # in that buffer.  The starting sample index is used to mark the transition
-        # between data intervals.
-        interval_starts = list()
-
-        # This quantity is only used for printing the fraction of samples in valid
-        # ranges specified by the View.  Only samples actually in the view are copied
-        # to Mappraiser buffers.
-        # N.B: For the moment this is useless since MAPPRAISER does not use data views
-        nsamp_valid = 0
-
         all_dets = set()
         nnz_full = None
         psd_freqs = None
 
         for ob in data.obs:
             # Get the detectors we are using for this observation
-            dets = ob.select_local_detectors(detectors)
-
-            if self.limit_det is not None:
-                # cut all detectors but one
-                dets = set(list(dets)[: self.limit_det])
-
-            all_dets.update(dets)
-
-            # Check that the timestamps exist.
-            if self.times not in ob.shared:
-                msg = (
-                    "Shared timestamps '{}' does not exist in observation '{}'".format(
-                        self.times, ob.name
-                    )
-                )
-                raise RuntimeError(msg)
+            local_dets = ob.select_local_detectors(detectors, flagmask=self.det_mask)
+            all_dets.update(set(local_dets))
 
             # Check that the detector data and pointing exists in the observation
             if self.det_data not in ob.detdata:
@@ -725,38 +604,12 @@ class Mappraiser(Operator):
                             "All PSDs passed to Mappraiser must have the same frequency binning."
                         )
 
-            # Are we using a view of the data?  If so, we will only be copying data in
-            # those valid intervals.
-            if self.view is not None:
-                if self.view not in ob.intervals:
-                    msg = "View '{}' does not exist in observation {}".format(
-                        self.view, ob.name
-                    )
-                    raise RuntimeError(msg)
-                # Go through all the intervals that will be used for our data view
-                # and accumulate the number of samples.
-                for intvw in ob.intervals[self.view]:
-                    interval_starts.append(nsamp_valid)
-                    nsamp_valid += intvw.last - intvw.first + 1
-            else:
-                interval_starts.append(nsamp_valid)
-                nsamp_valid += ob.n_local_samples
             nsamp += ob.n_local_samples
 
-        if data.comm.world_rank == 0:
-            log.info(
-                "{} {:.2f} % of samples are included in valid intervals.".format(
-                    self._logprefix, nsamp_valid * 100.0 / nsamp
-                )
-            )
-
-        nsamp = nsamp_valid
-
-        interval_starts = np.array(interval_starts, dtype=np.int64)
-        all_dets = sorted(all_dets)
+        all_dets = list(sorted(all_dets))[: self.limit_det]
+        ndet = len(all_dets)
 
         nnz_full = len(self.stokes_weights.mode)
-        nnz_stride = None  # N.B: not used, useful for temperature-only maps
 
         # Check that Stokes weights operator has mode "iqu"
         if nnz_full != 3:
@@ -771,7 +624,6 @@ class Mappraiser(Operator):
                 nnz = nnz_full - 1
         else:
             nnz = nnz_full
-        nnz_stride = 1
 
         if data.comm.world_rank == 0 and "path_output" in params:
             os.makedirs(params["path_output"], exist_ok=True)
@@ -792,23 +644,19 @@ class Mappraiser(Operator):
             nsamp,
             nnz,
             nnz_full,
-            nnz_stride,
-            interval_starts,
             psd_freqs,
         )
 
     @function_timer
     def _stage_data(
-            self,
-            params,
-            data,
-            all_dets,
-            nsamp,
-            nnz,
-            nnz_full,
-            nnz_stride,
-            interval_starts,
-            psd_freqs,
+        self,
+        params,
+        data,
+        all_dets,
+        nsamp,
+        nnz,
+        nnz_full,
+        psd_freqs,
     ):
         """Create mappraiser-compatible buffers.
         Collect the data into Mappraiser buffers.  If we are purging TOAST data to save
@@ -852,15 +700,6 @@ class Mappraiser(Operator):
         #     time_offset = 0.0
 
         #     for ob in data.obs:
-        #         for vw in ob.view[self.view].shared[self.times]:
-        #             offset = interval_starts[interval]
-        #             slc = slice(offset, offset + len(vw), 1)
-        #             self._mappraiser_timestamps[slc] = vw
-        #             if self.translate_timestamps:
-        #                 off = self._mappraiser_timestamps[offset] - time_offset
-        #                 self._mappraiser_timestamps[slc] -= off
-        #                 time_offset = self._mappraiser_timestamps[slc][-1] + 1.0
-        #             interval += 1
 
         #         # Get the noise object for this observation and create new
         #         # entries in the dictionary when the PSD actually changes.  The detector
@@ -872,8 +711,9 @@ class Mappraiser(Operator):
         #             if self.noise_scale in ob:
         #                 nse_scale = float(ob[self.noise_scale])
 
+        #         local_dets = set(ob.select_local_detectors(flagmask=self.det_mask))
         #         for det in all_dets:
-        #             if det not in ob.local_detectors:
+        #             if det not in local_dets:
         #                 continue
         #             psd = nse.psd(det).to_value(u.K**2 * u.second) * nse_scale**2
         #             detw = nse.detector_weight(det)
@@ -912,17 +752,16 @@ class Mappraiser(Operator):
             stage_local(
                 data,
                 nsamp,
-                self.view,
                 all_dets,
                 self.det_data,
                 self._mappraiser_signal,
-                interval_starts,
                 1,
                 1,
+                self.det_mask,
                 None,
                 None,
                 None,
-                None,
+                self.det_flag_mask,
                 do_purge=False,
                 pair_diff=self.pair_diff,
             )
@@ -935,17 +774,16 @@ class Mappraiser(Operator):
                     nodecomm,
                     n_copy_groups,
                     nsamp,
-                    self.view,
                     all_dets,
                     self.det_data,
                     libmappraiser.SIGNAL_TYPE,
-                    interval_starts,
                     1,
                     1,
+                    self.det_mask,
                     None,
                     None,
                     None,
-                    None,
+                    self.det_flag_mask,
                     pair_diff=self.pair_diff,
                 )
             else:
@@ -957,17 +795,16 @@ class Mappraiser(Operator):
                 stage_local(
                     data,
                     nsamp,
-                    self.view,
                     all_dets,
                     self.det_data,
                     self._mappraiser_signal,
-                    interval_starts,
                     1,
                     1,
+                    self.det_mask,
                     None,
                     None,
                     None,
-                    None,
+                    self.det_flag_mask,
                     do_purge=False,
                     pair_diff=self.pair_diff,
                 )
@@ -988,8 +825,7 @@ class Mappraiser(Operator):
 
         # Compute sizes of local data blocks, store telescope, ob and det uids (for gap-filling procedure)
         for iobs, ob in enumerate(data.obs):
-            views = ob.view[self.view]
-            dets = ob.select_local_detectors(all_dets)
+            dets = ob.select_local_detectors(all_dets, flagmask=self.det_mask)
             sindx = ob.session.uid
             telescope = ob.telescope.uid
             nse = ob[self.noise_model]
@@ -1000,15 +836,7 @@ class Mappraiser(Operator):
                 self._mappraiser_detindxs[data_block_indx] = nse.index(key)
                 self._mappraiser_obsindxs[data_block_indx] = sindx
                 self._mappraiser_telescopes[data_block_indx] = telescope
-                # Loop over views to compute the block size
-                for vw in views:
-                    view_samples = None
-                    if vw.start is None:
-                        # This is a view of the whole obs
-                        view_samples = ob.n_local_samples
-                    else:
-                        view_samples = vw.stop - vw.start
-                    self._mappraiser_blocksizes[data_block_indx] += view_samples
+                self._mappraiser_blocksizes[data_block_indx] = ob.n_local_samples
 
         # Gather data sizes of the full communicator in global array
         data_size_proc = np.array(
@@ -1047,17 +875,16 @@ class Mappraiser(Operator):
             stage_local(
                 data,
                 nsamp,
-                self.view,
                 all_dets,
                 self.noise_name,
                 self._mappraiser_noise,
-                interval_starts,
                 1,
                 1,
+                self.det_mask,
                 None,
                 None,
                 None,
-                None,
+                self.det_flag_mask,
                 do_purge=False,
                 pair_diff=self.pair_diff,
             )
@@ -1070,17 +897,16 @@ class Mappraiser(Operator):
                     nodecomm,
                     n_copy_groups,
                     nsamp,
-                    self.view,
                     all_dets,
                     self.noise_name,
                     libmappraiser.SIGNAL_TYPE,
-                    interval_starts,
                     1,
                     1,
+                    self.det_mask,
                     None,
                     None,
                     None,
-                    None,
+                    self.det_flag_mask,
                     pair_diff=self.pair_diff,
                 )
             else:
@@ -1092,17 +918,16 @@ class Mappraiser(Operator):
                 stage_local(
                     data,
                     nsamp,
-                    self.view,
                     all_dets,
                     self.noise_name,
                     self._mappraiser_noise,
-                    interval_starts,
                     1,
                     1,
+                    self.det_mask,
                     None,
                     None,
                     None,
-                    None,
+                    self.det_flag_mask,
                     do_purge=False,
                     pair_diff=self.pair_diff,
                 )
@@ -1168,13 +993,12 @@ class Mappraiser(Operator):
                 nodecomm,
                 n_copy_groups,
                 nsamp,
-                self.view,
                 all_dets,
                 self.pixel_pointing.pixels,
                 libmappraiser.PIXEL_TYPE,
-                interval_starts,
                 nnz,
                 1,
+                self.det_mask,
                 self.shared_flags,
                 self.shared_flag_mask,
                 self.det_flags,
@@ -1197,17 +1021,16 @@ class Mappraiser(Operator):
                 nodecomm,
                 n_copy_groups,
                 nsamp,
-                self.view,
                 all_dets,
                 self.stokes_weights.weights,
                 libmappraiser.WEIGHT_TYPE,
-                interval_starts,
                 nnz,
-                nnz_stride,
+                1,
+                self.det_mask,
                 None,
                 None,
                 None,
-                None,
+                self.det_flag_mask,
                 operator=self.stokes_weights,
                 pair_skip=self.pair_diff,
                 select_qu=not self.estimate_spin_zero,
@@ -1284,145 +1107,6 @@ class Mappraiser(Operator):
             data_size_proc,
             nblock_loc,
         )
-
-    @function_timer
-    def _unstage_data(
-            self,
-            params,
-            data,
-            all_dets,
-            nsamp,
-            nnz,
-            nnz_full,
-            interval_starts,
-            signal_dtype,
-    ):
-        """
-        Restore data to TOAST observations.
-        Optionally copy the signal and pointing back to TOAST if we previously
-        purged it to save memory.  Also copy the destriped timestreams if desired.
-        """
-        log = Logger.get()
-        timer = Timer()
-
-        nodecomm = data.comm.comm_group_node
-
-        # Determine how many processes per node should copy at once.
-        n_copy_groups = 1
-        if self.purge_det_data:
-            # We MAY be restoring some data- see if we should reduce the number of
-            # processes copying in parallel (if we are not purging data, there
-            # is no benefit to staggering the copy).
-            if self.copy_groups > 0:
-                n_copy_groups = min(self.copy_groups, nodecomm.size)
-
-        log_time_memory(
-            data,
-            prefix=self._logprefix,
-            mem_msg="Before un-staging",
-            full_mem=self.mem_report,
-        )
-
-        # Copy the signal
-
-        timer.start()
-
-        out_name = self.det_data
-        # if self.det_out is not None:
-        #     out_name = self.det_out
-
-        # if self.det_out is not None or (self.purge_det_data and self.restore_det_data):
-        if self.purge_det_data and self.restore_det_data:
-            # We are copying some kind of signal back
-            if not self.mcmode:
-                # We are not running multiple realizations, so delete as we copy.
-                # Restore signal
-                restore_in_turns(
-                    data,
-                    nodecomm,
-                    n_copy_groups,
-                    nsamp,
-                    self.view,
-                    all_dets,
-                    out_name,
-                    signal_dtype,
-                    self._mappraiser_signal,
-                    self._mappraiser_signal_raw,
-                    interval_starts,
-                    1,
-                )
-                del self._mappraiser_signal
-                del self._mappraiser_signal_raw
-                del self._mappraiser_blocksizes
-                del self._mappraiser_blocksizes_raw
-                del self._mappraiser_detindxs
-                del self._mappraiser_detindxs_raw
-                del self._mappraiser_obsindxs
-                del self._mappraiser_obsindxs_raw
-                del self._mappraiser_telescopes
-                del self._mappraiser_telescopes_raw
-                # Restore noise
-                restore_in_turns(
-                    data,
-                    nodecomm,
-                    n_copy_groups,
-                    nsamp,
-                    self.view,
-                    all_dets,
-                    out_name,
-                    signal_dtype,
-                    self._mappraiser_noise,
-                    self._mappraiser_noise_raw,
-                    interval_starts,
-                    1,
-                )
-                del self._mappraiser_noise
-                del self._mappraiser_noise_raw
-                del self._mappraiser_invtt
-                del self._mappraiser_invtt_raw
-                del self._mappraiser_tt
-                del self._mappraiser_tt_raw
-            else:
-                # We want to re-use the signal buffer, just copy.
-                restore_local(
-                    data,
-                    nsamp,
-                    self.view,
-                    all_dets,
-                    out_name,
-                    signal_dtype,
-                    self._mappraiser_signal,
-                    interval_starts,
-                    1,
-                )
-                restore_local(
-                    data,
-                    nsamp,
-                    self.view,
-                    all_dets,
-                    out_name,
-                    signal_dtype,
-                    self._mappraiser_noise,
-                    interval_starts,
-                    1,
-                )
-
-            log_time_memory(
-                data,
-                timer=timer,
-                timer_msg="Copy signal",
-                prefix=self._logprefix,
-                mem_msg="After restoring signal",
-                full_mem=self.mem_report,
-            )
-
-        if not self.mcmode:
-            # We can clear the cached pointing
-            del self._mappraiser_pixels
-            del self._mappraiser_pixels_raw
-            del self._mappraiser_pixweights
-            del self._mappraiser_pixweights_raw
-        return
 
     @function_timer
     def _MLmap(self, params, data, data_size_proc, nb_blocks_loc, nnz):

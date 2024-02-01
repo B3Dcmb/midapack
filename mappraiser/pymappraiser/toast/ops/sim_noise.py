@@ -16,7 +16,7 @@ from toast.traits import Bool, Int, Unicode, Unit
 from toast.utils import AlignedF64, Logger, rate_from_times, unit_conversion
 from toast.ops.operator import Operator
 
-from .utils import compute_autocorr, compute_psd_eff
+from .mappraiser_utils import compute_autocorr, compute_psd_eff
 
 
 @function_timer

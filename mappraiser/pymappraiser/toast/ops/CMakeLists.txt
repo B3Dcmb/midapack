@@ -1,8 +1,8 @@
 install(FILES
     __init__.py
-    gainscrambler.py
     mappraiser.py
+    mappraiser_utils.py
     sim_noise.py
-    utils.py
+    gainscrambler.py
     DESTINATION ${PYTHON_SITE}/pymappraiser/toast/ops
 )
