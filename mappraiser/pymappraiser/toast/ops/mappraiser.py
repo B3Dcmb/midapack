@@ -450,6 +450,7 @@ class Mappraiser(Operator):
             nsamp,
             nnz,
             nnz_full,
+            interval_starts,
             psd_freqs,
         ) = self._prepare(params, data, detectors)
 
@@ -471,6 +472,7 @@ class Mappraiser(Operator):
             nsamp,
             nnz,
             nnz_full,
+            interval_starts,
             psd_freqs,
         )
 
@@ -566,6 +568,11 @@ class Mappraiser(Operator):
 
         nsamp = 0
 
+        # MAPPRAISER uses monolithic data buffers and specifies contiguous data intervals
+        # in that buffer.  The starting sample index is used to mark the transition
+        # between data intervals.
+        interval_starts = list()
+
         all_dets = set()
         nnz_full = None
         psd_freqs = None
@@ -604,8 +611,11 @@ class Mappraiser(Operator):
                             "All PSDs passed to Mappraiser must have the same frequency binning."
                         )
 
+            # Not using views, so there is only one interval per observation
+            interval_starts.append(nsamp)
             nsamp += ob.n_local_samples
 
+        interval_starts = np.array(interval_starts, dtype=np.int64)
         all_dets = list(sorted(all_dets))[: self.limit_det]
         ndet = len(all_dets)
 
@@ -644,6 +654,7 @@ class Mappraiser(Operator):
             nsamp,
             nnz,
             nnz_full,
+            interval_starts,
             psd_freqs,
         )
 
@@ -656,6 +667,7 @@ class Mappraiser(Operator):
         nsamp,
         nnz,
         nnz_full,
+        interval_starts,
         psd_freqs,
     ):
         """Create mappraiser-compatible buffers.
@@ -755,7 +767,7 @@ class Mappraiser(Operator):
                 all_dets,
                 self.det_data,
                 self._mappraiser_signal,
-                1,
+                interval_starts,
                 1,
                 self.det_mask,
                 None,
@@ -777,7 +789,7 @@ class Mappraiser(Operator):
                     all_dets,
                     self.det_data,
                     libmappraiser.SIGNAL_TYPE,
-                    1,
+                    interval_starts,
                     1,
                     self.det_mask,
                     None,
@@ -798,7 +810,7 @@ class Mappraiser(Operator):
                     all_dets,
                     self.det_data,
                     self._mappraiser_signal,
-                    1,
+                    interval_starts,
                     1,
                     self.det_mask,
                     None,
@@ -830,13 +842,18 @@ class Mappraiser(Operator):
             telescope = ob.telescope.uid
             nse = ob[self.noise_model]
             for idet, key in enumerate(nse.all_keys_for_dets(dets)):
-                if self.pair_diff and (idet % 2 == 0):
-                    continue
-                data_block_indx = (idet // 2) * nobs + iobs
-                self._mappraiser_detindxs[data_block_indx] = nse.index(key)
-                self._mappraiser_obsindxs[data_block_indx] = sindx
-                self._mappraiser_telescopes[data_block_indx] = telescope
-                self._mappraiser_blocksizes[data_block_indx] = ob.n_local_samples
+                iblock: int
+                if self.pair_diff:
+                    if idet % 2 == 0:
+                        continue
+                    else:
+                        iblock = (idet // 2) * nobs + iobs
+                else:
+                    iblock = idet * nobs + iobs
+                self._mappraiser_detindxs[iblock] = nse.index(key)
+                self._mappraiser_obsindxs[iblock] = sindx
+                self._mappraiser_telescopes[iblock] = telescope
+                self._mappraiser_blocksizes[iblock] = ob.n_local_samples
 
         # Gather data sizes of the full communicator in global array
         data_size_proc = np.array(
@@ -878,7 +895,7 @@ class Mappraiser(Operator):
                 all_dets,
                 self.noise_name,
                 self._mappraiser_noise,
-                1,
+                interval_starts,
                 1,
                 self.det_mask,
                 None,
@@ -900,7 +917,7 @@ class Mappraiser(Operator):
                     all_dets,
                     self.noise_name,
                     libmappraiser.SIGNAL_TYPE,
-                    1,
+                    interval_starts,
                     1,
                     self.det_mask,
                     None,
@@ -921,7 +938,7 @@ class Mappraiser(Operator):
                     all_dets,
                     self.noise_name,
                     self._mappraiser_noise,
-                    1,
+                    interval_starts,
                     1,
                     self.det_mask,
                     None,
@@ -996,8 +1013,8 @@ class Mappraiser(Operator):
                 all_dets,
                 self.pixel_pointing.pixels,
                 libmappraiser.PIXEL_TYPE,
+                interval_starts,
                 nnz,
-                1,
                 self.det_mask,
                 self.shared_flags,
                 self.shared_flag_mask,
@@ -1024,8 +1041,8 @@ class Mappraiser(Operator):
                 all_dets,
                 self.stokes_weights.weights,
                 libmappraiser.WEIGHT_TYPE,
+                interval_starts,
                 nnz,
-                1,
                 self.det_mask,
                 None,
                 None,
