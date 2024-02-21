@@ -57,7 +57,7 @@ class Mappraiser(Operator):
     )
 
     atm_name = Unicode(
-        "atm",
+        None,
         allow_none=True,
         help="Observation detdata key for atm data to be added with the noise (if None, assume no atm)",
     )
