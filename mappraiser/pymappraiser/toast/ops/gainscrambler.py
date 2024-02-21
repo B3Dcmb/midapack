@@ -28,7 +28,7 @@ class MyGainScrambler(Operator):
 
     det_data_names = List(
         trait=Unicode,
-        default_value=[defaults.det_data, "noise"],
+        default_value=[defaults.det_data],
         help="Observation detdata key to apply the gain error to",
     )
 
@@ -45,13 +45,6 @@ class MyGainScrambler(Operator):
     realization = Int(0, allow_none=False, help="Realization index")
 
     component = Int(0, allow_none=False, help="Component index for this simulation")
-
-    coherent_gain_error = Bool(
-        False,
-        allow_none=False,
-        help="Apply same gain error (of `sigma` percent) to all detectors. Use `pattern` "
-        "to select e.g. the B detector of the detector pairs.",
-    )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -101,17 +94,14 @@ class MyGainScrambler(Operator):
                 detindx = focalplane[det]["uid"]
                 counter1 = detindx
 
-                if self.coherent_gain_error:
-                    gain = 1 + self.sigma
-                else:
-                    rngdata = rng.random(
-                        1,
-                        sampler="gaussian",
-                        key=(key1, key2),
-                        counter=(counter1, counter2),
-                    )
+                rngdata = rng.random(
+                    1,
+                    sampler="gaussian",
+                    key=(key1, key2),
+                    counter=(counter1, counter2),
+                )
 
-                    gain = self.center + rngdata[0] * self.sigma
+                gain = self.center + rngdata[0] * self.sigma
 
                 for name, dets_present in zip(self.det_data_names, dets_present_list):
                     if det in dets_present:
