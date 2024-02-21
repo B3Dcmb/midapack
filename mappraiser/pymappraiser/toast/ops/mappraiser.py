@@ -13,6 +13,7 @@ from toast.traits import Bool, Dict, Instance, Int, Float, Unicode, trait_docs
 from toast.utils import Environment, Logger, dtype_to_aligned
 from toast.ops.delete import Delete
 from toast.ops.operator import Operator
+from toast.ops.arithmetic import Combine
 
 from .mappraiser_utils import (
     compute_autocorrelations,
@@ -53,6 +54,12 @@ class Mappraiser(Operator):
         "noise",
         allow_none=True,
         help="Observation detdata key for noise data (if None, triggers noiseless mode)",
+    )
+
+    atm_name = Unicode(
+        "atm",
+        allow_none=True,
+        help="Observation detdata key for atm data to be added with the noise (if None, assume no atm)",
     )
 
     det_data = Unicode(
@@ -186,7 +193,7 @@ class Mappraiser(Operator):
 
     # preconditioner
     precond = Int(
-        0, help="Choose preconditioner (0->BJ, 1->2lvl a priori, 2->2lvl a posteriori"
+        0, help="Choose preconditioner (0->BJ, 1->2lvl a priori, 2->2lvl a posteriori)"
     )
     z_2lvl = Int(0, help="Size of 2lvl deflation space")
     ortho_alg = Int(1, help="Orthogonalization scheme for ECG (O->odir, 1->omin)")
@@ -879,6 +886,16 @@ class Mappraiser(Operator):
                 msg,
                 data.comm.comm_world,
             )
+
+        # Is there any atmosphere to be added with the noise?
+        if self.atm_name is not None:
+            if self.atm_name != self.noise_name:
+                Combine(
+                    op="add",
+                    first=self.noise_name,
+                    second=self.atm_name,
+                    result=self.noise_name,
+                ).apply(data)
 
         if self._cached:
             # We have previously created the mappraiser buffers.  We just need to fill
