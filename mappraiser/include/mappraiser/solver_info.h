@@ -39,6 +39,7 @@ void solverinfo_init(SolverInfo *si);
 void solverinfo_update(SolverInfo *si, bool *stop, int step_nbr, double res,
                        double wtime);
 void solverinfo_finalize(SolverInfo *si);
+int solverinfo_write(SolverInfo *si, const char *filename);
 void solverinfo_free(SolverInfo *si);
 
 #endif // MAPPRAISER_SOLVER_INFO_H

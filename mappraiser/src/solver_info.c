@@ -155,12 +155,31 @@ void solverinfo_finalize(SolverInfo *si) {
             puts("-> failed (possible cause: memory issue)");
         } else {
             // no convergence nor divergence
-            printf("-> maximal iteration number reached (%d)\n",
-                   si->max_steps);
+            printf("-> maximal iteration number reached (%d)\n", si->max_steps);
         }
         printf("-> n_iter = %d, time = %lf s\n", si->n_iter, si->solve_time);
         fflush(stdout);
     }
+}
+
+int solverinfo_write(SolverInfo *si, const char *filename) {
+    FILE *fp = fopen(filename, "w");
+    if (fp == NULL) {
+        return -1; // Error opening file
+    }
+
+    // Column headers
+    fprintf(fp, "step\tresidual");
+
+    // Contents
+    for (int i = 0; i < si->n_iter + 1; i++) {
+        fprintf(fp, "\n%04d\t%E", i, si->res_hist[i]);
+    }
+
+    // Close the file
+    fclose(fp);
+
+    return 0; // Success
 }
 
 /// @brief Free any allocated buffer inside the structure

@@ -300,6 +300,17 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
             CG_mm(&A, P->pixpond, &Nm1, &N, ws, &Gaps, x, signal, &si);
         }
 
+        // Write PCG residuals to disk
+        if (rank == 0) {
+            char fname[FILENAME_MAX];
+            sprintf(fname, "%s/residuals_%s.dat", outpath, ref);
+            int info = solverinfo_write(&si, fname);
+            if (info != 0) {
+                fputs("Problem writing residuals to file", stderr);
+            }
+        }
+
+        // Free SolverInfo structure
         solverinfo_free(&si);
 
     } else if (solver == 1) {
