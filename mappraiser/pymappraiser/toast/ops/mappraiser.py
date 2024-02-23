@@ -890,6 +890,13 @@ class Mappraiser(Operator):
         # Is there any atmosphere to be added with the noise?
         if self.atm_name is not None:
             if self.atm_name != self.noise_name:
+                msg = "{} Adding atmosphere '{}' to noise buffer '{}'".format(
+                    self._logprefix, self.atm_name, self.noise_name
+                )
+                log.info_rank(
+                    msg,
+                    data.comm.comm_world,
+                )
                 Combine(
                     op="add",
                     first=self.noise_name,
