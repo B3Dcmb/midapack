@@ -13,6 +13,8 @@ from toast.traits import Bool, Float, Int, Unicode, List, trait_docs
 from toast.utils import Logger
 from toast.ops.operator import Operator
 
+from .mappraiser_utils import pairwise
+
 
 @trait_docs
 class MyGainScrambler(Operator):
@@ -45,6 +47,14 @@ class MyGainScrambler(Operator):
     realization = Int(0, allow_none=False, help="Realization index")
 
     component = Int(0, allow_none=False, help="Component index for this simulation")
+
+    process_pairs = Bool(False, allow_none=False, help="Process detectors in pairs")
+
+    uniform = Bool(
+        False,
+        allow_none=False,
+        help="If True, scramble all detector pairs in the same way",
+    )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -83,29 +93,67 @@ class MyGainScrambler(Operator):
                 set(obs.detdata[name].detectors) for name in self.det_data_names
             ]
 
-            for det in dets:
-                # Test the detector pattern
-                if pat is not None and pat.match(det) is None:
-                    if rank == 0:
-                        msg = f"Skipping detector '{det}'"
-                        log.debug(msg)
-                    continue
+            if self.process_pairs:
+                for det_a, det_b in pairwise(dets):
+                    # Test the detector pattern
+                    if pat is not None and (
+                        pat.match(det_a) is None or pat.match(det_b) is None
+                    ):
+                        if rank == 0:
+                            msg = f"Skipping detector pair '({det_a}, {det_b})'"
+                            log.debug(msg)
+                        continue
 
-                detindx = focalplane[det]["uid"]
-                counter1 = detindx
+                    detindx = focalplane[det_a]["uid"]
+                    counter1 = detindx
 
-                rngdata = rng.random(
-                    1,
-                    sampler="gaussian",
-                    key=(key1, key2),
-                    counter=(counter1, counter2),
-                )
+                    if self.uniform:
+                        rngdata = np.array([1.0])
+                    else:
+                        rngdata = rng.random(
+                            1,
+                            sampler="gaussian",
+                            key=(key1, key2),
+                            counter=(counter1, counter2),
+                        )
 
-                gain = self.center + rngdata[0] * self.sigma
+                    # Apply symmetric gains to detectors A and B
+                    gain_a = self.center + 0.5 * rngdata[0] * self.sigma
+                    gain_b = self.center - 0.5 * rngdata[0] * self.sigma
 
-                for name, dets_present in zip(self.det_data_names, dets_present_list):
-                    if det in dets_present:
-                        obs.detdata[name][det] *= gain
+                    for name, dets_present in zip(
+                        self.det_data_names, dets_present_list
+                    ):
+                        if det_a in dets_present and det_b in dets_present:
+                            obs.detdata[name][det_a] *= gain_a
+                            obs.detdata[name][det_b] *= gain_b
+
+            else:
+                for det in dets:
+                    # Test the detector pattern
+                    if pat is not None and pat.match(det) is None:
+                        if rank == 0:
+                            msg = f"Skipping detector '{det}'"
+                            log.debug(msg)
+                        continue
+
+                    detindx = focalplane[det]["uid"]
+                    counter1 = detindx
+
+                    rngdata = rng.random(
+                        1,
+                        sampler="gaussian",
+                        key=(key1, key2),
+                        counter=(counter1, counter2),
+                    )
+
+                    gain = self.center + rngdata[0] * self.sigma
+
+                    for name, dets_present in zip(
+                        self.det_data_names, dets_present_list
+                    ):
+                        if det in dets_present:
+                            obs.detdata[name][det] *= gain
 
         return
 
