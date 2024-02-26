@@ -45,7 +45,7 @@ def simulate_calibration_error(job, otherargs, runargs, data):
     job_ops = job.operators
 
     if otherargs.realization is not None:
-        job_ops.gainscrambler.realization = otherargs.realization
+        job_ops.my_gainscrambler.realization = otherargs.realization
 
-    if job_ops.gainscrambler.enabled:
-        job_ops.gainscrambler.apply(data)
+    if job_ops.my_gainscrambler.enabled:
+        job_ops.my_gainscrambler.apply(data)
