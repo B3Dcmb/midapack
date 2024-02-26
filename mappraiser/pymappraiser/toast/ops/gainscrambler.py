@@ -95,6 +95,13 @@ class MyGainScrambler(Operator):
 
             if self.process_pairs:
                 for det_a, det_b in pairwise(dets):
+                    # Warn if the detectors don't look like a pair
+                    root = det_a[:-1]
+                    if root not in det_b:
+                        log.warning_rank(
+                            f"Detectors ({det_a=}, {det_b=}) don't look like a pair"
+                        )
+
                     # Test the detector pattern
                     if pat is not None and (
                         pat.match(det_a) is None or pat.match(det_b) is None
@@ -108,7 +115,7 @@ class MyGainScrambler(Operator):
                     counter1 = detindx
 
                     if self.uniform:
-                        rngdata = np.array([1.0])
+                        rngdata = [1.0]
                     else:
                         rngdata = rng.random(
                             1,
