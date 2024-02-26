@@ -408,7 +408,9 @@ def noise_autocorrelation(
     # Define apodization window
     # Only allow max lambda = nn//2
     if lambda_ > nn // 2:
-        raise RuntimeError("Bandwidth cannot be larger than timestream.")
+        raise RuntimeError(
+            f"Bandwidth cannot be larger than timestream (lambda={lambda_}, {nn=})."
+        )
 
     window = apo_window(lambda_, kind=apod_window_type)
 
