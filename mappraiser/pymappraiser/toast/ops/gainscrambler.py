@@ -50,7 +50,7 @@ class MyGainScrambler(Operator):
 
     process_pairs = Bool(False, allow_none=False, help="Process detectors in pairs")
 
-    uniform = Bool(
+    constant = Bool(
         False,
         allow_none=False,
         help="If True, scramble all detector pairs in the same way",
@@ -114,7 +114,7 @@ class MyGainScrambler(Operator):
                     detindx = focalplane[det_a]["uid"]
                     counter1 = detindx
 
-                    if self.uniform:
+                    if self.constant:
                         rngdata = [1.0]
                     else:
                         rngdata = rng.random(
