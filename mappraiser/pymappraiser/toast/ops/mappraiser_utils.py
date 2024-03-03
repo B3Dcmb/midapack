@@ -90,22 +90,18 @@ def stage_local(
         local_dets = set(ob.select_local_detectors(flagmask=det_mask))
         offset = interval_starts[iobs]
         if pair_diff or pair_skip:
-            for idet, (det_a, det_b) in enumerate(pairwise(dets)):
-                local_a = det_a in local_dets
-                local_b = det_b in local_dets
-                if (not local_a) and (not local_b):
+            for idet, pair in enumerate(pairwise(dets)):
+                if set(pair).isdisjoint(local_dets):
+                    # nothing to do
                     continue
-                incomplete_pair = local_a ^ local_b
-                if incomplete_pair:
-                    msg = "Incomplete pair in local detectors!\n"
-                    msg += f"{ob.telescope.detectors=}\n"
-                    msg += f"{local_dets=}\n"
-                    msg += f"{det_a=}, {det_b=}"
+                incomplete = not (set(pair).issubset(local_dets))
+                if incomplete:
+                    msg = f"Incomplete {pair=} ({ob.uid=}, {local_dets=}"
                     raise RuntimeError(msg)
                 if operator is not None:
                     # Synthesize data for staging
                     obs_data = data.select(obs_uid=ob.uid)
-                    operator.apply(obs_data, detectors=[det_a, det_b])
+                    operator.apply(obs_data, detectors=list(pair))
 
                 obs_samples = ob.n_local_samples
                 flags = None
@@ -120,6 +116,7 @@ def stage_local(
                     (idet * nsamp + offset + obs_samples) * nnz,
                     1,
                 )
+                det_a, det_b = pair
                 if detdata_name is not None:
                     if select_qu:
                         mappraiser_buffer[slc] = np.repeat(

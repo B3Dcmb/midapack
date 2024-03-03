@@ -89,9 +89,9 @@ class MyGainScrambler(Operator):
             counter1 = 0
             counter2 = 0
 
-            dets_present_list = [
-                set(obs.detdata[name].detectors) for name in self.det_data_names
-            ]
+            dets_present = {
+                name: set(obs.detdata[name].detectors) for name in self.det_data_names
+            }
 
             if self.process_pairs:
                 for det_a, det_b in pairwise(dets):
@@ -106,9 +106,6 @@ class MyGainScrambler(Operator):
                     if pat is not None and (
                         pat.match(det_a) is None or pat.match(det_b) is None
                     ):
-                        if rank == 0:
-                            msg = f"Skipping detector pair '({det_a}, {det_b})'"
-                            log.debug(msg)
                         continue
 
                     detindx = focalplane[det_a]["uid"]
@@ -128,10 +125,8 @@ class MyGainScrambler(Operator):
                     gain_a = self.center + 0.5 * rngdata[0] * self.sigma
                     gain_b = self.center - 0.5 * rngdata[0] * self.sigma
 
-                    for name, dets_present in zip(
-                        self.det_data_names, dets_present_list
-                    ):
-                        if det_a in dets_present and det_b in dets_present:
+                    for name, det_set in dets_present.items():
+                        if set((det_a, det_b)).issubset(det_set):
                             obs.detdata[name][det_a] *= gain_a
                             obs.detdata[name][det_b] *= gain_b
 
@@ -139,9 +134,6 @@ class MyGainScrambler(Operator):
                 for det in dets:
                     # Test the detector pattern
                     if pat is not None and pat.match(det) is None:
-                        if rank == 0:
-                            msg = f"Skipping detector '{det}'"
-                            log.debug(msg)
                         continue
 
                     detindx = focalplane[det]["uid"]
@@ -156,10 +148,8 @@ class MyGainScrambler(Operator):
 
                     gain = self.center + rngdata[0] * self.sigma
 
-                    for name, dets_present in zip(
-                        self.det_data_names, dets_present_list
-                    ):
-                        if det in dets_present:
+                    for name, det_set in dets_present.items():
+                        if det in det_set:
                             obs.detdata[name][det] *= gain
 
         return
