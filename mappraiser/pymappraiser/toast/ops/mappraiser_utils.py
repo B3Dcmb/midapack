@@ -276,8 +276,8 @@ def apo_window(lambd: int, kind="chebwin") -> np.ndarray:
 
 
 def compute_autocorrelations(
-    nobs,
-    ndet,
+    ob_uids,
+    dets,
     mappraiser_noise,
     local_block_sizes,
     lambda_,
@@ -292,13 +292,14 @@ def compute_autocorrelations(
 ):
     """Compute the first lines of the blocks of the banded noise covariance and store them in the provided buffer."""
     offset = 0
-    for iobs in range(nobs):
-        for idet in range(ndet):
-            blocksize = local_block_sizes[idet * nobs + iobs]
+    nobs = len(ob_uids)
+    for iob, uid in enumerate(ob_uids):
+        for idet, det in enumerate(dets):
+            blocksize = local_block_sizes[idet * nobs + iob]
             nsetod = mappraiser_noise[offset : offset + blocksize]
             slc = slice(
-                (idet * nobs + iobs) * lambda_,
-                (idet * nobs + iobs) * lambda_ + lambda_,
+                (idet * nobs + iob) * lambda_,
+                (idet * nobs + iob) * lambda_ + lambda_,
                 1,
             )
             buffer_inv_tt[slc], _ = noise_autocorrelation(
@@ -309,9 +310,9 @@ def compute_autocorrelations(
                 idet,
                 invtt_dtype,
                 apod_window_type,
-                verbose=(print_info and (idet == 0) and (iobs == 0)),
+                verbose=(print_info and (idet == 0) and (iob == 0)),
                 save_psd=save_psd,
-                fname=os.path.join(savedir, f"noise_fit_{obs.uid}_{idet}"),
+                fname=os.path.join(save_dir, f"noise_fit_{uid}_{det}"),
             )
             buffer_tt[slc] = compute_autocorr(
                 1 / compute_psd_eff(buffer_inv_tt[slc], blocksize), lambda_

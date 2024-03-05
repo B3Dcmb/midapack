@@ -637,10 +637,10 @@ class Mappraiser(Operator):
         else:
             nnz = nnz_full
 
-        if data.comm.world_rank == 0 and "path_output" in params:
+        if data.comm.world_rank == 0:
             os.makedirs(params["path_output"], exist_ok=True)
             if self.save_psd:
-                psdout = os.path.join(params["path_output"], "psd")
+                psdout = os.path.join(params["path_output"], "psd_fits")
                 os.makedirs(psdout, exist_ok=True)
 
         data.comm.comm_world.barrier()
@@ -980,9 +980,17 @@ class Mappraiser(Operator):
                 self._mappraiser_noise /= np.sqrt(self.downscale)
 
             # Compute noise autocorrelation and inverse autocorrelation functions
+            ob_uids = [ob.uid for ob in data.obs]
+            det_names = (
+                all_dets
+                if not self.pair_diff
+                else [name[:-2] for name in all_dets[::2]]
+            )
+            assert nobs == len(ob_uids)
+            assert ndet == len(det_names)
             compute_autocorrelations(
-                nobs,
-                ndet,
+                ob_uids,
+                det_names,
                 self._mappraiser_noise,
                 self._mappraiser_blocksizes,
                 params["lambda"],
