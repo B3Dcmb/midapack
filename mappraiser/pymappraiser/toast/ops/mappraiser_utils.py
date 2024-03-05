@@ -310,8 +310,8 @@ def compute_autocorrelations(
                 invtt_dtype,
                 apod_window_type,
                 verbose=(print_info and (idet == 0) and (iobs == 0)),
-                save_psd=(save_psd and (idet == 0) and (iobs == 0)),
-                save_dir=save_dir,
+                save_psd=save_psd,
+                fname=os.path.join(savedir, f"noise_fit_{obs.uid}_{idet}"),
             )
             buffer_tt[slc] = compute_autocorr(
                 1 / compute_psd_eff(buffer_inv_tt[slc], blocksize), lambda_
@@ -347,7 +347,7 @@ def noise_autocorrelation(
     nperseg=0,
     verbose=False,
     save_psd=False,
-    save_dir="",
+    fname="",
 ):
     """Computes a periodogram from a noise timestream, and fits a PSD model
     to it, which is then used to build the first row of a Toeplitz block.
@@ -415,38 +415,15 @@ def noise_autocorrelation(
     inv_tt_w = np.multiply(window, inv_tt[:lambda_], dtype=invtt_dtype)
     tt_w = np.multiply(window, tt[:lambda_], dtype=invtt_dtype)
 
-    # Keep the same norm
-    #
-    # rescale_tt = np.sqrt(np.sum(np.square(tt)) / np.sum(np.square(tt_w)))
-    # rescale_itt = np.sqrt(np.sum(np.square(inv_tt)) / np.sum(np.square(inv_tt_w)))
-    #
-    # print("correction for     tt = ", rescale_tt)
-    # print("correction for inv_tt = ", rescale_itt)
-    #
-    # tt_w *= rescale_tt
-    # inv_tt_w *= rescale_itt
-
     # Optionally save some PSDs for plots
     if save_psd:
-        # Save TOD
-        np.save(os.path.join(save_dir, "tod.npy"), nsetod)
-
-        # save simulated PSD
-        np.save(os.path.join(save_dir, "f_psd.npy"), f)
-        np.save(os.path.join(save_dir, "psd_sim.npy"), psd)
-        # ipsd = np.reciprocal(psd)
-        # np.save(os.path.join(save_dir, "ipsd_sim.npy"), ipsd)
-
-        # save fit of the PSD
-        np.save(os.path.join(save_dir, "f_full.npy"), f_full[: nn // 2])
-        np.save(os.path.join(save_dir, "psd_fit.npy"), psd_fit[: nn // 2])
-        # np.save(os.path.join(save_dir, "ipsd_fit.npy"), ipsd_fit[: nn // 2])
-
-        # save effective PSDs
-        ipsd_eff = compute_psd_eff(inv_tt_w, nn)
-        psd_eff = compute_psd_eff(tt_w, nn)
-        np.save(os.path.join(save_dir, "ipsd_eff" + str(lambda_) + ".npy"), ipsd_eff)
-        np.save(os.path.join(save_dir, "psd_eff" + str(lambda_) + ".npy"), psd_eff)
+        noise_fit = {
+            "nn": nn,
+            "popt": popt,
+            "pcov": pcov,
+            "periodogram": psd,
+        }
+        np.savez(fname, **noise_fit)
 
     return inv_tt_w, tt_w
 

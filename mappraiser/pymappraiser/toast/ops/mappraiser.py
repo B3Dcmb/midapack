@@ -846,7 +846,7 @@ class Mappraiser(Operator):
             for idet, key in enumerate(nse.all_keys_for_dets(dets)):
                 iblock: int
                 if self.pair_diff:
-                    if idet % 2 == 0:
+                    if idet % 2 == 1:
                         continue
                     else:
                         iblock = (idet // 2) * nobs + iobs
@@ -993,7 +993,7 @@ class Mappraiser(Operator):
                 apod_window_type=self.apod_window_type,
                 print_info=(data.comm.world_rank == 0),
                 save_psd=(self.save_psd and data.comm.world_rank == 0),
-                save_dir=os.path.join(params["path_output"], "psd"),
+                save_dir=os.path.join(params["path_output"], "psd_fits"),
             )
 
             if self.fill_noise_zero:
@@ -1069,7 +1069,7 @@ class Mappraiser(Operator):
                 self.det_flag_mask,
                 operator=self.stokes_weights,
                 pair_skip=self.pair_diff,
-                select_qu=not self.estimate_spin_zero,
+                select_qu=not self.estimate_spin_zero,  # FIXME is this correct ??
             )
 
             log_time_memory(
