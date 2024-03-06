@@ -285,6 +285,7 @@ def compute_autocorrelations(
     buffer_inv_tt,
     buffer_tt,
     invtt_dtype,
+    nperseg_frac=1.0,
     print_info=False,
     save_psd=False,
     save_dir="",
@@ -310,6 +311,7 @@ def compute_autocorrelations(
                 idet,
                 invtt_dtype,
                 apod_window_type,
+                nperseg_frac=nperseg_frac,
                 verbose=(print_info and (idet == 0) and (iob == 0)),
                 save_psd=save_psd,
                 fname=os.path.join(save_dir, f"noise_fit_{uid}_{det}"),
@@ -345,7 +347,7 @@ def noise_autocorrelation(
     idet,
     invtt_dtype,
     apod_window_type,
-    nperseg=0,
+    nperseg_frac=1.0,
     verbose=False,
     save_psd=False,
     fname="",
@@ -363,8 +365,7 @@ def noise_autocorrelation(
     # Estimate psd from noise timestream
 
     # Length of segments used to estimate PSD (defines the lowest frequency we can estimate)
-    if nperseg == 0:
-        nperseg = nn
+    nperseg = int(nn * nperseg_frac)
 
     # Compute a periodogram with Welch's method
     f, psd = scipy.signal.welch(
@@ -422,6 +423,7 @@ def noise_autocorrelation(
             "nn": nn,
             "popt": popt,
             "pcov": pcov,
+            "freqs": f,
             "periodogram": psd,
         }
         np.savez(fname, **noise_fit)

@@ -154,9 +154,9 @@ class Mappraiser(Operator):
         "chebwin", help="Type of apodisation window to use during noise PSD estimation"
     )
 
-    nperseg = Int(
-        0,
-        help="If 0, set nperseg = timestream length to compute the noise periodograms.",
+    nperseg_frac = Float(
+        1.0,
+        help="Fraction of timestream length to use for computing noise periodograms with Welch method.",
     )
 
     bandwidth = Int(16384, help="Half-bandwidth for the noise model")
@@ -998,6 +998,7 @@ class Mappraiser(Operator):
                 self._mappraiser_invtt,
                 self._mappraiser_tt,
                 libmappraiser.INVTT_TYPE,
+                nperseg_frac=self.nperseg_frac,
                 apod_window_type=self.apod_window_type,
                 print_info=(data.comm.world_rank == 0),
                 save_psd=(self.save_psd and data.comm.world_rank == 0),
