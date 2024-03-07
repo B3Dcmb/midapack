@@ -13,7 +13,6 @@ from toast.traits import Bool, Dict, Instance, Int, Float, Unicode, trait_docs
 from toast.utils import Environment, Logger, dtype_to_aligned
 from toast.ops.delete import Delete
 from toast.ops.operator import Operator
-from toast.ops.arithmetic import Combine
 
 from .mappraiser_utils import (
     compute_autocorrelations,
@@ -886,23 +885,6 @@ class Mappraiser(Operator):
                 msg,
                 data.comm.comm_world,
             )
-
-        # Is there any atmosphere to be added with the noise?
-        if self.atm_name is not None:
-            if self.atm_name != self.noise_name:
-                msg = "{} Adding atmosphere '{}' to noise buffer '{}'".format(
-                    self._logprefix, self.atm_name, self.noise_name
-                )
-                log.info_rank(
-                    msg,
-                    data.comm.comm_world,
-                )
-                Combine(
-                    op="add",
-                    first=self.noise_name,
-                    second=self.atm_name,
-                    result=self.noise_name,
-                ).apply(data)
 
         if self._cached:
             # We have previously created the mappraiser buffers.  We just need to fill
