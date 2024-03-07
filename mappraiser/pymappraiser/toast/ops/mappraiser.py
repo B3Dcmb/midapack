@@ -55,12 +55,6 @@ class Mappraiser(Operator):
         help="Observation detdata key for noise data (if None, triggers noiseless mode)",
     )
 
-    atm_name = Unicode(
-        None,
-        allow_none=True,
-        help="Observation detdata key for atm data to be added with the noise (if None, assume no atm)",
-    )
-
     det_data = Unicode(
         defaults.det_data, help="Observation detdata key for the timestream data"
     )
