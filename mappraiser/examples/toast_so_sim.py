@@ -741,7 +741,7 @@ def reduce_data(job, args, data):
         ops.mappraiser.pixel_pointing = job.pixels_final
         ops.mappraiser.stokes_weights = ops.weights_radec
         ops.mappraiser.az_name = ops.sim_ground.azimuth
-        ops.mappraiser.hwp_name = ops.sim_ground.hwp_angle
+        ops.mappraiser.hwpangle_name = ops.sim_ground.hwp_angle
         # override output path and ref by command line args
         ops.mappraiser.params["path_output"] = args.out_dir
         ops.mappraiser.params["ref"] = args.ref

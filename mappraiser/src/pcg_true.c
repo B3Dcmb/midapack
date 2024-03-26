@@ -307,24 +307,30 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz *Nm1, TemplateClas
 
     st=MPI_Wtime();
 
-    // to test that we get zero residual for template modes
-    //int cumul_offset = 0;
-    //for(ces_id=0;ces_id<nces;ces_id++){
+    // // to test that we get zero residual for template modes
+    // int cumul_offset = 0;
+    // for(ces_id=0;ces_id<nces;ces_id++){
     //  for(i=0;i<(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id])*ndet;i++){
-    //     // if(i%(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id])<=npoly*nsweeps[ces_id])
-    //        // out2[cumul_offset+i] = 1+0.01*((i%(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id]))%nsweeps[ces_id]);
-    //     // else if(i%(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id])<=npoly*nsweeps[ces_id]+ground*n_sss_bins)
-    //      out2[cumul_offset+i] = 1+0.01*((i%((npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id]))-npoly*nsweeps[ces_id])%n_sss_bins);
-    //     // else
-    //     //   out2[cumul_offset+i] = 1/(6*sqrt(2))*1+1/(6*sqrt(2))*0.01*((i%((npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id]))-npoly*nsweeps[ces_id]-ground*n_sss_bins)%hwp_bins[ces_id]);
+    //     // Ground template
+    //     out2[cumul_offset+i] = (1+ces_id)+0.01*(i%n_sss_bins);
+    //     HWPSS template
+    //     out2[cumul_offset+i] = 1/(6*sqrt(2))*1+(1+ces_id)/(6*sqrt(2))*0.01*((i%(2*nhwp*hwp_bins[ces_id]))%hwp_bins[ces_id]);
+    //     if(i%(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id])<=npoly*nsweeps[ces_id])
+    //       out2[cumul_offset+i] = (1+ces_id)+0.01*((i%(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id]))%nsweeps[ces_id]);
+    //     else if(i%(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id])<=npoly*nsweeps[ces_id]+ground*n_sss_bins)
+    //       out2[cumul_offset+i] = 1+0.01*((i%((npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id]))-npoly*nsweeps[ces_id])%n_sss_bins);
+    //     else
+    //       out2[cumul_offset+i] = 1/(6*sqrt(2))*1+1/(6*sqrt(2))*0.01*((i%((npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id]))-npoly*nsweeps[ces_id]-ground*n_sss_bins)%hwp_bins[ces_id]);
     //  }
     //  cumul_offset += (npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id])*ndet;
-    //}
-    //
-    //TVecProd(X, nces, n_class * ndet, sampling_freq, ces_length, sweeptstamps,
+    // }
+    
+    // TVecProd(X, nces, n_class * ndet, sampling_freq, ces_length, sweeptstamps,
     //  az_binned, hwp_mod, nhwp, delta_t, store_hwp, out2, noise);
-    // for(i=0;i<10;i++)
-    //   printf("b[%d] = %f\n",i,b[i]);
+    
+    // // Set signal to zero
+    // for(i=0;i<m;i++)
+    //   b[i] = 0;
 
     // Compute RHS - initial guess
     MatVecProd(A, x, _g, 0);
@@ -332,17 +338,17 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz *Nm1, TemplateClas
     for(i = 0; i < m; i++)
       _g[i] = b[i] + noise[i] - _g[i];
 
-    // Save detector data in a file for tests
+    // //Save detector data in a file for tests
     // if(rank==12){
     //   char det0filename[256];
     //   char detnfilename[256];
     //   FILE *fp0,*fp1;
     //   sprintf(det0filename,"%s/det0_data_init.dat",outpath);
-    //   sprintf(detnfilename,"%s/det%d_data_init.dat",outpath,80);
+    //   sprintf(detnfilename,"%s/det%d_data_init.dat",outpath,Nm1->nb_blocks_loc-1);
     //   fp0=fopen(det0filename, "wb");
     //   fp1=fopen(detnfilename, "wb");
-    //   fwrite(_g, sizeof(double), Nm1.tpltzblocks[0].n, fp0);
-    //   fwrite(_g+Nm1.tpltzblocks[0].n*80, sizeof(double), Nm1.tpltzblocks[Nm1.nb_blocks_loc-1].n, fp1);
+    //   fwrite(_g, sizeof(double), Nm1->tpltzblocks[0].n, fp0);
+    //   fwrite(_g+Nm1->tpltzblocks[0].n*(Nm1->nb_blocks_loc-1), sizeof(double), Nm1->tpltzblocks[Nm1->nb_blocks_loc-1].n, fp1);
     //   fclose(fp0);
     //   fclose(fp1);
     // }
@@ -417,17 +423,17 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz *Nm1, TemplateClas
     //    char fdetnfilename_fit[256];
     //    FILE *fp2,*fp3,*fp4,*fp5;
     //    sprintf(fdet0filename_filtered,"%s/det0_data_filtered.dat",outpath);
-    //    sprintf(fdetnfilename_filtered,"%s/det%d_data_filtered.dat",outpath,80);
+    //    sprintf(fdetnfilename_filtered,"%s/det%d_data_filtered.dat",outpath,Nm1->nb_blocks_loc-1);
     //    sprintf(fdet0filename_fit,"%s/det0_data_fit.dat",outpath);
-    //    sprintf(fdetnfilename_fit,"%s/det%d_data_fit.dat",outpath,80);
+    //    sprintf(fdetnfilename_fit,"%s/det%d_data_fit.dat",outpath,Nm1->nb_blocks_loc-1);
     //    fp2=fopen(fdet0filename_filtered, "wb");
     //    fp3=fopen(fdetnfilename_filtered, "wb");
     //    fp4=fopen(fdet0filename_fit, "wb");
     //    fp5=fopen(fdetnfilename_fit, "wb");
-    //    fwrite(_g, sizeof(double), Nm1.tpltzblocks[0].n, fp2);
-    //    fwrite(_g+Nm1.tpltzblocks[0].n*80, sizeof(double), Nm1.tpltzblocks[Nm1.nb_blocks_loc-1].n, fp3);
-    //    fwrite(Tvec, sizeof(double), Nm1.tpltzblocks[0].n, fp4);
-    //    fwrite(Tvec+Nm1.tpltzblocks[0].n*80, sizeof(double), Nm1.tpltzblocks[Nm1.nb_blocks_loc-1].n, fp5);
+    //    fwrite(_g, sizeof(double), Nm1->tpltzblocks[0].n, fp2);
+    //    fwrite(_g+Nm1->tpltzblocks[0].n*(Nm1->nb_blocks_loc-1), sizeof(double), Nm1->tpltzblocks[Nm1->nb_blocks_loc-1].n, fp3);
+    //    fwrite(Tvec, sizeof(double), Nm1->tpltzblocks[0].n, fp4);
+    //    fwrite(Tvec+Nm1->tpltzblocks[0].n*(Nm1->nb_blocks_loc-1), sizeof(double), Nm1->tpltzblocks[Nm1->nb_blocks_loc-1].n, fp5);
     //    fclose(fp2);
     //    fclose(fp3);
     //    fclose(fp4);

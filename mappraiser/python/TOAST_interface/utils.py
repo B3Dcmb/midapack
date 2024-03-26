@@ -80,7 +80,10 @@ def stage_local(
         # Flagging should only be enabled when we are processing the pixel indices
         # (which is how mappraiser effectively implements flagging).  So we will set
         # all flagged samples to "-1" below.
-
+    
+    # Change the meaning of offset to have dets of a single CES contiguous
+    offset = 0
+    
     for ob in data.obs:
         views = ob.view[view]
         for idet, det in enumerate(dets):
@@ -98,7 +101,6 @@ def stage_local(
                     view_samples = ob.n_local_samples
                 else:
                     view_samples = vw.stop - vw.start
-                offset = interval_starts[interval_offset + ivw]
 
                 flags = None
                 if do_flags:
@@ -108,10 +110,10 @@ def stage_local(
                     flags |= views.shared[shared_flags][ivw] & shared_mask
 
                 slc = slice(
-                    (idet * nsamp + offset) * nnz,
-                    (idet * nsamp + offset + view_samples) * nnz,
+                    (offset) * nnz,
+                    (offset + view_samples) * nnz,
                     1,
-                )
+                )                
                 if detdata_name is not None:
                     if nnz > 1:
                         mappraiser_buffer[slc] = np.repeat(
@@ -137,6 +139,9 @@ def stage_local(
                     # mappraiser's pixels buffer has nnz=3, not nnz=1
                     repeated_flags = np.repeat(detflags, n_repeat)
                     mappraiser_buffer[slc][repeated_flags != 0] = -1
+                
+                offset += view_samples
+
         if do_purge:
             del ob.detdata[detdata_name]
         interval_offset += len(views)
@@ -209,6 +214,9 @@ def restore_local(
     """Helper function to create a detdata buffer from mappraiser data.
     (This function is taken from madam_utils.py)
     """
+    # Change the meaning of offset to have dets of a single CES contiguous
+    offset = 0
+    
     interval = 0
     for ob in data.obs:
         # Create the detector data
@@ -225,15 +233,14 @@ def restore_local(
                 view_samples = ob.n_local_samples
             else:
                 view_samples = vw.stop - vw.start
-            offset = interval_starts[interval]
             ldet = 0
             for det in dets:
                 if det not in ob.local_detectors:
                     continue
                 idet = ob.local_detectors.index(det)
                 slc = slice(
-                    (idet * nsamp + offset) * nnz,
-                    (idet * nsamp + offset + view_samples) * nnz,
+                    (offset) * nnz,
+                    (offset + view_samples) * nnz,
                     1,
                 )
                 if nnz > 1:
@@ -243,6 +250,9 @@ def restore_local(
                 else:
                     views.detdata[detdata_name][ivw][ldet] = mappraiser_buffer[slc]
                 ldet += 1
+
+                offset += view_samples
+
             interval += 1
     return
 
@@ -328,7 +338,10 @@ def stage_polymetadata(
                     base_sup_id += int(params["polybaseline_length"] * fsamp)
             else:
                 for iflg, flg in enumerate(commonflags[:-1]):
-                    if (flg & commonflags[iflg+1] < 1): #switch from turnaround to LR/RL scan or viceversa
+                    # detect switch LR/RL scan and viceversa (turnarounds included in sweeps)
+                    # second condition was added because I noticed commonflags end with isolated turnaround flags, aka "3"
+                    # which in the current implementation will be ignored
+                    if ((flg & commonflags[iflg+1] < 8) and commonflags[iflg+1] >= 8):
                         sweeptstamps.append(iflg+1)
             sweeptstamps.append(len(commonflags))
             nsweeps = len(sweeptstamps)-1
@@ -336,7 +349,7 @@ def stage_polymetadata(
 
             sweeptstamps_list.append(sweeptstamps)
             nsweeps_list.append(nsweeps)
-
+    
     sweeptstamps_list = stack_padding(sweeptstamps_list)
     nsweeps_list = np.array(nsweeps_list, dtype=np.int32)
 
@@ -398,7 +411,7 @@ def compute_local_block_sizes(data, view, dets, buffer):
                     view_samples = ob.n_local_samples
                 else:
                     view_samples = vw.stop - vw.start
-                buffer[idet * len(data.obs) + iobs] += view_samples
+                buffer[iobs * len(dets) + idet] += view_samples
     return
 
 
@@ -420,11 +433,11 @@ def compute_invtt(
     offset = 0
     for iobs in range(nobs):
         for idet in range(ndet):
-            blocksize = local_block_sizes[idet * nobs + iobs]
+            blocksize = local_block_sizes[iobs * ndet + idet]            
             nsetod = mappraiser_noise[offset: offset + blocksize]
             slc = slice(
-                (idet * nobs + iobs) * Lambda,
-                (idet * nobs + iobs) * Lambda + Lambda,
+                (iobs * ndet + idet) * Lambda,
+                (iobs * ndet + idet) * Lambda + Lambda,
                 1,
             )
             buffer[slc] = noise2invtt(

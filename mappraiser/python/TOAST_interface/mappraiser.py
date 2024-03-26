@@ -147,7 +147,7 @@ class Mappraiser(Operator):
         help="Observation boresight azimuth key"
     )
 
-    hwp_name = Unicode(
+    hwpangle_name = Unicode(
         "hwp_angle",
         allow_none=True,
         help="Observation hwp angle key"
@@ -1200,16 +1200,15 @@ class Mappraiser(Operator):
         nces = len(data.obs)
         if params["map_maker"] == "MT":
             
-            if params["npoly"] != 0:
-                (
-                    sweeptstamps,
-                    nsweeps,
-                ) = stage_polymetadata(
-                    data,
-                    self.view,
-                    params,
-                    self.shared_flags,
-                )
+            (
+                sweeptstamps,
+                nsweeps,
+            ) = stage_polymetadata(
+                data,
+                self.view,
+                params,
+                self.shared_flags,
+            )
 
             if params["sss"]:
                 (
@@ -1219,7 +1218,6 @@ class Mappraiser(Operator):
                 ) = stage_azscan(
                     data,
                     self.view,
-                    params,
                     self.az_name,
                 )
             if params["nhwp"] != 0:

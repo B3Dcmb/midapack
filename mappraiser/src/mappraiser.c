@@ -576,10 +576,10 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
 
     // Polynomial templates metadata
     for(i=0;i<nces;i++){
-      detnsweeps[i] = (int *) calloc(ndet, sizeof(int));
-      for(j=0;j<ndet;j++)
-        detnsweeps[i][j] = nsweeps[i];
-        ces_length[i] = sweeptstamps[i][nsweeps[i]];
+        detnsweeps[i] = (int *) calloc(ndet, sizeof(int));
+        for(j=0;j<ndet;j++)
+          detnsweeps[i][j] = nsweeps[i];
+          ces_length[i] = sweeptstamps[i][nsweeps[i]];
     }
 
     // Binned boresight azimuth
@@ -589,16 +589,16 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     // HWP harmonics
     double ***hwp_mod = (double ***) malloc(nces * sizeof(double **));
     if(nhwp){
-      for(i=0;i<nces;i++){
-        hwp_mod[i] = (double **) malloc(2 * sizeof(double *));
-        hwp_mod[i][0] = (double *) calloc(ces_length[i], sizeof(double));//hwp_cos[i];
-        hwp_mod[i][1] = (double *) calloc(ces_length[i], sizeof(double));//hwp_sin[i];
-        for(j=0;j<ces_length[i];j++){
-          //hwp_angle_bis = (double)(2*M_PI*hwp_f*j)/sampling_freq;
-          hwp_mod[i][0][j] = cos(hwp_angle[i][j]);
-          hwp_mod[i][1][j] = sin(hwp_angle[i][j]);
+        for(i=0;i<nces;i++){
+            hwp_mod[i] = (double **) malloc(2 * sizeof(double *));
+            hwp_mod[i][0] = (double *) calloc(ces_length[i], sizeof(double));//hwp_cos[i];
+            hwp_mod[i][1] = (double *) calloc(ces_length[i], sizeof(double));//hwp_sin[i];
+            for(j=0;j<ces_length[i];j++){
+                //hwp_angle_bis = (double)(2*M_PI*hwp_f*j)/sampling_freq;
+                hwp_mod[i][0][j] = cos(hwp_angle[i][j]);
+                hwp_mod[i][1][j] = sin(hwp_angle[i][j]);
+            }
         }
-      }
     }
 
     // Set number of template classes
