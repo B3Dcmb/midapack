@@ -773,7 +773,7 @@ void transpose_nn(double *A, int n) {
         }
 }
 
-void inverse_svd(int m, int n, int lda, double *a) {
+void inverse_svd_bis(int m, int n, int lda, double *a) {
 
     int info = 0;
     int i    = 0;
@@ -979,7 +979,7 @@ void build_Em1(const Mat *A, double **Z, double **AZ, const double *pixpond, int
     iw = calloc(Zn, sizeof(int));
     w  = calloc(Zn * Zn * 2, sizeof(double));
 
-    inverse_svd(Zn, Zn, Zn, E);
+    inverse_svd_bis(Zn, Zn, Zn, E);
 
     // EO = calloc(Zn * Zn, sizeof(double));
     //

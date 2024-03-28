@@ -26,6 +26,9 @@ from .utils import (
     restore_local,
     stage_in_turns,
     stage_local,
+    stage_polymetadata,
+    stage_azscan,
+    stage_hwpangle,
 )
 
 mappraiser = None
@@ -136,6 +139,23 @@ class Mappraiser(Operator):
         "noise",
         allow_none=True,
         help="Observation detdata key for noise data (if None, triggers noiseless mode)",
+    )
+
+    az_name = Unicode(
+        "azimuth",
+        allow_none=True,
+        help="Observation boresight azimuth key"
+    )
+
+    hwpangle_name = Unicode(
+        "hwp_angle",
+        allow_none=True,
+        help="Observation hwp angle key"
+    )
+
+    noiseless = Bool(
+        False,
+        help="Activate noiseless mode"
     )
 
     det_flags = Unicode(
@@ -261,6 +281,12 @@ class Mappraiser(Operator):
 
     # Additional parameters for the C library
 
+    # map-making method
+    map_maker = Unicode("ML",
+        allow_none=False,
+        help="Map-making approach: 'ML' for maximum likelihood (downweigthing approach), 'MT' for marginalized templates.",
+    )
+
     # solver
     solver = Int(0, help="Choose mapmaking solver (0->PCG, 1->ECG)")
     tol = Float(1e-6, help="Convergence threshold for the iterative solver")
@@ -279,6 +305,16 @@ class Mappraiser(Operator):
     ptcomm_flag = Int(6, help="Choose collective communication scheme")
 
     realization = Int(0, help="Noise realization index (for gap filling)")
+    
+    # Template relevant additions
+    npoly = Int(0, help="Order of polynomial templates")
+    fixed_polybase = Int(0, help="Flag to set a specific polynomial baseline length. When False the baseline length is set to the sweep duration (ground only).")
+    polybaseline_length = Float(10.0, help="Polynomial baseline length in seconds (default = 10.0s)")
+    nhwp = Int(0, help="Order of HWPSS templates")
+    hwpssbaseline_length = Float(10.0, help="HWPSS baseline length in seconds (default = 10.0s)")
+    sss = Int(0, help="Scan Synchronous Signal template flag.")
+    sbins = Int(0, help="Number of azimuth bins in the SSS template")
+    uniform_w = Int(0, help="Flag to use a uniform white noise model in reduction.")
 
     @traitlets.validate("shared_flag_mask")
     def _check_shared_flag_mask(self, proposal):
@@ -482,6 +518,15 @@ class Mappraiser(Operator):
             "enlFac": self.enlFac,
             "ortho_alg": self.ortho_alg,
             "bs_red": self.bs_red,
+            "map_maker": self.map_maker,
+            "npoly": self.npoly,
+            "fixed_polybase": self.fixed_polybase,
+            "polybaseline_length": np.double(self.polybaseline_length),
+            "nhwp": self.nhwp,
+            "hwpssbaseline_length": np.double(self.hwpssbaseline_length),
+            "sss": self.sss,
+            "sbins": self.sbins,
+            "uniform_w": self.uniform_w,
         })
 
         # params dictionary overrides operator traits for mappraiser C library arguments
@@ -514,6 +559,10 @@ class Mappraiser(Operator):
             self.noiseless = True
             self.noise_name = None
             # diagonal noise covariance
+            params["Lambda"] = 1
+
+        # Set half bandwidth of noise model to 1 in uniform weighting mode or MT map-making
+        if params["uniform_w"] == 1 or params["map_maker"] == "MT":
             params["Lambda"] = 1
 
         # Log the libmappraiser parameters that were used.
@@ -549,7 +598,17 @@ class Mappraiser(Operator):
             msg = "{} Copying toast data to buffers".format(self._logprefix)
             log.info(msg)
 
-        signal_dtype, data_size_proc = self._stage_data(
+        (
+            signal_dtype,
+            data_size_proc,
+            sweeptstamps,
+            nsweeps,
+            az,
+            az_min,
+            az_max,
+            hwp_angle,
+            nces,
+        ) = self._stage_data(
             params,
             data,
             all_dets,
@@ -567,17 +626,42 @@ class Mappraiser(Operator):
             timer=timer,
         )
 
-        # Compute the ML map
-        if data.comm.world_rank == 0:
-            msg = "{} Computing the ML map".format(self._logprefix)
-            log.info(msg)
-        self._MLmap(
-            params,
-            data,
-            data_size_proc,
-            len(data.obs) * len(all_dets),
-            nnz,
-        )
+        # Compute the map
+        if params["map_maker"] == "ML":
+            if data.comm.world_rank == 0:
+                msg = "{} Computing the ML (LF downweighting) map".format(self._logprefix)
+                log.info(msg)
+            self._MLmap(
+                params,
+                data,
+                data_size_proc,
+                len(data.obs) * len(all_dets),
+                nnz,
+            )
+        elif params["map_maker"] == "MT":
+            if data.comm.world_rank == 0:
+                msg = "{} Computing the MT (marginalized templates) map".format(self._logprefix)
+                log.info(msg)
+            self._MTmap(
+                params,
+                data,
+                data_size_proc,
+                len(data.obs) * len(all_dets),
+                nnz,
+                sweeptstamps,
+                nsweeps,
+                az,
+                az_min,
+                az_max,
+                hwp_angle,
+                nces,
+            )
+        else:
+            raise RuntimeError(
+                "Unvalid Map-making approach please choose:"
+                " -'ML' for Maximum Likelihood map-making (or low frequency down-weighting)"
+                " -'MT' for Marginalized Templates map-making"
+            )
 
         log.info_rank(
             f"{self._logprefix} Processed time data in",
@@ -1060,21 +1144,24 @@ class Mappraiser(Operator):
             # Scale down the noise if we want
             if self.downscale > 1:
                 self._mappraiser_noise /= np.sqrt(self.downscale)
-
-            compute_invtt(
-                len(data.obs),
-                len(all_dets),
-                self._mappraiser_noise,
-                self._mappraiser_blocksizes,
-                params["Lambda"],
-                params["fsample"],
-                self._mappraiser_invtt,
-                mappraiser.INVTT_TYPE,
-                apod_window_type=self.apod_window_type,
-                print_info=(data.comm.world_rank == 0),
-                save_psd=(self.save_psd and data.comm.world_rank == 0),
-                save_dir=os.path.join(params["path_output"], "psd"),
-            )
+            
+            if params["uniform_w"] == 1:
+                self._mappraiser_invtt[:] = 1.0
+            else:
+                compute_invtt(
+                    len(data.obs),
+                    len(all_dets),
+                    self._mappraiser_noise,
+                    self._mappraiser_blocksizes,
+                    params["Lambda"],
+                    params["fsample"],
+                    self._mappraiser_invtt,
+                    mappraiser.INVTT_TYPE,
+                    apod_window_type=self.apod_window_type,
+                    print_info=(data.comm.world_rank == 0),
+                    save_psd=(self.save_psd and data.comm.world_rank == 0),
+                    save_dir=os.path.join(params["path_output"], "psd"),
+                )
 
             if self.fill_noise_zero:
                 # just set the noise to zero
@@ -1163,6 +1250,43 @@ class Mappraiser(Operator):
             # Any existing pixel numbers are in the wrong ordering
             Delete(detdata=[self.pixel_pointing.pixels]).apply(data)
             self.pixel_pointing.nest = False
+        
+        # Stage instrument data to build templates in case of template marginalization
+        sweeptstamps = None
+        nsweeps = None
+        az = None
+        az_min = None
+        az_max = None
+        hwp_angle = None
+        nces = len(data.obs)
+        if params["map_maker"] == "MT":
+            
+            (
+                sweeptstamps,
+                nsweeps,
+            ) = stage_polymetadata(
+                data,
+                self.view,
+                params,
+                self.shared_flags,
+            )
+
+            if params["sss"]:
+                (
+                    az,
+                    az_min,
+                    az_max,
+                ) = stage_azscan(
+                    data,
+                    self.view,
+                    self.az_name,
+                )
+            if params["nhwp"] != 0:
+                hwp_angle = stage_hwpangle(
+                    data,
+                    self.view,
+                    self.hwpangle_name,                    
+                )
 
         # The following is basically useless for Mappraiser.
 
@@ -1219,6 +1343,13 @@ class Mappraiser(Operator):
         return (
             signal_dtype,
             data_size_proc,
+            sweeptstamps,
+            nsweeps,
+            az,
+            az_min,
+            az_max,
+            hwp_angle,
+            nces,
         )
 
     @function_timer
@@ -1372,6 +1503,50 @@ class Mappraiser(Operator):
         mappraiser.MLmap(
             data.comm.comm_world,
             params,
+            data_size_proc,
+            nb_blocks_loc,
+            self._mappraiser_blocksizes,
+            nnz,
+            self._mappraiser_pixels,
+            self._mappraiser_pixweights,
+            self._mappraiser_signal,
+            self._mappraiser_noise,
+            self._mappraiser_invtt,
+        )
+
+        return
+    
+    @function_timer
+    def _MTmap(self, params, data, data_size_proc, nb_blocks_loc, nnz, 
+        sweeptstamps, nsweeps, az, az_min, az_max, hwp_angle, nces):
+        """Compute the MT map from buffered data."""
+        log_time_memory(
+            data,
+            prefix=self._logprefix,
+            mem_msg="Just before libmappraiser.MTmap",
+            full_mem=self.mem_report,
+        )
+
+        # ? how to use mcmode (not yet supported)
+        # if self._cached:
+        # -> call mappraiser in "cached" mode
+        # else:
+        # -> call mappraiser in normal mode
+        # -> if self.mcmode: self._cached=True
+        
+        # Force number of OMP threads to 1
+        os.environ["OMP_NUM_THREADS"] = "1"
+
+        mappraiser.MTmap(
+            data.comm.comm_world,
+            params,
+            sweeptstamps,
+            nsweeps,
+            az,
+            az_min,
+            az_max,
+            hwp_angle,
+            nces,
             data_size_proc,
             nb_blocks_loc,
             self._mappraiser_blocksizes,

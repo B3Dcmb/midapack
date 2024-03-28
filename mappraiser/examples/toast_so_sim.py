@@ -171,6 +171,7 @@ def parse_config(operators, templates, comm):
         default="run0",
         help="Reference that is added to the name of the output maps.",
     )
+    # N.B: use Mappraiser's trait "paramfile" to pass the rest of libmappraiser parameters
 
     # Build a config dictionary starting from the operator defaults, overriding with any
     # config files specified with the '--config' commandline option, followed by any
@@ -779,6 +780,8 @@ def reduce_data(job, args, data):
     ops.mappraiser.params["ref"] = args.ref
     ops.mappraiser.pixel_pointing = job.pixels_final
     ops.mappraiser.stokes_weights = ops.weights_radec
+    ops.mappraiser.az_name = ops.sim_ground.azimuth
+    ops.mappraiser.hwpangle_name = ops.sim_ground.hwp_angle
     if ops.mappraiser.enabled:
         if mappraiser.available():
             ops.mappraiser.apply(data)

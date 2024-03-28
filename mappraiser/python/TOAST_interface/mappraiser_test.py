@@ -207,7 +207,13 @@ class MappraiserTest(MPITestCase):
         pars = {
             "path_output": self.outdir,
             "ref": "run0",
-            "Lambda": 16,
+            "map_maker": "MT",
+            "npoly": 0,
+            "fixed_polybase": 0,
+            "polybaseline_length": 10,
+            "nhwp":1,
+            "hwpssbaseline_length": 100,
+            "Lambda": 1,
             "solver": 0,
             "precond": 0,
             "Z_2lvl": 0,
@@ -233,6 +239,8 @@ class MappraiserTest(MPITestCase):
             restore_det_data=False,
             mem_report=True,
         )
+
+        op_mappraiser.hwpangle_name = defaults.hwp_angle
         op_mappraiser.apply(data)
 
         # if data.comm.world_rank == 0:

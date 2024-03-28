@@ -73,14 +73,18 @@ def stage_local(
     """Helper function to fill a mappraiser buffer from a local detdata key.
     (This function is taken from madam_utils.py)
     """
-    interval_offset = 0
+    # interval_offset = 0
     do_flags = False
     if shared_flags is not None or det_flags is not None:
         do_flags = True
         # Flagging should only be enabled when we are processing the pixel indices
         # (which is how mappraiser effectively implements flagging).  So we will set
         # all flagged samples to "-1" below.
-
+    
+    # The line below redefines the offset variable to have dets of a single 
+    # observation contiguous in memory
+    offset = 0
+    
     for ob in data.obs:
         views = ob.view[view]
         for idet, det in enumerate(dets):
@@ -98,7 +102,8 @@ def stage_local(
                     view_samples = ob.n_local_samples
                 else:
                     view_samples = vw.stop - vw.start
-                offset = interval_starts[interval_offset + ivw]
+                # This was used in a deprecated data arrangement:
+                # offset = interval_starts[interval_offset + ivw]
 
                 flags = None
                 if do_flags:
@@ -107,11 +112,17 @@ def stage_local(
                 if shared_flags is not None:
                     flags |= views.shared[shared_flags][ivw] & shared_mask
 
+                # This was used in a deprecated data arrangement:
+                # slc = slice(
+                #     (idet * nsamp + offset) * nnz,
+                #     (idet * nsamp + offset + view_samples) * nnz,
+                #     1,
+                # )
                 slc = slice(
-                    (idet * nsamp + offset) * nnz,
-                    (idet * nsamp + offset + view_samples) * nnz,
+                    (offset) * nnz,
+                    (offset + view_samples) * nnz,
                     1,
-                )
+                )                
                 if detdata_name is not None:
                     if nnz > 1:
                         mappraiser_buffer[slc] = np.repeat(
@@ -137,9 +148,12 @@ def stage_local(
                     # mappraiser's pixels buffer has nnz=3, not nnz=1
                     repeated_flags = np.repeat(detflags, n_repeat)
                     mappraiser_buffer[slc][repeated_flags != 0] = -1
+                
+                # The line below goes with the new redifinition of the offset variable:
+                offset += view_samples
         if do_purge:
             del ob.detdata[detdata_name]
-        interval_offset += len(views)
+        # interval_offset += len(views)
     return
 
 
@@ -209,31 +223,42 @@ def restore_local(
     """Helper function to create a detdata buffer from mappraiser data.
     (This function is taken from madam_utils.py)
     """
-    interval = 0
+    # The line below redefines the offset variable to have dets of a single 
+    # observation contiguous in memory
+    offset = 0
+    
+    # interval = 0
     for ob in data.obs:
         # Create the detector data
         if nnz == 1:
             ob.detdata.create(detdata_name, dtype=detdata_dtype)
         else:
             ob.detdata.create(detdata_name, dtype=detdata_dtype, sample_shape=(nnz,))
-        # Loop over views
+        # Loop over detectors
         views = ob.view[view]
-        for ivw, vw in enumerate(views):
-            view_samples = None
-            if vw.start is None:
-                # This is a view of the whole obs
-                view_samples = ob.n_local_samples
-            else:
-                view_samples = vw.stop - vw.start
-            offset = interval_starts[interval]
-            ldet = 0
-            for det in dets:
-                if det not in ob.local_detectors:
-                    continue
-                idet = ob.local_detectors.index(det)
+        ldet = 0
+        for det in dets:
+            if det not in ob.local_detectors:
+                continue
+            # idet = ob.local_detectors.index(det)
+            # Loop over views
+            for ivw, vw in enumerate(views):
+                view_samples = None
+                if vw.start is None:
+                    # This is a view of the whole obs
+                    view_samples = ob.n_local_samples
+                else:
+                    view_samples = vw.stop - vw.start
+                # This was used in a deprecated data arrangement:
+                # offset = interval_starts[interval]
+                # slc = slice(
+                #     (idet * nsamp + offset) * nnz,
+                #     (idet * nsamp + offset + view_samples) * nnz,
+                #     1,
+                # )
                 slc = slice(
-                    (idet * nsamp + offset) * nnz,
-                    (idet * nsamp + offset + view_samples) * nnz,
+                    (offset) * nnz,
+                    (offset + view_samples) * nnz,
                     1,
                 )
                 if nnz > 1:
@@ -242,8 +267,10 @@ def restore_local(
                     ].reshape((-1, nnz))
                 else:
                     views.detdata[detdata_name][ivw][ldet] = mappraiser_buffer[slc]
-                ldet += 1
-            interval += 1
+                offset += view_samples
+                # This was used in a deprecated data arrangement:
+                # interval += 1
+            ldet += 1
     return
 
 
@@ -282,6 +309,109 @@ def restore_in_turns(
         nodecomm.barrier()
     return
 
+def stack_padding(it):
+    """Turns a list of arrays of different sizes to a matrix which rows
+    are the different arrays padded with zeros such that they all have the same length."""
+    # stack padding may be memory inefficient but was found as a solution
+    # for the interfacing of double pointers in the C backend. Should remain until we find a better solution.
+    def resize(row, size):
+        new = np.array(row)
+        new.resize(size)
+        return new
+
+    # find longest row length
+    row_length = max(it, key=len).__len__()
+    mat = np.array( [resize(row, row_length) for row in it] )
+
+    return mat
+
+def stage_polymetadata(
+    data,
+    view,
+    params,
+    shared_flags,
+):
+    """Builds a set of arrays of indices that mark the changes in scan direction and/or mark
+    the switch from one polynomial baseline to the other (one array per local CES), also computes the number of baselines per CES
+    and the local number of CES"""
+    fsamp = params["fsample"]
+    # remove unit of fsamp to avoid problems when computing periodogram
+    try:
+        f_unit = fsamp.unit
+        fsamp = float(fsamp / (1.0 * f_unit))
+    except AttributeError:
+        pass
+    sweeptstamps_list = []
+    nsweeps_list = []
+    for ob in data.obs:
+        views = ob.view[view]
+        for ivw, vw in enumerate(views):
+            commonflags = views.shared[shared_flags][ivw]
+            sweeptstamps = [0]
+            if params["fixed_polybase"]:
+                base_sup_id = int(params["polybaseline_length"] * fsamp)
+                while base_sup_id < len(commonflags):
+                    sweeptstamps.append(base_sup_id)
+                    base_sup_id += int(params["polybaseline_length"] * fsamp)
+            else:
+                for iflg, flg in enumerate(commonflags[:-1]):
+                    # detect switch LR/RL scan and viceversa (turnarounds included in sweeps)
+                    # second condition was added because I noticed commonflags end with isolated turnaround flags, aka "3"
+                    # which in the current implementation will be ignored
+                    if ((flg & commonflags[iflg+1] < 8) and commonflags[iflg+1] >= 8):
+                        sweeptstamps.append(iflg+1)
+            sweeptstamps.append(len(commonflags))
+            nsweeps = len(sweeptstamps)-1
+            sweeptstamps = np.array(sweeptstamps, dtype=np.int32)
+
+            sweeptstamps_list.append(sweeptstamps)
+            nsweeps_list.append(nsweeps)
+    
+    sweeptstamps_list = stack_padding(sweeptstamps_list)
+    nsweeps_list = np.array(nsweeps_list, dtype=np.int32)
+
+    return sweeptstamps_list, nsweeps_list
+
+def stage_azscan(
+    data,
+    view,
+    az_name,
+):
+    """Stages the boresight azimuth scan for each local CES as well as the min and max values."""
+    az_list = []
+    az_min_list = []
+    az_max_list = []
+    for ob in data.obs:
+        views = ob.view[view]
+        for ivw, vw in enumerate(views):
+            az = views.shared[az_name][ivw]
+            az_list.append(az)
+            az_min_list.append(az.min())
+            az_max_list.append(az.max())
+    
+    az_list = stack_padding(az_list)
+    az_min_list = np.array(az_min_list)
+    az_max_list = np.array(az_max_list)
+
+    return az_list, az_min_list, az_max_list
+
+def stage_hwpangle(
+    data,
+    view,
+    hwpangle_name,
+):
+    """Stage hwp angle for each local CES."""
+    hwp_angle_list = []
+    for ob in data.obs:
+        views = ob.view[view]
+        for ivw, vw in enumerate(views):
+            hwp_angle = views.shared[hwpangle_name][ivw]
+            if hwp_angle is not None:
+                hwp_angle_list.append(hwp_angle)
+    
+    hwp_angle_list = stack_padding(hwp_angle_list)
+
+    return hwp_angle_list
 
 def compute_local_block_sizes(data, view, dets, buffer):
     """Compute the sizes of the local data blocks and store them in the provided buffer."""
@@ -298,7 +428,7 @@ def compute_local_block_sizes(data, view, dets, buffer):
                     view_samples = ob.n_local_samples
                 else:
                     view_samples = vw.stop - vw.start
-                buffer[idet * len(data.obs) + iobs] += view_samples
+                buffer[iobs * len(dets) + idet] += view_samples
     return
 
 
@@ -320,11 +450,19 @@ def compute_invtt(
     offset = 0
     for iobs in range(nobs):
         for idet in range(ndet):
-            blocksize = local_block_sizes[idet * nobs + iobs]
+            # # Old data arrangement:
+            # blocksize = local_block_sizes[idet * nobs + iobs]
+            # nsetod = mappraiser_noise[offset: offset + blocksize]
+            # slc = slice(
+            #     (idet * nobs + iobs) * Lambda,
+            #     (idet * nobs + iobs) * Lambda + Lambda,
+            #     1,
+            # )    
+            blocksize = local_block_sizes[iobs * ndet + idet]            
             nsetod = mappraiser_noise[offset: offset + blocksize]
             slc = slice(
-                (idet * nobs + iobs) * Lambda,
-                (idet * nobs + iobs) * Lambda + Lambda,
+                (iobs * ndet + idet) * Lambda,
+                (iobs * ndet + idet) * Lambda + Lambda,
                 1,
             )
             buffer[slc] = noise2invtt(
@@ -386,7 +524,7 @@ def noise2invtt(
     # Length of segments used to estimate PSD (defines the lowest frequency we can estimate)
     nperseg = nn
 
-    # Compute a periofogram with Welch's method
+    # Compute a periodogram with Welch's method
     f, psd = scipy.signal.welch(nsetod, fsamp, window='hann', nperseg=nperseg, detrend='linear')
 
     # Fit the psd model to the periodogram (in log scale)

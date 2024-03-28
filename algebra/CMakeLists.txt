@@ -16,6 +16,24 @@ endif ()
 # Search for FFTW (necessary for toeplitz module)
 find_package(FFTW REQUIRED DOUBLE_LIB)
 
+# If MKL is enabled look for MKL, and use it to provide support for BLAS/LAPACK
+if (MKL)
+    find_package(MKL REQUIRED)
+endif ()
+
+if (MKL_FOUND)
+    # Use MKL for BLAS / LAPACK
+    set(BLAS_LIBRARIES "${MKL_LIBRARIES}")
+    set(LAPACK_LIBRARIES "${MKL_LIBRARIES}")
+    set(BLAS_FOUND TRUE)
+    set(LAPACK_FOUND TRUE)
+else ()
+    # We need a BLAS/LAPACK implementation other than MKL
+    find_package(BLAS)
+
+    find_package(LAPACK REQUIRED)
+endif ()
+
 # ________________________________________
 # Subdirectories
 
