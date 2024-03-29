@@ -41,6 +41,12 @@ by adding the following line in your `.bashrc` (or equivalent):
 export LD_LIBRARY_PATH="${PREFIX}/lib:${LD_LIBRARY_PATH}"
 ```
 
+For macOS users, you also need to prepend the installation path to your `DYLD_LIBRARY_PATH`:
+
+```
+export DYLD_LIBRARY_PATH="${PREFIX}/lib:${DYLD_LIBRARY_PATH}"
+```
+
 The user may want to use a LAPACK implementation provided by Intel MKL (Math Kernel Library).
 If so, the feature may be enabled by passing the option `-D MKL=ON`.
 

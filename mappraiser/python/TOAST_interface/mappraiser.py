@@ -8,9 +8,9 @@ from astropy import units as u
 from toast.mpi import use_mpi
 from toast.observation import default_values as defaults
 from toast.templates import Offset
-from toast.timing import function_timer
+from toast.timing import function_timer, Timer
 from toast.traits import Bool, Dict, Instance, Int, Float, Unicode, trait_docs
-from toast.utils import Environment, Logger, Timer, dtype_to_aligned
+from toast.utils import Environment, Logger, dtype_to_aligned
 from toast.ops.delete import Delete
 from toast.ops.mapmaker import MapMaker
 from toast.ops.operator import Operator
