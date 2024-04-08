@@ -57,3 +57,18 @@ target_include_directories(gaps PRIVATE
 
 target_compile_definitions(gaps PRIVATE W_MPI)
 target_link_libraries(gaps PRIVATE mappraiser MPI::MPI_CXX)
+
+# ____________________________________________________
+# Test executable for shift-and-overlap testing
+
+add_executable(shift_overlap shift_overlap.cpp utils.c)
+
+target_include_directories(shift_overlap PRIVATE
+        "../include"
+        "../include/mappraiser"
+        "../../algebra/include"
+        "../../algebra/include/mapmat"
+)
+
+target_compile_definitions(shift_overlap PRIVATE W_MPI)
+target_link_libraries(shift_overlap PRIVATE mappraiser MPI::MPI_CXX)
