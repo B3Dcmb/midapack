@@ -19,6 +19,7 @@ from .mappraiser_utils import (
     log_time_memory,
     stage_in_turns,
     stage_local,
+    compute_autocorr,
 )
 
 libmappraiser = None
@@ -140,6 +141,16 @@ class Mappraiser(Operator):
     )
 
     # Some traits for noise estimation
+
+    use_noise_model = Bool(
+        False,
+        help="Use an existing noise model fitted to the data (`noise_model_fit` trait)",
+    )
+
+    noise_model_fit = Unicode(
+        "noise_estim_fit",
+        help="Observation key containing a noise model fitted to the data",
+    )
 
     save_psd = Bool(False, help="Save noise PSD information during inv_tt computation")
 
@@ -955,31 +966,67 @@ class Mappraiser(Operator):
             if self.downscale > 1:
                 self._mappraiser_noise /= np.sqrt(self.downscale)
 
-            # Compute noise autocorrelation and inverse autocorrelation functions
-            ob_uids = [ob.uid for ob in data.obs]
-            det_names = (
-                all_dets
-                if not self.pair_diff
-                else [name[:-2] for name in all_dets[::2]]
-            )
-            assert nobs == len(ob_uids)
-            assert ndet == len(det_names)
-            compute_autocorrelations(
-                ob_uids,
-                det_names,
-                self._mappraiser_noise,
-                self._mappraiser_blocksizes,
-                params["lambda"],
-                params["fsample"],
-                self._mappraiser_invtt,
-                self._mappraiser_tt,
-                libmappraiser.INVTT_TYPE,
-                nperseg_frac=self.nperseg_frac,
-                apod_window_type=self.apod_window_type,
-                print_info=(data.comm.world_rank == 0),
-                save_psd=(self.save_psd and data.comm.world_rank == 0),
-                save_dir=os.path.join(params["path_output"], "psd_fits"),
-            )
+            lambda_ = params["lambda"]
+            if self.use_noise_model:
+                # Use an existing noise model
+                for iob, ob in enumerate(data.obs):
+                    # Get the fitted noise object for this observation.
+                    nse_fit = ob[self.noise_model_fit]
+                    nse_scale = 1.0
+                    if self.noise_scale is not None:
+                        if self.noise_scale in ob:
+                            nse_scale = float(ob[self.noise_scale])
+
+                    offset = 0
+                    # local_dets = set(ob.select_local_detectors(flagmask=self.det_mask))
+                    for idet, det in enumerate(all_dets):
+                        # if det not in local_dets:
+                        #     continue
+                        psd = nse_fit.psd(det).to_value(u.K**2 * u.second) * nse_scale**2
+                        # detw = nse.detector_weight(det)
+
+                        blocksize = self._mappraiser_blocksizes[idet * nobs + iob]
+                        slc = slice(
+                            (idet * nobs + iob) * lambda_,
+                            (idet * nobs + iob) * lambda_ + lambda_,
+                        )
+
+                        # Get invtt and tt directly from the model PSD
+                        self._mappraiser_invtt[slc] = compute_autocorr(
+                            1 / psd, lambda_, apo=True
+                        )
+                        self._mappraiser_tt[slc] = compute_autocorr(
+                            psd, lambda_, apo=True
+                        )
+
+                        offset += blocksize
+
+            else:
+                # Compute autocorrelation from the data
+                ob_uids = [ob.uid for ob in data.obs]
+                det_names = (
+                    all_dets
+                    if not self.pair_diff
+                    else [name[:-2] for name in all_dets[::2]]
+                )
+                assert nobs == len(ob_uids)
+                assert ndet == len(det_names)
+                compute_autocorrelations(
+                    ob_uids,
+                    det_names,
+                    self._mappraiser_noise,
+                    self._mappraiser_blocksizes,
+                    lambda_,
+                    params["fsample"],
+                    self._mappraiser_invtt,
+                    self._mappraiser_tt,
+                    libmappraiser.INVTT_TYPE,
+                    nperseg_frac=self.nperseg_frac,
+                    apod_window_type=self.apod_window_type,
+                    print_info=(data.comm.world_rank == 0),
+                    save_psd=(self.save_psd and data.comm.world_rank == 0),
+                    save_dir=os.path.join(params["path_output"], "psd_fits"),
+                )
 
             if self.fill_noise_zero:
                 # just set the noise to zero

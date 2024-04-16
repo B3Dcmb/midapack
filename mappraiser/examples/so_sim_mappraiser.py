@@ -200,8 +200,8 @@ def main():
     pwrk.setup_simulate_calibration_error(operators)  # for my_gainscrambler
     wrk.setup_save_data_hdf5(operators)
 
-    wrk.setup_flag_noise_outliers(operators)  #! to investigate
-    wrk.setup_noise_estimation(operators)  #! to investigate
+    wrk.setup_flag_noise_outliers(operators)
+    wrk.setup_noise_estimation(operators)
     wrk.setup_raw_statistics(operators)
     wrk.setup_mapmaker(operators, templates)
     pwrk.setup_mapmaker_mappraiser(parser, operators)
