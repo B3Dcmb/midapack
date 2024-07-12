@@ -7,7 +7,7 @@ import numpy as np
 import numpy.testing as nt
 from astropy import units as u
 
-from toast import ops as ops
+import toast.ops as ops
 from toast.noise import Noise
 from toast.observation import default_values as defaults
 from toast.pixels import PixelData, PixelDistribution
@@ -20,7 +20,8 @@ from toast.tests._helpers import (
 )
 from toast.tests.mpi import MPITestCase
 
-from .toast.ops import mappraiser
+from pymappraiser.toast import mappraiser
+
 
 def create_outdir(mpicomm, subdir=None):
     """Create the top level output directory and per-test subdir.
@@ -28,7 +29,7 @@ def create_outdir(mpicomm, subdir=None):
     Parameters:
     -----------
     * `mpicomm` (MPI.Comm): the MPI communicator (or None).
-    * `subdir` (str): the sub directory for this test.
+    * `subdir` (str): the subdirectory for this test.
 
     Returns:
     --------
