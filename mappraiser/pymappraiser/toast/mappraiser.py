@@ -14,7 +14,7 @@ from toast.utils import Environment, Logger, dtype_to_aligned
 from toast.ops.delete import Delete
 from toast.ops.operator import Operator
 
-from .mappraiser_utils import (
+from .utils import (
     compute_autocorrelations,
     log_time_memory,
     stage_in_turns,
