@@ -78,6 +78,21 @@ defined structures.
  **/
 
 int stbmmProd(Tpltz *Nm1, double *V) {
+    int t_id; // time sample index in local data
+    int i, j;
+    double offset;
+
+    // remove TOD offset
+    t_id = 0;
+    for (i = 0; i < Nm1->nb_blocks_loc; i++) {
+        offset = 0;
+        for (j = 0; j < Nm1->tpltzblocks[i].n; j++) offset += V[t_id + j];
+        offset /=  Nm1->tpltzblocks[i].n;
+        for (j = 0; j < Nm1->tpltzblocks[i].n; j++) {
+            V[t_id + j] -= offset;
+        }
+        t_id += Nm1->tpltzblocks[i].n;
+    }
 
 #ifdef W_MPI
 

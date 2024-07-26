@@ -307,51 +307,11 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz *Nm1, TemplateClas
 
     st=MPI_Wtime();
 
-    // // to test that we get zero residual for template modes
-    // int cumul_offset = 0;
-    // for(ces_id=0;ces_id<nces;ces_id++){
-    //  for(i=0;i<(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id])*ndet;i++){
-    //     // Ground template
-    //     out2[cumul_offset+i] = (1+ces_id)+0.01*(i%n_sss_bins);
-    //     HWPSS template
-    //     out2[cumul_offset+i] = 1/(6*sqrt(2))*1+(1+ces_id)/(6*sqrt(2))*0.01*((i%(2*nhwp*hwp_bins[ces_id]))%hwp_bins[ces_id]);
-    //     if(i%(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id])<=npoly*nsweeps[ces_id])
-    //       out2[cumul_offset+i] = (1+ces_id)+0.01*((i%(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id]))%nsweeps[ces_id]);
-    //     else if(i%(npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id])<=npoly*nsweeps[ces_id]+ground*n_sss_bins)
-    //       out2[cumul_offset+i] = 1+0.01*((i%((npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id]))-npoly*nsweeps[ces_id])%n_sss_bins);
-    //     else
-    //       out2[cumul_offset+i] = 1/(6*sqrt(2))*1+1/(6*sqrt(2))*0.01*((i%((npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id]))-npoly*nsweeps[ces_id]-ground*n_sss_bins)%hwp_bins[ces_id]);
-    //  }
-    //  cumul_offset += (npoly*nsweeps[ces_id]+ground*n_sss_bins+2*nhwp*hwp_bins[ces_id])*ndet;
-    // }
-    
-    // TVecProd(X, nces, n_class * ndet, sampling_freq, ces_length, sweeptstamps,
-    //  az_binned, hwp_mod, nhwp, delta_t, store_hwp, out2, noise);
-    
-    // // Set signal to zero
-    // for(i=0;i<m;i++)
-    //   b[i] = 0;
-
     // Compute RHS - initial guess
     MatVecProd(A, x, _g, 0);
 
     for(i = 0; i < m; i++)
       _g[i] = b[i] + noise[i] - _g[i];
-
-    // //Save detector data in a file for tests
-    // if(rank==12){
-    //   char det0filename[256];
-    //   char detnfilename[256];
-    //   FILE *fp0,*fp1;
-    //   sprintf(det0filename,"%s/det0_data_init.dat",outpath);
-    //   sprintf(detnfilename,"%s/det%d_data_init.dat",outpath,Nm1->nb_blocks_loc-1);
-    //   fp0=fopen(det0filename, "wb");
-    //   fp1=fopen(detnfilename, "wb");
-    //   fwrite(_g, sizeof(double), Nm1->tpltzblocks[0].n, fp0);
-    //   fwrite(_g+Nm1->tpltzblocks[0].n*(Nm1->nb_blocks_loc-1), sizeof(double), Nm1->tpltzblocks[Nm1->nb_blocks_loc-1].n, fp1);
-    //   fclose(fp0);
-    //   fclose(fp1);
-    // }
 
     st2=MPI_Wtime();
     apply_weights(Nm1, _g);
@@ -415,34 +375,9 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz *Nm1, TemplateClas
       printf("[rank %d] _g -= Tvec, time = %lf\n", rank, t2-st2);
     fflush(stdout);
 
-    // // Save detector data in files for testing purposes
-    // if(rank==12){
-    //    char fdet0filename_filtered[256];
-    //    char fdetnfilename_filtered[256];
-    //    char fdet0filename_fit[256];
-    //    char fdetnfilename_fit[256];
-    //    FILE *fp2,*fp3,*fp4,*fp5;
-    //    sprintf(fdet0filename_filtered,"%s/det0_data_filtered.dat",outpath);
-    //    sprintf(fdetnfilename_filtered,"%s/det%d_data_filtered.dat",outpath,Nm1->nb_blocks_loc-1);
-    //    sprintf(fdet0filename_fit,"%s/det0_data_fit.dat",outpath);
-    //    sprintf(fdetnfilename_fit,"%s/det%d_data_fit.dat",outpath,Nm1->nb_blocks_loc-1);
-    //    fp2=fopen(fdet0filename_filtered, "wb");
-    //    fp3=fopen(fdetnfilename_filtered, "wb");
-    //    fp4=fopen(fdet0filename_fit, "wb");
-    //    fp5=fopen(fdetnfilename_fit, "wb");
-    //    fwrite(_g, sizeof(double), Nm1->tpltzblocks[0].n, fp2);
-    //    fwrite(_g+Nm1->tpltzblocks[0].n*(Nm1->nb_blocks_loc-1), sizeof(double), Nm1->tpltzblocks[Nm1->nb_blocks_loc-1].n, fp3);
-    //    fwrite(Tvec, sizeof(double), Nm1->tpltzblocks[0].n, fp4);
-    //    fwrite(Tvec+Nm1->tpltzblocks[0].n*(Nm1->nb_blocks_loc-1), sizeof(double), Nm1->tpltzblocks[Nm1->nb_blocks_loc-1].n, fp5);
-    //    fclose(fp2);
-    //    fclose(fp3);
-    //    fclose(fp4);
-    //    fclose(fp5);
-    // }
-
     TrMatVecProd(A, _g, g, 0);		//  g = At _g
 
-    apply_precond(p, A, &Nm1, g, Cg);
+    apply_precond(p, A, Nm1, g, Cg);
 
     for(j = 0; j < n; j++) //  h = Cg
       h[j] = Cg[j];
@@ -481,7 +416,7 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz *Nm1, TemplateClas
       char filename[256];
       sprintf(filename,"%s/pcg_residuals_%s.dat", outpath, ref);
       fp=fopen(filename, "wb");
-      fwrite(&res_rel, sizeof(double), 1, fp);
+      if (fp != NULL) fwrite(&res_rel, sizeof(double), 1, fp);
       fflush(stdout);
     }
 
@@ -551,7 +486,7 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz *Nm1, TemplateClas
       for(j = 0; j < n; j++)      //   g = gp - ro * (At Nm1 A) h
         g[j] = gp[j] - ro * AtNm1Ah[j]; // Use Ribière-Polak formula
 
-      apply_precond(p, A, &Nm1, g, Cg);
+      apply_precond(p, A, Nm1, g, Cg);
 
       g2pixp = g2pix; // g2p = "res"
       localreduce = 0.0;
@@ -584,7 +519,7 @@ int PCG_GLS_templates(char *outpath, char *ref, Mat *A, Tpltz *Nm1, TemplateClas
       if(rank == 0){//print iterate info
         res_rel = sqrt(res) / sqrt(res0);
         printf("k = %d, res = %e, g2pix = %e, res_rel = %e, time = %lf \n", k, res, g2pix, res_rel, t-st);
-        fwrite(&res_rel, sizeof(double), 1, fp);
+        if (fp != NULL) fwrite(&res_rel, sizeof(double), 1, fp);
       }
       fflush(stdout);
 
@@ -659,7 +594,7 @@ int apply_weights(Tpltz *Nm1, double *tod) {
     // Use stbmmProd routine for correlated noise model (No det-det correlations
     // for now)
     else
+        // Apply N^{-1} to tod
         stbmmProd(Nm1, tod);
-
     return 0;
 }
