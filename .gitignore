@@ -47,6 +47,7 @@ cmake-build-*
 .cache
 .idea
 .fleet
+.zed
 
 # Directories to ignore
 algebra/test
