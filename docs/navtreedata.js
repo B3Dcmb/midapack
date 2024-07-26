@@ -24,39 +24,12 @@
 */
 var NAVTREE =
 [
-  [ "MIDAPACK - MIcrowave Data Analysis PACKage", "index.html", [
-    [ "General introduction", "index.html", "index" ],
-    [ "MIDAPACK development team", "sect_team.html", null ],
-    [ "Acknowledgement", "sect_ackno.html", null ],
-    [ "Licences", "page_license.html", null ],
-    [ "Installation", "page_install.html", null ],
-    [ "Bug tracking and reporting", "sect_bugreporting.html", null ],
-    [ "Todo List", "todo.html", null ],
-    [ "Modules", "modules.html", "modules" ],
-    [ "Data Structures", "annotated.html", [
-      [ "Data Structures", "annotated.html", "annotated_dup" ],
-      [ "Data Fields", "functions.html", [
-        [ "All", "functions.html", null ],
-        [ "Variables", "functions_vars.html", null ]
-      ] ]
-    ] ],
-    [ "Files", "files.html", [
-      [ "File List", "files.html", "files_dup" ],
-      [ "Globals", "globals.html", [
-        [ "All", "globals.html", "globals_dup" ],
-        [ "Functions", "globals_func.html", "globals_func" ],
-        [ "Variables", "globals_vars.html", null ],
-        [ "Typedefs", "globals_type.html", null ]
-      ] ]
-    ] ]
-  ] ]
+  [ "MIDAPACK - MIcrowave Data Analysis PACKage", "index.html", ]
 ];
 
 var NAVTREEINDEX =
 [
-"algorithm.html",
-"group__matmap__group11.html#gaaf26c7678367e6757392c03abd22a105",
-"toeplitz__gappy__seq_8dev_8c_source.html"
+"index.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';
