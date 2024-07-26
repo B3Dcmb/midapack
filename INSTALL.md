@@ -41,10 +41,22 @@ by adding the following line in your `.bashrc` (or equivalent):
 export LD_LIBRARY_PATH="${PREFIX}/lib:${LD_LIBRARY_PATH}"
 ```
 
-For macOS users, you also need to prepend the installation path to your `DYLD_LIBRARY_PATH`:
+For macOS users, the dynamic linker searches for the library in `DYLD_LIBRARY_PATH`, however due to a security feature, any dynamic linker environment variable gets purged when launching protected applications, which means that a simple export will not work. A workaround solution is to add the installation path to the python usercustomize module which is loaded during initialization, following these steps:
+
+Create a usercustomize.py file: `~/.local/lib/global-packages/usercustomize.py`. Paste in it the following script:
 
 ```
-export DYLD_LIBRARY_PATH="${PREFIX}/lib:${DYLD_LIBRARY_PATH}"
+import os
+
+software_lib_dir = <YOUR INSTALLATION PATH>
+existing_lib_path = os.environ.get("DYLD_FALLBACK_LIBRARY_PATH", "")
+os.environ["DYLD_FALLBACK_LIBRARY_PATH"] = software_lib_dir + ":" + existing_lib_path
+```
+
+Then, make this usercustomize script be used by any Python interpreter: In your ~/.zprofile add the following line:
+
+```
+export PYTHONPATH="$HOME/.local/lib/global-packages:$PYTHONPATH"
 ```
 
 The user may want to use a LAPACK implementation provided by Intel MKL (Math Kernel Library).

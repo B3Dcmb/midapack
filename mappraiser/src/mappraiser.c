@@ -54,7 +54,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     MPI_Comm_rank(comm, &rank);
     MPI_Comm_size(comm, &size);
     if (rank == 0) {
-        printf("\n############# MAPPRAISER : MidAPack PaRAllel Iterative Sky EstimatoR v2.1, April 2024 "
+        printf("\n############# MAPPRAISER : MidAPack PaRAllel Iterative Sky EstimatoR v2.1, July 2024 "
                "################\n");
         printf("Last compiled on %s at %s\n", __DATE__, __TIME__);
         printf("rank = %d, size = %d\n", rank, size);
@@ -411,7 +411,7 @@ void MTmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond, int
     #endif
     
     if (rank == 0) {
-        printf("\n############# MAPPRAISER : MidAPack PaRAllel Iterative Sky EstimatoR v2.1, April 2024 "
+        printf("\n############# MAPPRAISER : MidAPack PaRAllel Iterative Sky EstimatoR v2.1, July 2024 "
                "################\n");
         printf("Last compiled on %s at %s\n", __DATE__, __TIME__);
         printf("rank = %d, size = %d\n", rank, size);
