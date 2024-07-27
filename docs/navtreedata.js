@@ -24,12 +24,28 @@
 */
 var NAVTREE =
 [
-  [ "MIDAPACK - MIcrowave Data Analysis PACKage", "index.html", ]
+  [ "MIDAPACK - MIcrowave Data Analysis PACKage", "index.html", [
+    [ "General introduction", "index.html", "index" ],
+    [ "MIDAPACK development team", "sect_team.html", null ],
+    [ "Acknowledgement", "sect_ackno.html", null ],
+    [ "Licences", "page_license.html", null ],
+    [ "Installation", "page_install.html", null ],
+    [ "Bug tracking and reporting", "sect_bugreporting.html", null ],
+    [ "Todo List", "todo.html", null ],
+    [ "Files", "files.html", [
+      [ "File List", "files.html", "files_dup" ],
+      [ "Globals", "globals.html", [
+        [ "All", "globals.html", null ],
+        [ "Functions", "globals_func.html", null ],
+        [ "Variables", "globals_vars.html", null ]
+      ] ]
+    ] ]
+  ] ]
 ];
 
 var NAVTREEINDEX =
 [
-"index.html"
+"algorithm.html"
 ];
 
 var SYNCONMSG = 'click to disable panel synchronisation';

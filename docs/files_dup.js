@@ -1,0 +1,26 @@
+var files_dup =
+[
+    [ "alm.c", "alm_8c.html", "alm_8c" ],
+    [ "als.c", "als_8c.html", "als_8c" ],
+    [ "bitop.c", "bitop_8c.html", "bitop_8c" ],
+    [ "butterfly.c", "butterfly_8c.html", "butterfly_8c" ],
+    [ "butterfly_extra.c", "butterfly__extra_8c.html", "butterfly__extra_8c" ],
+    [ "butterfly_new.c", "butterfly__new_8c.html", "butterfly__new_8c" ],
+    [ "cindex.c", "cindex_8c.html", "cindex_8c" ],
+    [ "csort.c", "csort_8c.html", "csort_8c" ],
+    [ "mapmat.c", "mapmat_8c.html", "mapmat_8c" ],
+    [ "mapmatc.c", "mapmatc_8c.html", "mapmatc_8c" ],
+    [ "ring.c", "ring_8c.html", "ring_8c" ],
+    [ "toeplitz.c", "toeplitz_8c.html", "toeplitz_8c" ],
+    [ "toeplitz_block.c", "toeplitz__block_8c.html", "toeplitz__block_8c" ],
+    [ "toeplitz_devtools.c", "toeplitz__devtools_8c.html", "toeplitz__devtools_8c" ],
+    [ "toeplitz_gappy.c", "toeplitz__gappy_8c.html", "toeplitz__gappy_8c" ],
+    [ "toeplitz_gappy_seq.dev.c", "toeplitz__gappy__seq_8dev_8c.html", "toeplitz__gappy__seq_8dev_8c" ],
+    [ "toeplitz_nofft.c", "toeplitz__nofft_8c.html", "toeplitz__nofft_8c" ],
+    [ "toeplitz_params.c", "toeplitz__params_8c.html", "toeplitz__params_8c" ],
+    [ "toeplitz_rshp.c", "toeplitz__rshp_8c.html", "toeplitz__rshp_8c" ],
+    [ "toeplitz_seq.c", "toeplitz__seq_8c.html", "toeplitz__seq_8c" ],
+    [ "toeplitz_utils.c", "toeplitz__utils_8c.html", "toeplitz__utils_8c" ],
+    [ "toeplitz_wizard.c", "toeplitz__wizard_8c.html", "toeplitz__wizard_8c" ],
+    [ "truebutterfly.c", "truebutterfly_8c.html", "truebutterfly_8c" ]
+];
