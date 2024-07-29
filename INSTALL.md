@@ -108,10 +108,3 @@ if __name__ == "__main__":
         main()
 ```
 
-## examples (deprecated)
-
-To build the examples binaries for the core library, do:
-
-- make mapmat_example to generate the examples from the mapmat module
-- make toeplitz_example to generate the examples from the Toeplitz module
-

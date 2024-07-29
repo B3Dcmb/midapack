@@ -34,6 +34,11 @@ We are currently working on updating the online manual at: https://b3dcmb.github
 
 The novel features of version 2.0 are described in detail in the MAPPRAISER software release paper: https://arxiv.org/abs/2112.03370
 
+Installation
+-------------
+
+For detailed instructions on how to install the library, please refer to: https://github.com/B3Dcmb/midapack/blob/master/INSTALL.md.
+
 Project collaborators
 ---------------------
 
@@ -48,33 +53,35 @@ The full list of collaborators, including application scientists, validators, et
 
 Development Team
 ----------------
-2022-:
-  Simon Biquard
-  Hamza El Bouhargani
-  Magdy Morshed
-  Laura Grigori (coordinator)
-  Radek Stompor (coordinator)
+ 2022-:
+  Simon Biquard (developer);
+  Hamza El Bouhargani (developer);
+  Laura Grigori (coordinator); 
+  Magdy Morshed (developer);
+  Radek Stompor (coordinator).
 
-2019-2022:
-  Hamza El Bouhargani
-  Thibault Cimic
-  Aygul Jamal
-  Niels Guilbert
-  Laura Grigori (coordinator)
-  Radek Stompor (coordinator)
+ 2019-2022:
+  Hamza El Bouhargani (developer);
+  Thibault Cimic (developer); 
+  Laura Grigori (coordinator); 
+  Niels Guilbert (developer);
+  Aygul Jamal (developer);
+  Radek Stompor (coordinator).
 
-2015: 
-  Sebastien Cayrols
-  Laura Grigori (coordinator)
-  Radek Stompor (coordinator)
+ 2015:
+  Sebastien Cayrols (developer)
+  Laura Grigori (coordinator); 
+  Radek Stompor (coordinator).
 
-2009-2012:
-  Pierre Cargemel
-  Frederic Dauvergne
-  Maude Le Jeune
-  Antoine Rogier
-  Laura Grigori (coordinator)
-  Radek Stompor (coordinator)
+ 2009-2012:
+  Pierre Cargemel (developer);
+  Frederic Dauvergne (developer);
+  Giulio Fabbian (validator); 
+  Laura Grigori (coordinator); 
+  Maude Le Jeune (senior developer);
+  Antoine Rogier (developer);
+  Mikolaj Szydlarski (developer);
+  Radek Stompor (coordinator).
 
 How to use it
 -------------
