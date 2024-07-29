@@ -1,25 +1,25 @@
 import os
 import re
-import tomlkit
 
 import numpy as np
+import tomlkit
 import traitlets
 from astropy import units as u
 
 from toast.mpi import MPI, use_mpi
 from toast.observation import default_values as defaults
-from toast.timing import function_timer, Timer
-from toast.traits import Bool, Dict, Instance, Int, Float, Unicode, trait_docs
-from toast.utils import Environment, Logger, dtype_to_aligned
 from toast.ops.delete import Delete
 from toast.ops.operator import Operator
+from toast.timing import Timer, function_timer
+from toast.traits import Bool, Dict, Float, Instance, Int, Unicode, trait_docs
+from toast.utils import Environment, Logger, dtype_to_aligned
 
 from .utils import (
+    compute_autocorr,
     compute_autocorrelations,
     log_time_memory,
     stage_in_turns,
     stage_local,
-    compute_autocorr,
 )
 
 libmappraiser = None
@@ -156,11 +156,6 @@ class Mappraiser(Operator):
 
     apod_window_type = Unicode(
         "chebwin", help="Type of apodisation window to use during noise PSD estimation"
-    )
-
-    nperseg_frac = Float(
-        1.0,
-        help="Fraction of timestream length to use for computing noise periodograms with Welch method.",
     )
 
     bandwidth = Int(16384, help="Half-bandwidth for the noise model")
@@ -1021,7 +1016,6 @@ class Mappraiser(Operator):
                     self._mappraiser_invtt,
                     self._mappraiser_tt,
                     libmappraiser.INVTT_TYPE,
-                    nperseg_frac=self.nperseg_frac,
                     apod_window_type=self.apod_window_type,
                     print_info=(data.comm.world_rank == 0),
                     save_psd=(self.save_psd and data.comm.world_rank == 0),

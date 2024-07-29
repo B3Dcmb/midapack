@@ -92,10 +92,9 @@ endif ()
 # Subdirectories
 # ----------------------------------------------------------------------------------------#
 
+add_subdirectory(examples)
 add_subdirectory(src)
-
-# Python
-add_subdirectory(pymappraiser)
+add_subdirectory(python)
 
 # Enable/disable build of the tests
 option(BUILD_TESTS "Build the tests" OFF)

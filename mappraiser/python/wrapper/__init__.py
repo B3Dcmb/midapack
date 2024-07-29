@@ -1,5 +1,4 @@
-from __future__ import division
-from __future__ import print_function
+from __future__ import division, print_function
 
 import ctypes as ct
 import ctypes.util as ctu
@@ -8,7 +7,6 @@ import sys
 
 import numpy as np
 import numpy.ctypeslib as npc
-
 from mpi4py import MPI
 
 SIGNAL_TYPE = np.float64

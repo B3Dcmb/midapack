@@ -13,12 +13,8 @@ execute_process(
 # to use on many systems.
 #set(PYTHON_SITE
 #    "${CMAKE_INSTALL_LIBDIR}/python${PYTHON_MAJORMINOR}/site-packages")
-set(PYTHON_SITE "lib/python${PYTHON_MAJORMINOR}/site-packages")
-
-install(FILES
-    mappraiser_test.py
-    DESTINATION ${PYTHON_SITE}/pymappraiser
-)
+set(PYTHON_SITE "lib/python${PYTHON_MAJORMINOR}/site-packages/pymappraiser")
 
 add_subdirectory(toast)
+add_subdirectory(workflow)
 add_subdirectory(wrapper)

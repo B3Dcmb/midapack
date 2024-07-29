@@ -6,12 +6,12 @@ import os
 import numpy as np
 import numpy.testing as nt
 from astropy import units as u
+from pymappraiser.toast import mappraiser
 
 import toast.ops as ops
 from toast.noise import Noise
 from toast.observation import default_values as defaults
 from toast.pixels import PixelData, PixelDistribution
-from toast.vis import set_matplotlib_backend
 from toast.tests._helpers import (
     close_data,
     create_fake_sky,
@@ -19,8 +19,7 @@ from toast.tests._helpers import (
     fake_flags,
 )
 from toast.tests.mpi import MPITestCase
-
-from pymappraiser.toast import mappraiser
+from toast.vis import set_matplotlib_backend
 
 
 def create_outdir(mpicomm, subdir=None):

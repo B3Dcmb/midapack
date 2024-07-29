@@ -2,13 +2,14 @@
 # apply the Mappraiser operator during a TOD2MAP TOAST(3) pipeline
 
 import os
+
 import numpy as np
 import scipy.signal
-from scipy.optimize import curve_fit
 from astropy import units as u
+from scipy.optimize import curve_fit
 
-from toast.utils import Logger, dtype_to_aligned, memreport
 from toast.ops.memory_counter import MemoryCounter
+from toast.utils import Logger, dtype_to_aligned, memreport
 
 
 # Here are some helper functions adapted from toast/src/ops/madam_utils.py
@@ -26,7 +27,7 @@ def log_time_memory(
             restart = True
 
         if data.comm.world_rank == 0:
-            msg = "{} {}: {:0.1f} s".format(prefix, timer_msg, timer.seconds())
+            msg = f"{prefix} {timer_msg}: {timer.seconds():0.1f} s"
             log.debug(msg)
 
     if mem_msg is not None:
@@ -36,15 +37,13 @@ def log_time_memory(
         toast_bytes = mem_count.apply(data)
 
         if data.comm.group_rank == 0:
-            msg = "{} {} Group {} memory = {:0.2f} GB".format(
-                prefix, mem_msg, data.comm.group, toast_bytes / 1024**2
-            )
+            msg = "{prefix} {mem_msg} Group {data.comm.group} memory = {toast_bytes / 1024**2:0.2f} GB"
             log.debug(msg)
         if full_mem:
             _ = memreport(
                 msg="{} {}".format(prefix, mem_msg), comm=data.comm.comm_world
             )
-    if restart:
+    if restart and timer is not None:
         timer.start()
 
 
@@ -94,8 +93,7 @@ def stage_local(
                 if set(pair).isdisjoint(local_dets):
                     # nothing to do
                     continue
-                incomplete = not (set(pair).issubset(local_dets))
-                if incomplete:
+                if not (set(pair).issubset(local_dets)):
                     msg = f"Incomplete {pair=} ({ob.uid=}, {local_dets=}"
                     raise RuntimeError(msg)
                 if operator is not None:
@@ -285,7 +283,6 @@ def compute_autocorrelations(
     buffer_inv_tt,
     buffer_tt,
     invtt_dtype,
-    nperseg_frac=1.0,
     print_info=False,
     save_psd=False,
     save_dir="",
@@ -311,7 +308,6 @@ def compute_autocorrelations(
                 idet,
                 invtt_dtype,
                 apod_window_type,
-                nperseg_frac=nperseg_frac,
                 verbose=(print_info and (idet == 0) and (iob == 0)),
                 save_psd=save_psd,
                 fname=os.path.join(save_dir, f"noise_fit_{uid}_{det}"),
@@ -347,7 +343,6 @@ def noise_autocorrelation(
     idet,
     invtt_dtype,
     apod_window_type,
-    nperseg_frac=1.0,
     verbose=False,
     save_psd=False,
     fname="",
@@ -364,13 +359,11 @@ def noise_autocorrelation(
 
     # Estimate psd from noise timestream
 
-    # Length of segments used to estimate PSD (defines the lowest frequency we can estimate)
-    nperseg = int(nn * nperseg_frac)
+    # Average over 10 minute segments
+    nperseg = int(600 * fsamp)
 
     # Compute a periodogram with Welch's method
-    f, psd = scipy.signal.welch(
-        nsetod, fsamp, window="hann", nperseg=nperseg, detrend="linear"
-    )
+    f, psd = scipy.signal.welch(nsetod, fsamp, nperseg=nperseg)
 
     # Fit the psd model to the periodogram (in log scale)
     popt, pcov = curve_fit(
