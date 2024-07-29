@@ -48,7 +48,3 @@ cmake-build-*
 .idea
 .fleet
 .zed
-
-# Directories to ignore
-algebra/test
-mappraiser/test/debug_out

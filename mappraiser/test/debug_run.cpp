@@ -54,13 +54,13 @@ int main(int argc, char *argv[]) {
 
     // Define the data and the output directories
 
-    std::string data_path = directory + "/../../../mappraiser/test/data_bin";
-    std::string output_path = directory + "/../../../mappraiser/test/debug_out";
+    std::string data_path = directory + "/data_bin";
+    std::string output_path = directory + "/debug_out";
 
     // proc 0 will create the output directory
     if (rank == 0) {
         std::cout << "Checking output directory... ";
-        if (createDirectory(output_path.c_str()) != 0) {
+        if (create_directory(output_path.c_str(), 0755) != 0) {
             std::cerr << "Cannot write mappraiser products :'(\n";
             MPI_Finalize();
             return 1;
@@ -74,7 +74,7 @@ int main(int argc, char *argv[]) {
     int solver = 0;
     int precond = 0;
     int Z_2lvl = 0;
-    int pointing_commflag = 6;
+    int pointing_commflag = 2;
     double tol = 1e-6;
     int maxiter = 100;
     int enlFac = 1;
@@ -93,18 +93,18 @@ int main(int argc, char *argv[]) {
 
     // bool to fill noise vector with zeros
     // (--> noiseless run but solver will still iterate)
-    bool fill_noise_zero = true;
+    bool fill_noise_zero = false;
 
     // bool to trigger true noiseless mode
     // (--> set noise to zero + set lambda to 1)
-    bool noiseless = true;
+    bool noiseless = false;
 
     // modify input indices to mimic the observation of a single sky pixel
     bool single_pixel = false;
 
     // only run mapmaker on a single data block
     // note: only possible with 1 MPI process
-    bool single_block = true;
+    bool single_block = false;
 
     //____________________________________________________________
     // Process options

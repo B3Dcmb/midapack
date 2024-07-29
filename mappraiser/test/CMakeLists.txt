@@ -72,3 +72,14 @@ target_include_directories(shift_overlap PRIVATE
 
 target_compile_definitions(shift_overlap PRIVATE W_MPI)
 target_link_libraries(shift_overlap PRIVATE mappraiser MPI::MPI_CXX)
+
+# ____________________________________________________
+# Install the test executables in the bin/tests directory
+include(GNUInstallDirs)
+
+install(TARGETS debug_run baseline mapmat gaps shift_overlap
+        DESTINATION bin/tests)
+
+# install the headers
+install(DIRECTORY data_bin/
+        DESTINATION bin/tests/data_bin)

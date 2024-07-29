@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
 
     // proc 0 will create the output directory
     std::cout << "Checking output directory... ";
-    if (createDirectory(output_path.c_str()) != 0) {
+    if (create_directory(output_path.c_str(), 0755) != 0) {
         std::cerr << "Cannot write mappraiser products :'(\n";
         MPI_Finalize();
         return 1;
