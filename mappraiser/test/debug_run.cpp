@@ -74,7 +74,10 @@ int main(int argc, char *argv[]) {
     int solver = 0;
     int precond = 0;
     int Z_2lvl = 0;
-    int pointing_commflag = 2;
+    int pointing_commflag = 6; // default: allreduce
+    if (argc == 2) {
+        pointing_commflag = atoi(argv[1]);
+    }
     double tol = 1e-6;
     int maxiter = 100;
     int enlFac = 1;

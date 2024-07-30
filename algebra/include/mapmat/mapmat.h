@@ -14,14 +14,7 @@
 #ifndef MAPMAT_H
 #define MAPMAT_H
 
-#include "alm.h"
-#include "als.h"
-#include "bitop.h"
-#include "butterfly.h"
-#include "cindex.h"
-#include "csort.h"
-#include "ring.h"
-
+#include "butterfly_wrappers.h"
 #ifdef W_MPI
 #include <mpi.h>
 #endif
@@ -30,7 +23,7 @@
 extern "C" {
 #endif
 
-#include <stdbool.h>
+#include "stdbool.h"
 
 #define NONE 0
 #define RING 1
@@ -39,12 +32,13 @@ extern "C" {
 #define NOEMPTY 4
 #define ALLTOALLV 5
 #define ALLREDUCE 6
-//================Modification introduced by Sebastien Cayrols : 01/09/2015 ;
-// Berkeley
+//================Modification introduced by Sebastien Cayrols
+// Berkeley 01/09/2015
 #define BUTTERFLY_BLOCKING_1 7
 #define BUTTERFLY_BLOCKING_2 8
 #define NOEMPTYSTEPRING 9
 //================End modification
+
 #define SEQ 0
 #define OMP 1
 #define GPU 2
@@ -58,17 +52,17 @@ typedef struct mat_t {
     int nnz;       // number non-zero per rows
     int trash_pix; // amount of extra pixels
     bool flag_ignore_extra; // if true, do not include extra pixels in estimated
-                            // map
-    int *indices;     // column indices tab; size = m * nnz; can be a global or
-                      // local numbering
+    // map
+    int *indices; // column indices tab; size = m * nnz; can be a global or
+    // local numbering
     double *values;   // non-zero values tab; size = m * nnz
     int *id_last_pix; // index of the last time sample pointing to each pixel
-                      // (no nnz repeat factor)
-    int *ll;          // linked list of time samples indexes linked by pixels
+    // (no nnz repeat factor)
+    int *ll; // linked list of time samples indexes linked by pixels
     //--------local shaping---------------
     int lcount;
     int *lindices; // local indices tab (monotony with global numbering); size =
-                   // lcount
+    // lcount
 #ifdef W_MPI
     MPI_Comm comm; // MPI communicator
     //--------com shaping-----------------
@@ -76,6 +70,8 @@ typedef struct mat_t {
     int steps;                   // number of steps in the communication scheme
     int *nS, *nR; // number of indices (to send and to receive); size = steps
     int **R, **S; // sending or receiving indices tab
+    // butterfly communication with any number of processes
+    Butterfly_superstruct *bstruct;
 #endif
 } Mat;
 
@@ -87,41 +83,22 @@ int MatInit(Mat *A, int m, int nnz, int *indices, double *values, int flag
 );
 
 void MatSetIndices(Mat *A, int m, int nnz, int *indices);
-
 void MatSetValues(Mat *A, int m, int nnz, double *values);
-
 void MatFree(Mat *A);
-
 int MatLocalShape(Mat *A, int sflag);
-
-#if W_MPI
-
-int MatComShape(Mat *A, int flag, MPI_Comm comm);
-
-#endif
-
 int MatVecProd(Mat *A, double *x, double *y, int pflag);
-
 int TrMatVecProd(Mat *A, double *y, double *x, int pflag);
-
-#if W_MPI
-
-__attribute__((unused)) int TrMatVecProd_Naive(Mat *A, double *y, double *x,
-                                               int pflag);
-
-#endif
-
-__attribute__((unused)) int MatLoad(Mat *A, char *filename);
-
-__attribute__((unused)) int MatSave(Mat *A, char *filename);
-
-#if W_MPI
-
-__attribute__((unused)) int MatInfo(Mat *A, int master, char *filename);
-
-#endif
-
 int greedyreduce(Mat *A, double *x);
+
+int MatLoad(Mat *A, char *filename);
+int MatSave(Mat *A, char *filename);
+
+#if W_MPI
+int MatComShape(Mat *A, int flag, MPI_Comm comm);
+int TrMatVecProd_Naive(Mat *A, double *y, double *x, int pflag);
+int MatInfo(Mat *A, int master, char *filename);
+void CommInfo(Mat *A);
+#endif
 
 #ifdef __cplusplus
 }

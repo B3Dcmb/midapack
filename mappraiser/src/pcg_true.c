@@ -9,9 +9,8 @@
  */
 
 #include "mappraiser/pcg_true.h"
-#include "mappraiser/iofiles.h"
+#include "memutils.h"
 
-#include <math.h>
 #include <mpi.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -38,19 +37,16 @@ double scalar_prod_reduce(MPI_Comm comm, int n, const double *pixpond,
     return result;
 }
 
-int build_rhs(Mat *A, Tpltz *Nm1, Tpltz *N, Gap *G, WeightStgy ws,
-              const double *d, double *rhs) {
+void build_rhs(Mat *A, Tpltz *Nm1, Tpltz *N, Gap *G, WeightStgy ws,
+               const double *d, double *rhs) {
     // Build the right-hand side of the equation
     // rhs = A^t * N^{-1} * d
 
-    int m = A->m; // number of local samples
-    double *_t;   // time domain vector
+    // number of local samples
+    int m = A->m;
 
-    _t = malloc((sizeof *_t) * m);
-    if (_t == NULL) {
-        fprintf(stderr, "malloc of _t failed in get_rhs");
-        return 1;
-    }
+    // time domain vector
+    double *_t = SAFEMALLOC(sizeof *_t * m);
 
     // multiply by N^{-1}
     for (int i = 0; i < m; i++)
@@ -60,29 +56,22 @@ int build_rhs(Mat *A, Tpltz *Nm1, Tpltz *N, Gap *G, WeightStgy ws,
     // multiply by A^t
     TrMatVecProd(A, _t, rhs, 0);
 
-    free(_t);
-    return 0;
+    FREE(_t);
 }
 
-int opmm(Mat *A, Tpltz *Nm1, Tpltz *N, Gap *G, WeightStgy ws, double *x,
-         double *y) {
+void opmm(Mat *A, Tpltz *Nm1, Tpltz *N, Gap *G, WeightStgy ws, double *x,
+          double *y) {
     // Apply system matrix, i.e. compute
     // y = A^t * N^{-1} * A * x
 
-    double *_t = NULL; // time domain vector
-
-    _t = malloc((sizeof *_t) * A->m);
-    if (_t == NULL) {
-        fprintf(stderr, "malloc of _t failed in opmm");
-        return 1;
-    }
+    // time domain vector
+    double *_t = SAFEMALLOC(sizeof *_t * A->m);
 
     MatVecProd(A, x, _t, 0);
     apply_weights(Nm1, N, G, _t, ws, false);
     TrMatVecProd(A, _t, y, 0);
 
-    free(_t);
-    return 0;
+    FREE(_t);
 }
 
 #if 0
@@ -130,7 +119,6 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
     MPI_Barrier(A->comm);
     si->start_time = MPI_Wtime();
 
-    int info;
     int k = 0;                      // iteration number
     int n = get_actual_map_size(A); // map size
 
@@ -148,22 +136,11 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
     double *zp = NULL;  // previous z
     double *zt = NULL;  // backup pointer for zp
 
-    rhs = malloc((sizeof *rhs) * n);
-    r = malloc((sizeof *r) * n);
-    if (rhs == NULL || r == NULL) {
-        si->has_failed = true;
-        fprintf(stderr, "[proc %d] malloc of rhs or r failed", rank);
-        solverinfo_finalize(si);
-        return;
-    }
+    rhs = SAFEMALLOC(sizeof *rhs * n);
+    r = SAFEMALLOC(sizeof *r * n);
 
-    // build rhs
-    info = build_rhs(A, Nm1, N, G, ws, d, rhs);
-    if (info != 0) {
-        fprintf(stderr, "build_rhs routine returned a non-zero code (%d)",
-                info);
-        exit(EXIT_FAILURE);
-    }
+    // right-hand side
+    build_rhs(A, Nm1, N, G, ws, d, rhs);
 
     // compute initial residual
     opmm(A, Nm1, N, G, ws, x, r);
@@ -180,35 +157,18 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
     if (stop) {
         // one stop condition already met, no iteration
         solverinfo_finalize(si);
-        free(rhs);
-        free(r);
+        FREE(rhs);
+        FREE(r);
         return;
     }
 
     // iterate to solve the system
 
     // allocate buffers needed for the iteration
-    p = malloc((sizeof *p) * n);
-    Sp = malloc((sizeof *Sp) * n);
-    z = malloc((sizeof *z) * n);
-    zp = malloc((sizeof *zp) * n);
-
-    if (p == NULL || Sp == NULL || z == NULL || zp == NULL) {
-        // free memory if possible
-        if (p)
-            free(p);
-        if (Sp)
-            free(Sp);
-        if (z)
-            free(z);
-        if (zp)
-            free(zp);
-
-        si->has_failed = true;
-        fprintf(stderr, "[proc %d] malloc of p, Sp, z or zp failed", rank);
-        solverinfo_finalize(si);
-        return;
-    }
+    p = SAFEMALLOC(sizeof *p * n);
+    Sp = SAFEMALLOC(sizeof *Sp * n);
+    z = SAFEMALLOC(sizeof *z * n);
+    zp = SAFEMALLOC(sizeof *zp * n);
 
     // apply preconditioner (z0 = M^{-1} * r0)
     apply_precond(M, A, r, z);
@@ -226,11 +186,7 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
         k++;
 
         // apply system matrix
-        info = opmm(A, Nm1, N, G, ws, p, Sp);
-        if (info != 0) {
-            fprintf(stderr, "opmm routine returned a non-zero code (%d)", info);
-            exit(EXIT_FAILURE);
-        }
+        opmm(A, Nm1, N, G, ws, p, Sp);
 
         // compute (r,z) and (p,_p)
         coef_1 = scalar_prod_reduce(A->comm, M->n, M->pixpond, r, z, NULL);
@@ -296,12 +252,12 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
     }
 
     // free memory after the iteration
-    free(rhs);
-    free(r);
-    free(p);
-    free(Sp);
-    free(z);
-    free(zp);
+    FREE(rhs);
+    FREE(r);
+    FREE(p);
+    FREE(Sp);
+    FREE(z);
+    FREE(zp);
 
     solverinfo_finalize(si);
 }
@@ -333,7 +289,6 @@ void CG_mm(Mat *A, double *pixpond, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
     MPI_Barrier(A->comm);
     si->start_time = MPI_Wtime();
 
-    int info;
     int k = 0;                      // iteration number
     int n = get_actual_map_size(A); // map size
 
@@ -348,22 +303,11 @@ void CG_mm(Mat *A, double *pixpond, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
     double *p = NULL;   // search direction
     double *Sp = NULL;  // [system matrix] * p
 
-    rhs = malloc((sizeof *rhs) * n);
-    r = malloc((sizeof *r) * n);
-    if (rhs == NULL || r == NULL) {
-        si->has_failed = true;
-        fprintf(stderr, "[proc %d] malloc of rhs or r failed", rank);
-        solverinfo_finalize(si);
-        return;
-    }
+    rhs = SAFEMALLOC(sizeof *rhs * n);
+    r = SAFEMALLOC(sizeof *r * n);
 
-    // build rhs
-    info = build_rhs(A, Nm1, N, G, ws, d, r);
-    if (info != 0) {
-        fprintf(stderr, "build_rhs routine returned a non-zero code (%d)",
-                info);
-        exit(EXIT_FAILURE);
-    }
+    // right-hand side
+    build_rhs(A, Nm1, N, G, ws, d, r);
 
     // compute initial residual
     opmm(A, Nm1, N, G, ws, x, r);
@@ -380,29 +324,16 @@ void CG_mm(Mat *A, double *pixpond, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
     if (stop) {
         // one stop condition already met, no iteration
         solverinfo_finalize(si);
-        free(rhs);
-        free(r);
+        FREE(rhs);
+        FREE(r);
         return;
     }
 
     // iterate to solve the system
 
     // allocate buffers needed for the iteration
-    p = malloc((sizeof *p) * n);
-    Sp = malloc((sizeof *Sp) * n);
-
-    if (p == NULL || Sp == NULL) {
-        // free memory if possible
-        if (p)
-            free(p);
-        if (Sp)
-            free(Sp);
-
-        si->has_failed = true;
-        fprintf(stderr, "[proc %d] malloc of p or Sp failed", rank);
-        solverinfo_finalize(si);
-        return;
-    }
+    p = SAFEMALLOC(sizeof *p * n);
+    Sp = SAFEMALLOC(sizeof *Sp * n);
 
     // set initial search direction (p0 = r0)
     for (int i = 0; i < n; i++) {
@@ -415,11 +346,7 @@ void CG_mm(Mat *A, double *pixpond, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
         k++;
 
         // apply system matrix
-        info = opmm(A, Nm1, N, G, ws, p, Sp);
-        if (info != 0) {
-            fprintf(stderr, "opmm routine returned a non-zero code (%d)", info);
-            exit(EXIT_FAILURE);
-        }
+        opmm(A, Nm1, N, G, ws, p, Sp);
 
         // compute (r,r) and (p,_p)
         coef_1 = scalar_prod_reduce(A->comm, n, pixpond, r, r, NULL);
@@ -459,10 +386,10 @@ void CG_mm(Mat *A, double *pixpond, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
     }
 
     // free memory after the iteration
-    free(rhs);
-    free(r);
-    free(p);
-    free(Sp);
+    FREE(rhs);
+    FREE(r);
+    FREE(p);
+    FREE(Sp);
 
     solverinfo_finalize(si);
 }

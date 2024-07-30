@@ -18,13 +18,25 @@
     @author Pierre Cargemel
     @date   November 2011*/
 
-#ifdef W_MPI
-#include <mpi.h>
-#endif
-#include "mapmat.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "mapmat/alm.h"
+#include "mapmat/bitop.h"
+#include "mapmat/cindex.h"
+#include "mapmat/csort.h"
+#include "mapmat/mapmat.h"
+#include "memutils.h"
+
+#ifdef W_MPI
+#include "mapmat/butterfly.h"
+#if 0
+#include "mapmat/butterfly_wrappers.h"
+#endif
+#include "mapmat/ring.h"
+#include <mpi.h>
+#endif
 
 /** Create a matrix specifying the number of local rows m,
     the number of non-zero elements per row nnz ,
@@ -103,8 +115,8 @@ void MatSetValues(Mat *A, int m, int nnz, double *values) {
 
 //===================Part added by Sebastien Cayrols to get amount of memory
 // needed by communication algoritms
-__attribute__((unused)) void CommInfo(Mat *A) {
 #if W_MPI
+void CommInfo(Mat *A) {
     int i = 0, size, rank;
     double maxSizeR = 0.0;
     double maxSizeS = 0.0;
@@ -112,16 +124,13 @@ __attribute__((unused)) void CommInfo(Mat *A) {
     double amountSizeS = 0.0;
     double stepSum = 0.0, stepAvg = 0.0;
     // this value is based on data sent
-    double *amountSizeByStep = NULL;
     double minStep = 0.0, maxStep = 0.0;
-    double *s = NULL;
-    double *r = NULL;
     MPI_Comm comm = MPI_COMM_WORLD;
     MPI_Comm_rank(comm, &rank);
     MPI_Comm_size(comm, &size);
-    s = (double *)malloc(4 * sizeof(double));
-    r = (double *)malloc(4 * 3 * sizeof(double));
-    amountSizeByStep = (double *)malloc(A->steps * sizeof(double));
+    double *s = SAFEMALLOC(sizeof(double) * 4);
+    double *r = SAFEMALLOC(sizeof(double) * 4 * 3);
+    double *amountSizeByStep = SAFEMALLOC(sizeof(double) * A->steps);
     switch (A->flag) {
     case NONE:
         break;
@@ -213,16 +222,14 @@ __attribute__((unused)) void CommInfo(Mat *A) {
     }
 
     if (A->flag != ALLREDUCE && A->flag != ALLTOALLV) {
-        double *t = NULL;
-
-        t = (double *)malloc(A->steps * sizeof(double));
+        double *t = SAFEMALLOC(sizeof(double) * A->steps);
         // Copy int array into double array
         for (i = 0; i < A->steps; i++)
             t[i] = A->nS[i];
 
         MPI_Reduce(t, amountSizeByStep, A->steps, MPI_DOUBLE, MPI_SUM, 0, comm);
 
-        free(t);
+        FREE(t);
 
         if (rank == 0) {
             stepSum = minStep = maxStep = amountSizeByStep[0];
@@ -262,70 +269,11 @@ __attribute__((unused)) void CommInfo(Mat *A) {
         printf("\n[MEMORY]Message size sent       : %e\t[%e,%e]\n", r[3], r[7],
                r[11]);
     }
-    free(s);
-    free(r);
-    free(amountSizeByStep);
-#endif
+    FREE(s);
+    FREE(r);
+    FREE(amountSizeByStep);
 }
-
-void MatReset(Mat *A) {
-#if W_MPI
-    switch (A->flag) {
-    case NONE:
-        break;
-    case BUTTERFLY:
-        free(A->R);
-        free(A->nR);
-        free(A->S);
-        free(A->nS);
-        break;
-    case BUTTERFLY_BLOCKING_1:
-        free(A->R);
-        free(A->nR);
-        free(A->S);
-        free(A->nS);
-        break;
-    case BUTTERFLY_BLOCKING_2:
-        free(A->R);
-        free(A->nR);
-        free(A->S);
-        free(A->nS);
-        break;
-    case NOEMPTYSTEPRING:
-        free(A->R);
-        free(A->nR);
-        free(A->S);
-        free(A->nS);
-        break;
-    case RING:
-        free(A->R);
-        free(A->nR);
-        free(A->S);
-        free(A->nS);
-        break;
-    case NONBLOCKING:
-        free(A->R);
-        free(A->nR);
-        free(A->S);
-        free(A->nS);
-        break;
-    case NOEMPTY:
-        free(A->R);
-        free(A->nR);
-        free(A->S);
-        free(A->nS);
-        break;
-    case ALLTOALLV: // added -- rs 2015/02/04
-        free(A->R);
-        free(A->nR);
-        free(A->S);
-        free(A->nS);
-        break;
-    case ALLREDUCE:
-        break;
-    }
 #endif
-}
 
 //===================End
 
@@ -341,74 +289,40 @@ void MatFree(Mat *A) {
     // get information about communication size
     // CommInfo(A);
 
-    free(A->lindices);
+    FREE(A->lindices);
 #if W_MPI
+    int rank;
     switch (A->flag) {
     case NONE:
         break;
     case BUTTERFLY:
-        free(A->com_indices);
-        free(A->R);
-        free(A->nR);
-        free(A->S);
-        free(A->nS);
+#if 0
+        MPI_Comm_rank(A->comm, &rank);
+        free_butterfly_superstruct(A->bstruct, rank);
         break;
+#endif
     //==========================Modification added by Sebastien Cayrols :
     // 01/09/2015 , Berkeley
     case BUTTERFLY_BLOCKING_1:
-        free(A->com_indices);
-        free(A->R);
-        free(A->nR);
-        free(A->S);
-        free(A->nS);
-        break;
     case BUTTERFLY_BLOCKING_2:
-        free(A->com_indices);
-        free(A->R);
-        free(A->nR);
-        free(A->S);
-        free(A->nS);
+        FREE(A->com_indices);
+        FREE(A->R);
+        FREE(A->nR);
+        FREE(A->S);
+        FREE(A->nS);
         break;
     case NOEMPTYSTEPRING:
-        free(A->R);
-        free(A->nR);
-        free(A->S);
-        free(A->nS);
-        break;
-    //==========================End modification
     case RING:
-        free(A->R);
-        free(A->nR);
-        free(A->S);
-        free(A->nS);
-        break;
     case NONBLOCKING:
-        free(A->R);
-        free(A->nR);
-        free(A->S);
-        free(A->nS);
-        break;
     case NOEMPTY:
-        free(A->R);
-        free(A->nR);
-        free(A->S);
-        free(A->nS);
-        break;
     case ALLTOALLV: // Added: rs 2015/02/04
-        free(A->R);
-        free(A->nR);
-        free(A->S);
-        free(A->nS);
+        FREE(A->R);
+        FREE(A->nR);
+        FREE(A->S);
+        FREE(A->nS);
         break;
     case ALLREDUCE:
-        free(A->com_indices);
-        // ===
-        // Modif from Sebastien Cayrols: avoid SEGSIGV
-        // free(A->R);
-        // free(A->nR);
-        // free(A->S);
-        // free(A->nS);
-        // === End modif
+        FREE(A->com_indices);
         break;
     }
 #endif
@@ -426,7 +340,7 @@ void MatFree(Mat *A) {
    files denotes by "basename + processor number"
     @return error code
     @ingroup matmap_group11 */
-__attribute__((unused)) int MatLoad(Mat *mat, char *filename) {
+int MatLoad(Mat *mat, char *filename) {
     int err;
     int rank;
 #if W_MPI
@@ -474,7 +388,7 @@ __attribute__((unused)) int MatLoad(Mat *mat, char *filename) {
    the output files named "toto_$(rank)"
     @return error code
     @ingroup matmap_group11 */
-__attribute__((unused)) int MatSave(Mat *mat, char *filename) {
+int MatSave(Mat *mat, char *filename) {
     FILE *out;
     char fn[100];
     int i, j;
@@ -511,23 +425,17 @@ __attribute__((unused)) int MatSave(Mat *mat, char *filename) {
     @sa MatComShape MatFree MatSetIndices
     @ingroup matmap_group11 */
 int MatLocalShape(Mat *A, int sflag) {
-    int *tmp_indices;
+    // allocate a tmp copy of indices tab to sort
+    size_t count = A->m * A->nnz;
+    int *tmp_indices = SAFEMALLOC(sizeof(int) * count);
+    memcpy(tmp_indices, A->indices, sizeof(int) * count);
 
-    tmp_indices = (int *)malloc(
-        (int64_t)(A->m) * A->nnz *
-        sizeof(int)); // allocate a tmp copy of indices tab to sort
-    memcpy(tmp_indices, A->indices,
-           (int64_t)(A->m) * A->nnz * sizeof(int)); // copy
-
-    //  A->lcount = omp_psort(tmp_indices, A->m * A->nnz, sflag);
-    //  //sequential sort tmp_indices
-    A->lcount = ssort(tmp_indices, A->m * A->nnz,
-                      sflag); // sequential sort tmp_indices
-
-    A->lindices = (int *)malloc(A->lcount * sizeof(int));
-    memcpy(A->lindices, tmp_indices,
-           A->lcount * sizeof(int)); // copy tmp_indices into lindices and free
-    free(tmp_indices);
+    // sort tmp_indices
+    // A->lcount = omp_psort(tmp_indices, A->m * A->nnz, sflag);
+    A->lcount = ssort(tmp_indices, count, sflag);
+    A->lindices = SAFEMALLOC(sizeof(int) * A->lcount);
+    memcpy(A->lindices, tmp_indices, A->lcount * sizeof(int));
+    FREE(tmp_indices);
 
     sindex(A->lindices, A->lcount, A->indices, A->nnz * A->m);
 
@@ -544,6 +452,18 @@ int MatLocalShape(Mat *A, int sflag) {
 }
 
 #if W_MPI
+
+void _allocate_Mat_buffers(Mat *A) {
+    // sending maps tab
+    A->S = SAFEMALLOC(sizeof(int *) * A->steps);
+    // receiving maps tab
+    A->R = SAFEMALLOC(sizeof(int *) * A->steps);
+    // sending map sizes tab
+    A->nS = SAFEMALLOC(sizeof(int) * A->steps);
+    // receiving map size tab
+    A->nR = SAFEMALLOC(sizeof(int) * A->steps);
+}
+
 /** Transform the matrix data structure, identifying columns shared by several
    processors
     @warning [MPI ONLY!] this function does not exist in Midapack sequential
@@ -551,161 +471,91 @@ int MatLocalShape(Mat *A, int sflag) {
     @sa MatLocalShape MatInit TrMatVecProd
     @ingroup matmap_group11 */
 int MatComShape(Mat *A, int flag, MPI_Comm comm) {
-    int size;
+    int rank, size;
     int i, min, max, j;
-    A->comm = comm; // set communivcator
+
+    MPI_Comm_size(comm, &size);
+    MPI_Comm_rank(comm, &rank);
+
+    if ((flag == BUTTERFLY || flag == BUTTERFLY_BLOCKING_1 ||
+         flag == BUTTERFLY_BLOCKING_2) &&
+        is_pow_2(size) != 0) {
+        if (rank == 0) {
+            printf("BUTTERFLY_BLOCKING_1 or BUTTERFLY_BLOCKING_2 strategies "
+                   "can only be used with 2^n processes -- switching to "
+                   "BUTTERFLY.\n");
+        }
+        flag = ALLREDUCE; // FIXME: when generalized butterfly is implemented,
+                          // switch back to BUTTERFLY
+    }
+
+    if (rank == 0) {
+        printf("[MatComShape] communication strategy = %d\n", flag);
+    }
+
+    // set communicator and flag
+    A->comm = comm;
     A->flag = flag;
-    MPI_Comm_size(A->comm, &size);
-    if ((A->flag == BUTTERFLY || A->flag == BUTTERFLY_BLOCKING_1 ||
-         A->flag == BUTTERFLY_BLOCKING_2) &&
-        is_pow_2(size) != 0)
-        A->flag = RING;
+
+    // prepare communication
+    int ntrash = A->nnz * A->trash_pix;
     switch (A->flag) {
     case BUTTERFLY:
-        A->steps = log_2(size);
-        A->S = (int **)malloc(A->steps *
-                              sizeof(int *)); // allocate sending maps tab
-        A->R = (int **)malloc(A->steps *
-                              sizeof(int *)); // allocate receiving maps tab
-        A->nS = (int *)malloc(A->steps *
-                              sizeof(int)); // allocate sending map sizes tab
-        A->nR = (int *)malloc(A->steps *
-                              sizeof(int)); // allocate receiving map size tab
-        butterfly_init(A->lindices + (A->nnz) * (A->trash_pix),
-                       A->lcount - (A->nnz) * (A->trash_pix), A->R, A->nR, A->S,
-                       A->nS, &(A->com_indices), &(A->com_count), A->steps,
-                       A->comm);
+#if 0
+        // Use Magdy's generalization to any number of processes
+        A->bstruct = SAFEMALLOC(sizeof(struct Butterfly_superstruct));
+        prepare_butterfly_communication(A->lindices + ntrash, // indices_in
+                                        A->lcount - ntrash,   // count_in
+                                        A->lindices + ntrash, // indices_out
+                                        A->lcount - ntrash,   // count_out
+                                        0,                    // classic
+                                        A->bstruct, // initialized struct
+                                        A->comm     // communicator
+        );
         break;
-    //==========================Modification added by Sebastien Cayrols :
-    // 01/09/2015 , Berkeley
+#endif
     case BUTTERFLY_BLOCKING_1:
-        A->steps = log_2(size);
-        A->S = (int **)malloc(A->steps *
-                              sizeof(int *)); // allocate sending maps tab
-        A->R = (int **)malloc(A->steps *
-                              sizeof(int *)); // allocate receiving maps tab
-        A->nS = (int *)malloc(A->steps *
-                              sizeof(int)); // allocate sending map sizes tab
-        A->nR = (int *)malloc(A->steps *
-                              sizeof(int)); // allocate receiving map size tab
-        butterfly_init(A->lindices + (A->nnz) * (A->trash_pix),
-                       A->lcount - (A->nnz) * (A->trash_pix), A->R, A->nR, A->S,
-                       A->nS, &(A->com_indices), &(A->com_count), A->steps,
-                       A->comm);
-        break;
     case BUTTERFLY_BLOCKING_2:
+        // butterfly-like schemes
         A->steps = log_2(size);
-        A->S = (int **)malloc(A->steps *
-                              sizeof(int *)); // allocate sending maps tab
-        A->R = (int **)malloc(A->steps *
-                              sizeof(int *)); // allocate receiving maps tab
-        A->nS = (int *)malloc(A->steps *
-                              sizeof(int)); // allocate sending map sizes tab
-        A->nR = (int *)malloc(A->steps *
-                              sizeof(int)); // allocate receiving map size tab
-        butterfly_init(A->lindices + (A->nnz) * (A->trash_pix),
-                       A->lcount - (A->nnz) * (A->trash_pix), A->R, A->nR, A->S,
-                       A->nS, &(A->com_indices), &(A->com_count), A->steps,
-                       A->comm);
+
+        // init butterfly-like communication
+        _allocate_Mat_buffers(A);
+        butterfly_init(A->lindices + ntrash, A->lcount - ntrash, A->R, A->nR,
+                       A->S, A->nS, &(A->com_indices), &(A->com_count),
+                       A->steps, A->comm);
         break;
     case NOEMPTYSTEPRING:
-        A->steps = size;
-        A->S = (int **)malloc(A->steps *
-                              sizeof(int *)); // allocate sending maps tab
-        A->R = (int **)malloc(A->steps *
-                              sizeof(int *)); // allocate receiving maps tab
-        A->nS = (int *)malloc(A->steps *
-                              sizeof(int)); // allocate sending map sizes tab
-        A->nR = (int *)malloc(A->steps *
-                              sizeof(int)); // allocate receiving map size tab
-        ring_init(A->lindices + (A->nnz) * (A->trash_pix),
-                  A->lcount - (A->nnz) * (A->trash_pix), A->R, A->nR, A->S,
-                  A->nS, A->steps, A->comm);
-        A->com_count = A->lcount - (A->nnz) * (A->trash_pix);
-        A->com_indices = A->lindices + (A->nnz) * (A->trash_pix);
-        break;
-    //==========================End modification
     case RING:
-        A->steps = size;
-        A->S = (int **)malloc(A->steps *
-                              sizeof(int *)); // allocate sending maps tab
-        A->R = (int **)malloc(A->steps *
-                              sizeof(int *)); // allocate receiving maps tab
-        A->nS = (int *)malloc(A->steps *
-                              sizeof(int)); // allocate sending map sizes tab
-        A->nR = (int *)malloc(A->steps *
-                              sizeof(int)); // allocate receiving map size tab
-        ring_init(A->lindices + (A->nnz) * (A->trash_pix),
-                  A->lcount - (A->nnz) * (A->trash_pix), A->R, A->nR, A->S,
-                  A->nS, A->steps, A->comm);
-        A->com_count = A->lcount - (A->nnz) * (A->trash_pix);
-        A->com_indices = A->lindices + (A->nnz) * (A->trash_pix);
-        break;
     case NONBLOCKING:
-        A->steps = size;
-        A->S = (int **)malloc(A->steps *
-                              sizeof(int *)); // allocate sending maps tab
-        A->R = (int **)malloc(A->steps *
-                              sizeof(int *)); // allocate receiving maps tab
-        A->nS = (int *)malloc(A->steps *
-                              sizeof(int)); // allocate sending map sizes tab
-        A->nR = (int *)malloc(A->steps *
-                              sizeof(int)); // allocate receiving map size tab
-        ring_init(A->lindices + (A->nnz) * (A->trash_pix),
-                  A->lcount - (A->nnz) * (A->trash_pix), A->R, A->nR, A->S,
-                  A->nS, A->steps, A->comm);
-        A->com_count = A->lcount - (A->nnz) * (A->trash_pix);
-        A->com_indices = A->lindices + (A->nnz) * (A->trash_pix);
-        break;
     case NOEMPTY:
-        A->steps = size;
-        A->S = (int **)malloc(A->steps *
-                              sizeof(int *)); // allocate sending maps tab
-        A->R = (int **)malloc(A->steps *
-                              sizeof(int *)); // allocate receiving maps tab
-        A->nS = (int *)malloc(A->steps *
-                              sizeof(int)); // allocate sending map sizes tab
-        A->nR = (int *)malloc(A->steps *
-                              sizeof(int)); // allocate receiving map size tab
-        ring_init(A->lindices + (A->nnz) * (A->trash_pix),
-                  A->lcount - (A->nnz) * (A->trash_pix), A->R, A->nR, A->S,
-                  A->nS, A->steps, A->comm);
-        A->com_count = A->lcount - (A->nnz) * (A->trash_pix);
-        A->com_indices = A->lindices + (A->nnz) * (A->trash_pix);
-        break;
     case ALLTOALLV:
+        // ring-like schemes
         A->steps = size;
-        A->S = (int **)malloc(A->steps *
-                              sizeof(int *)); // allocate sending maps tab
-        A->R = (int **)malloc(A->steps *
-                              sizeof(int *)); // allocate receiving maps tab
-        A->nS = (int *)malloc(A->steps *
-                              sizeof(int)); // allocate sending map sizes tab
-        A->nR = (int *)malloc(A->steps *
-                              sizeof(int)); // allocate receiving map size tab
-        ring_init(A->lindices + (A->nnz) * (A->trash_pix),
-                  A->lcount - (A->nnz) * (A->trash_pix), A->R, A->nR, A->S,
+
+        // init ring-like communication
+        _allocate_Mat_buffers(A);
+        ring_init(A->lindices + ntrash, A->lcount - ntrash, A->R, A->nR, A->S,
                   A->nS, A->steps, A->comm);
         A->com_count = A->lcount - (A->nnz) * (A->trash_pix);
         A->com_indices = A->lindices + (A->nnz) * (A->trash_pix);
         break;
     case ALLREDUCE:
+        // maximum index
         MPI_Allreduce(&(A->lindices[A->lcount - 1]), &max, 1, MPI_INT, MPI_MAX,
-                      A->comm); // maximum index
-        MPI_Allreduce(&(A->lindices[(A->nnz) * (A->trash_pix)]), &min, 1,
-                      MPI_INT, MPI_MIN,
-                      A->comm); //
+                      A->comm);
+        MPI_Allreduce(&(A->lindices[ntrash]), &min, 1, MPI_INT, MPI_MIN,
+                      A->comm);
         A->com_count = (max - min + 1);
-        A->com_indices = (int *)malloc((A->lcount - (A->nnz) * (A->trash_pix)) *
-                                       sizeof(int)); // warning
-        i = (A->nnz) * (A->trash_pix);
+        A->com_indices = SAFEMALLOC(sizeof(int) * (A->lcount - ntrash));
+        i = ntrash;
         j = 0;
-        while (j < A->com_count &&
-               i < A->lcount) { // same as subsetmap for a coutiguous set
+        while (j < A->com_count && i < A->lcount) {
+            // same as subsetmap for a contiguous set
             if (min + j < A->lindices[i]) {
                 j++;
             } else {
-                A->com_indices[i - (A->nnz) * (A->trash_pix)] = j;
+                A->com_indices[i - ntrash] = j;
                 i++;
                 j++;
             }
@@ -757,8 +607,7 @@ int MatVecProd(Mat *A, double *x, double *y, int pflag) {
     @param x local output vector (overlapped)
     @ingroup matmap_group11
     @ingroup matmap_group12b */
-__attribute__((unused)) int TrMatVecProd_Naive(Mat *A, double *y, double *x,
-                                               int pflag) {
+int TrMatVecProd_Naive(Mat *A, double *y, double *x, int pflag) {
     int i, j, e, rank, size;
     int *rbuf, rbufcount;
     double *rbufvalues, *lvalues;
@@ -766,55 +615,56 @@ __attribute__((unused)) int TrMatVecProd_Naive(Mat *A, double *y, double *x,
     MPI_Request s_request, r_request;
     MPI_Status status;
 
-    MPI_Comm_rank(A->comm, &rank); // get rank and size of the communicator
+    MPI_Comm_rank(A->comm, &rank);
     MPI_Comm_size(A->comm, &size);
-    lvalues = (double *)malloc(
-        A->lcount * sizeof(double)); // allocate and set local values to 0.0
-    for (i = 0; i < A->lcount; i++)
-        lvalues[i] = 0.0;
+
+    // allocate and set local values to 0.0
+    lvalues = SAFECALLOC(A->lcount, sizeof(double));
 
     e = 0;
-    for (i = 0; i < A->m; i++) { // local transform reduces
+    for (i = 0; i < A->m; i++) {
+        // local transform reduces
         for (j = 0; j < A->nnz; j++) {
             lvalues[A->indices[i * A->nnz + j]] +=
                 (A->values[i * A->nnz + j]) * y[i];
         }
     }
 
-    memcpy(x, lvalues,
-           (A->lcount) * sizeof(double)); // copy local values into the result*/
-    MPI_Allreduce(
-        &(A->lcount), &(rbufcount), 1, MPI_INT, MPI_MAX,
-        A->comm); // find the max communication buffer sizes, and allocate
+    // copy local values into the result
+    memcpy(x, lvalues, (A->lcount) * sizeof(double));
+    // find the max communication buffer sizes
+    MPI_Allreduce(&(A->lcount), &(rbufcount), 1, MPI_INT, MPI_MAX, A->comm);
 
-    rbuf = (int *)malloc(rbufcount * sizeof(int));
-    rbufvalues = (double *)malloc(rbufcount * sizeof(double));
+    rbuf = SAFEMALLOC(sizeof(int) * rbufcount);
+    rbufvalues = SAFEMALLOC(sizeof(double) * rbufcount);
 
     tag = 0;
-    for (p = 1; p < size;
-         p++) { // loop : collective global reduce in ring-like fashion
+    for (p = 1; p < size; p++) {
+        // loop : collective global reduce in ring-like fashion
         rp = (size + rank - p) % size;
         sp = (rank + p) % size;
-        MPI_Send(&(A->lcount), 1, MPI_INT, sp, 0, A->comm); // exchange sizes
+        // exchange sizes
+        MPI_Send(&(A->lcount), 1, MPI_INT, sp, 0, A->comm);
         MPI_Recv(&rbufcount, 1, MPI_INT, rp, 0, A->comm, &status);
         tag++;
-        MPI_Irecv(rbuf, rbufcount, MPI_INT, rp, tag, A->comm,
-                  &r_request); // exchange local indices
+        // exchange local indices
+        MPI_Irecv(rbuf, rbufcount, MPI_INT, rp, tag, A->comm, &r_request);
         MPI_Isend(A->lindices, A->lcount, MPI_INT, sp, tag, A->comm,
                   &s_request);
         MPI_Wait(&r_request, &status);
         MPI_Wait(&s_request, &status);
         tag++;
+        // exchange local values
         MPI_Irecv(rbufvalues, rbufcount, MPI_DOUBLE, rp, tag, A->comm,
-                  &r_request); // exchange local values
+                  &r_request);
         MPI_Isend(lvalues, A->lcount, MPI_DOUBLE, sp, tag, A->comm, &s_request);
         tag++;
         MPI_Wait(&r_request, &status);
-        m2m_sum(rbufvalues, rbuf, rbufcount, x, A->lindices,
-                A->lcount); // sum in the result
+        // sum in the result
+        m2m_sum(rbufvalues, rbuf, rbufcount, x, A->lindices, A->lcount);
         MPI_Wait(&s_request, &status);
     }
-    free(lvalues);
+    FREE(lvalues);
     return 0;
 }
 #endif
@@ -866,7 +716,7 @@ int TrMatVecProd(Mat *A, double *y, double *x, int pflag) {
     @sa MatSave
     @param A pointer to the Mat
     @ingroup matmap_group11*/
-__attribute__((unused)) int MatInfo(Mat *mat, int verbose, char *filename) {
+int MatInfo(Mat *mat, int verbose, char *filename) {
     FILE *out;
     int *n;
     int *sr;
@@ -879,7 +729,8 @@ __attribute__((unused)) int MatInfo(Mat *mat, int verbose, char *filename) {
     MPI_Comm_rank(mat->comm, &rank);
     MPI_Comm_size(mat->comm, &size);
 
-    if (rank == master) { // master process saves data into filename_info.txt
+    if (rank == master) {
+        // master process saves data into filename_info.txt
         sprintf(fn, "%s_%s", filename, "info.txt");
         out = fopen(fn, "w");
         if (out == NULL) {
@@ -889,7 +740,7 @@ __attribute__((unused)) int MatInfo(Mat *mat, int verbose, char *filename) {
         printf("open file %s ...", fn);
         fprintf(out, "flag %d\n",
                 mat->flag); // print matirx main description : flag
-                            // (communication scheme),
+        // (communication scheme),
         fprintf(out, "rows %d\n ", mat->m); // rows per process,
         fprintf(out, "nnz %d\n", mat->nnz); // nnz (number of non zero per row).
         fprintf(out, "\n");                 // separator
@@ -911,30 +762,35 @@ __attribute__((unused)) int MatInfo(Mat *mat, int verbose, char *filename) {
 
     nnzline = 0; // compute communication sparsity and maximum message size
     sumline = 0;
-    for (i = 0; i < mat->steps; i++) { //
+    for (i = 0; i < mat->steps; i++) {
+        //
         sumline += mat->nS[i];
-        if (mat->nS[i] == 0) { //
-            nnzline += 1;      //
-        }                      //
-    }                          //
+        if (mat->nS[i] == 0) {
+            //
+            nnzline += 1; //
+        } //
+    } //
     MPI_Reduce(&nnzline, &sparsity, 1, MPI_INT, MPI_SUM, 0,
                mat->comm);                                           // sparsity
     MPI_Reduce(&sumline, &total, 1, MPI_INT, MPI_SUM, 0, mat->comm); // sparsity
-    if (rank == master) { // master process saves data into filename_info.txt
+    if (rank == master) {
+        // master process saves data into filename_info.txt
         fprintf(out, "sparsity %d\n", sparsity); //
         fprintf(out, "total %d\n", total);       //
     }
 
     maxsize = 0;
-    for (i = 0; i < mat->steps; i++) { //
+    for (i = 0; i < mat->steps; i++) {
+        //
         MPI_Reduce(&(mat->nS[i]), &maxstep, 1, MPI_INT, MPI_MAX, 0,
                    mat->comm); // maximum message size
         maxsize += maxstep;    //
-    }                          //
-    if (rank == master) { // master process saves data into filename_info.txt
+    } //
+    if (rank == master) {
+        // master process saves data into filename_info.txt
         fprintf(out, "maxsize %d\n ", maxsize); //
         fprintf(out, "\n");                     // separator
-    }                                           //
+    } //
 
     /* s = (int* ) calloc((mat->steps),sizeof(int));	//allocate steps
      MPI_Reduce(mat->nS, s, mat->steps, MPI_INT, MPI_SUM, 0, mat->comm);
@@ -995,7 +851,8 @@ __attribute__((unused)) int MatInfo(Mat *mat, int verbose, char *filename) {
          free(sr);
      }*/
 
-    if (rank == master) { // master process saves data into filename_info.txt
+    if (rank == master) {
+        // master process saves data into filename_info.txt
         fclose(out);
         printf("close %s\n", fn);
     }
@@ -1008,6 +865,7 @@ int greedyreduce(Mat *A, double *x) {
     int size;
     MPI_Comm_size(A->comm, &size);
     if (size == 1) {
+        // nothing to do
         return 0;
     }
 
@@ -1015,15 +873,8 @@ int greedyreduce(Mat *A, double *x) {
     int nSmax, nRmax, nStot, nRtot;
 
     // allocate buffer that will be reduced
-    double *lvalues = NULL;
-    lvalues = malloc((sizeof *lvalues) * (A->lcount - A->nnz * A->trash_pix));
-    if (lvalues == NULL) {
-        int rank;
-        MPI_Comm_rank(A->comm, &rank);
-        fprintf(stderr, "[proc %d] malloc of lvalues failed in greedyreduce",
-                rank);
-        exit(EXIT_FAILURE);
-    }
+    double *lvalues =
+        SAFEMALLOC((sizeof *lvalues) * (A->lcount - A->nnz * A->trash_pix));
 
     // copy local values into result values
     memcpy(lvalues, x, (sizeof *x) * (A->lcount - A->nnz * A->trash_pix));
@@ -1033,13 +884,14 @@ int greedyreduce(Mat *A, double *x) {
     int ne = 0;
     switch (A->flag) {
     case BUTTERFLY:
-        for (k = 0; k < A->steps; k++) // compute max communication buffer size
+        // compute max communication buffer size
+        for (k = 0; k < A->steps; k++)
             if (A->nR[k] > nRmax)
                 nRmax = A->nR[k];
         for (k = 0; k < A->steps; k++)
             if (A->nS[k] > nSmax)
                 nSmax = A->nS[k];
-        com_val = (double *)malloc(A->com_count * sizeof(double));
+        com_val = SAFEMALLOC(sizeof(double) * A->com_count);
         for (i = 0; i < A->com_count; i++)
             com_val[i] = 0.0;
         m2m(lvalues, A->lindices + (A->nnz) * (A->trash_pix),
@@ -1050,18 +902,19 @@ int greedyreduce(Mat *A, double *x) {
         m2m(com_val, A->com_indices, A->com_count, x,
             A->lindices + (A->nnz) * (A->trash_pix),
             A->lcount - (A->nnz) * (A->trash_pix));
-        free(com_val);
+        FREE(com_val);
         break;
     //==========================Modification added by Sebastien Cayrols :
     // 01/09/2015 , Berkeley
     case BUTTERFLY_BLOCKING_1:
-        for (k = 0; k < A->steps; k++) // compute max communication buffer size
+        // compute max communication buffer size
+        for (k = 0; k < A->steps; k++)
             if (A->nR[k] > nRmax)
                 nRmax = A->nR[k];
         for (k = 0; k < A->steps; k++)
             if (A->nS[k] > nSmax)
                 nSmax = A->nS[k];
-        com_val = (double *)malloc(A->com_count * sizeof(double));
+        com_val = SAFEMALLOC(sizeof(double) * A->com_count);
         for (i = 0; i < A->com_count; i++)
             com_val[i] = 0.0;
         m2m(lvalues, A->lindices + (A->nnz) * (A->trash_pix),
@@ -1072,16 +925,17 @@ int greedyreduce(Mat *A, double *x) {
         m2m(com_val, A->com_indices, A->com_count, x,
             A->lindices + (A->nnz) * (A->trash_pix),
             A->lcount - (A->nnz) * (A->trash_pix));
-        free(com_val);
+        FREE(com_val);
         break;
     case BUTTERFLY_BLOCKING_2:
-        for (k = 0; k < A->steps; k++) // compute max communication buffer size
+        // compute max communication buffer size
+        for (k = 0; k < A->steps; k++)
             if (A->nR[k] > nRmax)
                 nRmax = A->nR[k];
         for (k = 0; k < A->steps; k++)
             if (A->nS[k] > nSmax)
                 nSmax = A->nS[k];
-        com_val = (double *)malloc(A->com_count * sizeof(double));
+        com_val = SAFEMALLOC(sizeof(double) * A->com_count);
         for (i = 0; i < A->com_count; i++)
             com_val[i] = 0.0;
         m2m(lvalues, A->lindices + (A->nnz) * (A->trash_pix),
@@ -1092,10 +946,11 @@ int greedyreduce(Mat *A, double *x) {
         m2m(com_val, A->com_indices, A->com_count, x,
             A->lindices + (A->nnz) * (A->trash_pix),
             A->lcount - (A->nnz) * (A->trash_pix));
-        free(com_val);
+        FREE(com_val);
         break;
     case NOEMPTYSTEPRING:
-        for (k = 1; k < A->steps; k++) // compute max communication buffer size
+        // compute max communication buffer size
+        for (k = 1; k < A->steps; k++)
             if (A->nR[k] > nRmax)
                 nRmax = A->nR[k];
         nSmax = nRmax;
@@ -1123,8 +978,8 @@ int greedyreduce(Mat *A, double *x) {
                             A->steps, A->comm);
         break;
     case ALLREDUCE:
-        com_val = (double *)malloc(A->com_count * sizeof(double));
-        out_val = (double *)malloc(A->com_count * sizeof(double));
+        com_val = SAFEMALLOC(sizeof(double) * A->com_count);
+        out_val = SAFEMALLOC(sizeof(double) * A->com_count);
         for (i = 0; i < A->com_count; i++) {
             com_val[i] = 0.0;
             out_val[i] = 0.0;
@@ -1136,8 +991,9 @@ int greedyreduce(Mat *A, double *x) {
             printf("%lf ", com_val[i]);
         }
 #endif
+        // maximum index
         MPI_Allreduce(com_val, out_val, A->com_count, MPI_DOUBLE, MPI_SUM,
-                      A->comm); // maximum index
+                      A->comm);
 #if 0
         for (i = 0; i < A->com_count; i++) {
             printf("%lf ", out_val[i]);
@@ -1145,21 +1001,22 @@ int greedyreduce(Mat *A, double *x) {
 #endif
         // sum receive buffer into values
         m2s(out_val, x, A->com_indices, A->lcount - (A->nnz) * (A->trash_pix));
-        free(com_val);
-        free(out_val);
+        FREE(com_val);
+        FREE(out_val);
         break;
     case ALLTOALLV:
         nRtot = nStot = 0;
-        for (k = 0; k < A->steps; k++) { // compute buffer sizes
-            nRtot += A->nR[k];           // to receive
-            nStot += A->nS[k];           // to send
+        for (k = 0; k < A->steps; k++) {
+            // compute buffer sizes
+            nRtot += A->nR[k]; // to receive
+            nStot += A->nS[k]; // to send
         }
 
         alltoallv_reduce(A->R, A->nR, nRtot, A->S, A->nS, nStot, lvalues, x,
                          A->steps, A->comm);
         break;
     }
-    free(lvalues);
+    FREE(lvalues);
     return 0;
 }
 #endif

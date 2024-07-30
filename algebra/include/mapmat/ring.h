@@ -12,8 +12,8 @@
     @author Pierre Cargemel
     @date April 2012*/
 
-#ifndef MAPMAT_RING_H
-#define MAPMAT_RING_H
+#ifndef RING_H
+#define RING_H
 
 #ifdef W_MPI
 #include <mpi.h>
@@ -38,4 +38,4 @@ int alltoallv_reduce(int **R, int *nR, int nRtot, int **S, int *nS, int nStot,
                      double *val, double *res_val, int steps, MPI_Comm comm);
 #endif
 
-#endif // MAPMAT_RING_H
+#endif // RING_H

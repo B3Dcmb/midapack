@@ -18,13 +18,21 @@
    ANR-09-COSI-009).
     @author Pierre Cargemel
     @date   October 2012*/
+
+#include <stdlib.h>
+#include <string.h>
+
+#include "mapmat/alm.h"
+#include "mapmat/bitop.h"
+#include "mapmat/butterfly.h"
+#include "mapmat/cindex.h"
+#include "mapmat/csort.h"
+#include "mapmat/mapmatc.h"
+#include "mapmat/ring.h"
+
 #ifdef W_MPI
 #include <mpi.h>
 #endif
-#include "mapmatc.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 int CMatInit(CMat *A, int r, int *m, int *nnz, int **indices, double **values,
              int flag
@@ -34,10 +42,10 @@ int CMatInit(CMat *A, int r, int *m, int *nnz, int **indices, double **values,
 #endif
 ) {
     int M, k, *tmp_indices;
-    A->r    = r;   // set number of local rows
-    A->m    = m;   //
-    A->nnz  = nnz; //
-    A->disp = (int *) malloc((A->r + 1) * sizeof(int)); // allocate disp array
+    A->r = r;     // set number of local rows
+    A->m = m;     //
+    A->nnz = nnz; //
+    A->disp = (int *)malloc((A->r + 1) * sizeof(int)); // allocate disp array
     A->disp[0] = 0;
     //  printf(" %d\t%d\t%d\n", A->m[0], A->nnz[0], A->disp[0]);
     for (k = 1; k <= A->r; k++) {
@@ -47,7 +55,7 @@ int CMatInit(CMat *A, int r, int *m, int *nnz, int **indices, double **values,
         //  printf(" %d\n", A->disp[k]);
     }
     A->indices = indices; //
-    A->values  = values;
+    A->values = values;
     /*int i, j;
   for(k=0; k<A->r; k++){
     for(i=0; i<A->m[k]*A->nnz[k]; i+=A->nnz[k]){
@@ -57,26 +65,26 @@ int CMatInit(CMat *A, int r, int *m, int *nnz, int **indices, double **values,
     }
     printf("\n");
   }*/
-    tmp_indices = (int *) malloc(
-            A->disp[A->r]
-            * sizeof(int)); // allocate a tmp copy of indices tab to sort
+    tmp_indices = (int *)malloc(
+        A->disp[A->r] *
+        sizeof(int)); // allocate a tmp copy of indices tab to sort
     for (k = 0; k < A->r; k++) {
         memcpy(tmp_indices + A->disp[k], A->indices[k],
                A->m[k] * A->nnz[k] * sizeof(int)); // copy
     }
 
-    A->lcount   = ssort(tmp_indices, A->disp[A->r],
-                        0); // sequential sort tmp_indices (flag:3=counting sort)
-    A->lindices = (int *) malloc((A->lcount) * sizeof(int)); //
+    A->lcount = ssort(tmp_indices, A->disp[A->r],
+                      0); // sequential sort tmp_indices (flag:3=counting sort)
+    A->lindices = (int *)malloc((A->lcount) * sizeof(int)); //
     memcpy(A->lindices, tmp_indices,
-           (A->lcount)
-                   * sizeof(int)); // copy tmp_indices into lindices and free
+           (A->lcount) *
+               sizeof(int)); // copy tmp_indices into lindices and free
     free(tmp_indices);
 
     for (k = 0; k < A->r; k++) {
         sindex(A->lindices, A->lcount, A->indices[k],
-               A->nnz[k]
-                       * A->m[k]); // transform indices tab in local indices tab
+               A->nnz[k] *
+                   A->m[k]); // transform indices tab in local indices tab
     }
     /*for(k=0; k<A->r; k++){
     for(i=0; i<A->m[k]*A->nnz[k]; i+=A->nnz[k]){
@@ -93,24 +101,24 @@ int CMatInit(CMat *A, int r, int *m, int *nnz, int **indices, double **values,
 #endif
 }
 
-
 int CMatFree(CMat *A) {
     free(A->disp);
     free(A->lindices);
 #ifdef W_MPI
-    if (A->flag != NONE) { // if necessary free communication tab
-        if (A->R)          //
-            free(A->R);    //
-        if (A->nR)         //
-            free(A->nR);   //
-        if (A->S)          //
-            free(A->S);    //
-        if (A->nS) free(A->nS);
+    if (A->flag != NONE) {
+        // if necessary free communication tab
+        if (A->R)        //
+            free(A->R);  //
+        if (A->nR)       //
+            free(A->nR); //
+        if (A->S)        //
+            free(A->S);  //
+        if (A->nS)
+            free(A->nS);
     }
 #endif
     return 0;
 }
-
 
 #ifdef W_MPI
 int CMatComShape(CMat *mat, int flag) {
@@ -120,27 +128,27 @@ int CMatComShape(CMat *mat, int flag) {
     MPI_Comm_size(mat->comm, &size);
     if (flag == BUTTERFLY) {
         if (is_pow_2(size) == 0) {
-            mat->flag  = flag;
+            mat->flag = flag;
             mat->steps = log_2(size);
         } else {
-            mat->flag  = RING;
+            mat->flag = RING;
             mat->steps = size;
         }
     } else if (flag == NONE) {
         mat->flag = flag;
         return 0;
     } else {
-        mat->flag  = flag;
+        mat->flag = flag;
         mat->steps = size;
     }
-    mat->S  = (int **) malloc(mat->steps
-                              * sizeof(int *)); /*<allocate sending maps tab*/
-    mat->R  = (int **) malloc(mat->steps
-                              * sizeof(int *)); /*<allocate receiving maps tab*/
-    mat->nS = (int *) malloc(mat->steps
-                             * sizeof(int)); /*<allocate sending map sizes tab*/
-    mat->nR = (int *) malloc(
-            mat->steps * sizeof(int)); /*<allocate receiving map size tab*/
+    mat->S = (int **)malloc(mat->steps *
+                            sizeof(int *)); /*<allocate sending maps tab*/
+    mat->R = (int **)malloc(mat->steps *
+                            sizeof(int *)); /*<allocate receiving maps tab*/
+    mat->nS = (int *)malloc(mat->steps *
+                            sizeof(int)); /*<allocate sending map sizes tab*/
+    mat->nR = (int *)malloc(mat->steps *
+                            sizeof(int)); /*<allocate receiving map size tab*/
 
     if (mat->flag == BUTTERFLY) {
         butterfly_init(mat->lindices, mat->lcount, mat->R, mat->nR, mat->S,
@@ -149,7 +157,7 @@ int CMatComShape(CMat *mat, int flag) {
     } else {
         ring_init(mat->lindices, mat->lcount, mat->R, mat->nR, mat->S, mat->nS,
                   mat->steps, mat->comm);
-        mat->com_count   = mat->lcount;
+        mat->com_count = mat->lcount;
         mat->com_indices = mat->lindices;
     }
     // printf("commshape 1\n");
@@ -157,17 +165,20 @@ int CMatComShape(CMat *mat, int flag) {
 }
 #endif
 
-
 int CMatVecProd(CMat *A, double *xvalues, double *yvalues, int pflag) {
     int i, j, k;
     int l;
-    for (i = 0; i < A->disp[A->r]; i++) yvalues[i] = 0.0;
+    for (i = 0; i < A->disp[A->r]; i++)
+        yvalues[i] = 0.0;
     l = 0;
-    for (k = 0; k < A->r; k++) {                   // coarse levels
-        for (i = 0; i < A->m[k]; i += A->nnz[k]) { // rows
-            for (j = 0; j < A->nnz[k]; j++) {      // non-zero per row
+    for (k = 0; k < A->r; k++) {
+        // coarse levels
+        for (i = 0; i < A->m[k]; i += A->nnz[k]) {
+            // rows
+            for (j = 0; j < A->nnz[k]; j++) {
+                // non-zero per row
                 yvalues[l] +=
-                        A->values[k][i + j] * xvalues[A->indices[k][i + j]];
+                    A->values[k][i + j] * xvalues[A->indices[k][i + j]];
             }
             l++;
         }
@@ -175,44 +186,51 @@ int CMatVecProd(CMat *A, double *xvalues, double *yvalues, int pflag) {
     return 0;
 }
 
-
 int CTrMatVecProd(CMat *A, double *in_values, double *out_values, int pflag) {
-    int     i, j, k;
-    int     l;
-    int     nSmax, nRmax;
+    int i, j, k;
+    int l;
+    int nSmax, nRmax;
     double *lvalues;
 
-    lvalues = (double *) malloc(
-            A->lcount
-            * sizeof(double)); /*<allocate and set to 0.0 local values*/
-    for (i = 0; i < A->lcount; i++) lvalues[i] = 0.0;
+    lvalues = (double *)malloc(
+        A->lcount * sizeof(double)); /*<allocate and set to 0.0 local values*/
+    for (i = 0; i < A->lcount; i++)
+        lvalues[i] = 0.0;
 
     l = 0;
-    for (k = 0; k < A->r; k++) {                   // coarse levels
-        for (i = 0; i < A->m[k]; i += A->nnz[k]) { // rows
-            for (j = 0; j < A->nnz[k]; j++) {      // non-zero per row
+    for (k = 0; k < A->r; k++) {
+        // coarse levels
+        for (i = 0; i < A->m[k]; i += A->nnz[k]) {
+            // rows
+            for (j = 0; j < A->nnz[k]; j++) {
+                // non-zero per row
                 lvalues[A->indices[k][i + j]] +=
-                        A->values[k][i + j] * in_values[l];
+                    A->values[k][i + j] * in_values[l];
             }
             l++;
         }
     }
     memcpy(out_values, lvalues,
-           (A->lcount)
-                   * sizeof(double)); /*<copy local values into result values*/
+           (A->lcount) *
+               sizeof(double)); /*<copy local values into result values*/
 #ifdef W_MPI
     nRmax = 0;
     nSmax = 0;
 
-    if (A->flag == BUTTERFLY) {        /*<branch butterfly*/
+    if (A->flag == BUTTERFLY) {
+        /*<branch butterfly*/
         for (k = 0; k < A->steps; k++) /*compute max communication buffer size*/
-            if (A->nR[k] > nRmax) nRmax = A->nR[k];
+            if (A->nR[k] > nRmax)
+                nRmax = A->nR[k];
         for (k = 0; k < A->steps; k++)
-            if (A->nS[k] > nSmax) nSmax = A->nS[k];
+            if (A->nS[k] > nSmax)
+                nSmax = A->nS[k];
 
         double *com_val;
-        com_val = (double *) malloc(A->com_count * sizeof(double));
-        for (i = 0; i < A->com_count; i++) { com_val[i] = 0.0; }
+        com_val = (double *)malloc(A->com_count * sizeof(double));
+        for (i = 0; i < A->com_count; i++) {
+            com_val[i] = 0.0;
+        }
         m2m(lvalues, A->lindices, A->lcount, com_val, A->com_indices,
             A->com_count);
         butterfly_reduce(A->R, A->nR, nRmax, A->S, A->nS, nSmax, com_val,
@@ -222,7 +240,8 @@ int CTrMatVecProd(CMat *A, double *in_values, double *out_values, int pflag) {
         free(com_val);
     } else if (A->flag == RING) {
         for (k = 1; k < A->steps; k++) /*compute max communication buffer size*/
-            if (A->nR[k] > nRmax) nRmax = A->nR[k];
+            if (A->nR[k] > nRmax)
+                nRmax = A->nR[k];
 
         nSmax = nRmax;
         ring_reduce(A->R, A->nR, nRmax, A->S, A->nS, nSmax, lvalues, out_values,
@@ -233,7 +252,8 @@ int CTrMatVecProd(CMat *A, double *in_values, double *out_values, int pflag) {
     } else if (A->flag == NOEMPTY) {
         int ne = 0;
         for (k = 1; k < A->steps; k++)
-            if (A->nR[k] != 0) ne++;
+            if (A->nR[k] != 0)
+                ne++;
         ring_noempty_reduce(A->R, A->nR, ne, A->S, A->nS, ne, lvalues,
                             out_values, A->steps, A->comm);
     } else {

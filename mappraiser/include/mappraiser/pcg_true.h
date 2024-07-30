@@ -1,7 +1,7 @@
 #ifndef MAPPRAISER_PCG_TRUE_H
 #define MAPPRAISER_PCG_TRUE_H
 
-#include "midapack.h"
+#include <midapack.h>
 
 #ifdef __cplusplus
 extern "C" {

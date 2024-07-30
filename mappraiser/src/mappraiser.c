@@ -14,6 +14,7 @@
 #include "mappraiser/mapping.h"
 #include "mappraiser/noise_weighting.h"
 #include "mappraiser/pcg_true.h"
+#include "memutils.h"
 
 #ifdef WITH_ECG
 #include "mappraiser/ecg.h"
@@ -139,15 +140,9 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     // Size of map that will be estimated by the solver
     int solver_map_size = get_actual_map_size(&A);
 
-    x = calloc(solver_map_size, sizeof *x);
-    cond = malloc((sizeof *cond) * solver_map_size / A.nnz);
-    lhits = malloc((sizeof *lhits) * solver_map_size / A.nnz);
-
-    if (x == NULL || cond == NULL || lhits == NULL) {
-        fprintf(stderr, "[rank %d] memory allocation of map objects failed",
-                rank);
-        exit(1);
-    }
+    x = SAFECALLOC(solver_map_size, sizeof *x);
+    cond = SAFEMALLOC(sizeof *cond * solver_map_size / A.nnz);
+    lhits = SAFEMALLOC(sizeof *lhits * solver_map_size / A.nnz);
 
     // ____________________________________________________________
     // Create piecewise Toeplitz matrix
@@ -178,7 +173,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     int local_V_size = m;
 
     // Block definition
-    tpltzblocks = (Block *)malloc(nb_blocks_loc * sizeof(Block));
+    tpltzblocks = SAFEMALLOC(sizeof *tpltzblocks * nb_blocks_loc);
     defineBlocks_avg(tpltzblocks, inv_tt, nb_blocks_loc, local_blocks_sizes,
                      lambda_block_avg, id0);
     defineTpltz_avg(&Nm1, nrow, 1, mcol, tpltzblocks, nb_blocks_loc,
@@ -186,7 +181,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
 
     // define the noise covariance matrix
     Tpltz N;
-    Block *tpltzblocks_N = (Block *)malloc(nb_blocks_loc * sizeof(Block));
+    Block *tpltzblocks_N = SAFEMALLOC(sizeof *tpltzblocks_N * nb_blocks_loc);
     defineBlocks_avg(tpltzblocks_N, tt, nb_blocks_loc, local_blocks_sizes,
                      lambda_block_avg, id0);
     defineTpltz_avg(&N, nrow, 1, mcol, tpltzblocks_N, nb_blocks_loc,
@@ -225,7 +220,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
         use_precond = true;
     }
 
-    build_precond(&P, &pixpond, &A, &Nm1, &x, signal, noise, &cond, &lhits, tol,
+    build_precond(&P, &pixpond, &A, &Nm1, &x, signal, noise, cond, lhits, tol,
                   Z_2lvl, precond, gs, &Gaps, gif, local_blocks_sizes);
 
     MPI_Barrier(A.comm);
@@ -336,12 +331,12 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     }
 
     // free tpltz blocks
-    free(tpltzblocks);
-    free(tpltzblocks_N);
+    FREE(tpltzblocks);
+    FREE(tpltzblocks_N);
 
     // free Gap structure
-    free(Gaps.id0gap);
-    free(Gaps.lgap);
+    FREE(Gaps.id0gap);
+    FREE(Gaps.lgap);
 
     // free preconditioner structure
     free_precond(&P);
@@ -364,7 +359,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
 
     if (extra > 0) {
 #ifdef DEBUG
-        double *extra_map = (double *)malloc(extra * sizeof(double));
+        double *extra_map = SAFEMALLOC(sizeof *extra_map * extra);
         memcpy(extra_map, x, extra * sizeof(double));
         if (rank == 0) {
             printf("extra map with %d pixels (T only)\n {", extra / Nnz);
@@ -374,32 +369,20 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
             puts(" }");
         }
         fflush(stdout);
+        FREE(extra_map);
 #endif
         // valid map
-        memmove(x, (x + extra), map_size * sizeof(double));
-        memmove(lhits, lhits + extra / Nnz, (map_size / Nnz) * sizeof(int));
-        memmove(cond, cond + extra / Nnz, (map_size / Nnz) * sizeof(double));
-        double *tmp_x = realloc(x, (sizeof tmp_x) * map_size);
-        int *tmp_hits = realloc(lhits, (sizeof tmp_hits) * map_size / Nnz);
-        double *tmp_cond = realloc(cond, (sizeof tmp_cond) * map_size / Nnz);
-        if (tmp_x == NULL || tmp_hits == NULL || tmp_cond == NULL) {
-            fprintf(stderr, "[proc %d] realloc of x, lhits or cond failed",
-                    rank);
-            exit(EXIT_FAILURE);
-        }
-        x = tmp_x;
-        lhits = tmp_hits;
-        cond = tmp_cond;
+        memmove(x, x + extra, sizeof *x * map_size);
+        memmove(lhits, lhits + extra / Nnz, sizeof *lhits * map_size / Nnz);
+        memmove(cond, cond + extra / Nnz, sizeof *cond * map_size / Nnz);
+        x = SAFEREALLOC(x, sizeof *x * map_size);
+        lhits = SAFEREALLOC(lhits, sizeof *lhits * map_size / Nnz);
+        cond = SAFEREALLOC(cond, sizeof *cond * map_size / Nnz);
     }
 
     // get maps from all processes and combine them
 
-    int *lstid = malloc((sizeof lstid) * map_size);
-    if (lstid == NULL) {
-        fprintf(stderr, "[proc %d] memory allocation of lstid failed", rank);
-        exit(EXIT_FAILURE);
-    }
-
+    int *lstid = SAFEMALLOC(sizeof *lstid * map_size);
     for (i = 0; i < map_size; i++) {
         lstid[i] = A.lindices[i + Nnz * A.trash_pix];
     }
@@ -418,41 +401,22 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
 
         double *mapI = NULL;
         if (Nnz == 3) {
-            mapI = (double *)calloc(npix, sizeof(double));
+            mapI = SAFECALLOC(npix, sizeof *mapI);
         }
-        double *mapQ = NULL;
-        mapQ = (double *)calloc(npix, sizeof(double));
-        double *mapU = NULL;
-        mapU = (double *)calloc(npix, sizeof(double));
-        int *hits = NULL;
-        hits = (int *)calloc(npix, sizeof(int));
-        double *Cond = NULL;
-        Cond = (double *)calloc(npix, sizeof(double));
+        double *mapQ = SAFECALLOC(npix, sizeof *mapQ);
+        double *mapU = SAFECALLOC(npix, sizeof *mapU);
+        int *hits = SAFECALLOC(npix, sizeof *hits);
+        double *Cond = SAFECALLOC(npix, sizeof *Cond);
 
         for (i = 0; i < size; i++) {
             if (i != 0) {
                 oldsize = map_size;
                 MPI_Recv(&map_size, 1, MPI_INT, i, 0, comm, &status);
                 if (oldsize != map_size) {
-                    int *tmp1, *tmp4;
-                    double *tmp2, *tmp3;
-                    tmp1 = (int *)realloc(lstid, map_size * sizeof(int));
-                    tmp2 = (double *)realloc(x, map_size * sizeof(double));
-                    tmp3 = (double *)realloc(cond, map_size * sizeof(double));
-                    tmp4 = (int *)realloc(lhits, map_size * sizeof(int));
-                    if (tmp1 == NULL || tmp2 == NULL || tmp3 == NULL ||
-                        tmp4 == NULL) {
-                        fprintf(
-                            stderr,
-                            "realloc failed while receiving data from proc %d",
-                            i);
-                        exit(EXIT_FAILURE);
-                    } else {
-                        lstid = tmp1;
-                        x = tmp2;
-                        cond = tmp3;
-                        lhits = tmp4;
-                    }
+                    lstid = SAFEREALLOC(lstid, sizeof *lstid * map_size);
+                    x = SAFEREALLOC(x, sizeof *x * map_size);
+                    cond = SAFEREALLOC(cond, sizeof *cond * map_size);
+                    lhits = SAFEREALLOC(lhits, sizeof *lhits * map_size);
                 }
                 MPI_Recv(lstid, map_size, MPI_INT, i, 1, comm, &status);
                 MPI_Recv(x, map_size, MPI_DOUBLE, i, 2, comm, &status);
@@ -534,11 +498,11 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
                             "results will not be stored ;(\n");
         }
 
-        free(mapI);
-        free(mapQ);
-        free(mapU);
-        free(Cond);
-        free(hits);
+        FREE(mapI);
+        FREE(mapQ);
+        FREE(mapU);
+        FREE(Cond);
+        FREE(hits);
     }
 
     t = MPI_Wtime();
@@ -548,14 +512,14 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     }
 
     // free memory
-    free(x);
-    free(cond);
-    free(lhits);
+    FREE(x);
+    FREE(cond);
+    FREE(lhits);
 
     MatFree(&A);
     A.indices = NULL;
     A.values = NULL;
-    free(lstid);
+    FREE(lstid);
 
     // MPI_Finalize();
 }

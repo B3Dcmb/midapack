@@ -24,6 +24,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "mapmat/alm.h"
+#include "mapmat/als.h"
 
 /** @brief Initialize tables for butterfly-like communication scheme (true means
    pair wise) This routine set up needed tables for the butterfly communication
@@ -52,54 +54,57 @@ int truebutterfly_init(int *indices, int count, int **R, int *nR, int **S,
                        int *nS, int **com_indices, int *com_count, int steps,
                        MPI_Comm comm) {
 
-    int         i, k, p2k, p2k1;
-    int         rank, size, rk, sk;
-    int         tag;
+    int i, k, p2k, p2k1;
+    int rank, size, rk, sk;
+    int tag;
     MPI_Request s_request, r_request;
-    int         nbuf, *buf;
-    int       **I, *nI;
-    int       **J, *nJ;
+    int nbuf, *buf;
+    int **I, *nI;
+    int **J, *nJ;
 
     MPI_Comm_size(comm, &size);
     MPI_Comm_rank(comm, &rank);
 
-    I    = (int **) malloc(steps * sizeof(int *));
-    nI   = (int *) malloc(steps * sizeof(int));
-    tag  = 0;
-    p2k  = size / 2;
+    I = (int **)malloc(steps * sizeof(int *));
+    nI = (int *)malloc(steps * sizeof(int));
+    tag = 0;
+    p2k = size / 2;
     p2k1 = 2 * p2k;
 
-    for (k = 0; k < steps;
-         k++) { // butterfly first pass : bottom up (fill tabs nI and I)
+    for (k = 0; k < steps; k++) {
+        // butterfly first pass : bottom up (fill tabs nI and I)
 
-        if (rank % p2k1 < p2k) sk = rk = rank + p2k;
+        if (rank % p2k1 < p2k)
+            sk = rk = rank + p2k;
         else
             sk = rk = rank - p2k;
 
-        if (k == 0) { // S^0 := A
+        if (k == 0) {
+            // S^0 := A
             nS[k] = count;
-            S[k]  = (int *) malloc(nS[k] * sizeof(int));
+            S[k] = (int *)malloc(nS[k] * sizeof(int));
             memcpy(S[k], indices, nS[k] * sizeof(int));
-        } else { // S^k := S^{k-1} \cup R^{k-1}
+        } else {
+            // S^k := S^{k-1} \cup R^{k-1}
             nS[k] = card_or(S[k - 1], nS[k - 1], I[steps - k], nI[steps - k]);
-            S[k]  = (int *) malloc(nS[k] * sizeof(int));
+            S[k] = (int *)malloc(nS[k] * sizeof(int));
             set_or(S[k - 1], nS[k - 1], I[steps - k], nI[steps - k], S[k]);
         }
 
-        MPI_Irecv(&nI[steps - k - 1], 1, MPI_INT, rk, tag, comm,
-                  &r_request); // receive number of indices
-        MPI_Isend(&nS[k], 1, MPI_INT, sk, tag, comm,
-                  &s_request); // send number of indices
+        MPI_Irecv(&nI[steps - k - 1], 1, MPI_INT, rk, tag, comm, &r_request);
+        // receive number of indices
+        MPI_Isend(&nS[k], 1, MPI_INT, sk, tag, comm, &s_request);
+        // send number of indices
         MPI_Wait(&r_request, MPI_STATUS_IGNORE);
         MPI_Wait(&s_request, MPI_STATUS_IGNORE);
 
-        I[steps - k - 1] = (int *) malloc(nI[steps - k - 1] * sizeof(int));
+        I[steps - k - 1] = (int *)malloc(nI[steps - k - 1] * sizeof(int));
 
         tag++;
         MPI_Irecv(I[steps - k - 1], nI[steps - k - 1], MPI_INT, rk, tag, comm,
                   &r_request); // receive indices
-        MPI_Isend(S[k], nS[k], MPI_INT, sk, tag, comm,
-                  &s_request); // send indices
+        MPI_Isend(S[k], nS[k], MPI_INT, sk, tag, comm, &s_request);
+        // send indices
         MPI_Wait(&r_request, MPI_STATUS_IGNORE);
         MPI_Wait(&s_request, MPI_STATUS_IGNORE);
 
@@ -108,29 +113,30 @@ int truebutterfly_init(int *indices, int count, int **R, int *nR, int **S,
         tag++;
     }
 
-    J  = (int **) malloc(steps * sizeof(int *));
-    nJ = (int *) malloc(steps * sizeof(int));
+    J = (int **)malloc(steps * sizeof(int *));
+    nJ = (int *)malloc(steps * sizeof(int));
 
-    tag  = 0;
-    p2k  = 1;
+    tag = 0;
+    p2k = 1;
     p2k1 = p2k * 2;
-    for (k = 0; k < steps;
-         k++) { // buuterfly second pass : top down (fill tabs nJ and J)
+    for (k = 0; k < steps; k++) {
+        // buuterfly second pass : top down (fill tabs nJ and J)
         free(S[k]);
 
-        if (rank % p2k1 < p2k) sk = rk = rank + p2k;
+        if (rank % p2k1 < p2k)
+            sk = rk = rank + p2k;
         else
             sk = rk = rank - p2k;
 
         if (k == 0) {
             nJ[k] = count;
-            J[k]  = (int *) malloc(nJ[k] * sizeof(int));
+            J[k] = (int *)malloc(nJ[k] * sizeof(int));
             memcpy(J[k], indices, nJ[k] * sizeof(int));
         } else {
             nJ[k] = card_or(J[k - 1], nJ[k - 1], R[k - 1], nR[k - 1]);
-            J[k]  = (int *) malloc(nJ[k] * sizeof(int));
-            set_or(J[k - 1], nJ[k - 1], R[k - 1], nR[k - 1],
-                   J[k]); // J^k=R^k-1 \cup J^k-1
+            J[k] = (int *)malloc(nJ[k] * sizeof(int));
+            set_or(J[k - 1], nJ[k - 1], R[k - 1], nR[k - 1], J[k]);
+            // J^k=R^k-1 \cup J^k-1
             free(R[k - 1]);
         }
         if (k != steps - 1) {
@@ -139,7 +145,7 @@ int truebutterfly_init(int *indices, int count, int **R, int *nR, int **S,
             MPI_Wait(&r_request, MPI_STATUS_IGNORE);
             MPI_Wait(&s_request, MPI_STATUS_IGNORE);
 
-            R[k] = (int *) malloc(nR[k] * sizeof(int));
+            R[k] = (int *)malloc(nR[k] * sizeof(int));
             tag++;
 
             MPI_Irecv(R[k], nR[k], MPI_INT, rk, tag, comm, &r_request);
@@ -152,37 +158,38 @@ int truebutterfly_init(int *indices, int count, int **R, int *nR, int **S,
         tag++;
     }
 
-
-    tag  = 0;
-    p2k  = 1;
+    tag = 0;
+    p2k = 1;
     p2k1 = p2k * 2;
-    for (k = 0; k < steps; k++) { // butterfly last pass : know that Sending tab
-                                  // is S = I \cap J, so send S and we'll get R
+    for (k = 0; k < steps; k++) {
+        // butterfly last pass : know that Sending tab is S = I \cap J, so send
+        // S and we'll get R
 
-        if (rank % p2k1 < p2k) sk = rk = rank + p2k;
+        if (rank % p2k1 < p2k)
+            sk = rk = rank + p2k;
         else
             sk = rk = rank - p2k;
 
         nS[k] = card_and(I[k], nI[k], J[k], nJ[k]);
-        S[k]  = (int *) malloc(nJ[k] * sizeof(int));
+        S[k] = (int *)malloc(nJ[k] * sizeof(int));
         set_and(I[k], nI[k], J[k], nJ[k], S[k]); // S^k=I^k \cap J^k
 
         free(I[k]);
         free(J[k]);
 
-        MPI_Irecv(&nR[k], 1, MPI_INT, rk, tag, comm,
-                  &r_request); // receive size
+        MPI_Irecv(&nR[k], 1, MPI_INT, rk, tag, comm, &r_request); // receive
+                                                                  // size
         MPI_Isend(&nS[k], 1, MPI_INT, sk, tag, comm, &s_request); // send size
         MPI_Wait(&r_request, MPI_STATUS_IGNORE);
         MPI_Wait(&s_request, MPI_STATUS_IGNORE);
 
-        R[k] = (int *) malloc(nR[k] * sizeof(int));
+        R[k] = (int *)malloc(nR[k] * sizeof(int));
         tag++;
 
-        MPI_Irecv(R[k], nR[k], MPI_INT, rk, tag, comm,
-                  &r_request); // receive indices
-        MPI_Isend(S[k], nS[k], MPI_INT, sk, tag, comm,
-                  &s_request); // send indices
+        MPI_Irecv(R[k], nR[k], MPI_INT, rk, tag, comm, &r_request);
+        // receive indices
+        MPI_Isend(S[k], nS[k], MPI_INT, sk, tag, comm, &s_request);
+        // send indices
         MPI_Wait(&r_request, MPI_STATUS_IGNORE);
         MPI_Wait(&s_request, MPI_STATUS_IGNORE);
 
@@ -194,29 +201,29 @@ int truebutterfly_init(int *indices, int count, int **R, int *nR, int **S,
     // Now we work locally
     int **USR, *nUSR, **U, *nU;
 
-    USR  = (int **) malloc(steps * sizeof(int *));
-    nUSR = (int *) malloc(steps * sizeof(int));
-    U    = (int **) malloc(steps * sizeof(int *));
-    nU   = (int *) malloc(steps * sizeof(int));
+    USR = (int **)malloc(steps * sizeof(int *));
+    nUSR = (int *)malloc(steps * sizeof(int));
+    U = (int **)malloc(steps * sizeof(int *));
+    nU = (int *)malloc(steps * sizeof(int));
 
     for (k = 0; k < steps; k++) {
         nUSR[k] = card_or(S[k], nS[k], R[k], nR[k]);
-        USR[k]  = (int *) malloc(nUSR[k] * sizeof(int));
+        USR[k] = (int *)malloc(nUSR[k] * sizeof(int));
         set_or(S[k], nS[k], R[k], nR[k], USR[k]);
     }
     for (k = 0; k < steps; k++) {
         if (k == 0) {
             nU[k] = nUSR[k];
-            U[k]  = (int *) malloc(nU[k] * sizeof(int));
+            U[k] = (int *)malloc(nU[k] * sizeof(int));
             memcpy(U[k], USR[k], nU[k] * sizeof(int));
         } else {
             nU[k] = card_or(U[k - 1], nU[k - 1], USR[k], nUSR[k]);
-            U[k]  = (int *) malloc(nU[k] * sizeof(int *));
+            U[k] = (int *)malloc(nU[k] * sizeof(int *));
             set_or(U[k - 1], nU[k - 1], USR[k], nUSR[k], U[k]);
         }
     }
-    *com_count   = nU[steps - 1];
-    *com_indices = (int *) malloc(*com_count * sizeof(int));
+    *com_count = nU[steps - 1];
+    *com_indices = (int *)malloc(*com_count * sizeof(int));
     memcpy(*com_indices, U[steps - 1], *com_count * sizeof(int));
     //====================================================================
 
@@ -229,7 +236,6 @@ int truebutterfly_init(int *indices, int count, int **R, int *nR, int **S,
 
     return 0;
 }
-
 
 /** @brief Perform a sparse sum reduction (or mapped reduction) using a
    butterfly-like communication scheme (true means pairwise)
@@ -249,19 +255,19 @@ int truebutterfly_reduce(int **R, int *nR, int nRmax, int **S, int *nS,
                          int nSmax, double *val, int steps, MPI_Comm comm) {
     //  double st, t;
     //  t=0.0;
-    int         k, p2k, p2k1, tag;
-    int         rank, size, rk, sk;
-    MPI_Status  status;
+    int k, p2k, p2k1, tag;
+    int rank, size, rk, sk;
+    MPI_Status status;
     MPI_Request s_request, r_request;
-    double     *sbuf, *rbuf;
+    double *sbuf, *rbuf;
 
     MPI_Comm_size(comm, &size);
     MPI_Comm_rank(comm, &rank);
 
-    sbuf = (double *) malloc(nSmax * sizeof(double));
-    rbuf = (double *) malloc(nRmax * sizeof(double));
-    tag  = 0;
-    p2k  = 1;
+    sbuf = (double *)malloc(nSmax * sizeof(double));
+    rbuf = (double *)malloc(nRmax * sizeof(double));
+    tag = 0;
+    p2k = 1;
     p2k1 = p2k * 2;
 
     for (k = 0; k < steps; k++) {
@@ -282,7 +288,6 @@ int truebutterfly_reduce(int **R, int *nR, int nRmax, int **S, int *nS,
             MPI_Wait(&s_request, MPI_STATUS_IGNORE);
             MPI_Wait(&r_request, MPI_STATUS_IGNORE);
             s2m_sum(val, rbuf, R[k], nR[k]); // sum receive buffer into values
-
 
             // t=t+MPI_Wtime()-st;
 

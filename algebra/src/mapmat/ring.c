@@ -18,12 +18,14 @@
     @author Pierre Cargemel
     @date April 2012*/
 #ifdef W_MPI
-
-#include "mapmat.h"
 #include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "mapmat/alm.h"
+#include "mapmat/als.h"
+#include "mapmat/ring.h"
 
 /** @brief Initialize tables for ring-like communication scheme.
 
@@ -47,19 +49,20 @@
     @ingroup matmap_group22*/
 int ring_init(int *indices, int count, int **R, int *nR, int **S, int *nS,
               int steps, MPI_Comm comm) {
-    int         err, p, tag;
-    int         size, rank, sp, rp;
-    int        *buf, nbuf;
+    int err, p, tag;
+    int size, rank, sp, rp;
+    int *buf, nbuf;
     MPI_Request s_request, r_request;
 
     MPI_Comm_size(comm, &size);
     MPI_Comm_rank(comm, &rank);
     MPI_Allreduce(&count, &nbuf, 1, MPI_INT, MPI_MAX,
                   comm); // compute the buffer size : max(count)_{comm}
-    buf = (int *) malloc(nbuf * sizeof(int)); // allocate buffer
+    buf = (int *)malloc(nbuf * sizeof(int)); // allocate buffer
     tag = 0;
-    for (p = 1; p < steps; p++) { // communication phase to get nb shared
-                                  // indices between peer of preocesses
+    for (p = 1; p < steps; p++) {
+        // communication phase to get nb shared
+        // indices between peer of preocesses
         sp = (rank + p) % size;
         rp = (rank + size - p) % size;
         MPI_Isend(&count, 1, MPI_INT, sp, 0, comm,
@@ -76,14 +79,14 @@ int ring_init(int *indices, int count, int **R, int *nR, int **S, int *nS,
         tag++;
 
         MPI_Wait(&r_request, MPI_STATUS_IGNORE);
-        nR[p]         = card_and(indices, count, buf,
-                                 nbuf); // compute number of shared indices
+        nR[p] = card_and(indices, count, buf,
+                         nbuf); // compute number of shared indices
         nS[steps - p] = nR[p];
-        R[p] = (int *) malloc(nR[p] * sizeof(int));   // allocate receiving tab
-        S[steps - p] = (int *) malloc(nS[steps - p]
-                                      * sizeof(int)); // allocate sanding tab
-        map_and(indices, count, buf, nbuf, R[p]);     // fill receiving tab
-        S[steps - p] = R[p];                          //
+        R[p] = (int *)malloc(nR[p] * sizeof(int)); // allocate receiving tab
+        S[steps - p] =
+            (int *)malloc(nS[steps - p] * sizeof(int)); // allocate sanding tab
+        map_and(indices, count, buf, nbuf, R[p]);       // fill receiving tab
+        S[steps - p] = R[p];                            //
     }
     free(buf);
     nS[0] = 0; //
@@ -108,17 +111,17 @@ int ring_init(int *indices, int count, int **R, int *nR, int **S, int *nS,
     @ingroup matmap_group22*/
 int ring_reduce(int **R, int *nR, int nRmax, int **S, int *nS, int nSmax,
                 double *val, double *res_val, int steps, MPI_Comm comm) {
-    int         tag, rank, size, p;
+    int tag, rank, size, p;
     MPI_Request s_request, r_request;
-    int         sp, rp;
-    double     *sbuf, *rbuf;
+    int sp, rp;
+    double *sbuf, *rbuf;
 
     MPI_Comm_size(comm, &size);
     MPI_Comm_rank(comm, &rank);
     tag = 0;
 
-    rbuf = (double *) malloc(nRmax * sizeof(double));
-    sbuf = (double *) malloc(nSmax * sizeof(double));
+    rbuf = (double *)malloc(nRmax * sizeof(double));
+    sbuf = (double *)malloc(nSmax * sizeof(double));
 
     for (p = 1; p < steps; p++) {
         rp = (rank + size - p) % size;
@@ -139,7 +142,6 @@ int ring_reduce(int **R, int *nR, int nRmax, int **S, int *nS, int nSmax,
     return 0;
 }
 
-
 /** @brief Perform a sparse sum reduction (or mapped reduction) using an
  MPI-Alltoallv call
 
@@ -156,32 +158,32 @@ int ring_reduce(int **R, int *nR, int nRmax, int **S, int *nS, int nSmax,
  @ingroup matmap_group22*/
 int alltoallv_reduce(int **R, int *nR, int nRtot, int **S, int *nS, int nStot,
                      double *val, double *res_val, int steps, MPI_Comm comm) {
-    int         rank, size, p;
+    int rank, size, p;
     MPI_Request s_request, r_request;
-    int         sp, rp, *rindx, *sindx, *rdisp, *sdisp;
-    double     *sbuf, *rbuf;
-
+    int sp, rp, *rindx, *sindx, *rdisp, *sdisp;
+    double *sbuf, *rbuf;
 
     MPI_Comm_size(comm,
                   &size); // N.B. size and steps must be equal, shall we check
-                          // for this ?! -- rs
+    // for this ?! -- rs
     MPI_Comm_rank(comm, &rank);
 
-    rbuf = (double *) malloc(nRtot * sizeof(double));
-    sbuf = (double *) malloc(nStot * sizeof(double));
+    rbuf = (double *)malloc(nRtot * sizeof(double));
+    sbuf = (double *)malloc(nStot * sizeof(double));
 
-    rindx = (int *) calloc(size, sizeof(int));
-    sindx = (int *) calloc(size, sizeof(int));
+    rindx = (int *)calloc(size, sizeof(int));
+    sindx = (int *)calloc(size, sizeof(int));
 
-    rdisp = (int *) calloc(size, sizeof(int));
-    sdisp = (int *) calloc(size, sizeof(int));
+    rdisp = (int *)calloc(size, sizeof(int));
+    sdisp = (int *)calloc(size, sizeof(int));
 
     // compute shifts ...
 
-    for (p = 0; p < steps; p++) { // starts with 0 !
-        rp        = (rank + size - p) % size;
+    for (p = 0; p < steps; p++) {
+        // starts with 0 !
+        rp = (rank + size - p) % size;
         rindx[rp] = nR[p];
-        sp        = (rank + p) % size;
+        sp = (rank + p) % size;
         sindx[sp] = nS[p];
     }
 
@@ -233,25 +235,25 @@ int alltoallv_reduce(int **R, int *nR, int nRtot, int **S, int *nS, int nStot,
     @ingroup matmap_group22*/
 int ring_nonblocking_reduce(int **R, int *nR, int **S, int *nS, double *val,
                             double *res_val, int steps, MPI_Comm comm) {
-    int          tag, rank, size, p;
+    int tag, rank, size, p;
     MPI_Request *s_request, *r_request;
-    int          sp, rp;
-    double     **sbuf, **rbuf;
+    int sp, rp;
+    double **sbuf, **rbuf;
 
     MPI_Comm_size(comm, &size);
     MPI_Comm_rank(comm, &rank);
     // printf("\n non_blocking rank %d", rank);
 
-    s_request = (MPI_Request *) malloc((steps - 1) * sizeof(MPI_Request));
-    r_request = (MPI_Request *) malloc((steps - 1) * sizeof(MPI_Request));
+    s_request = (MPI_Request *)malloc((steps - 1) * sizeof(MPI_Request));
+    r_request = (MPI_Request *)malloc((steps - 1) * sizeof(MPI_Request));
 
-    rbuf = (double **) malloc((steps - 1) * sizeof(double *));
-    sbuf = (double **) malloc((steps - 1) * sizeof(double *));
+    rbuf = (double **)malloc((steps - 1) * sizeof(double *));
+    sbuf = (double **)malloc((steps - 1) * sizeof(double *));
 
     for (p = 1; p < steps; p++) {
         // printf("\n buf alloc %d", p);
-        rbuf[p - 1] = (double *) malloc(nR[p] * sizeof(double));
-        sbuf[p - 1] = (double *) malloc(nS[p] * sizeof(double));
+        rbuf[p - 1] = (double *)malloc(nR[p] * sizeof(double));
+        sbuf[p - 1] = (double *)malloc(nS[p] * sizeof(double));
         m2s(val, sbuf[p - 1], S[p], nS[p]); // fill the sending buffer
     }
 
@@ -298,38 +300,38 @@ int ring_nonblocking_reduce(int **R, int *nR, int **S, int *nS, double *val,
 int ring_noempty_reduce(int **R, int *nR, int nneR, int **S, int *nS, int nneS,
                         double *val, double *res_val, int steps,
                         MPI_Comm comm) {
-    int          tag, rank, size, p;
+    int tag, rank, size, p;
     MPI_Request *s_request, *r_request;
-    int          sp, rp, nesi, neri;
-    double     **sbuf, **rbuf;
+    int sp, rp, nesi, neri;
+    double **sbuf, **rbuf;
 
     MPI_Comm_size(comm, &size);
     MPI_Comm_rank(comm, &rank);
     // printf("\n non_blocking rank %d", rank);
 
-    s_request = (MPI_Request *) malloc(nneS * sizeof(MPI_Request));
-    r_request = (MPI_Request *) malloc(nneR * sizeof(MPI_Request));
+    s_request = (MPI_Request *)malloc(nneS * sizeof(MPI_Request));
+    r_request = (MPI_Request *)malloc(nneR * sizeof(MPI_Request));
 
-    rbuf = (double **) malloc(nneR * sizeof(double *));
-    sbuf = (double **) malloc(nneS * sizeof(double *));
+    rbuf = (double **)malloc(nneR * sizeof(double *));
+    sbuf = (double **)malloc(nneS * sizeof(double *));
 
     nesi = 0;
     for (p = 1; p < steps; p++) {
         if (nS[p] != 0) {
-            sbuf[nesi] = (double *) malloc(nS[p] * sizeof(double));
+            sbuf[nesi] = (double *)malloc(nS[p] * sizeof(double));
             m2s(val, sbuf[nesi], S[p], nS[p]); // fill the sending buffer
             nesi++;
         }
     }
 
-    tag  = 0;
+    tag = 0;
     nesi = 0;
     neri = 0;
     for (p = 1; p < steps; p++) {
         sp = (rank + p) % size;
         rp = (rank + size - p) % size;
         if (nR[p] != 0) {
-            rbuf[neri] = (double *) malloc(nR[p] * sizeof(double));
+            rbuf[neri] = (double *)malloc(nR[p] * sizeof(double));
             MPI_Irecv(rbuf[neri], nR[p], MPI_DOUBLE, rp, tag, comm,
                       &r_request[neri]);
             neri++;
@@ -360,7 +362,7 @@ int ring_noempty_reduce(int **R, int *nR, int nneR, int **S, int *nS, int nneS,
 }
 
 //=======================================================Modification added by
-//Sebastien Cayrols : 01/09/2015 ; Berkeley
+// Sebastien Cayrols : 01/09/2015 ; Berkeley
 
 /** @brief Perform a sparse sum reduction (or mapped reduction) using a
    ring-like communication scheme
@@ -380,17 +382,17 @@ int ring_noempty_reduce(int **R, int *nR, int nneR, int **S, int *nS, int nneS,
 int ring_noempty_step_reduce(int **R, int *nR, int nRmax, int **S, int *nS,
                              int nSmax, double *val, double *res_val, int steps,
                              MPI_Comm comm) {
-    int         tag, rank, size, p;
+    int tag, rank, size, p;
     MPI_Request s_request, r_request;
-    int         sp, rp;
-    double     *sbuf, *rbuf;
+    int sp, rp;
+    double *sbuf, *rbuf;
 
     MPI_Comm_size(comm, &size);
     MPI_Comm_rank(comm, &rank);
     tag = 0;
 
-    rbuf = (double *) malloc(nRmax * sizeof(double));
-    sbuf = (double *) malloc(nSmax * sizeof(double));
+    rbuf = (double *)malloc(nRmax * sizeof(double));
+    sbuf = (double *)malloc(nSmax * sizeof(double));
 
     for (p = 1; p < steps; p++) {
         rp = (rank + size - p) % size;
@@ -408,7 +410,8 @@ int ring_noempty_step_reduce(int **R, int *nR, int nRmax, int **S, int *nS,
             s2m_sum(res_val, rbuf, R[p],
                     nR[p]); // sum receive buffer into values
         }
-        if (nS[p] != 0) MPI_Wait(&s_request, MPI_STATUS_IGNORE);
+        if (nS[p] != 0)
+            MPI_Wait(&s_request, MPI_STATUS_IGNORE);
     }
     free(sbuf);
     free(rbuf);

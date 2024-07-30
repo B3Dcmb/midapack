@@ -7,6 +7,7 @@
  */
 
 #include "mappraiser/mapping.h"
+#include "memutils.h"
 
 #ifndef NDEBUG
 #include <assert.h>
@@ -130,15 +131,10 @@ int build_pixel_to_time_domain_mapping(Mat *A) {
     int ngap, lengap;
 
     // index of last sample pointing to each pixel
-    A->id_last_pix = malloc((sizeof A->id_last_pix) * A->lcount / A->nnz);
+    A->id_last_pix = SAFEMALLOC(sizeof A->id_last_pix * A->lcount / A->nnz);
 
     // linked list of time samples indexes
-    A->ll = malloc((sizeof A->ll) * A->m);
-
-    if (A->id_last_pix == NULL || A->ll == NULL) {
-        fputs("memory allocation of id_last_pix or ll failed", stderr);
-        exit(EXIT_FAILURE);
-    }
+    A->ll = SAFEMALLOC(sizeof A->ll * A->m);
 
     // initialize the mapping arrays to -1
     for (i = 0; i < A->m; i++) {
@@ -204,58 +200,49 @@ int argmax(const int *array, int size) {
  */
 void build_gap_struct(int64_t gif, Gap *gaps, Mat *A) {
     // allocate the arrays
-    gaps->id0gap = malloc((sizeof gaps->id0gap) * gaps->ngap);
-    gaps->lgap = malloc((sizeof gaps->lgap) * gaps->ngap);
+    gaps->id0gap = SAFEMALLOC(sizeof gaps->id0gap * gaps->ngap);
+    gaps->lgap = SAFEMALLOC(sizeof gaps->lgap * gaps->ngap);
 
-    if (gaps->ngap > 0) {
-        // only test correct allocation if ngap > 0 because
-        // behaviour of malloc(0) is implementation-defined
-        // free(NULL) produces no error
-        if (gaps->id0gap == NULL || gaps->lgap == NULL) {
-            fputs("malloc of id0gap or lgap failed", stderr);
-            exit(EXIT_FAILURE);
-        }
+    if (gaps->ngap == 0)
+        return;
 
-        // follow linked time samples for all extra pixels simultaneously
-        int *tab_j = malloc((sizeof tab_j) * A->trash_pix);
-        if (tab_j == NULL) {
-            fputs("malloc of tab_j failed", stderr);
-            exit(EXIT_FAILURE);
-        }
+    // follow linked time samples for all extra pixels simultaneously
+    int *tab_j = SAFEMALLOC(sizeof tab_j * A->trash_pix);
 
-        // initialize with the last sample pointing to each extra pixel
-        for (int p = 0; p < A->trash_pix; p++) {
-            tab_j[p] = A->id_last_pix[p];
-        }
-
-        // current index in the tab_j array
-        int pj = argmax(tab_j, A->trash_pix);
-
-        int i = gaps->ngap - 1; // index of the gap being computed
-        int lengap = 1;         // length of the current gap
-        int j = tab_j[pj];      // index to go through linked time samples
-        int gap_start = j;      // index of the first sample of the gap
-
-        // go through the time samples
-        while (j != -1) {
-            // go to previous flagged sample
-            tab_j[pj] = A->ll[tab_j[pj]];
-            pj = argmax(tab_j, A->trash_pix);
-            j = tab_j[pj];
-
-            if (j != -1 && gap_start - j == 1) {
-                // same gap, and there are flagged samples left
-                ++lengap;
-            } else {
-                // different gap, or no flagged samples remaining
-                gaps->id0gap[i] = gif + gap_start; // global row index
-                gaps->lgap[i] = lengap;
-                lengap = 1;
-                --i;
-            }
-            gap_start = j;
-        }
+    // initialize with the last sample pointing to each extra pixel
+    for (int p = 0; p < A->trash_pix; p++) {
+        tab_j[p] = A->id_last_pix[p];
     }
+
+    // current index in the tab_j array
+    int pj = argmax(tab_j, A->trash_pix);
+
+    int i = gaps->ngap - 1; // index of the gap being computed
+    int lengap = 1;         // length of the current gap
+    int j = tab_j[pj];      // index to go through linked time samples
+    int gap_start = j;      // index of the first sample of the gap
+
+    // go through the time samples
+    while (j != -1) {
+        // go to previous flagged sample
+        tab_j[pj] = A->ll[tab_j[pj]];
+        pj = argmax(tab_j, A->trash_pix);
+        j = tab_j[pj];
+
+        if (j != -1 && gap_start - j == 1) {
+            // same gap, and there are flagged samples left
+            ++lengap;
+        } else {
+            // different gap, or no flagged samples remaining
+            gaps->id0gap[i] = gif + gap_start; // global row index
+            gaps->lgap[i] = lengap;
+            lengap = 1;
+            --i;
+        }
+        gap_start = j;
+    }
+
+    FREE(tab_j);
 }
 
 bool gap_overlaps_with_block(Gap *gaps, int i_gap, Block *block) {

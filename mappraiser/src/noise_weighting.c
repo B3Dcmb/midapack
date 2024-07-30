@@ -10,6 +10,7 @@
 #include "mappraiser/noise_weighting.h"
 #include "mappraiser/mapping.h"
 #include "mappraiser/solver_info.h"
+#include "memutils.h"
 
 #ifndef NDEBUG
 #include <assert.h>
@@ -240,21 +241,8 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps,
     if (!ignore_gaps)
         reset_relevant_gaps(tod_block, N_block, Gaps);
 
-    _r = malloc((sizeof *_r) * m);
-    r = malloc((sizeof *r) * m);
-
-    if (_r == NULL || r == NULL) {
-        // free memory if possible
-        if (_r)
-            free(_r);
-        if (r)
-            free(r);
-
-        si->has_failed = true;
-        solverinfo_finalize(si);
-
-        return;
-    }
+    _r = SAFEMALLOC(sizeof *_r * m);
+    r = SAFEMALLOC(sizeof *r * m);
 
     for (int i = 0; i < m; ++i) {
         if (init_guess) {
@@ -295,8 +283,8 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps,
     if (stop) {
         // one stop condition already met, no iteration
         // free the allocated memory
-        free(_r);
-        free(r);
+        FREE(_r);
+        FREE(r);
         solverinfo_finalize(si);
         return;
     }
@@ -304,24 +292,9 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps,
     // iterate to solve the system
 
     // allocate buffers needed for the iteration
-    p = malloc((sizeof *p) * m);
-    z = malloc((sizeof *z) * m);
-    zp = malloc((sizeof *zp) * m);
-
-    if (p == NULL || z == NULL || zp == NULL) {
-        // free memory if possible
-        if (p)
-            free(p);
-        if (z)
-            free(z);
-        if (zp)
-            free(zp);
-
-        si->has_failed = true;
-        solverinfo_finalize(si);
-
-        return;
-    }
+    p = SAFEMALLOC(sizeof *p * m);
+    z = SAFEMALLOC(sizeof *z * m);
+    zp = SAFEMALLOC(sizeof *zp * m);
 
     // apply preconditioner (z0 = M^{-1} * r0)
     for (int i = 0; i < m; ++i)
@@ -407,11 +380,11 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps,
     }
 
     // free memory after the iteration
-    free(p);
-    free(_r);
-    free(r);
-    free(z);
-    free(zp);
+    FREE(p);
+    FREE(_r);
+    FREE(r);
+    FREE(z);
+    FREE(zp);
 
     solverinfo_finalize(si);
 }

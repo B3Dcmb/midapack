@@ -10,6 +10,7 @@
 #include <stdio.h>
 
 #include "mappraiser/solver_info.h"
+#include "memutils.h"
 
 /// @brief Print current solver parameters and information
 /// @param si SolverInfo struct
@@ -69,7 +70,7 @@ void solverinfo_init(SolverInfo *si) {
     si->res_hist = NULL;
 
     if (si->store_hist)
-        si->res_hist = malloc((sizeof si->res_hist) * si->max_steps);
+        si->res_hist = SAFEMALLOC((sizeof si->res_hist) * si->max_steps);
 
     if (si->print) {
         printf("PCG solver running with kmax = %d\n", si->max_steps);
@@ -134,11 +135,7 @@ void solverinfo_update(SolverInfo *si, bool *stop, int step_nbr, double res,
 void solverinfo_finalize(SolverInfo *si) {
     if ((si->n_iter < si->max_steps) && (si->store_hist)) {
         // res_history has size n_iter + 1 !!!
-        double *tmp;
-        tmp = realloc(si->res_hist, (sizeof si->res_hist) * (si->n_iter + 1));
-        if (tmp != NULL) {
-            si->res_hist = tmp;
-        }
+        si->res_hist = SAFEREALLOC(si->res_hist, si->n_iter + 1);
     }
 
     if (si->print) {
@@ -186,7 +183,6 @@ int solverinfo_write(SolverInfo *si, const char *filename) {
 /// @param si SolverInfo struct
 void solverinfo_free(SolverInfo *si) {
     if (si->res_hist) {
-        free(si->res_hist);
+        FREE(si->res_hist);
     }
-    si->res_hist = NULL;
 }

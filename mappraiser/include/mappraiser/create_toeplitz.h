@@ -1,7 +1,7 @@
 #ifndef MAPPRAISER_CREATE_TOEPLITZ_H
 #define MAPPRAISER_CREATE_TOEPLITZ_H
 
-#include "toeplitz/toeplitz.h"
+#include <toeplitz/toeplitz.h>
 
 #ifdef __cplusplus
 extern "C" {
