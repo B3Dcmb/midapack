@@ -14,16 +14,17 @@
 #ifndef MAPMAT_H
 #define MAPMAT_H
 
-#include "butterfly_wrappers.h"
 #ifdef W_MPI
 #include <mpi.h>
 #endif
+
+#include "butterfly_wrappers.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include "stdbool.h"
+#include <stdbool.h>
 
 #define NONE 0
 #define RING 1

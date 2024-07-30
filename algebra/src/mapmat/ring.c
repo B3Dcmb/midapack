@@ -19,13 +19,11 @@
     @date April 2012*/
 #ifdef W_MPI
 #include <mpi.h>
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
-#include "mapmat/alm.h"
-#include "mapmat/als.h"
-#include "mapmat/ring.h"
+#include <mapmat/alm.h>
+#include <mapmat/als.h>
+#include <mapmat/ring.h>
 
 /** @brief Initialize tables for ring-like communication scheme.
 

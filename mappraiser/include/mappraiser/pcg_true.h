@@ -7,9 +7,9 @@
 extern "C" {
 #endif
 
-#include <noise_weighting.h>
-#include <precond.h>
-#include <solver_info.h>
+#include <mappraiser/noise_weighting.h>
+#include <mappraiser/precond.h>
+#include <mappraiser/solver_info.h>
 
 // PCG routine
 void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,

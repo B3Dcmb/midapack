@@ -20,12 +20,8 @@
     @date April 2012 */
 
 #include <stdlib.h>
-#include <string.h>
 
-#include "mapmat/csort.h"
-
-// int per page size
-#define PAGE 1024
+#include <mapmat/csort.h>
 
 /** Insertion sort :
     complexity is n square; ascending order
@@ -214,7 +210,10 @@ int ssort(int *indices, int count, int flag) {
 // optimized version is faster than the other implementation but there is a bug
 // !!!
 #ifdef W_OPENMP
+
 #include <omp.h>
+#define PAGE 1024
+
 int omp_psort_opt(int *A, int nA, int flag) {
     int i;
     int *count, *disp;

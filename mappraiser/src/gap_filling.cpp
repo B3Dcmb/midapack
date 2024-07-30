@@ -5,20 +5,20 @@
  * @date March 2023
  */
 
-#include "mappraiser/gap_filling.h"
-#include "mappraiser/RunningSum.h"
-#include "mappraiser/create_toeplitz.h"
-#include "mappraiser/mapping.h"
-#include "mappraiser/noise_weighting.h"
-#include "mappraiser/rng.h"
-#include "mappraiser/stopwatch.h"
-
 #include <algorithm>
 #include <cmath>
 #include <complex>
 #include <fftw3.h>
 #include <iostream>
 #include <numeric>
+
+#include <mappraiser/RunningSum.h>
+#include <mappraiser/create_toeplitz.h>
+#include <mappraiser/gap_filling.h>
+#include <mappraiser/mapping.h>
+#include <mappraiser/noise_weighting.h>
+#include <mappraiser/rng.h>
+#include <mappraiser/stopwatch.h>
 
 // ____________________________________________________________
 // GapFillRecap

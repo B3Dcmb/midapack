@@ -6,12 +6,11 @@
  * @last_update May 2019 by Hamza El Bouhargani
  */
 
-#include "mappraiser/iofiles.h"
-
+#include <fitsio.h>
 #include <stdio.h>
 #include <string.h>
 
-#include "fitsio.h"
+#include <mappraiser/iofiles.h>
 
 static void util_fail_(const char *file, int line, const char *func,
                        const char *msg) {

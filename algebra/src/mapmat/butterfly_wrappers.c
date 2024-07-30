@@ -1,6 +1,3 @@
-#include "sys/param.h"
-#include "sys/stat.h"
-#include "sys/types.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,13 +6,13 @@
 #ifdef W_MPI
 #include <mpi.h>
 
-#include "mapmat/alm.h"
-#include "mapmat/bitop.h"
-#include "mapmat/butterfly.h"
-#include "mapmat/butterfly_new.h"
-#include "mapmat/butterfly_wrappers.h"
-#include "mapmat/csort.h"
-#include "mapmat/mpi_utils.h"
+#include <mapmat/alm.h>
+#include <mapmat/bitop.h>
+#include <mapmat/butterfly.h>
+#include <mapmat/butterfly_new.h>
+#include <mapmat/butterfly_wrappers.h>
+#include <mapmat/csort.h>
+#include <mapmat/mpi_utils.h>
 
 int mirror_butterfly(double *values_local, int *indices_local, int size_local,
                      double *values_received, int *indices_received,

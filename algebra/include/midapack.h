@@ -40,7 +40,7 @@ National Research
 #ifndef MIDAPACK_H
 #define MIDAPACK_H
 
-#include "mapmat/mapmat.h"
-#include "toeplitz/toeplitz.h"
+#include <mapmat/mapmat.h>
+#include <toeplitz/toeplitz.h>
 
 #endif // MIDAPACK_H

@@ -6,15 +6,15 @@
  * @date Nov 2022
  */
 
-#include "mappraiser/mapping.h"
-#include "memutils.h"
+#include <stdbool.h>
+#include <stdlib.h>
 
 #ifndef NDEBUG
 #include <assert.h>
 #endif
 
-#include <stdbool.h>
-#include <stdlib.h>
+#include <mappraiser/mapping.h>
+#include <memutils.h>
 
 void print_gap_stgy(GapStrategy gs) {
     switch (gs) {

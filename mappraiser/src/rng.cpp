@@ -33,12 +33,13 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
+#include <vector>
+
+#include <mappraiser/rng.h>
+
 #include "Random123/boxmuller.hpp"
 #include "Random123/threefry.h"
 #include "Random123/uniform.hpp"
-#include <vector>
-
-#include "mappraiser/rng.h"
 
 typedef r123::Threefry2x64 RNG;
 

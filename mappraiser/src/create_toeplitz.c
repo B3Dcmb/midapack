@@ -5,7 +5,7 @@
  * @last_update May 2019 by Hamza El Bouhargani
  */
 
-#include "mappraiser/create_toeplitz.h"
+#include <mappraiser/create_toeplitz.h>
 
 int defineTpltz_avg(Tpltz *Nm1, int64_t nrow, int m_cw, int m_rw,
                     Block *tpltzblocks, int nb_blocks_loc, int nb_blocks_tot,

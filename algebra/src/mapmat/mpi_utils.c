@@ -2,9 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 
-#include "mapmat/mpi_utils.h"
+#include <mapmat/mpi_utils.h>
 
 int elem_in_list_elem(int elem, int *list_elem, int size_list_elem) {
     /* Return the index of elem if it is in list_elem, -1 otherwise */

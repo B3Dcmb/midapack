@@ -3,9 +3,9 @@
 #ifdef W_MPI
 #include <mpi.h>
 
-#include "mapmat/alm.h"
-#include "mapmat/als.h"
-#include "mapmat/butterfly_new.h"
+#include <mapmat/alm.h>
+#include <mapmat/als.h>
+#include <mapmat/butterfly_new.h>
 
 int butterfly_reduce_init(int *indices, int count, int **R, int *nR, int **S,
                           int *nS, int **com_indices, int *com_count, int steps,

@@ -7,24 +7,24 @@
  * @update June 2020 by Aygul Jamal
  */
 
-#include "mappraiser/create_toeplitz.h"
-#include "mappraiser/gap_filling.h"
-#include "mappraiser/iofiles.h"
-#include "mappraiser/map.h"
-#include "mappraiser/mapping.h"
-#include "mappraiser/noise_weighting.h"
-#include "mappraiser/pcg_true.h"
-#include "memutils.h"
-
-#ifdef WITH_ECG
-#include "mappraiser/ecg.h"
-#endif
-
 #include <fitsio.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+#include <mappraiser/create_toeplitz.h>
+#include <mappraiser/gap_filling.h>
+#include <mappraiser/iofiles.h>
+#include <mappraiser/map.h>
+#include <mappraiser/mapping.h>
+#include <mappraiser/noise_weighting.h>
+#include <mappraiser/pcg_true.h>
+#include <memutils.h>
+
+#ifdef WITH_ECG
+#include <mappraiser/ecg.h>
+#endif
 
 WeightStgy handle_gaps(Gap *Gaps, Mat *A, Tpltz *Nm1, Tpltz *N, GapStrategy gs,
                        double *b, const double *noise, bool do_gap_filling,

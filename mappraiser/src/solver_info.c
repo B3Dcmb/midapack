@@ -9,8 +9,8 @@
 #include <math.h>
 #include <stdio.h>
 
-#include "mappraiser/solver_info.h"
-#include "memutils.h"
+#include <mappraiser/solver_info.h>
+#include <memutils.h>
 
 /// @brief Print current solver parameters and information
 /// @param si SolverInfo struct

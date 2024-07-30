@@ -23,9 +23,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "mapmat/alm.h"
-#include "mapmat/als.h"
-#include "mapmat/butterfly.h"
+#include <mapmat/alm.h>
+#include <mapmat/als.h>
+#include <mapmat/butterfly.h>
 
 /** @brief Initialize tables for butterfly-like communication scheme
     This routine set up needed tables for the butterfly communication scheme.

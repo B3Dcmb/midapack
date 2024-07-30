@@ -22,13 +22,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "mapmat/alm.h"
-#include "mapmat/bitop.h"
-#include "mapmat/butterfly.h"
-#include "mapmat/cindex.h"
-#include "mapmat/csort.h"
-#include "mapmat/mapmatc.h"
-#include "mapmat/ring.h"
+#include <mapmat/alm.h>
+#include <mapmat/bitop.h>
+#include <mapmat/butterfly.h>
+#include <mapmat/cindex.h>
+#include <mapmat/csort.h>
+#include <mapmat/mapmatc.h>
+#include <mapmat/ring.h>
 
 #ifdef W_MPI
 #include <mpi.h>

@@ -18,7 +18,7 @@
     @author Pierre Cargemel
     @date   May 2012*/
 
-#include "mapmat/cindex.h"
+#include <mapmat/cindex.h>
 
 /* Prototype binary search function */
 int dichotomy(int nT, int *T, int e);

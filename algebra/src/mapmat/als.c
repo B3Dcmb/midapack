@@ -20,7 +20,7 @@
     @author Pierre Cargemel
     @date April 2012*/
 
-#include "mapmat/als.h"
+#include <mapmat/als.h>
 
 /** Compute cardinal(A)
     Perform a loop onto elements of a set, counting different elements.

@@ -10,7 +10,7 @@ more details. You should have received a copy of the GNU General Public License
 along with this program; if not, see http://www.gnu.org/licenses/lgpl.html
 **/
 
-#include "mapmat/bitop.h"
+#include <mapmat/bitop.h>
 
 int is_pow_2(int n) { return ((n & -n) ^ n); }
 

@@ -7,11 +7,6 @@
  * @last_update Jan 2023
  */
 
-#include "mappraiser/noise_weighting.h"
-#include "mappraiser/mapping.h"
-#include "mappraiser/solver_info.h"
-#include "memutils.h"
-
 #ifndef NDEBUG
 #include <assert.h>
 #endif
@@ -19,6 +14,11 @@
 #include <mpi.h>
 #include <stdbool.h>
 #include <stdlib.h>
+
+#include <mappraiser/mapping.h>
+#include <mappraiser/noise_weighting.h>
+#include <mappraiser/solver_info.h>
+#include <memutils.h>
 
 __attribute__((unused)) void reset_tod_gaps(double *tod, Tpltz *N, Gap *Gaps);
 

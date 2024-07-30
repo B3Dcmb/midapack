@@ -1,7 +1,7 @@
 #ifndef MAPPRAISER_PRECOND_H
 #define MAPPRAISER_PRECOND_H
 
-#include <mapping.h>
+#include <mappraiser/mapping.h>
 #include <midapack.h>
 
 typedef struct precond_t {

@@ -20,7 +20,7 @@
     @author Pierre Cargemel
     @date April 2012*/
 
-#include "mapmat/alm.h"
+#include <mapmat/alm.h>
 
 /** Set some map values into a submap values array
     @param mapval array of values
