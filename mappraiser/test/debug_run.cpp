@@ -2,8 +2,6 @@
 // Created by sbiquard on 5/24/23.
 //
 
-#include "utils.h"
-
 #include <algorithm>
 #include <array>
 #include <cstring>
@@ -14,6 +12,9 @@
 #include <string>
 #include <unistd.h>
 #include <vector>
+
+#include "argparse.hpp"
+#include "utils.h"
 
 std::string getExecDirectory() {
     std::string directory;
@@ -34,6 +35,9 @@ std::string getExecDirectory() {
 }
 
 int main(int argc, char *argv[]) {
+    // Command line parser
+    argparse::ArgumentParser program("test_run");
+
     //____________________________________________________________
     // MPI initialization
 
@@ -72,12 +76,15 @@ int main(int argc, char *argv[]) {
     // Run parameters
 
     int solver = 0;
-    int precond = 0;
+    int precond = 0; // default: block Jacobi
+    program.add_argument("--precond")
+        .store_into(precond)
+        .help("Choice of preconditioner");
     int Z_2lvl = 0;
     int pointing_commflag = 6; // default: allreduce
-    if (argc == 2) {
-        pointing_commflag = atoi(argv[1]);
-    }
+    program.add_argument("--ptcomm-flag")
+        .store_into(pointing_commflag)
+        .help("choice of communication pattern for pointing matrix");
     double tol = 1e-6;
     int maxiter = 100;
     int enlFac = 1;
@@ -90,6 +97,15 @@ int main(int argc, char *argv[]) {
     int Nnz = 3;
     int lambda = 8192;
     double sample_rate = 200;
+
+    // parse command line arguments
+    try {
+        program.parse_args(argc, argv);
+    } catch (const std::exception &err) {
+        std::cerr << err.what() << std::endl;
+        std::cerr << program;
+        std::exit(1);
+    }
 
     char *outpath = (char *)output_path.c_str();
     char *ref = (gap_stgy == 0) ? (char *)"cond" : (char *)"marg";
@@ -112,7 +128,7 @@ int main(int argc, char *argv[]) {
     //____________________________________________________________
     // Process options
 
-    // noiseless mode activate
+    // noiseless mode activated
     if (noiseless) {
         fill_noise_zero = true;
         lambda = 1;
