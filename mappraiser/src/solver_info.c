@@ -10,7 +10,7 @@
 #include <stdio.h>
 
 #include <mappraiser/solver_info.h>
-#include <memutils.h>
+#include <midapack/memutils.h>
 
 /// @brief Print current solver parameters and information
 /// @param si SolverInfo struct
@@ -70,7 +70,7 @@ void solverinfo_init(SolverInfo *si) {
     si->res_hist = NULL;
 
     if (si->store_hist)
-        si->res_hist = SAFEMALLOC((sizeof si->res_hist) * si->max_steps);
+        si->res_hist = SAFEMALLOC(sizeof si->res_hist * si->max_steps);
 
     if (si->print) {
         printf("PCG solver running with kmax = %d\n", si->max_steps);

@@ -16,9 +16,9 @@
 #include <mappraiser/create_toeplitz.h>
 #include <mappraiser/gap_filling.h>
 #include <mappraiser/mapping.h>
-#include <mappraiser/noise_weighting.h>
 #include <mappraiser/rng.h>
 #include <mappraiser/stopwatch.h>
+#include <mappraiser/weight.h>
 
 // ____________________________________________________________
 // GapFillRecap
@@ -446,8 +446,8 @@ void mappraiser::sim_constrained_noise_block(
     // invert the system N x = (noise - xi)
     mappraiser::system_stopwatch stopwatch;
 
-    int nb_iterations =
-        apply_weights(Nm1_block, N_block, gaps, rhs.data(), ITER, false);
+    WeightMatrix W_block = createWeightMatrix(Nm1_block, N_block, gaps, ITER);
+    int nb_iterations = applyWeightMatrix(&W_block, rhs.data());
 
     gfi.store_pcg_time(
         stopwatch.elapsed_time<double, std::chrono::milliseconds>());

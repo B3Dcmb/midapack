@@ -7,17 +7,17 @@
 extern "C" {
 #endif
 
-#include <mappraiser/noise_weighting.h>
 #include <mappraiser/precond.h>
 #include <mappraiser/solver_info.h>
+#include <mappraiser/weight.h>
 
 // PCG routine
-void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
-            double *x, const double *b, SolverInfo *si);
+void PCG_mm(Mat *A, Precond *M, WeightMatrix *W, double *x, const double *data,
+            SolverInfo *si);
 
 // without preconditioning
-void CG_mm(Mat *A, double *pixpond, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
-           double *x, const double *d, SolverInfo *si);
+void CG_mm(Mat *A, const double *pixpond, WeightMatrix *W, double *x,
+           const double *data, SolverInfo *si);
 
 #ifdef __cplusplus
 }

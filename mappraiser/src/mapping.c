@@ -6,6 +6,7 @@
  * @date Nov 2022
  */
 
+#include "mapmat/mapmat.h"
 #include <stdbool.h>
 #include <stdlib.h>
 
@@ -14,7 +15,7 @@
 #endif
 
 #include <mappraiser/mapping.h>
-#include <memutils.h>
+#include <midapack/memutils.h>
 
 void print_gap_stgy(GapStrategy gs) {
     switch (gs) {
@@ -392,6 +393,24 @@ void point_pixel_to_trash(Mat *A, int ipix) {
         }
         j = A->ll[j];
     }
+}
+
+void get_pixshare_pond(Mat *A, double *pixpond) {
+    // number of local pixels
+    int n = get_actual_map_size(A);
+    int n_extra = n - get_valid_map_size(A);
+
+    // create an eyes local vector
+    for (int i = 0; i < n; i++)
+        pixpond[i] = 1.;
+
+    // communicate with the others processes to have the global reduce
+    // only communicate shared pixels (i.e. valid)
+    greedyreduce(A, pixpond + n_extra);
+
+    // compute the inverse vector
+    for (int i = n_extra; i < n; i++)
+        pixpond[i] = 1. / pixpond[i];
 }
 
 __attribute__((unused)) void print_gap_info(Gap *gaps) {

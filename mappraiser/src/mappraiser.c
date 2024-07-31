@@ -7,6 +7,7 @@
  * @update June 2020 by Aygul Jamal
  */
 
+#include "precond.h"
 #include <fitsio.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,9 +19,9 @@
 #include <mappraiser/iofiles.h>
 #include <mappraiser/map.h>
 #include <mappraiser/mapping.h>
-#include <mappraiser/noise_weighting.h>
 #include <mappraiser/pcg_true.h>
-#include <memutils.h>
+#include <mappraiser/weight.h>
+#include <midapack/memutils.h>
 
 #ifdef WITH_ECG
 #include <mappraiser/ecg.h>
@@ -55,7 +56,6 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     Gap Gaps;                // timestream gaps structure
     double *x, *cond = NULL; // pixel domain vectors
     int *lhits = NULL;
-    double st, t; // timer, start time
     int rank, size;
     MPI_Status status;
 
@@ -114,19 +114,19 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     // Pointing matrix initialization + mapping
 
     MPI_Barrier(comm);
-    st = MPI_Wtime();
+    double st = MPI_Wtime();
 
     MatInit(&A, m, Nnz, pix, pixweights, pointing_commflag, comm);
     Gaps.ngap = build_pixel_to_time_domain_mapping(&A);
 
     MPI_Barrier(comm);
-    t = MPI_Wtime();
+    double elapsed = MPI_Wtime() - st;
 
     nbr_extra_pixels = A.trash_pix * A.nnz;
     nbr_valid_pixels = A.lcount - nbr_extra_pixels;
 
     if (rank == 0) {
-        printf("Initialized pointing matrix in %lf s\n", t - st);
+        printf("Initialized pointing matrix in %lf s\n", elapsed);
         printf("[proc %d] sky pixels = %d", rank, A.lcount / A.nnz);
         printf(" (%d valid + %d extra)\n", nbr_valid_pixels / A.nnz,
                nbr_extra_pixels / A.nnz);
@@ -140,7 +140,6 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     // Size of map that will be estimated by the solver
     int solver_map_size = get_actual_map_size(&A);
 
-    x = SAFECALLOC(solver_map_size, sizeof *x);
     cond = SAFEMALLOC(sizeof *cond * solver_map_size / A.nnz);
     lhits = SAFEMALLOC(sizeof *lhits * solver_map_size / A.nnz);
 
@@ -203,13 +202,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
         fflush(stdout);
     }
 
-    Precond *P = NULL;
-    double *pixpond;
-
     st = MPI_Wtime();
-
-    if (Z_2lvl == 0)
-        Z_2lvl = size;
 
     bool use_precond;
     if (precond < 0) {
@@ -220,20 +213,25 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
         use_precond = true;
     }
 
-    build_precond(&P, &pixpond, &A, &Nm1, &x, signal, noise, cond, lhits, tol,
-                  Z_2lvl, precond, gs, &Gaps, gif, local_blocks_sizes);
+    // first build the BJ preconditioner
+    Precond *P =
+        newPrecondBJ(&A, &Nm1, cond, lhits, gs, &Gaps, gif, local_blocks_sizes);
 
-    MPI_Barrier(A.comm);
-    t = MPI_Wtime();
+    // Allocate memory for the map with the right number of pixels
+    x = SAFECALLOC(P->n, sizeof *x);
+
+    MPI_Barrier(comm);
+    elapsed = MPI_Wtime() - st;
 
     if (rank == 0) {
-        printf("Precond built for %d sky pixels (%d valid + %d extra)\n",
+        printf("Block Jacobi preconditioner built for %d sky pixels (%d valid "
+               "+ %d extra)\n",
                P->n / A.nnz, P->n_valid / A.nnz, P->n_extra / A.nnz);
-        printf("Total time = %lf s\n", t - st);
+        printf("Total time = %lf s\n", elapsed);
         fflush(stdout);
     }
 
-    // Guard against using ECG in some cases
+    // Guard against using ECG with extra pixels to estimate
     if (P->n_extra > 0 && solver == 1) {
         if (rank == 0) {
             fprintf(stderr,
@@ -243,8 +241,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
         exit(EXIT_FAILURE);
     }
 
-    //____________________________________________________________
-    // Gap treatment
+    // Gap treatment can happen now
 
     MPI_Barrier(comm);
     if (rank == 0) {
@@ -255,6 +252,34 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     WeightStgy ws =
         handle_gaps(&Gaps, &A, &Nm1, &N, gs, signal, noise, do_gap_filling,
                     realization, detindxs, obsindxs, telescopes, sample_rate);
+
+    // final weighting operator
+    WeightMatrix W = createWeightMatrix(&Nm1, &N, &Gaps, ws);
+
+    // ____________________________________________________________
+    // Now build the 2lvl part of the preconditioner if needed
+
+    if (precond != BJ) {
+        MPI_Barrier(comm);
+        if (rank == 0) {
+            puts("##### 2lvl preconditioner ####################");
+            fflush(stdout);
+        }
+
+        st = MPI_Wtime();
+
+        P->ptype = precond;
+        P->Zn = Z_2lvl == 0 ? size : Z_2lvl;
+        buildPrecond2lvl(P, &A, &W, x, signal);
+
+        MPI_Barrier(comm);
+        elapsed = MPI_Wtime() - st;
+
+        if (rank == 0) {
+            printf("2lvl preconditioner construction took %lf s\n", elapsed);
+            fflush(stdout);
+        }
+    }
 
     // ____________________________________________________________
     // Solve the system
@@ -284,7 +309,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
             }
 #endif
 
-            PCG_mm(&A, P, &Nm1, &N, ws, &Gaps, x, signal, &si);
+            PCG_mm(&A, P, &W, x, signal, &si);
         } else {
 #ifdef DEBUG
             if (rank == 0) {
@@ -292,7 +317,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
                 fflush(stdout);
             }
 #endif
-            CG_mm(&A, P->pixpond, &Nm1, &N, ws, &Gaps, x, signal, &si);
+            CG_mm(&A, P->pixpond, &W, x, signal, &si);
         }
 
         // Write PCG residuals to disk
@@ -338,8 +363,8 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
     FREE(Gaps.id0gap);
     FREE(Gaps.lgap);
 
-    // free preconditioner structure
-    free_precond(&P);
+    // free memory allocated for preconditioner
+    PrecondFree(P);
 
     // ____________________________________________________________
     // Write output to fits files
@@ -505,9 +530,9 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
         FREE(hits);
     }
 
-    t = MPI_Wtime();
+    elapsed = MPI_Wtime() - st;
     if (rank == 0) {
-        printf("Total time = %lf s\n", t - st);
+        printf("Total time = %lf s\n", elapsed);
         fflush(stdout);
     }
 
@@ -551,7 +576,7 @@ WeightStgy handle_gaps(Gap *Gaps, Mat *A, Tpltz *Nm1, Tpltz *N, GapStrategy gs,
     WeightStgy ws;
 
     // When not doing gap-filling, set signal in the gaps to zero
-    bool reset_signal_in_gaps = !do_gap_filling;
+    const bool reset_signal_in_gaps = !do_gap_filling;
 
     switch (gs) {
 

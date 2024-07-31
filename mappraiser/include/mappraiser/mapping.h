@@ -58,6 +58,10 @@ void condition_extra_pix_zero(Mat *A);
 
 void point_pixel_to_trash(Mat *A, int ipix);
 
+// Compute pixel share ponderation
+// to deal with pixels overlapping multiple processes
+void get_pixshare_pond(Mat *A, double *pixpond);
+
 __attribute__((unused)) void print_gap_info(Gap *gaps);
 
 #ifdef __cplusplus

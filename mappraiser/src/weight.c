@@ -1,10 +1,10 @@
 /**
- * @file noise_weighting.c
+ * @file weight.c
  * @author Simon Biquard
  * @brief Inverse noise weighting of the map-making procedure with an iterative
  * approach
  * @date Nov 2022
- * @last_update Jan 2023
+ * @last_update Jul 2024
  */
 
 #ifndef NDEBUG
@@ -16,9 +16,19 @@
 #include <stdlib.h>
 
 #include <mappraiser/mapping.h>
-#include <mappraiser/noise_weighting.h>
 #include <mappraiser/solver_info.h>
-#include <memutils.h>
+#include <mappraiser/weight.h>
+#include <midapack/memutils.h>
+
+WeightMatrix createWeightMatrix(Tpltz *Nm1, Tpltz *N, Gap *G, WeightStgy stgy) {
+    // assume everything already allocated
+    WeightMatrix W;
+    W.Nm1 = Nm1;
+    W.N = N;
+    W.G = G;
+    W.stgy = stgy;
+    return W;
+}
 
 __attribute__((unused)) void reset_tod_gaps(double *tod, Tpltz *N, Gap *Gaps);
 
@@ -35,117 +45,106 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps,
  * @brief Weight TOD with the adopted noise model.
  * An PCG is used unless the noise model has lambda=1 (white noise).
  *
- * @param Nm1 Approximate Toeplitz inverse noise covariance
- * @param N Toeplitz noise covariance
- * @param Gaps timestream gaps
+ * @param W WeightMatrix structure containing the noise model and gap info
  * @param tod data vector
  * @return number of PCG iterations if there is a single data block, 0 otherwise
  */
-int apply_weights(Tpltz *Nm1, Tpltz *N, Gap *Gaps, double *tod, WeightStgy stgy,
-                  bool verbose) {
+int applyWeightMatrix(WeightMatrix *W, double *tod) {
     int t_id = 0; // time sample index in local data
 
     int rank, size;
-    MPI_Comm_rank(N->comm, &rank);
-    MPI_Comm_size(N->comm, &size);
+    MPI_Comm_rank(W->N->comm, &rank);
+    MPI_Comm_size(W->N->comm, &size);
 
-    if (stgy == BASIC) {
+    if (W->stgy == BASIC) {
         // assume no gaps (this is the case if we use a gap-filling procedure,
         // for example)
 
-        if (Nm1->tpltzblocks[0].lambda == 1) {
+        if (W->Nm1->tpltzblocks[0].lambda == 1) {
             // Use straightforward loop for white noise model
 
             // Here it is assumed that we use a single bandwidth for all TOD
             // intervals i.e. lambda is the same for all Toeplitz blocks
-            for (int i = 0; i < Nm1->nb_blocks_loc; i++) {
-                for (int j = 0; j < Nm1->tpltzblocks[i].n; j++) {
+            for (int i = 0; i < W->Nm1->nb_blocks_loc; i++) {
+                for (int j = 0; j < W->Nm1->tpltzblocks[i].n; j++) {
                     tod[t_id + j] =
-                        Nm1->tpltzblocks[i].T_block[0] * tod[t_id + j];
+                        W->Nm1->tpltzblocks[i].T_block[0] * tod[t_id + j];
                 }
-                t_id += Nm1->tpltzblocks[i].n;
+                t_id += W->Nm1->tpltzblocks[i].n;
             }
         } else {
             // Use stbmmProd routine for correlated noise model
             // (no det-det correlations for now)
-            stbmmProd(Nm1, tod);
+            stbmmProd(W->Nm1, tod);
         }
         return 0;
+    }
 
-    } else {
-        // we want to do a nested PCG
-        // i.e. iteratively solve Nx=b to apply the noise weights
+    // strategy is not BASIC
+    // --> iteratively solve Nx=b to apply the noise weights
 
-        bool ignore_gaps = false;
-        if (stgy == ITER) {
-            // don't ignore the gaps
-            ignore_gaps = false;
-        } else if (stgy == ITER_IGNORE) {
-            // gap-filling procedure was performed
-            // we will ignore the gaps but still iterate
-            ignore_gaps = true;
-        }
+    bool ignore_gaps = false;
+    if (W->stgy == ITER) {
+        // don't ignore the gaps
+        ignore_gaps = false;
+    } else if (W->stgy == ITER_IGNORE) {
+        // gap-filling procedure was performed
+        // we will ignore the gaps but still iterate
+        ignore_gaps = true;
+    }
 
-        int n_blocks = N->nb_blocks_loc;
+    int n_blocks = W->N->nb_blocks_loc;
 
-        // create a SolverInfo structure for the solver parameters and output
-        SolverInfo si;
-        solverinfo_set_defaults(&si);
-        si.print = verbose;
+    // create a SolverInfo structure for the solver parameters and output
+    SolverInfo si;
+    solverinfo_set_defaults(&si);
 
-        if (n_blocks > 1) {
+    if (n_blocks == 1) {
+        PCG_single_block(W->N, W->Nm1, W->G, tod, NULL, &si, ignore_gaps);
+        return si.n_iter;
+    }
 
-            // variables for a single toeplitz block
-            Block block, block_m1;
-            Tpltz N_block, Nm1_block;
-            double *tod_block = NULL;
+    // variables for a single toeplitz block
+    Block block, block_m1;
+    Tpltz N_block, Nm1_block;
+    double *tod_block = NULL;
 
-            for (int i = 0; i < N->nb_blocks_loc; ++i) {
-                // pick the single Toeplitz block
-                block = N->tpltzblocks[i];
-                block_m1 = Nm1->tpltzblocks[i];
+    for (int i = 0; i < W->N->nb_blocks_loc; ++i) {
+        // pick the single Toeplitz block
+        block = W->N->tpltzblocks[i];
+        block_m1 = W->Nm1->tpltzblocks[i];
 
-                // if (rank == 0)
-                // {
-                //     printf("process toeplitz block %d/%d\n", i,
-                //     (N->nb_blocks_loc) - 1); printf("  block.n = %d\n",
-                //     block.n); printf("  block.idv = %ld\n", block.idv);
-                //     printf("  offset = %d\n", t_id);
-                //     fflush(stdout);
-                // }
+        // if (rank == 0)
+        // {
+        //     printf("process toeplitz block %d/%d\n", i,
+        //     (N->nb_blocks_loc) - 1); printf("  block.n = %d\n",
+        //     block.n); printf("  block.idv = %ld\n", block.idv);
+        //     printf("  offset = %d\n", t_id);
+        //     fflush(stdout);
+        // }
 
-                // define Tpltz structures for the single block
-                set_tpltz_struct(&N_block, N, &block);
-                set_tpltz_struct(&Nm1_block, Nm1, &block_m1);
+        // define Tpltz structures for the single block
+        set_tpltz_struct(&N_block, W->N, &block);
+        set_tpltz_struct(&Nm1_block, W->Nm1, &block_m1);
 
-                // pointer to current block in the tod
-                tod_block = (tod + t_id);
+        // pointer to current block in the tod
+        tod_block = (tod + t_id);
 
-                // apply the weights with a PCG
-                PCG_single_block(&N_block, &Nm1_block, Gaps, tod_block, NULL,
-                                 &si, ignore_gaps);
+        // apply the weights with a PCG
+        PCG_single_block(&N_block, &Nm1_block, W->G, tod_block, NULL, &si,
+                         ignore_gaps);
 
-                // do something with solver output
-                //
-                //
-
-                if (si.store_hist)
-                    solverinfo_free(&si);
-
-                // update our index of local samples
-                t_id += block.n;
-            }
-            return 0;
-
-        } else {
-
-            PCG_single_block(N, Nm1, Gaps, tod, NULL, &si, ignore_gaps);
-            return si.n_iter;
-        }
+        // do something with solver output
+        //
+        //
 
         if (si.store_hist)
             solverinfo_free(&si);
+
+        // update our index of local samples
+        t_id += block.n;
     }
+    return 0;
 }
 
 /// @brief Initialize a dedicated Tpltz structure for a single data block
@@ -220,8 +219,7 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps,
     double coef_1, coef_2; // scalars
     double wtime;          // timing variable
 
-    bool stop = false;            // stop iteration or continue
-    bool init_guess = x0 != NULL; // starting vector provided or not
+    bool stop = false; // stop iteration or continue
 
     if (ng == 0)
         ignore_gaps = true;
@@ -245,7 +243,7 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps,
     r = SAFEMALLOC(sizeof *r * m);
 
     for (int i = 0; i < m; ++i) {
-        if (init_guess) {
+        if (x0 != NULL) {
             // use starting vector if provided
             _r[i] = x0[i];
         } else {

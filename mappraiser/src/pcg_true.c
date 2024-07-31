@@ -14,7 +14,7 @@
 #include <stdlib.h>
 
 #include <mappraiser/pcg_true.h>
-#include <memutils.h>
+#include <midapack/memutils.h>
 
 double scalar_prod_reduce(MPI_Comm comm, int n, const double *pixpond,
                           const double *p1, const double *p2,
@@ -37,8 +37,7 @@ double scalar_prod_reduce(MPI_Comm comm, int n, const double *pixpond,
     return result;
 }
 
-void build_rhs(Mat *A, Tpltz *Nm1, Tpltz *N, Gap *G, WeightStgy ws,
-               const double *d, double *rhs) {
+void build_rhs(Mat *A, WeightMatrix *W, const double *d, double *rhs) {
     // Build the right-hand side of the equation
     // rhs = A^t * N^{-1} * d
 
@@ -51,7 +50,7 @@ void build_rhs(Mat *A, Tpltz *Nm1, Tpltz *N, Gap *G, WeightStgy ws,
     // multiply by N^{-1}
     for (int i = 0; i < m; i++)
         _t[i] = d[i];
-    apply_weights(Nm1, N, G, _t, ws, false);
+    applyWeightMatrix(W, _t);
 
     // multiply by A^t
     TrMatVecProd(A, _t, rhs, 0);
@@ -59,8 +58,7 @@ void build_rhs(Mat *A, Tpltz *Nm1, Tpltz *N, Gap *G, WeightStgy ws,
     FREE(_t);
 }
 
-void opmm(Mat *A, Tpltz *Nm1, Tpltz *N, Gap *G, WeightStgy ws, double *x,
-          double *y) {
+void opmm(Mat *A, WeightMatrix *W, double *x, double *y) {
     // Apply system matrix, i.e. compute
     // y = A^t * N^{-1} * A * x
 
@@ -68,7 +66,7 @@ void opmm(Mat *A, Tpltz *Nm1, Tpltz *N, Gap *G, WeightStgy ws, double *x,
     double *_t = SAFEMALLOC(sizeof *_t * A->m);
 
     MatVecProd(A, x, _t, 0);
-    apply_weights(Nm1, N, G, _t, ws, false);
+    applyWeightMatrix(W, _t);
     TrMatVecProd(A, _t, y, 0);
 
     FREE(_t);
@@ -98,15 +96,13 @@ void print_residual_max(double *x, int n_extra, int n_valid) {
  *
  * @param A pointing matrix
  * @param M preconditioner
- * @param Nm1 inverse noise covariance
- * @param N noise covariance
- * @param G timestream gaps
+ * @param W weight matrix
  * @param x [in] starting map [out] estimated solution
- * @param d data vector
+ * @param data data vector
  * @param si SolverInfo structure
  */
-void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
-            double *x, const double *d, SolverInfo *si) {
+void PCG_mm(Mat *A, Precond *M, WeightMatrix *W, double *x, const double *data,
+            SolverInfo *si) {
     // MPI information
     int rank, size;
     MPI_Comm_rank(A->comm, &rank);
@@ -140,10 +136,10 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
     r = SAFEMALLOC(sizeof *r * n);
 
     // right-hand side
-    build_rhs(A, Nm1, N, G, ws, d, rhs);
+    build_rhs(A, W, data, rhs);
 
     // compute initial residual
-    opmm(A, Nm1, N, G, ws, x, r);
+    opmm(A, W, x, r);
     for (int i = 0; i < n; i++) {
         r[i] = rhs[i] - r[i]; // r = b - A * x0
     }
@@ -171,7 +167,7 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
     zp = SAFEMALLOC(sizeof *zp * n);
 
     // apply preconditioner (z0 = M^{-1} * r0)
-    apply_precond(M, A, r, z);
+    applyPrecond(M, A, r, z);
 
     // set initial search direction (p0 = z0)
     for (int i = 0; i < n; i++) {
@@ -186,7 +182,7 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
         k++;
 
         // apply system matrix
-        opmm(A, Nm1, N, G, ws, p, Sp);
+        opmm(A, W, p, Sp);
 
         // compute (r,z) and (p,_p)
         coef_1 = scalar_prod_reduce(A->comm, M->n, M->pixpond, r, z, NULL);
@@ -212,7 +208,7 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
             printf("\nimplicit r_%d\n", k);
             print_residual_max(r, M->n_extra, M->n_valid);
 #endif
-            opmm(A, Nm1, N, G, ws, x, r);
+            opmm(A, W, x, r);
             for (int i = 0; i < n; i++) {
                 r[i] = rhs[i] - r[i]; // r = b - A * x_k
             }
@@ -223,7 +219,7 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
         }
 
         // apply preconditioner (z = M^{-1} * r)
-        apply_precond(M, A, r, z);
+        applyPrecond(M, A, r, z);
 
         // compute updated (r,z)
         // use Polak-Ribière formula (r,z-zp)
@@ -268,15 +264,13 @@ void PCG_mm(Mat *A, Precond *M, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
  *
  * @param A pointing matrix
  * @param pixpond pixel share ponderation
- * @param Nm1 inverse noise covariance
- * @param N noise covariance
- * @param G timestream gaps
+ * @param W weight matrix
  * @param x [in] starting map [out] estimated solution
- * @param d data vector
+ * @param data data vector
  * @param si SolverInfo structure
  */
-void CG_mm(Mat *A, double *pixpond, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
-           double *x, const double *d, SolverInfo *si) {
+void CG_mm(Mat *A, const double *pixpond, WeightMatrix *W, double *x, const double *data,
+           SolverInfo *si) {
     // MPI information
     int rank, size;
     MPI_Comm_rank(A->comm, &rank);
@@ -307,10 +301,10 @@ void CG_mm(Mat *A, double *pixpond, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
     r = SAFEMALLOC(sizeof *r * n);
 
     // right-hand side
-    build_rhs(A, Nm1, N, G, ws, d, r);
+    build_rhs(A, W, data, r);
 
     // compute initial residual
-    opmm(A, Nm1, N, G, ws, x, r);
+    opmm(A, W, x, r);
     for (int i = 0; i < n; i++) {
         r[i] = rhs[i] - r[i]; // r = b - A * x0
     }
@@ -346,7 +340,7 @@ void CG_mm(Mat *A, double *pixpond, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
         k++;
 
         // apply system matrix
-        opmm(A, Nm1, N, G, ws, p, Sp);
+        opmm(A, W, p, Sp);
 
         // compute (r,r) and (p,_p)
         coef_1 = scalar_prod_reduce(A->comm, n, pixpond, r, r, NULL);
@@ -361,7 +355,7 @@ void CG_mm(Mat *A, double *pixpond, Tpltz *Nm1, Tpltz *N, WeightStgy ws, Gap *G,
 
         if (si->use_exact_residual) {
             // compute explicit residual
-            opmm(A, Nm1, N, G, ws, x, r);
+            opmm(A, W, x, r);
             for (int i = 0; i < n; i++) {
                 r[i] = rhs[i] - r[i]; // r = b - A * x_k
             }

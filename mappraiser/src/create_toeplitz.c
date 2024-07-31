@@ -1,5 +1,5 @@
 /**
- * @file   createToeplitz.c
+ * @file create_toeplitz.c
  * @brief Utility routines for creating the inverse time-time noise
  * correlation matrix
  * @last_update May 2019 by Hamza El Bouhargani
@@ -29,25 +29,21 @@ int defineTpltz_avg(Tpltz *Nm1, int64_t nrow, int m_cw, int m_rw,
 int defineBlocks_avg(Block *tpltzblocks, double *T, int nb_blocks_loc,
                      void *local_blocks_sizes, int lambda_block_avg,
                      int64_t id0) {
-
-    int i, index0;
-
-    for (i = 0; i < nb_blocks_loc; i++)
+    for (int i = 0; i < nb_blocks_loc; i++)
         tpltzblocks[i].n = ((int *)local_blocks_sizes)[i];
 
-    for (i = 0; i < nb_blocks_loc; i++)
+    for (int i = 0; i < nb_blocks_loc; i++)
         tpltzblocks[i].lambda = lambda_block_avg;
 
     // tpltzblocks[0].idv = (int64_t) (id0/n_block_avg) * n_block_avg ;
     tpltzblocks[0].idv = id0;
-    for (i = 1; i < nb_blocks_loc; i++)
-        tpltzblocks[i].idv =
-            (int64_t)tpltzblocks[i - 1].idv + tpltzblocks[i - 1].n;
+    for (int i = 1; i < nb_blocks_loc; i++)
+        tpltzblocks[i].idv = tpltzblocks[i - 1].idv + tpltzblocks[i - 1].n;
 
-    index0 = 0;
-    for (i = 0; i < nb_blocks_loc; i++) {
-        tpltzblocks[i].T_block = (T + index0);
-        index0 += tpltzblocks[i].lambda;
+    int start = 0;
+    for (int i = 0; i < nb_blocks_loc; i++) {
+        tpltzblocks[i].T_block = T + start;
+        start += tpltzblocks[i].lambda;
     }
 
     return 0;

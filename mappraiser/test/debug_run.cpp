@@ -76,15 +76,21 @@ int main(int argc, char *argv[]) {
     // Run parameters
 
     int solver = 0;
+
     int precond = 0; // default: block Jacobi
     program.add_argument("--precond")
         .store_into(precond)
         .help("Choice of preconditioner");
-    int Z_2lvl = 0;
+
+    int Z_2lvl = 32;
+    program.add_argument("--z2lvl").store_into(Z_2lvl).help(
+        "size of 2lvl deflation subspace");
+
     int pointing_commflag = 6; // default: allreduce
     program.add_argument("--ptcomm-flag")
         .store_into(pointing_commflag)
         .help("choice of communication pattern for pointing matrix");
+
     double tol = 1e-6;
     int maxiter = 100;
     int enlFac = 1;

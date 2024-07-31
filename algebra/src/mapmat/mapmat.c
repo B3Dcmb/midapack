@@ -27,14 +27,12 @@
 #include <mapmat/cindex.h>
 #include <mapmat/csort.h>
 #include <mapmat/mapmat.h>
-#include <memutils.h>
+#include <midapack/memutils.h>
 
 #ifdef W_MPI
-#include "mapmat/butterfly.h"
-#if 0
-#include "mapmat/butterfly_wrappers.h"
-#endif
-#include "mapmat/ring.h"
+#include <mapmat/butterfly.h>
+// #include <mapmat/butterfly_wrappers.h>
+#include <mapmat/ring.h>
 #include <mpi.h>
 #endif
 
@@ -862,106 +860,83 @@ int MatInfo(Mat *mat, int verbose, char *filename) {
 
 #if W_MPI
 int greedyreduce(Mat *A, double *x) {
-    int size;
-    MPI_Comm_size(A->comm, &size);
-    if (size == 1) {
-        // nothing to do
-        return 0;
-    }
-
-    int i, j, k;
     int nSmax, nRmax, nStot, nRtot;
-
-    // allocate buffer that will be reduced
-    double *lvalues =
-        SAFEMALLOC((sizeof *lvalues) * (A->lcount - A->nnz * A->trash_pix));
+    int nbr_values = A->lcount - A->nnz * A->trash_pix;
 
     // copy local values into result values
-    memcpy(lvalues, x, (sizeof *x) * (A->lcount - A->nnz * A->trash_pix));
+    double *lvalues = SAFEMALLOC(sizeof *lvalues * nbr_values);
+    memcpy(lvalues, x, sizeof *x * nbr_values);
+
+    nRmax = 0;
+    nSmax = 0;
+    int ne = 0;
 
     double *com_val;
     double *out_val;
-    int ne = 0;
+
     switch (A->flag) {
     case BUTTERFLY:
-        // compute max communication buffer size
-        for (k = 0; k < A->steps; k++)
+        for (int k = 0; k < A->steps; k++)
             if (A->nR[k] > nRmax)
                 nRmax = A->nR[k];
-        for (k = 0; k < A->steps; k++)
+        for (int k = 0; k < A->steps; k++)
             if (A->nS[k] > nSmax)
                 nSmax = A->nS[k];
-        com_val = SAFEMALLOC(sizeof(double) * A->com_count);
-        for (i = 0; i < A->com_count; i++)
-            com_val[i] = 0.0;
-        m2m(lvalues, A->lindices + (A->nnz) * (A->trash_pix),
-            A->lcount - (A->nnz) * (A->trash_pix), com_val, A->com_indices,
-            A->com_count);
+
+        com_val = SAFECALLOC(A->com_count, sizeof(double));
+        m2m(lvalues, A->lindices + (A->nnz) * (A->trash_pix), nbr_values,
+            com_val, A->com_indices, A->com_count);
         butterfly_reduce(A->R, A->nR, nRmax, A->S, A->nS, nSmax, com_val,
                          A->steps, A->comm);
         m2m(com_val, A->com_indices, A->com_count, x,
-            A->lindices + (A->nnz) * (A->trash_pix),
-            A->lcount - (A->nnz) * (A->trash_pix));
+            A->lindices + (A->nnz) * (A->trash_pix), nbr_values);
         FREE(com_val);
         break;
-    //==========================Modification added by Sebastien Cayrols :
-    // 01/09/2015 , Berkeley
     case BUTTERFLY_BLOCKING_1:
-        // compute max communication buffer size
-        for (k = 0; k < A->steps; k++)
+        for (int k = 0; k < A->steps; k++)
             if (A->nR[k] > nRmax)
                 nRmax = A->nR[k];
-        for (k = 0; k < A->steps; k++)
+        for (int k = 0; k < A->steps; k++)
             if (A->nS[k] > nSmax)
                 nSmax = A->nS[k];
-        com_val = SAFEMALLOC(sizeof(double) * A->com_count);
-        for (i = 0; i < A->com_count; i++)
-            com_val[i] = 0.0;
-        m2m(lvalues, A->lindices + (A->nnz) * (A->trash_pix),
-            A->lcount - (A->nnz) * (A->trash_pix), com_val, A->com_indices,
-            A->com_count);
+        com_val = SAFECALLOC(A->com_count, sizeof(double));
+        m2m(lvalues, A->lindices + (A->nnz) * (A->trash_pix), nbr_values,
+            com_val, A->com_indices, A->com_count);
         butterfly_blocking_1instr_reduce(A->R, A->nR, nRmax, A->S, A->nS, nSmax,
                                          com_val, A->steps, A->comm);
         m2m(com_val, A->com_indices, A->com_count, x,
-            A->lindices + (A->nnz) * (A->trash_pix),
-            A->lcount - (A->nnz) * (A->trash_pix));
+            A->lindices + (A->nnz) * (A->trash_pix), nbr_values);
         FREE(com_val);
         break;
     case BUTTERFLY_BLOCKING_2:
-        // compute max communication buffer size
-        for (k = 0; k < A->steps; k++)
+        for (int k = 0; k < A->steps; k++)
             if (A->nR[k] > nRmax)
                 nRmax = A->nR[k];
-        for (k = 0; k < A->steps; k++)
+        for (int k = 0; k < A->steps; k++)
             if (A->nS[k] > nSmax)
                 nSmax = A->nS[k];
-        com_val = SAFEMALLOC(sizeof(double) * A->com_count);
-        for (i = 0; i < A->com_count; i++)
-            com_val[i] = 0.0;
-        m2m(lvalues, A->lindices + (A->nnz) * (A->trash_pix),
-            A->lcount - (A->nnz) * (A->trash_pix), com_val, A->com_indices,
-            A->com_count);
+        com_val = SAFECALLOC(A->com_count, sizeof(double));
+        m2m(lvalues, A->lindices + (A->nnz) * (A->trash_pix), nbr_values,
+            com_val, A->com_indices, A->com_count);
         butterfly_blocking_1instr_reduce(A->R, A->nR, nRmax, A->S, A->nS, nSmax,
                                          com_val, A->steps, A->comm);
         m2m(com_val, A->com_indices, A->com_count, x,
-            A->lindices + (A->nnz) * (A->trash_pix),
-            A->lcount - (A->nnz) * (A->trash_pix));
+            A->lindices + (A->nnz) * (A->trash_pix), nbr_values);
         FREE(com_val);
         break;
     case NOEMPTYSTEPRING:
-        // compute max communication buffer size
-        for (k = 1; k < A->steps; k++)
+        for (int k = 1; k < A->steps; k++)
             if (A->nR[k] > nRmax)
                 nRmax = A->nR[k];
         nSmax = nRmax;
         ring_noempty_step_reduce(A->R, A->nR, nRmax, A->S, A->nS, nSmax,
                                  lvalues, x, A->steps, A->comm);
         break;
-    //==========================End modification
     case RING:
-        for (k = 1; k < A->steps; k++) // compute max communication buffer size
+        for (int k = 1; k < A->steps; k++)
             if (A->nR[k] > nRmax)
                 nRmax = A->nR[k];
+
         nSmax = nRmax;
         ring_reduce(A->R, A->nR, nRmax, A->S, A->nS, nSmax, lvalues, x,
                     A->steps, A->comm);
@@ -971,42 +946,26 @@ int greedyreduce(Mat *A, double *x) {
                                 A->comm);
         break;
     case NOEMPTY:
-        for (k = 1; k < A->steps; k++)
+        for (int k = 1; k < A->steps; k++)
             if (A->nR[k] != 0)
                 ne++;
+
         ring_noempty_reduce(A->R, A->nR, ne, A->S, A->nS, ne, lvalues, x,
                             A->steps, A->comm);
         break;
     case ALLREDUCE:
-        com_val = SAFEMALLOC(sizeof(double) * A->com_count);
-        out_val = SAFEMALLOC(sizeof(double) * A->com_count);
-        for (i = 0; i < A->com_count; i++) {
-            com_val[i] = 0.0;
-            out_val[i] = 0.0;
-        }
-        s2m(com_val, lvalues, A->com_indices,
-            A->lcount - (A->nnz) * (A->trash_pix));
-#if 0
-        for (i = 0; i < A->com_count; i++) {
-            printf("%lf ", com_val[i]);
-        }
-#endif
-        // maximum index
+        com_val = SAFECALLOC(A->com_count, sizeof(double));
+        out_val = SAFECALLOC(A->com_count, sizeof(double));
+        s2m(com_val, lvalues, A->com_indices, nbr_values);
         MPI_Allreduce(com_val, out_val, A->com_count, MPI_DOUBLE, MPI_SUM,
                       A->comm);
-#if 0
-        for (i = 0; i < A->com_count; i++) {
-            printf("%lf ", out_val[i]);
-        }
-#endif
-        // sum receive buffer into values
-        m2s(out_val, x, A->com_indices, A->lcount - (A->nnz) * (A->trash_pix));
+        m2s(out_val, x, A->com_indices, nbr_values);
         FREE(com_val);
         FREE(out_val);
         break;
     case ALLTOALLV:
         nRtot = nStot = 0;
-        for (k = 0; k < A->steps; k++) {
+        for (int k = 0; k < A->steps; k++) {
             // compute buffer sizes
             nRtot += A->nR[k]; // to receive
             nStot += A->nS[k]; // to send
