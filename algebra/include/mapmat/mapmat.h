@@ -87,9 +87,9 @@ void MatSetIndices(Mat *A, int m, int nnz, int *indices);
 void MatSetValues(Mat *A, int m, int nnz, double *values);
 void MatFree(Mat *A);
 int MatLocalShape(Mat *A, int sflag);
-int MatVecProd(Mat *A, double *x, double *y, int pflag);
-int TrMatVecProd(Mat *A, double *y, double *x, int pflag);
-int greedyreduce(Mat *A, double *x);
+void MatVecProd(const Mat *A, const double *x, double *y);
+void TrMatVecProd(const Mat *A, const double *y, double *x);
+int greedyreduce(const Mat *A, double *x);
 
 int MatLoad(Mat *A, char *filename);
 int MatSave(Mat *A, char *filename);

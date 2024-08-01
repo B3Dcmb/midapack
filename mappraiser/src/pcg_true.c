@@ -53,7 +53,7 @@ void build_rhs(Mat *A, WeightMatrix *W, const double *d, double *rhs) {
     applyWeightMatrix(W, _t);
 
     // multiply by A^t
-    TrMatVecProd(A, _t, rhs, 0);
+    TrMatVecProd(A, _t, rhs);
 
     FREE(_t);
 }
@@ -65,9 +65,9 @@ void opmm(Mat *A, WeightMatrix *W, double *x, double *y) {
     // time domain vector
     double *_t = SAFEMALLOC(sizeof *_t * A->m);
 
-    MatVecProd(A, x, _t, 0);
+    MatVecProd(A, x, _t);
     applyWeightMatrix(W, _t);
-    TrMatVecProd(A, _t, y, 0);
+    TrMatVecProd(A, _t, y);
 
     FREE(_t);
 }

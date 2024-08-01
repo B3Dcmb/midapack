@@ -881,9 +881,9 @@ void build_AZ(Mat *A, WeightMatrix *W, double **Z, int Zn, int n,
 
     for (i = 0; i < Zn; i++) {
         // AZ[i] = Pt N^{-1} P * Z[i]
-        MatVecProd(A, Z[i], v, 0);
+        MatVecProd(A, Z[i], v);
         applyWeightMatrix(W, v); // In-place
-        TrMatVecProd(A, v, AZ[i], 0);
+        TrMatVecProd(A, v, AZ[i]);
     }
 
     FREE(v);
@@ -983,7 +983,7 @@ void Lanczos_eig(Mat *A, WeightMatrix *W, double *x, const double *d,
         Ritz_vectors_AZ[i] = _p_AZ;
     }
 
-    MatVecProd(A, x, _g, 0);
+    MatVecProd(A, x, _g);
 
     for (i = 0; i < m; i++)
         _g[i] = d[i] - _g[i];
@@ -991,7 +991,7 @@ void Lanczos_eig(Mat *A, WeightMatrix *W, double *x, const double *d,
     // stbmmProd(Nm1, _g);
     applyWeightMatrix(W, _g);
 
-    TrMatVecProd(A, _g, w, 0);
+    TrMatVecProd(A, _g, w);
 
     // beta = sqrt(dot(w, w))
     dot = 0.0;
@@ -1008,9 +1008,9 @@ void Lanczos_eig(Mat *A, WeightMatrix *W, double *x, const double *d,
     }
 
     // Av = A * v = Pt N P * v
-    MatVecProd(A, v, _g, 0);
+    MatVecProd(A, v, _g);
     applyWeightMatrix(W, _g);
-    TrMatVecProd(A, _g, Av, 0);
+    TrMatVecProd(A, _g, Av);
 
     memcpy(w, Av, n * sizeof(double));
 
@@ -1060,9 +1060,9 @@ void Lanczos_eig(Mat *A, WeightMatrix *W, double *x, const double *d,
         T[((i + 1) * (K + 1)) + i] = beta;
 
         // Av = A * v = Pt N P * v
-        MatVecProd(A, v, _g, 0);
+        MatVecProd(A, v, _g);
         applyWeightMatrix(W, _g);
-        TrMatVecProd(A, _g, Av, 0);
+        TrMatVecProd(A, _g, Av);
 
         memcpy(w, Av, n * sizeof(double));
 
@@ -1434,7 +1434,7 @@ void buildPrecond2lvl(Precond *p, Mat *A, WeightMatrix *W, double *x,
 // General routine for applying the preconditioner to a map vector
 void applyPrecond(Precond *p, const Mat *A, double *g, double *Cg) {
     if (p->ptype == BJ) {
-        MatVecProd(&p->BJ_inv, g, Cg, 0);
+        MatVecProd(&p->BJ_inv, g, Cg);
         return;
     }
 
@@ -1447,7 +1447,7 @@ void applyPrecond(Precond *p, const Mat *A, double *g, double *Cg) {
         p->AQg[i] = g[i] - p->AQg[i];
     }
 
-    MatVecProd(&(p->BJ_inv), p->AQg, Cg, 0);
+    MatVecProd(&(p->BJ_inv), p->AQg, Cg);
 
     for (int i = 0; i < p->n; ++i) {
         Cg[i] += p->Qg[i];

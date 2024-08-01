@@ -570,7 +570,7 @@ int MatComShape(Mat *A, int flag, MPI_Comm comm) {
     @param y output vector (distributed)
     @ingroup matmap_group11
     @ingroup matmap_group12a */
-int MatVecProd(Mat *A, double *x, double *y, int pflag) {
+void MatVecProd(const Mat *A, const double *x, double *y) {
     // refresh output vector
     for (int j = 0; j < A->m; j++)
         y[j] = 0.0;
@@ -588,8 +588,6 @@ int MatVecProd(Mat *A, double *x, double *y, int pflag) {
             }
         }
     }
-
-    return 0;
 }
 
 #ifdef W_MPI
@@ -681,7 +679,7 @@ int TrMatVecProd_Naive(Mat *A, double *y, double *x, int pflag) {
     @param y local input vector (distributed)
     @param x local output vector (overlapped)
     @ingroup matmap_group11 */
-int TrMatVecProd(Mat *A, double *y, double *x, int pflag) {
+void TrMatVecProd(const Mat *A, const double *y, double *x) {
     // elements not present in output vector (potentially zero)
     int extra = A->trash_pix * A->nnz;
     int off_extra = A->flag_ignore_extra ? extra : 0;
@@ -700,12 +698,10 @@ int TrMatVecProd(Mat *A, double *y, double *x, int pflag) {
             }
         }
     }
-
 #ifdef W_MPI
     // perform global reduce on valid pixels
     greedyreduce(A, x + (A->flag_ignore_extra ? 0 : extra));
 #endif
-    return 0;
 }
 
 #ifdef W_MPI
@@ -858,85 +854,68 @@ int MatInfo(Mat *mat, int verbose, char *filename) {
 }
 #endif
 
+int _array_max_or_zero(const int *arr, int size) {
+    int max = 0;
+    for (int i = 0; i < size; i++)
+        if (arr[i] > max)
+            max = arr[i];
+    return max;
+}
+
+int _array_sum(const int *arr, int size) {
+    int sum = 0;
+    for (int i = 0; i < size; i++)
+        sum += arr[i];
+    return sum;
+}
+
 #if W_MPI
-int greedyreduce(Mat *A, double *x) {
-    int nSmax, nRmax, nStot, nRtot;
-    int nbr_values = A->lcount - A->nnz * A->trash_pix;
+int greedyreduce(const Mat *A, double *x) {
+    // don't communicate trash pixels
+    const int n_trash = A->nnz * A->trash_pix;
+    const int n_good = A->lcount - n_trash;
+    int *lindices_good = A->lindices + n_trash;
 
     // copy local values into result values
-    double *lvalues = SAFEMALLOC(sizeof *lvalues * nbr_values);
-    memcpy(lvalues, x, sizeof *x * nbr_values);
+    // /!\ assumes x contains only good pixels
+    double *lvalues = SAFEMALLOC(sizeof *lvalues * n_good);
+    memcpy(lvalues, x, sizeof *x * n_good);
 
-    nRmax = 0;
-    nSmax = 0;
-    int ne = 0;
+    int nSmax, nRmax, nStot, nRtot, ne;
 
     double *com_val;
     double *out_val;
 
     switch (A->flag) {
     case BUTTERFLY:
-        for (int k = 0; k < A->steps; k++)
-            if (A->nR[k] > nRmax)
-                nRmax = A->nR[k];
-        for (int k = 0; k < A->steps; k++)
-            if (A->nS[k] > nSmax)
-                nSmax = A->nS[k];
-
-        com_val = SAFECALLOC(A->com_count, sizeof(double));
-        m2m(lvalues, A->lindices + (A->nnz) * (A->trash_pix), nbr_values,
-            com_val, A->com_indices, A->com_count);
+        // max communication buffer size
+        nRmax = _array_max_or_zero(A->nR, A->steps);
+        nSmax = _array_max_or_zero(A->nS, A->steps);
+        // allocate communication buffer
+        com_val = SAFECALLOC(A->com_count, sizeof *com_val);
+        m2m(lvalues, lindices_good, n_good, com_val, A->com_indices,
+            A->com_count);
         butterfly_reduce(A->R, A->nR, nRmax, A->S, A->nS, nSmax, com_val,
                          A->steps, A->comm);
-        m2m(com_val, A->com_indices, A->com_count, x,
-            A->lindices + (A->nnz) * (A->trash_pix), nbr_values);
+        m2m(com_val, A->com_indices, A->com_count, x, lindices_good, n_good);
+        // free communication buffer
         FREE(com_val);
         break;
     case BUTTERFLY_BLOCKING_1:
-        for (int k = 0; k < A->steps; k++)
-            if (A->nR[k] > nRmax)
-                nRmax = A->nR[k];
-        for (int k = 0; k < A->steps; k++)
-            if (A->nS[k] > nSmax)
-                nSmax = A->nS[k];
-        com_val = SAFECALLOC(A->com_count, sizeof(double));
-        m2m(lvalues, A->lindices + (A->nnz) * (A->trash_pix), nbr_values,
-            com_val, A->com_indices, A->com_count);
-        butterfly_blocking_1instr_reduce(A->R, A->nR, nRmax, A->S, A->nS, nSmax,
-                                         com_val, A->steps, A->comm);
-        m2m(com_val, A->com_indices, A->com_count, x,
-            A->lindices + (A->nnz) * (A->trash_pix), nbr_values);
-        FREE(com_val);
-        break;
     case BUTTERFLY_BLOCKING_2:
-        for (int k = 0; k < A->steps; k++)
-            if (A->nR[k] > nRmax)
-                nRmax = A->nR[k];
-        for (int k = 0; k < A->steps; k++)
-            if (A->nS[k] > nSmax)
-                nSmax = A->nS[k];
-        com_val = SAFECALLOC(A->com_count, sizeof(double));
-        m2m(lvalues, A->lindices + (A->nnz) * (A->trash_pix), nbr_values,
-            com_val, A->com_indices, A->com_count);
+        nRmax = _array_max_or_zero(A->nR, A->steps);
+        nSmax = _array_max_or_zero(A->nS, A->steps);
+        com_val = SAFECALLOC(A->com_count, sizeof *com_val);
+        m2m(lvalues, lindices_good, n_good, com_val, A->com_indices,
+            A->com_count);
         butterfly_blocking_1instr_reduce(A->R, A->nR, nRmax, A->S, A->nS, nSmax,
                                          com_val, A->steps, A->comm);
-        m2m(com_val, A->com_indices, A->com_count, x,
-            A->lindices + (A->nnz) * (A->trash_pix), nbr_values);
+        m2m(com_val, A->com_indices, A->com_count, x, lindices_good, n_good);
         FREE(com_val);
         break;
     case NOEMPTYSTEPRING:
-        for (int k = 1; k < A->steps; k++)
-            if (A->nR[k] > nRmax)
-                nRmax = A->nR[k];
-        nSmax = nRmax;
-        ring_noempty_step_reduce(A->R, A->nR, nRmax, A->S, A->nS, nSmax,
-                                 lvalues, x, A->steps, A->comm);
-        break;
     case RING:
-        for (int k = 1; k < A->steps; k++)
-            if (A->nR[k] > nRmax)
-                nRmax = A->nR[k];
-
+        nRmax = _array_max_or_zero(A->nR, A->steps);
         nSmax = nRmax;
         ring_reduce(A->R, A->nR, nRmax, A->S, A->nS, nSmax, lvalues, x,
                     A->steps, A->comm);
@@ -946,6 +925,7 @@ int greedyreduce(Mat *A, double *x) {
                                 A->comm);
         break;
     case NOEMPTY:
+        ne = 0;
         for (int k = 1; k < A->steps; k++)
             if (A->nR[k] != 0)
                 ne++;
@@ -954,25 +934,24 @@ int greedyreduce(Mat *A, double *x) {
                             A->steps, A->comm);
         break;
     case ALLREDUCE:
-        com_val = SAFECALLOC(A->com_count, sizeof(double));
-        out_val = SAFECALLOC(A->com_count, sizeof(double));
-        s2m(com_val, lvalues, A->com_indices, nbr_values);
+        com_val = SAFECALLOC(A->com_count, sizeof *com_val);
+        out_val = SAFECALLOC(A->com_count, sizeof *out_val);
+        s2m(com_val, lvalues, A->com_indices, n_good);
         MPI_Allreduce(com_val, out_val, A->com_count, MPI_DOUBLE, MPI_SUM,
                       A->comm);
-        m2s(out_val, x, A->com_indices, nbr_values);
+        m2s(out_val, x, A->com_indices, n_good);
         FREE(com_val);
         FREE(out_val);
         break;
     case ALLTOALLV:
-        nRtot = nStot = 0;
-        for (int k = 0; k < A->steps; k++) {
-            // compute buffer sizes
-            nRtot += A->nR[k]; // to receive
-            nStot += A->nS[k]; // to send
-        }
-
+        // compute buffer sizes
+        nRtot = _array_sum(A->nR, A->steps);
+        nStot = _array_sum(A->nS, A->steps);
         alltoallv_reduce(A->R, A->nR, nRtot, A->S, A->nS, nStot, lvalues, x,
                          A->steps, A->comm);
+        break;
+    default:
+        // do nothing
         break;
     }
     FREE(lvalues);
