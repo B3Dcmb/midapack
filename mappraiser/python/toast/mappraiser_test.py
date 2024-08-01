@@ -238,6 +238,8 @@ class MappraiserTest(MPITestCase):
             restore_det_data=False,
             mem_report=True,
         )
+
+        op_mappraiser.hwpangle_name = defaults.hwp_angle
         op_mappraiser.apply(data)
 
         # if data.comm.world_rank == 0:
