@@ -49,7 +49,7 @@ void PCG_single_block(Tpltz *N_block, Tpltz *Nm1_block, Gap *Gaps,
  * @param tod data vector
  * @return number of PCG iterations if there is a single data block, 0 otherwise
  */
-int applyWeightMatrix(WeightMatrix *W, double *tod) {
+int applyWeightMatrix(const WeightMatrix *W, double *tod) {
     int t_id = 0; // time sample index in local data
 
     int rank, size;
@@ -151,7 +151,7 @@ int applyWeightMatrix(WeightMatrix *W, double *tod) {
 /// @param single_block_struct [out] Tpltz structure to initialize
 /// @param full_struct [in] Tpltz structure of the whole data
 /// @param block [in] the Block structure representing the single data block
-void set_tpltz_struct(Tpltz *single_block_struct, Tpltz *full_struct,
+void set_tpltz_struct(Tpltz *single_block_struct, const Tpltz *full_struct,
                       Block *block) {
     single_block_struct->nrow = full_struct->nrow; // does not matter anyway
     single_block_struct->m_cw = full_struct->m_cw; // 1

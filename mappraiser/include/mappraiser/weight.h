@@ -23,9 +23,9 @@ typedef struct {
 // Simple constructor
 WeightMatrix createWeightMatrix(Tpltz *Nm1, Tpltz *N, Gap *G, WeightStgy stgy);
 
-int applyWeightMatrix(WeightMatrix *W, double *tod);
+int applyWeightMatrix(const WeightMatrix *W, double *tod);
 
-void set_tpltz_struct(Tpltz *single_block_struct, Tpltz *full_struct,
+void set_tpltz_struct(Tpltz *single_block_struct, const Tpltz *full_struct,
                       Block *block);
 
 #ifdef __cplusplus

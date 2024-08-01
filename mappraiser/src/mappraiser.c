@@ -204,15 +204,6 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
 
     st = MPI_Wtime();
 
-    bool use_precond;
-    if (precond < 0) {
-        // we won't be using preconditioning in the solver
-        use_precond = false;
-        precond = 0;
-    } else {
-        use_precond = true;
-    }
-
     // first build the BJ preconditioner
     Precond *P =
         newPrecondBJ(&A, &Nm1, cond, lhits, gs, &Gaps, gif, local_blocks_sizes);
@@ -301,24 +292,7 @@ void MLmap(MPI_Comm comm, char *outpath, char *ref, int solver, int precond,
         si.use_exact_residual = true;
 
         // solve the equation
-        if (use_precond) {
-#ifdef DEBUG
-            if (rank == 0) {
-                puts("call PCG routine (with preconditioning)");
-                fflush(stdout);
-            }
-#endif
-
-            PCG_mm(&A, P, &W, x, signal, &si);
-        } else {
-#ifdef DEBUG
-            if (rank == 0) {
-                puts("call CG routine (no preconditioning)");
-                fflush(stdout);
-            }
-#endif
-            CG_mm(&A, P->pixpond, &W, x, signal, &si);
-        }
+        PCG_maxL(&A, P, &W, x, signal, &si);
 
         // Write PCG residuals to disk
         if (rank == 0) {

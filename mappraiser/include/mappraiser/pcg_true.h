@@ -12,12 +12,8 @@ extern "C" {
 #include <mappraiser/weight.h>
 
 // PCG routine
-void PCG_mm(Mat *A, Precond *M, WeightMatrix *W, double *x, const double *data,
-            SolverInfo *si);
-
-// without preconditioning
-void CG_mm(Mat *A, const double *pixpond, WeightMatrix *W, double *x,
-           const double *data, SolverInfo *si);
+void PCG_maxL(const Mat *A, const Precond *M, const WeightMatrix *W, double *x,
+              const double *data, SolverInfo *si);
 
 #ifdef __cplusplus
 }

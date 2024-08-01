@@ -37,12 +37,13 @@ double scalar_prod_reduce(MPI_Comm comm, int n, const double *pixpond,
     return result;
 }
 
-void build_rhs(Mat *A, WeightMatrix *W, const double *d, double *rhs) {
+void build_rhs(const Mat *A, const WeightMatrix *W, const double *d,
+               double *rhs) {
     // Build the right-hand side of the equation
     // rhs = A^t * N^{-1} * d
 
     // number of local samples
-    int m = A->m;
+    const int m = A->m;
 
     // time domain vector
     double *_t = SAFEMALLOC(sizeof *_t * m);
@@ -58,7 +59,7 @@ void build_rhs(Mat *A, WeightMatrix *W, const double *d, double *rhs) {
     FREE(_t);
 }
 
-void opmm(Mat *A, WeightMatrix *W, double *x, double *y) {
+void opmm(const Mat *A, const WeightMatrix *W, const double *x, double *y) {
     // Apply system matrix, i.e. compute
     // y = A^t * N^{-1} * A * x
 
@@ -72,24 +73,6 @@ void opmm(Mat *A, WeightMatrix *W, double *x, double *y) {
     FREE(_t);
 }
 
-#if 0
-double maxabs(double *x, int n) {
-    double r;
-    double fmax = fabs(x[0]);
-    for (int j = 1; j < n; j++) {
-        r = fabs(x[j]);
-        if (r > fmax)
-            fmax = r;
-    }
-    return fmax;
-}
-
-void print_residual_max(double *x, int n_extra, int n_valid) {
-    printf("  extra: max = %lf\n", maxabs(x, n_extra));
-    printf("  valid: max = %lf\n", maxabs(x + n_extra, n_valid));
-}
-#endif
-
 /**
  * @brief Solve the map making equation with a preconditioned conjugate gradient
  * algorithm.
@@ -101,8 +84,8 @@ void print_residual_max(double *x, int n_extra, int n_valid) {
  * @param data data vector
  * @param si SolverInfo structure
  */
-void PCG_mm(Mat *A, Precond *M, WeightMatrix *W, double *x, const double *data,
-            SolverInfo *si) {
+void PCG_maxL(const Mat *A, const Precond *M, const WeightMatrix *W, double *x,
+              const double *data, SolverInfo *si) {
     // MPI information
     int rank, size;
     MPI_Comm_rank(A->comm, &rank);
@@ -118,9 +101,9 @@ void PCG_mm(Mat *A, Precond *M, WeightMatrix *W, double *x, const double *data,
     int k = 0;                      // iteration number
     int n = get_actual_map_size(A); // map size
 
-    double res;            // norm of residual
-    double coef_1, coef_2; // scalars
-    double wtime;          // timing variable
+    double res;                         // norm of residual
+    double alpha, beta, coef_1, coef_2; // scalars
+    double wtime;                       // timing variable
 
     bool stop = false; // stop iteration or continue
 
@@ -173,8 +156,6 @@ void PCG_mm(Mat *A, Precond *M, WeightMatrix *W, double *x, const double *data,
     for (int i = 0; i < n; i++) {
         p[i] = z[i];
     }
-
-    double alpha, beta;
 
     // iteration loop
     while (!stop) {
@@ -254,136 +235,6 @@ void PCG_mm(Mat *A, Precond *M, WeightMatrix *W, double *x, const double *data,
     FREE(Sp);
     FREE(z);
     FREE(zp);
-
-    solverinfo_finalize(si);
-}
-
-/**
- * @brief Solve the map making equation with a simple conjugate gradient
- * algorithm.
- *
- * @param A pointing matrix
- * @param pixpond pixel share ponderation
- * @param W weight matrix
- * @param x [in] starting map [out] estimated solution
- * @param data data vector
- * @param si SolverInfo structure
- */
-void CG_mm(Mat *A, const double *pixpond, WeightMatrix *W, double *x, const double *data,
-           SolverInfo *si) {
-    // MPI information
-    int rank, size;
-    MPI_Comm_rank(A->comm, &rank);
-    MPI_Comm_size(A->comm, &size);
-
-    // initialize the SolverInfo struct
-    solverinfo_init(si);
-
-    // store starting time
-    MPI_Barrier(A->comm);
-    si->start_time = MPI_Wtime();
-
-    int k = 0;                      // iteration number
-    int n = get_actual_map_size(A); // map size
-
-    double res;            // norm of residual
-    double coef_1, coef_2; // scalars
-    double wtime;          // timing variable
-
-    bool stop = false; // stop iteration or continue
-
-    double *rhs = NULL; // right-hand side
-    double *r = NULL;   // residual
-    double *p = NULL;   // search direction
-    double *Sp = NULL;  // [system matrix] * p
-
-    rhs = SAFEMALLOC(sizeof *rhs * n);
-    r = SAFEMALLOC(sizeof *r * n);
-
-    // right-hand side
-    build_rhs(A, W, data, r);
-
-    // compute initial residual
-    opmm(A, W, x, r);
-    for (int i = 0; i < n; i++) {
-        r[i] = rhs[i] - r[i]; // r = b - A * x0
-    }
-    res = scalar_prod_reduce(A->comm, n, pixpond, r, r, NULL);
-
-    // update SolverInfo
-    MPI_Barrier(A->comm);
-    wtime = MPI_Wtime();
-    solverinfo_update(si, &stop, k, res, wtime);
-
-    if (stop) {
-        // one stop condition already met, no iteration
-        solverinfo_finalize(si);
-        FREE(rhs);
-        FREE(r);
-        return;
-    }
-
-    // iterate to solve the system
-
-    // allocate buffers needed for the iteration
-    p = SAFEMALLOC(sizeof *p * n);
-    Sp = SAFEMALLOC(sizeof *Sp * n);
-
-    // set initial search direction (p0 = r0)
-    for (int i = 0; i < n; i++) {
-        p[i] = r[i];
-    }
-
-    // iteration loop
-    while (!stop) {
-        // we are doing one more iteration step
-        k++;
-
-        // apply system matrix
-        opmm(A, W, p, Sp);
-
-        // compute (r,r) and (p,_p)
-        coef_1 = scalar_prod_reduce(A->comm, n, pixpond, r, r, NULL);
-        coef_2 = scalar_prod_reduce(A->comm, n, pixpond, p, Sp, NULL);
-
-        // update current vector (x = x + alpha * p)
-        // update residual (r = r - alpha * _p)
-        for (int i = 0; i < n; i++) {
-            x[i] = x[i] + (coef_1 / coef_2) * p[i];
-            r[i] = r[i] - (coef_1 / coef_2) * Sp[i];
-        }
-
-        if (si->use_exact_residual) {
-            // compute explicit residual
-            opmm(A, W, x, r);
-            for (int i = 0; i < n; i++) {
-                r[i] = rhs[i] - r[i]; // r = b - A * x_k
-            }
-        }
-
-        // compute updated (r,r)
-        coef_2 = scalar_prod_reduce(A->comm, n, pixpond, r, r, NULL);
-
-        // update search direction
-        for (int i = 0; i < n; i++) {
-            p[i] = r[i] + (coef_2 / coef_1) * p[i];
-        }
-
-        // compute residual
-        res = scalar_prod_reduce(A->comm, n, pixpond, r, r, NULL);
-
-        // update SolverInfo structure
-        // and check stop conditions
-        MPI_Barrier(A->comm);
-        wtime = MPI_Wtime();
-        solverinfo_update(si, &stop, k, res, wtime);
-    }
-
-    // free memory after the iteration
-    FREE(rhs);
-    FREE(r);
-    FREE(p);
-    FREE(Sp);
 
     solverinfo_finalize(si);
 }

@@ -37,10 +37,11 @@ Precond *newPrecondBJ(Mat *A, Tpltz *Nm1, double *cond, int *lhits,
 // 2lvl constructor
 // to be called after getting the Block Jacobi from the previous factory
 // and instantiating the weighting operator W
-void buildPrecond2lvl(Precond *P, Mat *A, WeightMatrix *W, double *x, double *d);
+void buildPrecond2lvl(Precond *P, const Mat *A, const WeightMatrix *W,
+                      const double *x, const double *d);
 
 // Product of the preconditioner with a map vector
-void applyPrecond(Precond *p, const Mat *A, double *g, double *Cg);
+void applyPrecond(const Precond *P, const Mat *A, const double *g, double *Cg);
 
 // Free memory of the preconditioner
 void PrecondFree(Precond *p);

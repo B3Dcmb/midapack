@@ -23,9 +23,7 @@
 #endif
 
 #include <mapmat/alm.h>
-#include <mapmat/butterfly.h>
 #include <mapmat/mapmat.h>
-#include <mapmat/ring.h>
 #include <mappraiser/precond.h>
 #include <mappraiser/weight.h>
 #include <midapack/memutils.h>
@@ -85,7 +83,7 @@ void accumulate_sample(const Mat *A, int64_t t, int *lhits, double *vpixBlock,
  * @param vpixBlock vector for storing W (size = nnz * Npixels)
  * @param lhits vector counting hits on pixels (size = Npixels)
  */
-void getlocalW(const Mat *A, Tpltz *Nm1, double *vpixBlock, int *lhits) {
+void getlocalW(const Mat *A, const Tpltz *Nm1, double *vpixBlock, int *lhits) {
     int nnz = A->nnz;               // number of non-zero entries
     int n = get_actual_map_size(A); // actual size of local map
 
@@ -493,7 +491,7 @@ int precondblockjacobilike(Mat *A, Tpltz *Nm1, double *vpixBlock,
 }
 
 // Complementary BJ routine for extra pixels
-int precond_bj_like_extra(Mat *A, Tpltz *Nm1, double *vpixBlock,
+int precond_bj_like_extra(const Mat *A, const Tpltz *Nm1, double *vpixBlock,
                           double *vpixBlock_inv, double *cond, int *lhits) {
     // MPI info
     int rank, size;
@@ -866,7 +864,7 @@ void build_Em1(const Mat *A, double **Z, double **AZ, const double *pixpond,
 }
 
 // AZ constructor to speed-up iterations with the 2lvl preconditioners
-void build_AZ(Mat *A, WeightMatrix *W, double **Z, int Zn, int n,
+void build_AZ(const Mat *A, const WeightMatrix *W, double **Z, int Zn, int n,
               double ***out_AZ) {
     double **AZ;
     double *v;
@@ -942,9 +940,9 @@ void mul_ZQtx(double **Z, const double *Qtx, double *vec, int Zn, int n) {
 
 // Lanczos procedure to build the deflation subspace of the "a posteriori" 2lvl
 // preconditioner
-void Lanczos_eig(Mat *A, WeightMatrix *W, double *x, const double *d,
-                 const double *pixpond, int K, double ***out_Ritz_vectors,
-                 double ***out_Ritz_vectors_AZ) {
+void Lanczos_eig(const Mat *A, const WeightMatrix *W, const double *x,
+                 const double *d, const double *pixpond, int K,
+                 double ***out_Ritz_vectors, double ***out_Ritz_vectors_AZ) {
     int i, j, k; // some indexes
     int m, n, rank, size;
     double st, t; // timers
@@ -1282,15 +1280,11 @@ void build_BJinv(Mat *A, Tpltz *Nm1, Mat *BJ_inv, double *cond, int *lhits,
             fflush(stdout);
         }
 
+#if 1
+        precond_bj_like_extra(A, Nm1, vpixBlock, vpixBlock_inv, cond, lhits);
+#else
         int n_ill = precond_bj_like_extra(A, Nm1, vpixBlock, vpixBlock_inv,
                                           cond, lhits);
-#if 0
-        if (rank == 0) {
-            print_matrix("first extra block (inverse)", A->nnz, A->nnz,
-                         vpixBlock_inv, A->nnz);
-            fflush(stdout);
-        }
-#endif
         if (n_ill > 0) {
             // some extra pixels are ill-conditioned
             // we can not estimate them
@@ -1300,6 +1294,7 @@ void build_BJinv(Mat *A, Tpltz *Nm1, Mat *BJ_inv, double *cond, int *lhits,
                 rank, n_ill);
             exit(EXIT_FAILURE);
         }
+#endif
     }
 
     MPI_Barrier(A->comm);
@@ -1388,20 +1383,20 @@ Precond *newPrecondBJ(Mat *A, Tpltz *Nm1, double *cond, int *lhits,
     return p;
 }
 
-void buildPrecond2lvl(Precond *p, Mat *A, WeightMatrix *W, double *x,
-                      double *d) {
-    if (p->ptype == BJ)
+void buildPrecond2lvl(Precond *P, const Mat *A, const WeightMatrix *W,
+                      const double *x, const double *d) {
+    if (P->ptype == BJ)
         return;
 
     // 2-lvl specific allocations
-    p->Qg = SAFECALLOC(p->n, sizeof *p->Qg);
-    p->AQg = SAFECALLOC(p->n, sizeof *p->AQg);
-    p->w = SAFECALLOC(p->Zn, sizeof *p->w);     // Zt * x
-    p->Qtx = SAFECALLOC(p->Zn, sizeof *p->Qtx); // Em1 * Zt * x
+    P->Qg = SAFECALLOC(P->n, sizeof *P->Qg);
+    P->AQg = SAFECALLOC(P->n, sizeof *P->AQg);
+    P->w = SAFECALLOC(P->Zn, sizeof *P->w);     // Zt * x
+    P->Qtx = SAFECALLOC(P->Zn, sizeof *P->Qtx); // Em1 * Zt * x
 
-    if (p->ptype == APRIORI) {
-        build_Z(A, p->Zn, &p->Z);
-        build_AZ(A, W, p->Z, p->Zn, p->n, &p->AZ);
+    if (P->ptype == APRIORI) {
+        build_Z(A, P->Zn, &P->Z);
+        build_AZ(A, W, P->Z, P->Zn, P->n, &P->AZ);
         return;
     }
 
@@ -1413,7 +1408,7 @@ void buildPrecond2lvl(Precond *p, Mat *A, WeightMatrix *W, double *x,
 
     // Compute deflation subspace and projected deflation subspace
     double st = MPI_Wtime();
-    Lanczos_eig(A, W, x, d, p->pixpond, p->Zn, &(p->Z), &(p->AZ));
+    Lanczos_eig(A, W, x, d, P->pixpond, P->Zn, &P->Z, &P->AZ);
     double elapsed = MPI_Wtime() - st;
 
     if (rank == 0) {
@@ -1423,7 +1418,7 @@ void buildPrecond2lvl(Precond *p, Mat *A, WeightMatrix *W, double *x,
     }
 
     st = MPI_Wtime();
-    build_Em1(A, p->Z, p->AZ, p->pixpond, p->Zn, p->n, &(p->Em1));
+    build_Em1(A, P->Z, P->AZ, P->pixpond, P->Zn, P->n, &P->Em1);
     elapsed = MPI_Wtime() - st;
 
     if (rank == 0) {
@@ -1432,25 +1427,25 @@ void buildPrecond2lvl(Precond *p, Mat *A, WeightMatrix *W, double *x,
 }
 
 // General routine for applying the preconditioner to a map vector
-void applyPrecond(Precond *p, const Mat *A, double *g, double *Cg) {
-    if (p->ptype == BJ) {
-        MatVecProd(&p->BJ_inv, g, Cg);
+void applyPrecond(const Precond *P, const Mat *A, const double *g, double *Cg) {
+    if (P->ptype == BJ) {
+        MatVecProd(&P->BJ_inv, g, Cg);
         return;
     }
 
     // 2lvl
-    build_Qtx(A, p->Z, p->Em1, g, p->pixpond, p->w, p->Qtx, p->Zn, p->n);
-    mul_ZQtx(p->Z, p->Qtx, p->Qg, p->Zn, p->n);
-    mul_ZQtx(p->AZ, p->Qtx, p->AQg, p->Zn, p->n);
+    build_Qtx(A, P->Z, P->Em1, g, P->pixpond, P->w, P->Qtx, P->Zn, P->n);
+    mul_ZQtx(P->Z, P->Qtx, P->Qg, P->Zn, P->n);
+    mul_ZQtx(P->AZ, P->Qtx, P->AQg, P->Zn, P->n);
 
-    for (int i = 0; i < p->n; ++i) {
-        p->AQg[i] = g[i] - p->AQg[i];
+    for (int i = 0; i < P->n; ++i) {
+        P->AQg[i] = g[i] - P->AQg[i];
     }
 
-    MatVecProd(&(p->BJ_inv), p->AQg, Cg);
+    MatVecProd(&P->BJ_inv, P->AQg, Cg);
 
-    for (int i = 0; i < p->n; ++i) {
-        Cg[i] += p->Qg[i];
+    for (int i = 0; i < P->n; ++i) {
+        Cg[i] += P->Qg[i];
     }
 }
 
