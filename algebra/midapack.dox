@@ -46,6 +46,27 @@
 ///
 /// \page sect_team MIDAPACK development team
 ///
+/// 2022-:
+/// \arg Simon Biquard (developer);
+/// \arg Hamza El Bouhargani (developer);
+/// \arg Laura Grigori (coordinator);
+/// \arg Magdy Morshed (developer);
+/// \arg Radek Stompor (coordinator).
+///
+/// 2019-2022:
+/// \arg Hamza El Bouhargani (developer);
+/// \arg Thibault Cimic (developer);
+/// \arg Laura Grigori (coordinator);
+/// \arg Niels Guilbert (developer);
+/// \arg Aygul Jamal (developer);
+/// \arg Radek Stompor (coordinator).
+///
+/// 2015:
+/// \arg Sebastien Cayrols (developer)
+/// \arg Laura Grigori (coordinator);
+/// \arg Radek Stompor (coordinator).
+///
+/// 2009-2012:
 /// \arg Pierre Cargemel (developer);
 /// \arg Fr&eacute;d&eacute;ric Dauvergne (developer);
 /// \arg Giulio Fabbian (validator); 
@@ -74,27 +95,11 @@
 ///
 /// \page page_install Installation
 ///
-/// Once you have downloaded Midapack_1.1.tgz, create a directory where you want to install it, for example midapackdir.
-/// Then extract it and move to midapackdir.
-/// - mkdir midapackdir  
-/// - tar -xvzf Midapack_1.1.tgz -C midapackdir
-/// - cd midapackdir 
-///
-/// Here are several files and directories. Please refer to files README, LICENSE and INSTALL,
-/// to see under which conditions your distribution of Midapack is licensed and how to install it.
-///
-/// Midapack requires few libraries : mpi, openmp, fftw3.
-/// Ensure these libraries are available on your system.
-/// To build the library, run the following commands :
-/// - ./configure  
-/// - make
-///
-/// The first command generate Makefiles.
-/// The second one compiles sources and build the library, libmidapack.a, in midapackdir/lib  
+/// For detailed instructions on how to install the library, please refer to: https://github.com/B3Dcmb/midapack/blob/master/INSTALL.md.
 ///
 /// \page sect_bugreporting Bug tracking and reporting
 ///
-/// To report bugs please use the following website:
+/// To report bugs please open an issue at :
 ///
-/// http://code.google.com/p/cmb-da-library/
+/// https://github.com/B3Dcmb/midapack/issues
 ///

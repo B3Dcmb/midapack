@@ -18,12 +18,11 @@ portable analysis tools suitable for Cosmic Microwave Background (CMB) data anal
 and thus addressing the existing gap between the low level numerical libraries, such as 
 FFTW, SCALAPACK, LAPACK, PLASMA, etc, and high level tools needed to analyze actual CMB data.
 
-The library is designed to provide all essential functionality needed for the CMB data analysis.
-It will include new algorithm solutions and their implementation, capable of dealing with the 
-huge data volumes, while giving the user flexibility in constructing their own codes
+The library is designed to provide essential functionalities needed for the CMB data analysis.
+It includes new algorithmic solutions and their implementation, capable of dealing with
+massive data volumes, while giving the users flexibility in constructing their own codes
 according to their preferences and instrument and data characteristics.
 
-The core of the library comes with example codes stored in the directory 'algebra/test'.
 Since version 2.0 the repository also includes a fully-fledged, massively parallel map-making code, MAPPRAISER.
 
 Getting some more information
@@ -31,9 +30,15 @@ Getting some more information
 
 You can download the last release from github: https://github.com/B3Dcmb/midapack 
 
-and find an online manual (currently only available for version 1.1b) at: https://b3dcmb.github.io/midapack/
+We are currently working on updating the online manual at: https://b3dcmb.github.io/midapack/ which was released with version 1.1b.
+The manual contains descriptions of the core algorithms and implementation details that remain relevant for the latest version, and that users may find useful.
 
 The novel features of version 2.0 are described in detail in the MAPPRAISER software release paper: https://arxiv.org/abs/2112.03370
+
+Installation
+-------------
+
+For detailed instructions on how to install the library, please refer to: https://github.com/B3Dcmb/midapack/blob/master/INSTALL.md.
 
 Project collaborators
 ---------------------
@@ -43,32 +48,41 @@ AstroParticule et Cosmologie (UMR7164), Centre Pierre Binétruy (IRL2007) and Al
 
 The full list of collaborators, including application scientists, validators, etc, can be found:
 
-2019-:   http://b3dcmb.in2p3.fr/?page_id=405
+2019-2022:   http://b3dcmb.in2p3.fr/?page_id=405
 
 2009-2012:   http://www.apc.univ-paris7.fr/APC_CS/Recherche/Adamis/MIDAS09/partners.html
 
 Development Team
 ----------------
+ 2022-:
+  Simon Biquard (developer);
+  Hamza El Bouhargani (developer);
+  Laura Grigori (coordinator);
+  Magdy Morshed (developer);
+  Radek Stompor (coordinator).
 
-2019-:
-  Hamza El Bouhargani
-  Thibault Cimic
-  Aygul Jamal
-  Laura Grigori (coordinator)
-  Radek Stompor (coordinator)
+ 2019-2022:
+  Hamza El Bouhargani (developer);
+  Thibault Cimic (developer);
+  Laura Grigori (coordinator);
+  Niels Guilbert (developer);
+  Aygul Jamal (developer);
+  Radek Stompor (coordinator).
 
-2015: 
-  Sebastien Cayrols
-  Laura Grigori (coordinator)
-  Radek Stompor (coordinator)
+ 2015:
+  Sebastien Cayrols (developer)
+  Laura Grigori (coordinator);
+  Radek Stompor (coordinator).
 
-2009-2012:
-  Pierre Cargemel
-  Frederic Dauvergne
-  Maude Le Jeune
-  Antoine Rogier
-  Laura Grigori (coordinator)
-  Radek Stompor (coordinator)
+ 2009-2012:
+  Pierre Cargemel (developer);
+  Frederic Dauvergne (developer);
+  Giulio Fabbian (validator);
+  Laura Grigori (coordinator);
+  Maude Le Jeune (senior developer);
+  Antoine Rogier (developer);
+  Mikolaj Szydlarski (developer);
+  Radek Stompor (coordinator).
 
 How to use it
 -------------
@@ -79,11 +93,8 @@ modern Unix-like system after minimal porting efforts.
 The source code is delivered in a set of directories:
 
 - The /algebra directory contains the sources files for the core low-level library. It's composed by the
-differents modules of the Midapack library (please refer to the website for more details). 
+differents modules of the Midapack library (please refer to the paper and the website for more details).
 You can directly compile theses files and link the generated binaries with your own program.
-
-- The /algebra/test directory contains some Utility/demonstration programs to show some examples of
-how to use the library fonctionnalities.
 
 - The /mappraiser directory contains the MAPPRAISER map-making library.
 
@@ -92,5 +103,6 @@ can be used with TOAST to process time-domain data.
 
 For more details please check:
 
-- The online documentation for version 1.1b: https://b3dcmb.github.io/midapack/
 - The MAPPRAISER software release paper: https://arxiv.org/abs/2112.03370
+- The online documentation for version 1.1b: https://b3dcmb.github.io/midapack/
+

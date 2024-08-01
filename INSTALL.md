@@ -40,6 +40,24 @@ It may be useful to prepend the installation path to your `LD_LIBARY_PATH` by ad
 export LD_LIBRARY_PATH="<prefix>/lib:${LD_LIBRARY_PATH}"
 ```
 
+For macOS users, the dynamic linker searches for the library in `DYLD_LIBRARY_PATH`, however due to a security feature, any dynamic linker environment variable gets purged when launching protected applications, which means that a simple export will not work. A workaround solution is to add the installation path to the python usercustomize module which is loaded during initialization, following these steps:
+
+Create a usercustomize.py file: `~/.local/lib/global-packages/usercustomize.py`. Paste in it the following script:
+
+```bash
+import os
+
+software_lib_dir = <YOUR INSTALLATION PATH>
+existing_lib_path = os.environ.get("DYLD_FALLBACK_LIBRARY_PATH", "")
+os.environ["DYLD_FALLBACK_LIBRARY_PATH"] = software_lib_dir + ":" + existing_lib_path
+```
+
+Then, make this usercustomize script be used by any Python interpreter: In your ~/.zprofile add the following line:
+
+```bash
+export PYTHONPATH="$HOME/.local/lib/global-packages:$PYTHONPATH"
+```
+
 The user may want to use a LAPACK implementation provided by Intel MKL (Math Kernel Library).
 If so, the feature may be enabled by passing the option `-D MKL=ON`.
 
@@ -53,7 +71,8 @@ In that case, Mappraiser will also need:
 - METIS
 - preAlps (<https://github.com/NLAFET/preAlps>)
 
-The location of the preAlps libraries are to be specified through a variable `PREALPS_ROOT`, which may be an environment variable or simply set for a one-time use:
+The location of the preAlps libraries are to be specified through a variable `PREALPS_ROOT`,
+which may be an environment variable or simply set for a one-time use:
 
 ```bash
 PREALPS_ROOT=<path> cmake [...]
@@ -89,9 +108,3 @@ if __name__ == "__main__":
         main()
 ```
 
-## examples (deprecated)
-
-To build the examples binaries for the core library, do:
-
-- make mapmat_example to generate the examples from the mapmat module
-- make toeplitz_example to generate the examples from the Toeplitz module

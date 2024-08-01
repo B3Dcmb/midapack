@@ -10,7 +10,7 @@ add_library(midapack SHARED)
 
 add_subdirectory(mapmat)
 add_subdirectory(toeplitz)
-# add_subdirectory(templates)
+add_subdirectory(templates)
 
 # ----------------------------------------------------------------------------------------#
 # header files
@@ -20,6 +20,7 @@ target_include_directories(midapack PRIVATE
         "../include"
         "../include/mapmat"
         "../include/toeplitz"
+        "../include/templates"
         )
 
 #target_include_directories(midapack PUBLIC
@@ -48,6 +49,16 @@ endif ()
 
 if (FFTW_DOUBLE_LIB_FOUND)
     target_link_libraries(midapack PUBLIC FFTW::Double)
+endif ()
+
+# MKL / LAPACK (for templates module)
+
+if (MKL_FOUND)
+    target_compile_definitions(midapack PRIVATE HAVE_MKL)
+    target_include_directories(midapack PUBLIC "${MKL_INCLUDE_DIRS}")
+    target_link_libraries(midapack PUBLIC "${MKL_LIBRARIES}")
+elseif (LAPACK_FOUND)
+    target_link_libraries(midapack PUBLIC LAPACK::LAPACK)
 endif ()
 
 # ----------------------------------------------------------------------------------------#

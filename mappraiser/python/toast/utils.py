@@ -12,6 +12,20 @@ from toast.ops.memory_counter import MemoryCounter
 from toast.utils import Logger, dtype_to_aligned, memreport
 
 
+def block_index(iobs: int, ndet: int, idet: int) -> int:
+    """
+    Compute the index of the data block for given detector and observations indexes.
+
+    The memory layout of mappraiser buffers is such that the detectors of a single
+    observation are contiguous in memory:
+
+    [ det 1 | det 2 | ... | det N | det 1 | det 2 | ... | det N | ... ]
+
+    [      observation 1          |      observation 2          | ... ]
+    """
+    return iobs * ndet + idet
+
+
 # Here are some helper functions adapted from toast/src/ops/madam_utils.py
 def log_time_memory(
     data, timer=None, timer_msg=None, mem_msg=None, full_mem=False, prefix=""
@@ -37,12 +51,10 @@ def log_time_memory(
         toast_bytes = mem_count.apply(data)
 
         if data.comm.group_rank == 0:
-            msg = "{prefix} {mem_msg} Group {data.comm.group} memory = {toast_bytes / 1024**2:0.2f} GB"
+            msg = f"{prefix} {mem_msg} Group {data.comm.group} memory = {toast_bytes / 1024**2:0.2f} GB"
             log.debug(msg)
         if full_mem:
-            _ = memreport(
-                msg="{} {}".format(prefix, mem_msg), comm=data.comm.comm_world
-            )
+            _ = memreport(msg=f"{prefix} {mem_msg}", comm=data.comm.comm_world)
     if restart and timer is not None:
         timer.start()
 
@@ -85,9 +97,13 @@ def stage_local(
     if pair_diff and pair_skip:
         raise RuntimeError("pair_diff and pair_skip in stage_local are incompatible.")
 
+    # The line below redefines the offset variable to have dets of a single
+    # observation contiguous in memory
+    offset = 0
+
     for iobs, ob in enumerate(data.obs):
         local_dets = set(ob.select_local_detectors(flagmask=det_mask))
-        offset = interval_starts[iobs]
+        # offset = interval_starts[iobs]
         if pair_diff or pair_skip:
             for idet, pair in enumerate(pairwise(dets)):
                 if set(pair).isdisjoint(local_dets):
@@ -109,11 +125,15 @@ def stage_local(
                 if shared_flags is not None:
                     flags |= ob.shared["flags"][:] & shared_mask
 
-                slc = slice(
-                    (idet * nsamp + offset) * nnz,
-                    (idet * nsamp + offset + obs_samples) * nnz,
-                    1,
-                )
+                # deprecated data arrangement
+                # slc = slice(
+                #     (idet * nsamp + offset) * nnz,
+                #     (idet * nsamp + offset + obs_samples) * nnz,
+                #     1,
+                # )
+                slc = slice(offset * nnz, (offset + obs_samples) * nnz, 1)
+                offset += obs_samples
+
                 det_a, det_b = pair
                 if detdata_name is not None:
                     if select_qu:
@@ -168,11 +188,15 @@ def stage_local(
                 if shared_flags is not None:
                     flags |= ob.shared["flags"][:] & shared_mask
 
-                slc = slice(
-                    (idet * nsamp + offset) * nnz,
-                    (idet * nsamp + offset + obs_samples) * nnz,
-                    1,
-                )
+                # deprecated data arrangement
+                # slc = slice(
+                #     (idet * nsamp + offset) * nnz,
+                #     (idet * nsamp + offset + obs_samples) * nnz,
+                #     1,
+                # )
+                slc = slice(offset * nnz, (offset + obs_samples) * nnz, 1)
+                offset += obs_samples
+
                 if detdata_name is not None:
                     mappraiser_buffer[slc] = np.repeat(
                         ob.detdata[detdata_name][det].flatten(),
@@ -255,6 +279,216 @@ def stage_in_turns(
     return raw, wrapped
 
 
+def restore_local(
+    data,
+    nsamp,
+    view,
+    dets,
+    detdata_name,
+    detdata_dtype,
+    mappraiser_buffer,
+    interval_starts,
+    nnz,
+):
+    """Helper function to create a detdata buffer from mappraiser data.
+    (This function is taken from madam_utils.py)
+    """
+    # The line below redefines the offset variable to have dets of a single
+    # observation contiguous in memory
+    offset = 0
+
+    # interval = 0
+    for ob in data.obs:
+        # Create the detector data
+        if nnz == 1:
+            ob.detdata.create(detdata_name, dtype=detdata_dtype)
+        else:
+            ob.detdata.create(detdata_name, dtype=detdata_dtype, sample_shape=(nnz,))
+        # Loop over detectors
+        views = ob.view[view]
+        ldet = 0
+        for det in dets:
+            if det not in ob.local_detectors:
+                continue
+            # idet = ob.local_detectors.index(det)
+            # Loop over views
+            for ivw, vw in enumerate(views):
+                view_samples = None
+                if vw.start is None:
+                    # This is a view of the whole obs
+                    view_samples = ob.n_local_samples
+                else:
+                    view_samples = vw.stop - vw.start
+                # This was used in a deprecated data arrangement:
+                # offset = interval_starts[interval]
+                # slc = slice(
+                #     (idet * nsamp + offset) * nnz,
+                #     (idet * nsamp + offset + view_samples) * nnz,
+                #     1,
+                # )
+                slc = slice(
+                    (offset) * nnz,
+                    (offset + view_samples) * nnz,
+                    1,
+                )
+                if nnz > 1:
+                    views.detdata[detdata_name][ivw][ldet] = mappraiser_buffer[
+                        slc
+                    ].reshape((-1, nnz))
+                else:
+                    views.detdata[detdata_name][ivw][ldet] = mappraiser_buffer[slc]
+                offset += view_samples
+                # This was used in a deprecated data arrangement:
+                # interval += 1
+            ldet += 1
+    return
+
+
+def restore_in_turns(
+    data,
+    nodecomm,
+    n_copy_groups,
+    nsamp,
+    view,
+    dets,
+    detdata_name,
+    detdata_dtype,
+    mappraiser_buffer,
+    mappraiser_buffer_raw,
+    interval_starts,
+    nnz,
+):
+    """When restoring data, take turns copying it.
+    (This function is taken from madam_utils.py)
+    """
+    for copying in range(n_copy_groups):
+        if nodecomm.rank % n_copy_groups == copying:
+            # Our turn to copy data
+            restore_local(
+                data,
+                nsamp,
+                view,
+                dets,
+                detdata_name,
+                detdata_dtype,
+                mappraiser_buffer,
+                interval_starts,
+                nnz,
+            )
+            mappraiser_buffer_raw.clear()
+        nodecomm.barrier()
+    return
+
+
+def stack_padding(it):
+    """Turns a list of arrays of different sizes to a matrix which rows
+    are the different arrays padded with zeros such that they all have the same length."""
+
+    # stack padding may be memory inefficient but was found as a solution
+    # for the interfacing of double pointers in the C backend. Should remain until we find a better solution.
+    def resize(row, size):
+        new = np.array(row)
+        new.resize(size)
+        return new
+
+    # find longest row length
+    row_length = max(it, key=len).__len__()
+    mat = np.array([resize(row, row_length) for row in it])
+
+    return mat
+
+
+def stage_polymetadata(
+    data,
+    view,
+    params,
+    shared_flags,
+):
+    """Builds a set of arrays of indices that mark the changes in scan direction and/or mark
+    the switch from one polynomial baseline to the other (one array per local CES), also computes the number of baselines per CES
+    and the local number of CES"""
+    fsamp = params["fsample"]
+    # remove unit of fsamp to avoid problems when computing periodogram
+    try:
+        f_unit = fsamp.unit
+        fsamp = float(fsamp / (1.0 * f_unit))
+    except AttributeError:
+        pass
+    sweeptstamps_list = []
+    nsweeps_list = []
+    for ob in data.obs:
+        views = ob.view[view]
+        for ivw, vw in enumerate(views):
+            commonflags = views.shared[shared_flags][ivw]
+            sweeptstamps = [0]
+            if params["fixed_polybase"]:
+                base_sup_id = int(params["polybaseline_length"] * fsamp)
+                while base_sup_id < len(commonflags):
+                    sweeptstamps.append(base_sup_id)
+                    base_sup_id += int(params["polybaseline_length"] * fsamp)
+            else:
+                for iflg, flg in enumerate(commonflags[:-1]):
+                    # detect switch LR/RL scan and viceversa (turnarounds included in sweeps)
+                    # second condition was added because I noticed commonflags end with isolated turnaround flags, aka "3"
+                    # which in the current implementation will be ignored
+                    if (flg & commonflags[iflg + 1] < 8) and commonflags[iflg + 1] >= 8:
+                        sweeptstamps.append(iflg + 1)
+            sweeptstamps.append(len(commonflags))
+            nsweeps = len(sweeptstamps) - 1
+            sweeptstamps = np.array(sweeptstamps, dtype=np.int32)
+
+            sweeptstamps_list.append(sweeptstamps)
+            nsweeps_list.append(nsweeps)
+
+    sweeptstamps_list = stack_padding(sweeptstamps_list)
+    nsweeps_list = np.array(nsweeps_list, dtype=np.int32)
+
+    return sweeptstamps_list, nsweeps_list
+
+
+def stage_azscan(
+    data,
+    view,
+    az_name,
+):
+    """Stages the boresight azimuth scan for each local CES as well as the min and max values."""
+    az_list = []
+    az_min_list = []
+    az_max_list = []
+    for ob in data.obs:
+        views = ob.view[view]
+        for ivw, vw in enumerate(views):
+            az = views.shared[az_name][ivw]
+            az_list.append(az)
+            az_min_list.append(az.min())
+            az_max_list.append(az.max())
+
+    az_list = stack_padding(az_list)
+    az_min_list = np.array(az_min_list)
+    az_max_list = np.array(az_max_list)
+
+    return az_list, az_min_list, az_max_list
+
+
+def stage_hwpangle(
+    data,
+    view,
+    hwpangle_name,
+):
+    """Stage hwp angle for each local CES."""
+    hwp_angle_list = []
+    for ob in data.obs:
+        views = ob.view[view]
+        for ivw, vw in enumerate(views):
+            hwp_angle = views.shared[hwpangle_name][ivw]
+            if hwp_angle is not None:
+                hwp_angle_list.append(hwp_angle)
+
+    hwp_angle_list = stack_padding(hwp_angle_list)
+
+    return hwp_angle_list
+
+
 def apo_window(lambd: int, kind="chebwin") -> np.ndarray:
     if kind == "gaussian":
         q_apo = (
@@ -290,16 +524,14 @@ def compute_autocorrelations(
 ):
     """Compute the first lines of the blocks of the banded noise covariance and store them in the provided buffer."""
     offset = 0
-    nobs = len(ob_uids)
     for iob, uid in enumerate(ob_uids):
         for idet, det in enumerate(dets):
-            blocksize = local_block_sizes[idet * nobs + iob]
+            # index of data block to retrieve noise data from staged buffer
+            iblock = block_index(iob, len(dets), idet)
+            blocksize = local_block_sizes[iblock]
             nsetod = mappraiser_noise[offset : offset + blocksize]
-            slc = slice(
-                (idet * nobs + iob) * lambda_,
-                (idet * nobs + iob) * lambda_ + lambda_,
-                1,
-            )
+
+            slc = slice(iblock * lambda_, (iblock + 1) * lambda_, 1)
             buffer_inv_tt[slc], _ = noise_autocorrelation(
                 nsetod,
                 blocksize,
