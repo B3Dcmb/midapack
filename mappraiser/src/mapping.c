@@ -15,7 +15,7 @@
 #endif
 
 #include <mappraiser/mapping.h>
-#include <midapack/memutils.h>
+#include <memutils.h>
 
 void print_gap_stgy(GapStrategy gs) {
     switch (gs) {

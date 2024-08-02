@@ -26,7 +26,7 @@
 #include <mapmat/mapmat.h>
 #include <mappraiser/precond.h>
 #include <mappraiser/weight.h>
-#include <midapack/memutils.h>
+#include <memutils.h>
 
 #define eps 1.0e-15
 

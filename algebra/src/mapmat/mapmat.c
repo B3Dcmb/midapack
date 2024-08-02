@@ -27,7 +27,7 @@
 #include <mapmat/cindex.h>
 #include <mapmat/csort.h>
 #include <mapmat/mapmat.h>
-#include <midapack/memutils.h>
+#include <memutils.h>
 
 #ifdef W_MPI
 #include <mapmat/butterfly.h>

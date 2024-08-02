@@ -10,7 +10,7 @@
 #include <stdio.h>
 
 #include <mappraiser/solver_info.h>
-#include <midapack/memutils.h>
+#include <memutils.h>
 
 /// @brief Print current solver parameters and information
 /// @param si SolverInfo struct

@@ -21,7 +21,7 @@
 #include <mappraiser/pcg_true.h>
 #include <mappraiser/precond.h>
 #include <mappraiser/weight.h>
-#include <midapack/memutils.h>
+#include <memutils.h>
 
 #ifdef WITH_ECG
 #include <mappraiser/ecg.h>

@@ -18,7 +18,7 @@
 #include <mappraiser/mapping.h>
 #include <mappraiser/solver_info.h>
 #include <mappraiser/weight.h>
-#include <midapack/memutils.h>
+#include <memutils.h>
 
 WeightMatrix createWeightMatrix(Tpltz *Nm1, Tpltz *N, Gap *G, WeightStgy stgy) {
     // assume everything already allocated
