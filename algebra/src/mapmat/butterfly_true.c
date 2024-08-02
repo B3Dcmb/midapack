@@ -1,4 +1,4 @@
-/** @file   truebutterfly.c
+/** @file butterfly_true.c
     @brief  Implementation of routines for butterfly-like communication scheme,
    with classic pair wise butterfly scheme.
     @note  Copyright (c) 2010-2012 APC CNRS Université Paris Diderot. This
