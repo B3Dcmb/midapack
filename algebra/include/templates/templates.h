@@ -50,7 +50,7 @@ typedef struct Templates {
   TemplateMetadata mdata; // Contains scan information useful for building and applyin template filters
   int nclass; // number of template classes
   int nb_templates_loc; // local number of templates
-  int store_hwp; // Flag to store all HWPSS orders once before single template expansion  
+  int store_hwp; // Flag to store all HWPSS orders once before single template expansion
 } Templates;
 
 typedef struct hwpss_w {
@@ -83,9 +83,6 @@ int BuildKernel(TemplateClass *X, int n, double *B, double w, int *sweeptstamps,
 
 /* Inverting the Kernel Blocks */
 int InvKernel(double *B, int n, double *Binv);
-
-void transpose_nn(double *A, int n);
-int inverse_svd(int m, int n, int lda,  double *a);
 
 double P0(double x);
 

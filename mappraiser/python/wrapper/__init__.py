@@ -42,8 +42,22 @@ def encode_comm(comm):
     return MPI_Comm.from_address(comm_ptr)
 
 
+# A wrapper for ndpointer allowing to pass NULL pointers
+def wrapped_ndptr(*args, **kwargs):
+    base = npc.ndpointer(*args, **kwargs)
+
+    def from_param(cls, obj):
+        if obj is None:
+            return obj
+        return base.from_param(obj)
+
+    return type(base.__name__, (base,), {"from_param": classmethod(from_param)})
+
+
+array_ptrs_type = wrapped_ndptr(dtype=np.uintp, ndim=1, flags="C")
+
 ############################################################
-# MLmap routine
+# Map-making routines (MLmap, MTmap)
 ############################################################
 
 _mappraiser.MLmap.restype = None
@@ -83,26 +97,25 @@ _mappraiser.MLmap.argtypes = [
 
 
 def MLmap(
-        comm,
-        params,
-        data_size_proc,
-        nb_blocks_loc,
-        local_blocks_sizes,
-        detindxs,
-        obsindxs,
-        telescopes,
-        nnz,
-        pixels,
-        pixweights,
-        signal,
-        noise,
-        inv_tt,
-        tt,
+    comm,
+    params,
+    data_size_proc,
+    nb_blocks_loc,
+    local_blocks_sizes,
+    detindxs,
+    obsindxs,
+    telescopes,
+    nnz,
+    pixels,
+    pixweights,
+    signal,
+    noise,
+    inv_tt,
+    tt,
 ):
     """
-    Compute the MLMV solution of the GLS estimator, assuming uniform detector weighting and a single PSD
-    for all stationary intervals.
-    (These assumptions will be removed in future updates)
+    Compute the MLMV solution of the GLS estimator, assuming uniform detector
+    weighting and a single PSD for all stationary intervals.
 
     Parameters
     ----------
@@ -111,6 +124,9 @@ def MLmap(
     * `data_size_proc`: Data sizes in full communicator
     * `nb_blocks_loc`: Number of local observations
     * `local_blocks_sizes`: Local data sizes
+    * `detindxs`: Detector ID for each block
+    * `obsindxs`: Observation ID for each block
+    * `telescopes`: Telescope ID for each block
     * `nnz`: Number of non-zero elements per row
     * `pixels`: Pixel indices of non-zero values
     * `pixweights`: Corresponding matrix values
@@ -165,6 +181,190 @@ def MLmap(
     return
 
 
+_mappraiser.MTmap.restype = None
+_mappraiser.MTmap.argtypes = [
+    MPI_Comm,  # comm
+    ct.c_char_p,  # outpath
+    ct.c_char_p,  # ref
+    ct.c_int,  # solver
+    ct.c_int,  # precond
+    ct.c_int,  # Z_2lvl
+    ct.c_int,  # pointing_commflag
+    ct.c_double,  # tol
+    ct.c_int,  # maxIter
+    ct.c_int,  # enlFac
+    ct.c_int,  # ortho_alg
+    ct.c_int,  # bs_red
+    ct.c_int,  # nside
+    ct.c_int,  # gap_stgy
+    ct.c_bool,  # do_gap_filling
+    ct.c_uint64,  # realization
+    npc.ndpointer(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"),  # data_size_proc
+    ct.c_int,  # nb_blocks_loc
+    npc.ndpointer(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"),  # local_blocks_sizes
+    ct.c_double,  # sample_rate
+    npc.ndpointer(dtype=np.uint64, ndim=1, flags="C_CONTIGUOUS"),  # detindxs
+    npc.ndpointer(dtype=np.uint64, ndim=1, flags="C_CONTIGUOUS"),  # obsindxs
+    npc.ndpointer(dtype=np.uint64, ndim=1, flags="C_CONTIGUOUS"),  # telescopes
+    ct.c_int,  # Nnz
+    npc.ndpointer(dtype=PIXEL_TYPE, ndim=1, flags="C_CONTIGUOUS"),  # pixels
+    npc.ndpointer(dtype=WEIGHT_TYPE, ndim=1, flags="C_CONTIGUOUS"),  # pixweights
+    npc.ndpointer(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"),  # signal
+    npc.ndpointer(dtype=SIGNAL_TYPE, ndim=1, flags="C_CONTIGUOUS"),  # noise
+    ct.c_int,  # lambda
+    npc.ndpointer(dtype=INVTT_TYPE, ndim=1, flags="C_CONTIGUOUS"),  # inv_tt
+    npc.ndpointer(dtype=INVTT_TYPE, ndim=1, flags="C_CONTIGUOUS"),  # tt
+    ct.c_int,  # npoly
+    ct.c_int,  # nhwp
+    ct.c_double,  # delta_t
+    ct.c_int,  # ground
+    ct.c_int,  # n_sss_bins
+    array_ptrs_type,  # sweeptstamps
+    wrapped_ndptr(dtype=np.int32, ndim=1, flags="C_CONTIGUOUS"),  # nsweeps
+    array_ptrs_type,  # az
+    wrapped_ndptr(dtype=np.float64, ndim=1, flags="C_CONTIGUOUS"),  # az_min
+    wrapped_ndptr(dtype=np.float64, ndim=1, flags="C_CONTIGUOUS"),  # az_max
+    array_ptrs_type,  # hwp_angle
+    ct.c_int,  # nces
+]
+
+
+def MTmap(
+    comm,
+    params,
+    sweeptstamps,
+    nsweeps,
+    az,
+    az_min,
+    az_max,
+    hwp_angle,
+    nces,
+    data_size_proc,
+    nb_blocks_loc,
+    local_blocks_sizes,
+    detindxs,
+    obsindxs,
+    telescopes,
+    nnz,
+    pixels,
+    pixweights,
+    signal,
+    noise,
+    inv_tt,
+    tt,
+):
+    """
+    Compute a map estimator through the marginalization over a set of time-domain templates.
+
+    Parameters
+    ----------
+    * `comm`: Communicator over which data is distributed
+    * `params`: Parameter dictionary
+    * `sweeptstamps`: Index stamps indicating the borders of the compact supports of polynomial templates
+    * `nsweeps`: Number of polynomial supports for each local CES
+    * `az`: Boresight azimuth
+    * `az_min`: Minimum azimuth for each local CES
+    * `az_max`: Maximum azimuth for each local CES
+    * `hwp_angle`: HWP angle
+    * `nces`: Number of local CES
+    * `data_size_proc`: Data sizes in full communicator
+    * `nb_blocks_loc`: Number of local observations
+    * `local_blocks_sizes`: Local data sizes
+    * `detindxs`: Detector ID for each block
+    * `obsindxs`: Observation ID for each block
+    * `telescopes`: Telescope ID for each block
+    * `nnz`: Number of non-zero elements per row
+    * `pixels`: Pixel indices of non-zero values
+    * `pixweights`: Corresponding matrix values
+    * `signal`: Signal buffer
+    * `noise`: Noise buffer
+    * `inv_tt`: Inverse noise correlation
+    * `tt`: Noise autocorrelation
+
+    """
+    if not available:
+        raise RuntimeError("No libmappraiser available, cannot reconstruct the map")
+
+    outpath = params["path_output"].encode("ascii")
+    ref = params["ref"].encode("ascii")
+
+    fsamp = params["fsample"]
+    # remove unit of fsamp
+    try:
+        f_unit = fsamp.unit
+        fsamp = float(fsamp / (1.0 * f_unit))
+    except AttributeError:
+        pass
+
+    # Format 2D arrays as arrays of uintp (pointers: void*)
+    sweeptstamps_p = None
+    az_p = None
+    hwp_angle_p = None
+    if sweeptstamps is not None:
+        sweeptstamps_p = (
+            sweeptstamps.__array_interface__["data"][0]
+            + np.arange(sweeptstamps.shape[0]) * sweeptstamps.strides[0]
+        ).astype(np.uintp)
+    if az is not None:
+        az_p = (
+            az.__array_interface__["data"][0] + np.arange(az.shape[0]) * az.strides[0]
+        ).astype(np.uintp)
+    if hwp_angle is not None:
+        hwp_angle_p = (
+            hwp_angle.__array_interface__["data"][0]
+            + np.arange(hwp_angle.shape[0]) * hwp_angle.strides[0]
+        ).astype(np.uintp)
+
+    # Call C-function
+    _mappraiser.MTmap(
+        encode_comm(comm),
+        outpath,
+        ref,
+        params["solver"],
+        params["precond"],
+        params["Z_2lvl"],
+        params["ptcomm_flag"],
+        params["tol"],
+        params["maxiter"],
+        params["enlFac"],
+        params["ortho_alg"],
+        params["bs_red"],
+        params["nside"],
+        params["gap_stgy"],
+        params["do_gap_filling"],
+        params["realization"],
+        data_size_proc,
+        nb_blocks_loc,
+        local_blocks_sizes,
+        params["fsample"],
+        detindxs,
+        obsindxs,
+        telescopes,
+        nnz,
+        pixels,
+        pixweights,
+        signal,
+        noise,
+        params["lambda"],
+        inv_tt,
+        tt,
+        params["npoly"],
+        params["nhwp"],
+        params["hwpssbaseline_length"],
+        params["sss"],
+        params["sbins"],
+        sweeptstamps_p,
+        nsweeps,
+        az_p,
+        az_min,
+        az_max,
+        hwp_angle_p,
+        nces,
+    )
+
+    return
+
+
 ############################################################
 # gap filling routine
 ############################################################
@@ -190,19 +390,19 @@ _mappraiser.gap_filling.argtypes = [
 
 
 def gap_filling(
-        comm,
-        data_size_proc,
-        nb_blocks_loc,
-        local_blocks_sizes,
-        params,
-        detindxs,
-        obsindxs,
-        telescopes,
-        nnz,
-        pixels,
-        signal,
-        inv_tt,
-        tt,
+    comm,
+    data_size_proc,
+    nb_blocks_loc,
+    local_blocks_sizes,
+    params,
+    detindxs,
+    obsindxs,
+    telescopes,
+    nnz,
+    pixels,
+    signal,
+    inv_tt,
+    tt,
 ):
     if not available:
         raise RuntimeError("No libmappraiser available, cannot perform gap-filling")
@@ -245,11 +445,11 @@ _mappraiser.psd_from_tt.argtypes = [
 
 
 def psd_from_tt(
-        fftlen,
-        lambda_,
-        psdlen,
-        tt,
-        psd,
+    fftlen,
+    lambda_,
+    psdlen,
+    tt,
+    psd,
 ):
     # if not available:
     #     raise RuntimeError("No libmappraiser available, cannot call psd_from_tt")
@@ -284,15 +484,15 @@ _mappraiser.sim_noise_tod.argtypes = [
 
 
 def sim_noise_tod(
-        samples,
-        lambda_,
-        tt,
-        buf,
-        realization,
-        detindx,
-        obsindx,
-        telescope,
-        sample_rate,
+    samples,
+    lambda_,
+    tt,
+    buf,
+    realization,
+    detindx,
+    obsindx,
+    telescope,
+    sample_rate,
 ):
     # if not available:
     #     raise RuntimeError("No libmappraiser available, cannot call psd_from_tt")
@@ -328,12 +528,12 @@ _mappraiser.remove_baseline.argtypes = [
 
 
 def remove_baseline(
-        samples,
-        buf,
-        baseline,
-        valid,
-        w0,
-        rm,
+    samples,
+    buf,
+    baseline,
+    valid,
+    w0,
+    rm,
 ):
     _mappraiser.remove_baseline(
         samples,
@@ -371,20 +571,20 @@ _mappraiser.sim_constrained_block.argtypes = [
 
 
 def sim_constrained_block(
-        init,
-        finalize,
-        samples,
-        lambda_,
-        w0,
-        tt,
-        inv_tt,
-        noise,
-        pix,
-        realization,
-        detindx,
-        obsindx,
-        telescope,
-        sample_rate,
+    init,
+    finalize,
+    samples,
+    lambda_,
+    w0,
+    tt,
+    inv_tt,
+    noise,
+    pix,
+    realization,
+    detindx,
+    obsindx,
+    telescope,
+    sample_rate,
 ):
     _mappraiser.sim_constrained_block(
         init,

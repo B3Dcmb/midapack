@@ -12,6 +12,7 @@ target_compile_definitions(mappraiser PRIVATE "$<$<CONFIG:DEBUG>:DEBUG>")
 target_sources(mappraiser PRIVATE
         "create_toeplitz.c"
         "iofiles.c"
+        "make_maps.c"
         "mapping.c"
         "mappraiser.c"
         "weight.c"

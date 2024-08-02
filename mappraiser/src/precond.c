@@ -563,7 +563,7 @@ int precond_bj_like_extra(const Mat *A, const Tpltz *Nm1, double *vpixBlock,
 #endif
 
         // store rcond value
-        *(*cond + ipix) = rcond;
+        cond[ipix] = rcond;
 
         // invert the block using the previous LU decomposition
         invert_block(x, nb, lda, ipiv);

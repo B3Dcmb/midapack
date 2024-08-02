@@ -5,8 +5,11 @@
 #include <array>
 #include <cassert>
 #include <iostream>
-#include <mappraiser.h>
 #include <mpi.h>
+
+#include <mapmat/mapmat.h>
+#include <mappraiser/mapping.h>
+#include <toeplitz/toeplitz.h>
 
 #define NS 32
 #define NP 4

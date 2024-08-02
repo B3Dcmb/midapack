@@ -7,11 +7,14 @@
 #include <fstream>
 #include <iostream>
 #include <linux/limits.h>
-#include <mappraiser.h>
 #include <mpi.h>
 #include <string>
 #include <unistd.h>
 #include <vector>
+
+#include <mappraiser/create_toeplitz.h>
+#include <mappraiser/stopwatch.h>
+#include <toeplitz/toeplitz.h>
 
 #include "utils.h"
 
