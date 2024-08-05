@@ -35,9 +35,6 @@ std::string getExecDirectory() {
 }
 
 int main(int argc, char *argv[]) {
-    // Command line parser
-    argparse::ArgumentParser program("test_run");
-
     //____________________________________________________________
     // MPI initialization
 
@@ -74,35 +71,52 @@ int main(int argc, char *argv[]) {
     MPI_Barrier(MPI_COMM_WORLD);
 
     // Run parameters
+    // Uninitialized parameters are set by the command line parser
 
     int solver = 0;
-
-    int precond = 0; // default: block Jacobi
-    program.add_argument("--precond")
-        .store_into(precond)
-        .help("Choice of preconditioner");
-
-    int Z_2lvl = 32;
-    program.add_argument("--z2lvl").store_into(Z_2lvl).help(
-        "size of 2lvl deflation subspace");
-
-    int pointing_commflag = 6; // default: allreduce
-    program.add_argument("--ptcomm-flag")
-        .store_into(pointing_commflag)
-        .help("choice of communication pattern for pointing matrix");
-
+    int precond;
+    int Z_2lvl;
+    int pointing_commflag;
     double tol = 1e-6;
     int maxiter = 100;
     int enlFac = 1;
     int ortho_alg = 1;
     int bs_red = 0;
     int nside = 512;
-    int gap_stgy = 1;
-    bool do_gap_filling = false;
+    int gap_stgy;
+    bool do_gap_filling;
     uint64_t realization = 0;
     int Nnz = 3;
     int lambda = 8192;
     double sample_rate = 200;
+
+    // Command line parser
+    argparse::ArgumentParser program("test_run");
+
+    program.add_argument("-p", "--precond")
+        .default_value(0) // default: block Jacobi
+        .store_into(precond)
+        .help("choice of preconditioner");
+
+    program.add_argument("-z", "--z2lvl")
+        .default_value(32) // default: 32 Lanczos vectors
+        .store_into(Z_2lvl)
+        .help("size of 2lvl deflation subspace");
+
+    program.add_argument("--ptcomm-flag")
+        .default_value(6) // default: allreduce
+        .store_into(pointing_commflag)
+        .help("choice of communication pattern for pointing matrix");
+
+    program.add_argument("-gs", "--gap-stgy")
+        .default_value(0) // default: conditioning
+        .store_into(gap_stgy)
+        .help("gap treatment strategy");
+
+    program.add_argument("-gf", "--gap-filling")
+        .flag() // default: no gap filling
+        .store_into(do_gap_filling)
+        .help("perform gap filling on the data vector");
 
     // parse command line arguments
     try {
