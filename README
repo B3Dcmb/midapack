@@ -30,7 +30,8 @@ Getting some more information
 
 You can download the last release from github: https://github.com/B3Dcmb/midapack 
 
-We are currently working on updating the online manual at: https://b3dcmb.github.io/midapack/ which was released with version 1.1b. The manual contains descriptions of the core algorithms and implementation details that remain relevant for the latest version, and that users may find useful.
+We are currently working on updating the online manual at: https://b3dcmb.github.io/midapack/ which was released with version 1.1b.
+The manual contains descriptions of the core algorithms and implementation details that remain relevant for the latest version, and that users may find useful.
 
 The novel features of version 2.0 are described in detail in the MAPPRAISER software release paper: https://arxiv.org/abs/2112.03370
 
@@ -56,28 +57,28 @@ Development Team
  2022-:
   Simon Biquard (developer);
   Hamza El Bouhargani (developer);
-  Laura Grigori (coordinator); 
+  Laura Grigori (coordinator);
   Magdy Morshed (developer);
   Radek Stompor (coordinator).
 
  2019-2022:
   Hamza El Bouhargani (developer);
-  Thibault Cimic (developer); 
-  Laura Grigori (coordinator); 
+  Thibault Cimic (developer);
+  Laura Grigori (coordinator);
   Niels Guilbert (developer);
   Aygul Jamal (developer);
   Radek Stompor (coordinator).
 
  2015:
   Sebastien Cayrols (developer)
-  Laura Grigori (coordinator); 
+  Laura Grigori (coordinator);
   Radek Stompor (coordinator).
 
  2009-2012:
   Pierre Cargemel (developer);
   Frederic Dauvergne (developer);
-  Giulio Fabbian (validator); 
-  Laura Grigori (coordinator); 
+  Giulio Fabbian (validator);
+  Laura Grigori (coordinator);
   Maude Le Jeune (senior developer);
   Antoine Rogier (developer);
   Mikolaj Szydlarski (developer);
@@ -92,7 +93,7 @@ modern Unix-like system after minimal porting efforts.
 The source code is delivered in a set of directories:
 
 - The /algebra directory contains the sources files for the core low-level library. It's composed by the
-differents modules of the Midapack library (please refer to the paper and the website for more details). 
+differents modules of the Midapack library (please refer to the paper and the website for more details).
 You can directly compile theses files and link the generated binaries with your own program.
 
 - The /mappraiser directory contains the MAPPRAISER map-making library.

@@ -35,16 +35,16 @@
 # Python
 *.pyc
 
-#Cmake build
+# Cmake build
 build
+cmake-build-*
 
 # System files
 .DS_Store
 
-# VSCode stuff
-.vscode/*
-*.code-workspace
-
-# Directories to ignore
-mappraiser/src/test
-algebra/test
+# Editor stuff
+.vscode
+.cache
+.idea
+.fleet
+.zed

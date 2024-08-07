@@ -20,6 +20,8 @@
     @author Pierre Cargemel
     @date April 2012*/
 
+#include <mapmat/alm.h>
+
 /** Set some map values into a submap values array
     @param mapval array of values
     @param submapval  array of values
@@ -28,7 +30,9 @@ void m2s(double *mapval, double *submapval, int *subset, int count) {
     int i;
 
     // #pragma omp parallel for
-    for (i = 0; i < count; i++) { submapval[i] = mapval[subset[i]]; }
+    for (i = 0; i < count; i++) {
+        submapval[i] = mapval[subset[i]];
+    }
 }
 
 /** @brief Local mat vec prod
@@ -39,7 +43,8 @@ void lmatvecprod(int *ind, double *val, int m, int nnz, double *in,
                  double *out) {
     int i, j, k;
     k = 0;
-    for (i = 0; i < m; i++) { /*<local transform reduce*/
+    for (i = 0; i < m; i++) {
+        /*<local transform reduce*/
         for (j = 0; j < nnz; j++) {
             out[i] += val[k] * in[ind[k]];
             k++;
@@ -54,7 +59,9 @@ void lmatvecprod(int *ind, double *val, int m, int nnz, double *in,
 void s2m_sum(double *mapval, double *submapval, int *subset, int count) {
     int i;
     // #pragma omp parallel for
-    for (i = 0; i < count; i++) { mapval[subset[i]] += submapval[i]; }
+    for (i = 0; i < count; i++) {
+        mapval[subset[i]] += submapval[i];
+    }
 }
 
 /** @brief assign submap values the submap values array
@@ -63,7 +70,9 @@ void s2m_sum(double *mapval, double *submapval, int *subset, int count) {
     @return array of indices*/
 void s2m(double *mapval, double *submapval, int *subset, int count) {
     int i;
-    for (i = 0; i < count; i++) { mapval[subset[i]] = submapval[i]; }
+    for (i = 0; i < count; i++) {
+        mapval[subset[i]] = submapval[i];
+    }
 }
 
 /** @brief Sum  submap values the submap values array
@@ -73,7 +82,8 @@ void cnt_nnz_dot_prod(double *out, double *in, int cnt, int *ind, double *val,
     int i, j, k;
     k = 0;
     for (i = 0; i < cnt; i++) /*<local transform reduce*/
-        for (j = 0; j < nnz; j++) out[ind[k]] += val[k] * in[i];
+        for (j = 0; j < nnz; j++)
+            out[ind[k]] += val[k] * in[i];
 }
 
 #if OPENMP
@@ -84,7 +94,8 @@ void omp_cnt_nnz_dot_prod(double *out, double *in, int cnt, int *ind,
     int i, j, k;
     k = 0;
     for (i = 0; i < cnt; i++) /*<local transform reduce*/
-        for (j = 0; j < nnz; j++) out[ind[k]] += val[k] * in[i];
+        for (j = 0; j < nnz; j++)
+            out[ind[k]] += val[k] * in[i];
 }
 #endif
 

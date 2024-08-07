@@ -20,6 +20,8 @@
     @author Pierre Cargemel
     @date April 2012*/
 
+#include <mapmat/als.h>
+
 /** Compute cardinal(A)
     Perform a loop onto elements of a set, counting different elements.
     The array should be in ascending order with possible redundancy.
@@ -29,7 +31,7 @@
 int card(int *A, int nA) {
     int i;
     int tmp = A[0];
-    int c   = 1;
+    int c = 1;
     for (i = 1; i < nA; i++) {
         if (A[i] != tmp) {
             c++;
@@ -38,7 +40,6 @@ int card(int *A, int nA) {
     }
     return c;
 }
-
 
 /** Merge redundant elements.
     Fill a new array containing elements of A, merging redundant elements.
@@ -59,7 +60,6 @@ void merge(int *A, int nA, int *B) {
     }
 }
 
-
 /** Compute \f$ card(A_1 \cup A_2) \f$
     A1 and A2 should be two ascending ordered monotmony sets.
     of size n1 and n2.
@@ -71,14 +71,8 @@ void merge(int *A, int nA, int *B) {
     @ingroup matmap_group22*/
 int card_or(int *A1, int n1, int *A2, int n2) {
     int i = 0, j = 0, k = 0;
-    while ((i < n1) || (j < n2)) {
-        if ((i == n1) || (j == n2)) {
-            if (i == n1) {
-                j++;
-            } else {
-                i++;
-            }
-        } else if (A1[i] < A2[j]) {
+    while (i < n1 || j < n2) {
+        if (A1[i] < A2[j]) {
             if (i < n1) {
                 i++;
             } else {
@@ -91,8 +85,12 @@ int card_or(int *A1, int n1, int *A2, int n2) {
                 i++;
             }
         } else {
-            if (i < n1) { i++; }
-            if (j < n2) { j++; }
+            if (i < n1) {
+                i++;
+            }
+            if (j < n2) {
+                j++;
+            }
         }
         k++;
     }
@@ -137,16 +135,8 @@ int card_and(int *A1, int n1, int *A2, int n2) {
     @ingroup matmap_group22*/
 int set_or(int *A1, int n1, int *A2, int n2, int *A1orA2) {
     int i = 0, j = 0, k = 0;
-    while ((i < n1) || (j < n2)) {
-        if ((i == n1) || (j == n2)) {
-            if (i == n1) {
-                A1orA2[k] = A2[j];
-                j++;
-            } else {
-                A1orA2[k] = A1[i];
-                i++;
-            }
-        } else if (A1[i] < A2[j]) {
+    while (i < n1 || j < n2) {
+        if (A1[i] < A2[j]) {
             if (i < n1) {
                 A1orA2[k] = A1[i];
                 i++;
@@ -223,7 +213,6 @@ int map_and(int *A1, int n1, int *A2, int n2, int *mapA1andA2) {
     }
     return k;
 }
-
 
 /** Transform a subset into a mapper array
     Parse a subset and replace element by his index in the larger set.
