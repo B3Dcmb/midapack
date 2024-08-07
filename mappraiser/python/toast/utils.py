@@ -460,22 +460,22 @@ def stage_hwpangle(
     return hwp_angle_list
 
 
-def apo_window(lambd: int, kind="chebwin") -> np.ndarray:
+def apo_window(lambd: int, kind: str = "chebwin") -> np.ndarray:
     if kind == "gaussian":
-        q_apo = (
-            3  # Apodization factor: cut happens at q_apo * sigma in the Gaussian window
-        )
-        window = scipy.signal.get_window(
-            ("general_gaussian", 1, 1 / q_apo * lambd), 2 * lambd
-        )
+        # Apodization factor: cut happens at q_apo * sigma in the Gaussian window
+        q_apo = 3
+        window = ("general_gaussian", 1, 1 / q_apo * lambd)
     elif kind == "chebwin":
         # https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.windows.chebwin.html#scipy.signal.windows.chebwin
+        # Attenuation level (dB)
         at = 150
-        window = scipy.signal.get_window(("chebwin", at), 2 * lambd)
+        window = ("chebwin", at)
     else:
         raise RuntimeError(f"Apodisation window '{kind}' is not supported.")
 
-    return np.fft.ifftshift(window)[:lambd]
+    window = scipy.signal.get_window(window, 2 * lambd)
+    window = np.fft.ifftshift(window)[:lambd]
+    return window
 
 
 def compute_autocorrelations(
@@ -610,9 +610,8 @@ def noise_autocorrelation(
     # Define apodization window
     # Only allow max lambda = nn//2
     if lambda_ > nn // 2:
-        raise RuntimeError(
-            f"Bandwidth cannot be larger than timestream (lambda={lambda_}, {nn=})."
-        )
+        msg = f"Bandwidth cannot be larger than timestream (lambda={lambda_}, {nn=})."
+        raise RuntimeError(msg)
 
     window = apo_window(lambda_, kind=apod_window_type)
 
@@ -634,28 +633,27 @@ def noise_autocorrelation(
     return inv_tt_w, tt_w
 
 
-def compute_psd_eff(tt, m) -> np.ndarray:
+def compute_psd_eff(tt, fftlen) -> np.ndarray:
     """
     Computes the power spectral density from a given autocorrelation function.
 
     :param tt: Input autocorrelation
     :param m: FFT size
 
-    :return: The PSD (size = m // 2 + 1 beacuse we are using np.fft.rfft)
+    :return: The PSD (size = fft_size // 2 + 1 because we are using np.fft.rfft)
     """
     # Form the cylic autocorrelation
     lag = len(tt)
-    circ_t = np.pad(tt, (0, m - lag), "constant")
+    circ_t = np.pad(tt, (0, fftlen - lag), "constant")
     if lag > 1:
         circ_t[-lag + 1 :] = np.flip(tt[1:], 0)
 
     # FFT
-    psd = np.fft.rfft(circ_t, n=m)
+    psd = np.abs(np.fft.rfft(circ_t, n=fftlen))
+    return psd
 
-    return np.real(psd)
 
-
-def compute_autocorr(psd, lambd: int, apo=True) -> np.ndarray:
+def compute_autocorr(psd, lambda_: int, apo=True) -> np.ndarray:
     """
     Computes the autocorrelation function from a given power spectral density.
 
@@ -663,14 +661,15 @@ def compute_autocorr(psd, lambd: int, apo=True) -> np.ndarray:
     :param lambd: Assumed noise correlation length
     :param apo: if True, apodize the autocorrelation function
 
-    :return: The autocorrelation function apodised and cut after `lambd` terms
+    :return: The autocorrelation function apodised and cut after `lambda_` terms
     """
 
     # Compute the inverse FFT
-    autocorr = np.fft.irfft(psd)[:lambd]
+    autocorr = np.fft.irfft(psd)[:lambda_]
 
     # Apodisation
     if apo:
-        return np.multiply(apo_window(lambd), autocorr)
-    else:
-        return autocorr
+        window = apo_window(lambda_)
+        autocorr *= window
+
+    return autocorr
