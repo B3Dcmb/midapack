@@ -148,12 +148,12 @@
 /// Ad = (double *) malloc(m*sizeof(double));             //Ad = A d
 /// Ag = (double *) malloc(m*sizeof(double));             //Ag = A g
 ///
-/// MatVecProd(&A, x, Ax_b, 0);           //Ax_b = Ax-b
+/// MatVecProd(&A, x, Ax_b);              //Ax_b = Ax-b
 /// for(i=0; i<m; i++)                    // 
 ///   Ax_b[i] = Ax_b[i]-b[i];             //
 ///
-/// TrMatVecProd(&A, Ax_b, d, 0);         //Ad = A d =  A A^t(Ax-b)
-/// MatVecProd(&A, d, Ad, 0);             //
+/// TrMatVecProd(&A, Ax_b, d);            //Ad = A d =  A A^t(Ax-b)
+/// MatVecProd(&A, d, Ad);                //
 ///
 /// resnew=0.0;                           //initial residu, resnew = ||A^t(Ax-b)|| = <Ax_b, Ad>
 /// localreduce=0.0;                      //
@@ -179,12 +179,12 @@
 ///   for(j=0; j<A.lcount; j++)           // x = x + (alpha/gamma) d 
 ///     x[j] = x[j] - (alpha/gamma)* d[j];//
 ///
-///   MatVecProd(&A, x, Ax_b, 0);         //Ax_b = Ax-b
+///   MatVecProd(&A, x, Ax_b);            //Ax_b = Ax-b
 ///   for(i=0; i<m; i++)                  // 
 ///     Ax_b[i] = Ax_b[i]-b[i];           //
 ///
-///   TrMatVecProd(&A, Ax_b, g, 0);       //g  = A^t(Ax-b)
-///   MatVecProd(&A, g, Ag, 0);           //Ag = AA^t(Ax-b)
+///   TrMatVecProd(&A, Ax_b, g);          //g  = A^t(Ax-b)
+///   MatVecProd(&A, g, Ag);              //Ag = AA^t(Ax-b)
 ///
 ///   resold=resnew;                      //residu = ||g|| = <Ax-b, Ag>
 ///   resnew=0.0;                         //
@@ -205,7 +205,7 @@
 ///   for(j=0; j<A.lcount; j++)           //d = -g + (beta/gamma) d
 ///     d[j]= -g[j] + (beta/gamma)*d[j];  // 
 ///
-///   MatVecProd(&A, d, Ad, 0);           //Ad = A d
+///   MatVecProd(&A, d, Ad);              //Ad = A d
 /// }
 /// \endcode
 ///

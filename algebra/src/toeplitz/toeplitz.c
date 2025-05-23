@@ -70,8 +70,10 @@ defined structures.
 **
 */
 
-
 #include "toeplitz.h"
+
+#include <math.h>
+#include <stdlib.h>
 
 #ifdef _OPENMP
 
@@ -79,9 +81,9 @@ defined structures.
 
 #endif
 
-#define max(a, b)                                                              \
-    ({                                                                         \
-        __typeof__(a) _a = (a);                                                \
+#define max(a, b)               \
+    ({                          \
+        __typeof__(a) _a = (a); \
         __typeof__(b) _b = (b);                                                \
         _a > _b ? _a : _b;                                                     \
     })
@@ -337,10 +339,10 @@ int tpltz_init(int n, int lambda, int *nfft, int *blocksize,
     // initialize fftw plan allocation flag
     int fftw_flag = flag_stgy.flag_fftw; // FFTW_FLAG;
 
-    // initialize fftw for omp threads
-    #ifdef fftw_MULTITHREADING
-        fftw_init_omp_threads(n_thread);
-    #endif
+    //    // initialize fftw for omp threads
+    // #ifdef fftw_MULTITHREADING
+    //    fftw_init_omp_threads(n_thread);
+    // #endif
 
     // initialize fftw array and plan for T (and make it circulant first)
     // t1=MPI_Wtime();
@@ -368,7 +370,7 @@ int tpltz_init(int n, int lambda, int *nfft, int *blocksize,
 
 
 //=========================================================================
-#ifdef fftw_MULTITHREADING
+
 /// Initialize omp threads for fftw plans.
 /** @ingroup group21
     Initialize omp threads for fftw plans. The number of threads used for ffts
@@ -376,22 +378,21 @@ int tpltz_init(int n, int lambda, int *nfft, int *blocksize,
    variable. fftw multithreaded option is controlled by fftw_MULTITHREADING
    macro.
 */
-int fftw_init_omp_threads(int fftw_n_thread) {
-    int status;
-
-    // initialize fftw omp threads
-    status = fftw_init_threads();
-    if (status == 0) return print_error_message(3, __FILE__, __LINE__);
-
-    // set the number of FFTW threads
-    fftw_plan_with_nthreads(fftw_n_thread);
-
-    if (PRINT_RANK == 0 && VERBOSE > 1 && VERBOSE_FIRSTINIT == 1)
-        printf("Using multithreaded FFTW with %d threads\n", fftw_n_thread);
-
-    return 0;
-}
-#endif
+// int fftw_init_omp_threads(int fftw_n_thread) {
+//     int status;
+//
+//     // initialize fftw omp threads
+//     status = fftw_init_threads();
+//     if (status == 0) return print_error_message(3, __FILE__, __LINE__);
+//
+//     // set the number of FFTW threads
+//     fftw_plan_with_nthreads(fftw_n_thread);
+//
+//     if (PRINT_RANK == 0 && VERBOSE > 1 && VERBOSE_FIRSTINIT == 1)
+//         printf("Using multithreaded FFTW with %d threads\n", fftw_n_thread);
+//
+//     return 0;
+// }
 
 
 //=========================================================================

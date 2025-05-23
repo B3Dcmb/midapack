@@ -60,6 +60,8 @@ strategy.
 
 #include "toeplitz.h"
 
+#include <stdlib.h>
+
 // r1.1 - Frederic Dauvergne (APC)
 // This is the sequential version of the mpi routines for the API.
 // The stbmm and gstbmm are the same as the mpi_stbmm and mpi_gstbmm but without

@@ -61,15 +61,17 @@ strategy.
 
 #include "toeplitz.h"
 
-#define max(a, b)                                                              \
-    ({                                                                         \
-        __typeof__(a) _a = (a);                                                \
-        __typeof__(b) _b = (b);                                                \
-        _a > _b ? _a : _b;                                                     \
+#include <stdlib.h>
+
+#define max(a, b)               \
+    ({                          \
+        __typeof__(a) _a = (a); \
+        __typeof__(b) _b = (b); \
+        _a > _b ? _a : _b;      \
     })
 
-#define min(a, b)                                                              \
-    ({                                                                         \
+#define min(a, b)               \
+    ({                          \
         __typeof__(a) _a = (a);                                                \
         __typeof__(b) _b = (b);                                                \
         _a < _b ? _a : _b;                                                     \
@@ -628,7 +630,7 @@ int mpi_stbmm(double **V, int64_t nrow, int m, int m_rowwise,
         } // end of if(nnew[id]>0)
     }     // end of loop over the blocks
 
-
+    free(nnew);
     free(LambdaIn);
 
 

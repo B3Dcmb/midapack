@@ -45,25 +45,25 @@
 /// Check here \ref sect_ackno "our funding sources" and \ref page_license "licensing info".
 ///
 /// \page sect_team MIDAPACK development team
-/// 
+///
 /// 2022-:
 /// \arg Simon Biquard (developer);
 /// \arg Hamza El Bouhargani (developer);
-/// \arg Laura Grigori (coordinator); 
+/// \arg Laura Grigori (coordinator);
 /// \arg Magdy Morshed (developer);
 /// \arg Radek Stompor (coordinator).
 ///
 /// 2019-2022:
 /// \arg Hamza El Bouhargani (developer);
-/// \arg Thibault Cimic (developer); 
-/// \arg Laura Grigori (coordinator); 
+/// \arg Thibault Cimic (developer);
+/// \arg Laura Grigori (coordinator);
 /// \arg Niels Guilbert (developer);
 /// \arg Aygul Jamal (developer);
 /// \arg Radek Stompor (coordinator).
 ///
 /// 2015:
 /// \arg Sebastien Cayrols (developer)
-/// \arg Laura Grigori (coordinator); 
+/// \arg Laura Grigori (coordinator);
 /// \arg Radek Stompor (coordinator).
 ///
 /// 2009-2012:

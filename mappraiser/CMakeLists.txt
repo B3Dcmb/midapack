@@ -6,6 +6,8 @@
 
 find_package(MPI REQUIRED)
 
+find_package(OpenMP)
+
 find_package(CFITSIO REQUIRED)
 
 option(ECG "Build mappraiser with ECG solver" OFF)
@@ -90,8 +92,9 @@ endif ()
 # Subdirectories
 # ----------------------------------------------------------------------------------------#
 
-add_subdirectory(src)
 add_subdirectory(examples)
+add_subdirectory(src)
+add_subdirectory(python)
 
 # Enable/disable build of the tests
 option(BUILD_TESTS "Build the tests" OFF)
@@ -99,6 +102,3 @@ option(BUILD_TESTS "Build the tests" OFF)
 if (BUILD_TESTS)
     add_subdirectory(test)
 endif ()
-
-# TODO handle Python package in a dedicated CMakeLists file?
-# add_subdirectory(python)

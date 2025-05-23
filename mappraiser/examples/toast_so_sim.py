@@ -28,76 +28,37 @@ import traceback
 
 import numpy as np
 
-from astropy import units as u
+# Make sure pixell uses a reliable FFT engine
+import pixell.fft
 
 # Import sotodlib.toast first, since that sets default object names
 # to use in toast.
 import sotodlib.toast as sotoast
-
 import toast
 import toast.ops
-
-from toast.mpi import MPI, Comm
-from toast.observation import default_values as defaults
-
+from astropy import units as u
 from sotodlib.toast import ops as so_ops
 from sotodlib.toast import workflows as wrk
-from sotodlib.toast.workflows.job import workflow_timer # This is only needed for the mappraiser workflow temporarily defined here
-
-# Make sure pixell uses a reliable FFT engine
-import pixell.fft
+from sotodlib.toast.workflows.job import (
+    workflow_timer,  # This is only needed for the mappraiser workflow temporarily defined here
+)
+from toast.mpi import MPI, Comm
+from toast.observation import default_values as defaults
+from toast.utils import Environment, Logger, memreport
 
 pixell.fft.engine = "fftw"
 
-from TOAST_interface import mappraiser
-
-
-def setup_mapmaker_mappraiser(operators):
-    """Add commandline args and operators for the MAPPRAISER mapmaker.
-
-    Args:
-        operators (list):  The list of operators to extend.
-
-    Returns:
-        None
-
-    """
-    if mappraiser.available():
-        operators.append(mappraiser.Mappraiser(name="mappraiser", enabled=False))
-
-
-@workflow_timer
-def mapmaker_mappraiser(job, otherargs, runargs, data):
-    """Run the MAPPRAISER mapmaker.
-
-    Args:
-        job (namespace):  The configured operators and templates for this job.
-        otherargs (namespace):  Other commandline arguments.
-        runargs (namespace):  Job related runtime parameters.
-        data (Data):  The data container.
-
-    Returns:
-        None
-
-    """
-    # Configured operators for this job
-    job_ops = job.operators
-
-    if mappraiser.available() and job_ops.mappraiser.enabled:
-        job_ops.mappraiser.params["path_output"] = otherargs.out_dir
-        job_ops.mappraiser.params["ref"] = otherargs.ref
-        job_ops.mappraiser.pixel_pointing = job.pixels_final
-        job_ops.mappraiser.stokes_weights = job.weights_final
-        job_ops.mappraiser.az_name = job_ops.sim_ground.azimuth
-        job_ops.mappraiser.hwpangle_name = job_ops.sim_ground.hwp_angle
-        job_ops.mappraiser.apply(data)
+from pymappraiser.workflow import mapmaker_mappraiser, setup_mapmaker_mappraiser
 
 
 def simulate_data(job, otherargs, runargs, comm):
-    log = toast.utils.Logger.get()
+    log = Logger.get()
     job_ops = job.operators
 
     if job_ops.sim_ground.enabled:
+        # do not split observations by wafer
+        # FIXME: this is a hack because splitting by wafer breaks our data staging
+        job_ops.sim_ground.session_split_key = "tube_slot"
         data = wrk.simulate_observing(job, otherargs, runargs, comm)
     else:
         group_size = wrk.reduction_group_size(job, runargs, comm)
@@ -138,19 +99,19 @@ def simulate_data(job, otherargs, runargs, comm):
     wrk.simulate_calibration_error(job, otherargs, runargs, data)
     wrk.simulate_readout_effects(job, otherargs, runargs, data)
 
-    mem = toast.utils.memreport(msg="(whole node)", comm=comm, silent=True)
+    mem = memreport(msg="(whole node)", comm=comm, silent=True)
     log.info_rank(f"After simulating data:  {mem}", comm)
 
     wrk.save_data_hdf5(job, otherargs, runargs, data)
 
-    mem = toast.utils.memreport(msg="(whole node)", comm=comm, silent=True)
+    mem = memreport(msg="(whole node)", comm=comm, silent=True)
     log.info_rank(f"After saving data:  {mem}", comm)
 
     return data
 
 
 def reduce_data(job, otherargs, runargs, data):
-    log = toast.utils.Logger.get()
+    log = Logger.get()
 
     wrk.flag_noise_outliers(job, otherargs, runargs, data)
     wrk.filter_hwpss(job, otherargs, runargs, data)
@@ -171,18 +132,19 @@ def reduce_data(job, otherargs, runargs, data):
     wrk.mapmaker(job, otherargs, runargs, data)
     wrk.mapmaker_filterbin(job, otherargs, runargs, data)
     wrk.mapmaker_madam(job, otherargs, runargs, data)
-    mapmaker_mappraiser(job, otherargs, runargs, data) # MAPPRAISER specific line, ultimately should be included in sotodlib/workflows
+
+    # MAPPRAISER specific line, ultimately should be included in sotodlib/workflows
+    mapmaker_mappraiser(job, otherargs, runargs, data)
+
     wrk.filtered_statistics(job, otherargs, runargs, data)
 
-    mem = toast.utils.memreport(
-        msg="(whole node)", comm=data.comm.comm_world, silent=True
-    )
+    mem = memreport(msg="(whole node)", comm=data.comm.comm_world, silent=True)
     log.info_rank(f"After reducing data:  {mem}", data.comm.comm_world)
 
 
 def main():
-    env = toast.utils.Environment.get()
-    log = toast.utils.Logger.get()
+    env = Environment.get()
+    log = Logger.get()
     gt = toast.timing.GlobalTimers.get()
     gt.start("toast_so_sim (total)")
     timer = toast.timing.Timer()
@@ -204,7 +166,7 @@ def main():
         comm,
     )
 
-    mem = toast.utils.memreport(msg="(whole node)", comm=comm, silent=True)
+    mem = memreport(msg="(whole node)", comm=comm, silent=True)
     log.info_rank(f"Start of the workflow:  {mem}", comm)
 
     # Argument parsing
@@ -231,14 +193,6 @@ def main():
         action="store_true",
         help="Zero out detector data loaded from disk",
     )
-    # MAPPRAISER specific arguments:
-    parser.add_argument(
-        "--ref",
-        required=False,
-        default="run0",
-        help="Reference that is added to the name of the output maps.",
-    )
-    # N.B: use MAPPRAISER's trait "paramfile" to pass the rest of libmappraiser parameters
 
     # The operators and templates we want to configure from the command line
     # or a parameter file.
@@ -295,7 +249,10 @@ def main():
     wrk.setup_mapmaker(operators, templates)
     wrk.setup_mapmaker_filterbin(operators)
     wrk.setup_mapmaker_madam(operators)
-    setup_mapmaker_mappraiser(operators) # MAPPRAISER specific line, ultimately should be included in sotodlib/workflows
+
+    # MAPPRAISER specific line, ultimately should be included in sotodlib/workflows
+    setup_mapmaker_mappraiser(parser, operators)
+
     wrk.setup_filtered_statistics(operators)
 
     job, config, otherargs, runargs = wrk.setup_job(
@@ -317,6 +274,9 @@ def main():
         return
 
     data = simulate_data(job, otherargs, runargs, comm)
+    if data is None:
+        log.info_rank("Simulation failed", comm=comm)
+        return
 
     if not job.operators.sim_atmosphere.cache_only:
         # Reduce the data

@@ -75,16 +75,16 @@ defined structures.
 #define TOEPLITZ_H
 
 #ifdef W_MPI
-
 #include <mpi.h>
-
 #endif
 
 #include <fftw3.h>
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#include <stdint.h>
 
 //=========================================================================
 // Fixed parameters
@@ -122,18 +122,18 @@ defined structures.
 #ifndef FLAG_STGY
 #define FLAG_STGY
 
-#define FLAG_BS   0 // 0:auto  1:fixed  2:zero  3:3lambda  4:4lambda  5:formula2
+#define FLAG_BS 0   // 0:auto  1:fixed  2:zero  3:3lambda  4:4lambda  5:formula2
 #define FLAG_NFFT 0 // 0:auto  1:fixed  2:numthreads  3:fftwthreads
 #define FLAG_FFTW                                                              \
     FFTW_FLAG_AUTO // ESTIMATE, MEASURE, PATIENT, EXHAUSTIVE. Default is MEASURE
-#define FLAG_NO_RSHP                 0 // 0:auto  1:yes  1:no
-#define FLAG_NOFFT                   0 // 0:auto  1:yes  1:no
-#define FLAG_BLOCKINGCOMM            0 // 0:auto  1:noblocking  2:blocking
-#define FIXED_NFFT                   0 // fixed init value for nfft
-#define FIXED_BS                     0 // fixed init value for blockside
-#define FLAG_VERBOSE                 0
+#define FLAG_NO_RSHP 0      // 0:auto  1:yes  1:no
+#define FLAG_NOFFT 0        // 0:auto  1:yes  1:no
+#define FLAG_BLOCKINGCOMM 0 // 0:auto  1:noblocking  2:blocking
+#define FIXED_NFFT 0        // fixed init value for nfft
+#define FIXED_BS 0          // fixed init value for blockside
+#define FLAG_VERBOSE 0
 #define FLAG_SKIP_BUILD_GAPPY_BLOCKS 0
-#define FLAG_PARAM_DISTMIN_FIXED     0
+#define FLAG_PARAM_DISTMIN_FIXED 0
 #define FLAG_PRECOMPUTE_LVL                                                    \
     0 // 0: no precompute  1: precompute plans  2: precomputes Toeplitz and
       // plans
@@ -149,11 +149,13 @@ extern int PRINT_RANK;
 //=========================================================================
 // Strutures definition
 
-typedef struct {
+typedef struct tpltz_block_t {
     int64_t idv;
     double *T_block; // pointer of the Toeplitz data
-    int     lambda;
-    int     n;
+    int lambda;
+    int n;
+    int first_gap; // index of the first relevant local gap
+    int last_gap;  // index of the last relevant local gap
     /* For precomputed fftw
          int bs;
          int nfft;
@@ -166,7 +168,7 @@ typedef struct {
     */
 } Block;
 
-typedef struct {
+typedef struct tpltz_flag_t {
     int flag_bs; // bs used formula
     int flag_nfft;
     int flag_fftw;
@@ -181,25 +183,27 @@ typedef struct {
     int flag_precompute_lvl;
 } Flag;
 
-typedef struct {
+typedef struct tpltz_gap_t {
     int64_t *id0gap;
-    int     *lgap;
-    int      ngap;
+    int *lgap;
+    int ngap;
 } Gap;
 
-typedef struct {
+typedef struct tpltz_mat_t {
     int64_t nrow; // n total
-    int     m_cw; // V column number in the linear row-wise order (vect row-wise
+    int m_cw;     // V column number in the linear row-wise order (vect row-wise
                   // order)
     int m_rw; // V column number in the uniform row-wise order (matrix row-wise
               // order)
-    Block   *tpltzblocks;
-    int      nb_blocks_loc;
-    int      nb_blocks_tot;
-    int64_t  idp;
-    int      local_V_size;
-    Flag     flag_stgy;
+    Block *tpltzblocks;
+    int nb_blocks_loc;
+    int nb_blocks_tot;
+    int64_t idp;
+    int local_V_size;
+    Flag flag_stgy;
+#ifdef W_MPI
     MPI_Comm comm;
+#endif
 } Tpltz;
 
 //=========================================================================
@@ -281,7 +285,7 @@ int gstbmm(double **V, int nrow, int m_cw, int m_rw, Block *tpltzblocks,
            int nb_blocks, int64_t idp, int local_V_size, int64_t *id0gap,
            int *lgap, int ngap, Flag flag_stgy);
 
-int reset_gaps(double **V, int id0, int local_V_size, int m, int nrow,
+int reset_gaps(double **V, int64_t id0, int local_V_size, int m, int64_t nrow,
                int m_rowwise, const int64_t *id0gap, const int *lgap, int ngap);
 
 // Mpi routines (group 12)
@@ -317,9 +321,7 @@ int define_blocksize(int n, int lambda, int bs_flag, int fixed_bs);
 
 int define_nfft(int n_thread, int flag_nfft, int fixed_nfft);
 
-#ifdef fftw_MULTITHREADING
-int fftw_init_omp_threads(int fftw_n_thread);
-#endif
+// int fftw_init_omp_threads(int fftw_n_thread);
 
 int rhs_init_fftw(const int *nfft, int fft_size, fftw_complex **V_fft,
                   double **V_rfft, fftw_plan *plan_f, fftw_plan *plan_b,
@@ -343,7 +345,7 @@ int build_gappy_blocks(int nrow, int m, Block *tpltzblocks, int nb_blocks_local,
                        int nb_blocks_all, const int64_t *id0gap,
                        const int *lgap, int ngap, Block *tpltzblocks_gappy,
                        int *nb_blocks_gappy_final,
-                       int  flag_param_distmin_fixed);
+                       int flag_param_distmin_fixed);
 
 // Internal routines (group 22)
 int print_error_message(int error_number, char const *file, int line);
@@ -399,6 +401,10 @@ int build_reshape(double *Vin, int *nocol, int nbcol, int lconc, int n, int m,
 int extract_result(double *Vout, int *nocol, int nbcol, int lconc, int n, int m,
                    int id0, int l, int lambda, int nfft, double *Vrshp,
                    int nrshp, int mrshp, int lrshp, int flag_format_rshp);
+
+#ifdef __cplusplus
+}
+#endif
 
 //=========================================================================
 #endif // TOEPLITZ_H

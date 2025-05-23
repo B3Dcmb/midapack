@@ -68,7 +68,6 @@ defined structures.
 **
 */
 
-
 #include "toeplitz.h"
 
 /// Performs the product of a Toeplitz matrix by a general matrix either
