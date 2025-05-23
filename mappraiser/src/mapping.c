@@ -341,24 +341,29 @@ void fill_gap_with_zero(double *tod, int n, int64_t idv, int64_t id0g, int lg) {
  * @param gaps pointer to the gaps structure
  */
 void reset_relevant_gaps(double *tod, Tpltz *tmat, Gap *gaps) {
-    // loop over data blocks
-    Block *b;
-    double *tod_block;
+    // global position in the data vector
     int pos = 0;
+
+    // loop over data blocks
     for (int i = 0; i < tmat->nb_blocks_loc; ++i) {
-        b = &(tmat->tpltzblocks[i]);
+        // get the block
+        Block *block = &(tmat->tpltzblocks[i]);
+        double *tod_block = (tod + pos);
+
+        // update position in the data vector
+        // we must do this _before_ potentially skipping the block
+        pos += block->n;
+
         // if there are no relevant gaps, skip this block
-        if (b->first_gap < 0) {
+        if (block->first_gap < 0) {
             continue;
         }
 
-        tod_block = (tod + pos);
         // loop over the relevant gaps for this block
-        for (int j = b->first_gap; j <= b->last_gap; ++j) {
-            fill_gap_with_zero(tod_block, b->n, b->idv, gaps->id0gap[j],
+        for (int j = block->first_gap; j <= block->last_gap; ++j) {
+            fill_gap_with_zero(tod_block, block->n, block->idv, gaps->id0gap[j],
                                gaps->lgap[j]);
         }
-        pos += b->n;
     }
 }
 
