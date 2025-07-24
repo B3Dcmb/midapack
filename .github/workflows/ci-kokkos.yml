@@ -1,0 +1,98 @@
+name: CI with Kokkos
+
+on:
+  push:
+    branches: [ master, develop ]
+  pull_request:
+    branches: [ master, develop ]
+  workflow_dispatch:
+
+jobs:
+  build-cpu:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        kokkos: [ON, OFF]
+        openmp: [ON, OFF]
+        
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake libopenmpi-dev libfftw3-dev \
+                                libblas-dev liblapack-dev liblapacke-dev libcfitsio-dev
+    
+    - name: Install Kokkos
+      if: matrix.kokkos == 'ON'
+      run: |
+        git clone https://github.com/kokkos/kokkos.git /tmp/kokkos
+        cd /tmp/kokkos
+        mkdir build && cd build
+        cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local \
+                 -DKokkos_ENABLE_OPENMP=${{ matrix.openmp }} \
+                 -DKokkos_ENABLE_SERIAL=ON \
+                 -DCMAKE_BUILD_TYPE=Release
+        make -j$(nproc)
+        sudo make install
+    
+    - name: Configure CMake
+      run: |
+        mkdir build && cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release \
+                 -DENABLE_KOKKOS=${{ matrix.kokkos }} \
+                 -DDISABLE_OPENMP=${{ matrix.openmp == 'OFF' && 'ON' || 'OFF' }}
+    
+    - name: Build
+      run: |
+        cd build
+        make -j$(nproc)
+    
+    - name: Test build
+      run: |
+        cd build
+        ldd algebra/src/libmidapack.so
+        ldd mappraiser/src/libmappraiser.so
+
+  build-with-unit-tests:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake libopenmpi-dev libfftw3-dev \
+                                libblas-dev liblapack-dev liblapacke-dev libcfitsio-dev
+    
+    - name: Install Kokkos
+      run: |
+        git clone https://github.com/kokkos/kokkos.git /tmp/kokkos
+        cd /tmp/kokkos
+        mkdir build && cd build
+        cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local \
+                 -DKokkos_ENABLE_OPENMP=ON \
+                 -DKokkos_ENABLE_SERIAL=ON \
+                 -DCMAKE_BUILD_TYPE=Release
+        make -j$(nproc)
+        sudo make install
+    
+    - name: Configure CMake with tests
+      run: |
+        mkdir build && cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release \
+                 -DENABLE_KOKKOS=ON \
+                 -DBUILD_TESTS=ON
+    
+    - name: Build with tests
+      run: |
+        cd build
+        make -j$(nproc)
+    
+    - name: Run tests
+      run: |
+        cd build
+        # Tests will be added in subsequent steps
+        echo "Unit tests will be implemented in next phase"

@@ -71,6 +71,10 @@ defined structures.
 
 #include "toeplitz.h"
 
+#ifdef HAVE_KOKKOS
+#include "kokkos_wrapper.h"
+#endif
+
 #define max(a, b)                                                              \
     ({                                                                         \
         __typeof__(a) _a = (a);                                                \
@@ -103,6 +107,23 @@ extern int PRINT_RANK;
 */
 int stmm_simple_basic(double **V, int n, int m, double *T, int lambda,
                       double **TV) {
+
+#ifdef HAVE_KOKKOS
+    // Try to use Kokkos if available and initialized
+    if (kokkos_is_initialized()) {
+        int result = kokkos_stmm_simple_basic(V, n, m, T, lambda);
+        if (result == 0) {
+            // Copy result to output (Kokkos version works in-place on V)
+            for (int k = 0; k < m; k++) {
+                for (int i = 0; i < n; i++) {
+                    (*TV)[i + k * n] = (*V)[i + k * n];
+                }
+            }
+            return 0;
+        }
+        // Fall back to CPU version if Kokkos fails
+    }
+#endif
 
     int j_first, j_last;
     int i, j, k, Tid;
