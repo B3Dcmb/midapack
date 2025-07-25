@@ -157,17 +157,19 @@ Try the example demonstrating Kokkos acceleration:
 
 ### Performance Benchmarks
 
-Compare CPU vs GPU performance:
+Run comprehensive performance comparisons:
 
 ```bash
-# CPU-only build
-cmake .. -DENABLE_KOKKOS=OFF
-make && time ./example_kokkos_usage
+# Build the benchmark
+cd build
+cmake .. -DENABLE_KOKKOS=ON  # or OFF for CPU-only comparison
+make
 
-# GPU-accelerated build  
-cmake .. -DENABLE_KOKKOS=ON
-make && time ./example_kokkos_usage
+# Run the benchmark
+./benchmark_kokkos_performance
 ```
+
+The benchmark tests multiple problem sizes and provides detailed timing comparisons between CPU-only and Kokkos-accelerated execution.
 
 ## Troubleshooting
 
@@ -214,15 +216,35 @@ export KOKKOS_PRINT_CONFIGURATION=1
 
 ## Performance Results
 
-Preliminary performance measurements on representative problems:
+Performance benefits from Kokkos acceleration vary significantly depending on:
+- Problem size (larger problems benefit more from GPU acceleration)
+- Hardware configuration (CPU cores, GPU model, memory bandwidth)
+- Data layout and memory access patterns
+- Kokkos backend configuration (Serial, OpenMP, CUDA, etc.)
 
-| Problem Size | CPU (OpenMP) | GPU (CUDA) | Speedup |
-|--------------|--------------|------------|---------|
-| n=1,000      | 0.2 ms       | 0.1 ms     | 2x      |
-| n=10,000     | 15 ms        | 2 ms       | 7.5x    |
-| n=100,000    | 1.2 s        | 0.08 s     | 15x     |
+### Running Performance Benchmarks
 
-*Results may vary depending on hardware configuration*
+To obtain actual performance measurements for your system:
+
+```bash
+# Build the benchmark suite
+cd build
+cmake .. -DENABLE_KOKKOS=ON -DDISABLE_MPI=ON
+make benchmark_kokkos_performance
+
+# Run comprehensive benchmarks
+./benchmark_kokkos_performance
+
+# Or use the automated script
+cd ..
+./run_benchmark.sh
+```
+
+The benchmark will test multiple problem sizes and provide detailed comparisons between:
+- CPU-only execution (with OpenMP if available)
+- Kokkos-accelerated execution (GPU/CPU depending on configuration)
+
+**Important**: Actual performance results depend entirely on your hardware setup. The benchmark must be run on your target system to get meaningful performance data.
 
 ## Contributing
 
