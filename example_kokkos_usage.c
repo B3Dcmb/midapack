@@ -9,15 +9,12 @@
 #include <stdlib.h>
 #include <math.h>
 #include <time.h>
+#include <mpi.h>
+#include "midapack.h"
 
 #ifdef HAVE_KOKKOS
 #include "kokkos_wrapper.h"
 #endif
-
-// Forward declare the function we need with C linkage
-extern "C" {
-    int stmm_simple_basic(double **V, int n, int m, double *T, int lambda, double **TV);
-}
 
 void print_usage() {
     printf("Example: Kokkos-accelerated Toeplitz matrix-vector multiplication\n");
