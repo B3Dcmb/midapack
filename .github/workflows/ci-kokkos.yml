@@ -33,7 +33,8 @@ jobs:
         cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local \
                  -DKokkos_ENABLE_OPENMP=${{ matrix.openmp }} \
                  -DKokkos_ENABLE_SERIAL=ON \
-                 -DCMAKE_BUILD_TYPE=Release
+                 -DCMAKE_BUILD_TYPE=Release \
+                 -DBUILD_SHARED_LIBS=ON
         make -j$(nproc)
         sudo make install
     
@@ -83,7 +84,8 @@ jobs:
         cmake .. -DCMAKE_INSTALL_PREFIX=/usr/local \
                  -DKokkos_ENABLE_OPENMP=ON \
                  -DKokkos_ENABLE_SERIAL=ON \
-                 -DCMAKE_BUILD_TYPE=Release
+                 -DCMAKE_BUILD_TYPE=Release \
+                 -DBUILD_SHARED_LIBS=ON
         make -j$(nproc)
         sudo make install
     

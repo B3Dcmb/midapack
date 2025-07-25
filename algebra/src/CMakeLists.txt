@@ -53,7 +53,7 @@ endif ()
 
 # Kokkos (for GPU/CPU acceleration)
 
-if (ENABLE_KOKKOS AND KOKKOS_FOUND)
+if (ENABLE_KOKKOS)
     target_sources(midapack PRIVATE kokkos_wrapper.cpp)
     target_compile_definitions(midapack PRIVATE HAVE_KOKKOS)
     target_link_libraries(midapack PUBLIC Kokkos::kokkos)

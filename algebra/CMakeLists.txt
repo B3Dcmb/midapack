@@ -3,7 +3,6 @@
 
 option(DISABLE_MPI "Compile without MPI enabled" OFF)
 option(DISABLE_OPENMP "Compile without OpenMP enabled" ON)
-option(ENABLE_KOKKOS "Enable Kokkos for CPU/GPU acceleration" OFF)
 
 # Search for MPI and OpenMP if we want to use them
 if (NOT DISABLE_MPI)
@@ -13,12 +12,6 @@ endif ()
 if (NOT DISABLE_OPENMP)
     find_package(OpenMP)
 endif ()
-
-# Search for Kokkos if enabled
-if (ENABLE_KOKKOS)
-    find_package(Kokkos REQUIRED)
-    message(STATUS "Found Kokkos: ${KOKKOS_LIBRARIES}")
-endif()
 
 # Search for FFTW (necessary for toeplitz module)
 find_package(FFTW REQUIRED DOUBLE_LIB)

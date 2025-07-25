@@ -60,6 +60,17 @@ if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif ()
 
 # ----------------------------------------------------------------------------------------#
+# Optional dependencies
+# ----------------------------------------------------------------------------------------#
+
+# Kokkos (for GPU/CPU acceleration)
+option(ENABLE_KOKKOS "Enable Kokkos for CPU/GPU acceleration" OFF)
+if (ENABLE_KOKKOS)
+    find_package(Kokkos REQUIRED CONFIG)
+    message(STATUS "Found Kokkos: ${Kokkos_DIR}")
+endif()
+
+# ----------------------------------------------------------------------------------------#
 # Subdirectories
 # ----------------------------------------------------------------------------------------#
 
@@ -74,8 +85,8 @@ add_subdirectory(mappraiser)
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/example_kokkos_usage.c")
     add_executable(example_kokkos_usage example_kokkos_usage.c)
     target_include_directories(example_kokkos_usage PRIVATE algebra/include)
-    target_link_libraries(example_kokkos_usage midapack)
-    if(ENABLE_KOKKOS AND TARGET Kokkos::kokkos)
+    target_link_libraries(example_kokkos_usage midapack m lapacke)
+    if(ENABLE_KOKKOS)
         target_link_libraries(example_kokkos_usage Kokkos::kokkos)
         target_compile_definitions(example_kokkos_usage PRIVATE HAVE_KOKKOS)
     endif()
@@ -85,8 +96,8 @@ endif()
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_kokkos_integration.c")
     add_executable(test_kokkos_integration test_kokkos_integration.c)
     target_include_directories(test_kokkos_integration PRIVATE algebra/include)
-    target_link_libraries(test_kokkos_integration midapack)
-    if(ENABLE_KOKKOS AND TARGET Kokkos::kokkos)
+    target_link_libraries(test_kokkos_integration midapack m)
+    if(ENABLE_KOKKOS)
         target_link_libraries(test_kokkos_integration Kokkos::kokkos)
         target_compile_definitions(test_kokkos_integration PRIVATE HAVE_KOKKOS)
     endif()
