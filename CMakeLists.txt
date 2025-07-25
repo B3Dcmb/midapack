@@ -10,11 +10,13 @@ cmake_minimum_required(VERSION 3.18)
 project(midapack
         VERSION 2.1
         DESCRIPTION "Parallel software tools for high performance CMB data analysis"
-        LANGUAGES C)
+        LANGUAGES C CXX)
 
 # Enforce language standards
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Auxiliary files
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
@@ -58,8 +60,56 @@ if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif ()
 
 # ----------------------------------------------------------------------------------------#
+# Optional dependencies
+# ----------------------------------------------------------------------------------------#
+
+# Kokkos (for GPU/CPU acceleration)
+option(ENABLE_KOKKOS "Enable Kokkos for CPU/GPU acceleration" OFF)
+if (ENABLE_KOKKOS)
+    find_package(Kokkos REQUIRED CONFIG)
+    message(STATUS "Found Kokkos: ${Kokkos_DIR}")
+endif()
+
+# ----------------------------------------------------------------------------------------#
 # Subdirectories
 # ----------------------------------------------------------------------------------------#
 
 add_subdirectory(algebra)
 add_subdirectory(mappraiser)
+
+# ----------------------------------------------------------------------------------------#
+# Example and benchmark executables
+# ----------------------------------------------------------------------------------------#
+
+# Kokkos example usage
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/example_kokkos_usage.c")
+    add_executable(example_kokkos_usage example_kokkos_usage.c)
+    target_include_directories(example_kokkos_usage PRIVATE algebra/include)
+    target_link_libraries(example_kokkos_usage midapack m lapacke)
+    if(ENABLE_KOKKOS)
+        target_link_libraries(example_kokkos_usage Kokkos::kokkos)
+        target_compile_definitions(example_kokkos_usage PRIVATE HAVE_KOKKOS)
+    endif()
+endif()
+
+# Kokkos integration test
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test_kokkos_integration.c")
+    add_executable(test_kokkos_integration test_kokkos_integration.c)
+    target_include_directories(test_kokkos_integration PRIVATE algebra/include)
+    target_link_libraries(test_kokkos_integration midapack m)
+    if(ENABLE_KOKKOS)
+        target_link_libraries(test_kokkos_integration Kokkos::kokkos)
+        target_compile_definitions(test_kokkos_integration PRIVATE HAVE_KOKKOS)
+    endif()
+endif()
+
+# Kokkos performance benchmark
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/benchmark_kokkos_performance.c")
+    add_executable(benchmark_kokkos_performance benchmark_kokkos_performance.c)
+    target_include_directories(benchmark_kokkos_performance PRIVATE algebra/include)
+    target_link_libraries(benchmark_kokkos_performance midapack m)
+    if(ENABLE_KOKKOS AND TARGET Kokkos::kokkos)
+        target_link_libraries(benchmark_kokkos_performance Kokkos::kokkos)
+        target_compile_definitions(benchmark_kokkos_performance PRIVATE HAVE_KOKKOS)
+    endif()
+endif()

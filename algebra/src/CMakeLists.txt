@@ -51,6 +51,18 @@ if (FFTW_DOUBLE_LIB_FOUND)
     target_link_libraries(midapack PUBLIC FFTW::Double)
 endif ()
 
+# Kokkos (for GPU/CPU acceleration)
+
+if (ENABLE_KOKKOS)
+    target_sources(midapack PRIVATE kokkos_wrapper.cpp)
+    target_compile_definitions(midapack PRIVATE HAVE_KOKKOS)
+    target_link_libraries(midapack PUBLIC Kokkos::kokkos)
+    # Ensure OpenMP is enabled for the Kokkos wrapper
+    if (OpenMP_CXX_FOUND)
+        set_source_files_properties(kokkos_wrapper.cpp PROPERTIES COMPILE_FLAGS "${OpenMP_CXX_FLAGS}")
+    endif()
+endif ()
+
 # MKL / LAPACK (for templates module)
 
 if (MKL_FOUND)
